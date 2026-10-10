@@ -1,3 +1,4 @@
+import { readLuminateBody } from "./readLuminateBody";
 import { createHash } from "node:crypto";
 import { FatalError, RetryableError } from "workflow";
 
@@ -37,35 +38,17 @@ export async function getLuminateAccessToken(
         });
       throw new FatalError(`Luminate authentication unavailable (HTTP ${response.status})`);
     }
-    const reader = response.body?.getReader();
-    if (!reader) throw new FatalError("Empty Luminate authentication response");
-    const chunks: Uint8Array[] = [];
-    let size = 0;
-    for (;;) {
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      size += chunk.value.byteLength;
-      if (size > 16384) {
-        await reader.cancel();
-        throw new FatalError("Oversized Luminate authentication response");
-      }
-      chunks.push(chunk.value);
-    }
-    let auth;
-    try {
-      auth = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-    } catch {
-      throw new FatalError("Invalid Luminate authentication response");
-    }
+    const auth = await readLuminateBody(response, 16384, "Luminate authentication");
     if (
       !auth ||
       typeof auth !== "object" ||
+      !("access_token" in auth) ||
       typeof auth.access_token !== "string" ||
       !auth.access_token
     )
       throw new FatalError("Invalid Luminate authentication response");
     const seconds =
-      typeof auth.expires_in === "number" && auth.expires_in > 0
+      "expires_in" in auth && typeof auth.expires_in === "number" && auth.expires_in > 0
         ? Math.min(auth.expires_in, 86400)
         : 86400;
     entry.expires = Date.now() + seconds * 1000;

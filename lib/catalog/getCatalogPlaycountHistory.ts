@@ -30,7 +30,11 @@ export async function getCatalogPlaycountHistory(
     return { error: "Comparison requires completed UTC observation days", status: 400 } as const;
   }
   const ownerIds = await getCatalogOwnerIds(accountId);
-  const link = await selectAccountCatalog({ accountIds: ownerIds, catalogId: query.catalog_id });
+  const link = await selectAccountCatalog({
+    accountIds: ownerIds,
+    catalogId: query.catalog_id,
+    throwOnError: true,
+  });
   if (!link) return { error: "Catalog not found", status: 404 } as const;
   const page = await selectCatalogRecordingPage({
     catalogId: query.catalog_id,

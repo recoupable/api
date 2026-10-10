@@ -29,6 +29,7 @@ describe("selectPublicPlaycountHistory", () => {
     expect(builder.eq).toHaveBeenCalledWith("platform", "spotify");
     expect(builder.eq).toHaveBeenCalledWith("metric", "platform_displayed_play_count");
     expect(builder.eq).toHaveBeenCalledWith("data_source", "apify_spotify_playcount");
+    expect(builder.gte).toHaveBeenCalledWith("captured_at", "2026-09-01T00:00:00Z");
     expect(builder.lt).toHaveBeenCalledWith("captured_at", "2026-09-06T00:00:00.000Z");
     expect(builder.limit).toHaveBeenCalledWith(500);
   });

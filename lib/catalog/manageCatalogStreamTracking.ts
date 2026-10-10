@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import { consumeOAuthRateLimit } from "@/lib/supabase/oauth_rate_limits/consumeOAuthRateLimit";
 import { catalogStreamTrackingSchema } from "./validateCatalogStreamTracking";
 import { getCatalogOwnerIds } from "./getCatalogOwnerIds";
 import { selectAccountCatalog } from "@/lib/supabase/account_catalogs/selectAccountCatalog";
@@ -15,15 +16,30 @@ export async function manageCatalogStreamTracking(
   const parsed = catalogStreamTrackingSchema.safeParse(input);
   if (!parsed.success) return { error: "Invalid tracking request", status: 400 } as const;
   const { catalog_id: catalogId, action } = parsed.data;
+  if (
+    action !== "status" &&
+    (await consumeOAuthRateLimit("catalog-stream-controls", [{ key: accountId, limit: 10 }]))
+  )
+    return { error: "Too many tracking requests", status: 429 } as const;
+  const existing = await selectCatalogStreamTracking(catalogId);
+  const ownerIds = await getCatalogOwnerIds(accountId);
   const link = await selectAccountCatalog({
-    accountIds: await getCatalogOwnerIds(accountId),
+    accountIds: ownerIds,
     catalogId,
+    throwOnError: true,
   });
   if (!link) return { error: "Catalog not found", status: 404 } as const;
-  const existing = await selectCatalogStreamTracking(catalogId);
+  const sameOwner =
+    existing &&
+    ownerIds.includes(existing.owner_id) &&
+    (await selectAccountCatalog({
+      accountIds: [existing.owner_id],
+      catalogId,
+      throwOnError: true,
+    }));
   // Repeated enable is idempotent; explicit pause/re-enable creates a new revision.
   const tracking =
-    action === "disable" || (action === "enable" && !existing?.enabled)
+    action === "disable" || (action === "enable" && (!existing?.enabled || !sameOwner))
       ? await upsertCatalogStreamTracking({
           catalog_id: catalogId,
           owner_id: link.account,

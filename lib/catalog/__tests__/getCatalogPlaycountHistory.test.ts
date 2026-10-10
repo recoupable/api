@@ -45,6 +45,7 @@ describe("getCatalogPlaycountHistory", () => {
     expect(selectAccountCatalog).toHaveBeenCalledWith({
       accountIds: ["owner", "org"],
       catalogId: query.catalog_id,
+      throwOnError: true,
     });
     expect(result).toMatchObject({
       data: {

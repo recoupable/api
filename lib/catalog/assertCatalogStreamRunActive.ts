@@ -11,7 +11,11 @@ export async function assertCatalogStreamRunActive(runId: string, isrc?: string)
     !tracking?.enabled ||
     tracking.revision !== run.revision ||
     !["queued", "running"].includes(run.status) ||
-    !(await selectAccountCatalog({ accountIds: [tracking.owner_id], catalogId: run.catalog_id }))
+    !(await selectAccountCatalog({
+      accountIds: [tracking.owner_id],
+      catalogId: run.catalog_id,
+      throwOnError: true,
+    }))
   )
     throw new FatalError("Catalog stream run revoked");
   if (isrc && !(await selectCatalogSongs([isrc])).some(row => row.catalog === run.catalog_id))

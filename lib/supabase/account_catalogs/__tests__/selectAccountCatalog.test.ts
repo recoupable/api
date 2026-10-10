@@ -64,6 +64,14 @@ describe("selectAccountCatalog", () => {
     expect(await selectAccountCatalog({ accountIds: ["acc_1"], catalogId: "cat_x" })).toBeNull();
   });
 
+  it("preserves failures for strict feature callers", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockBuilder({ data: null, error: { message: "private database detail" } });
+    await expect(
+      selectAccountCatalog({ accountIds: ["acc_1"], catalogId: "cat_1", throwOnError: true }),
+    ).rejects.toThrow(/^Catalog ownership unavailable$/);
+    log.mockRestore();
+  });
   it("returns null on error", async () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
     mockBuilder({ data: null, error: { message: "boom" } });

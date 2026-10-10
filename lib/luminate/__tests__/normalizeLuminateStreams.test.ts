@@ -34,7 +34,9 @@ describe("normalizeLuminateStreams", () => {
   it("preserves missing dates rather than filling zeros", () => {
     const data = payload();
     data.metrics[0].value[0].value.pop();
-    expect(normalizeLuminateStreams(data, request).days).toHaveLength(1);
+    expect(normalizeLuminateStreams(data, request).days).toEqual([
+      { date: request.since, streams: 1 },
+    ]);
   });
   it.each(["identity", "territory", "range", "duplicate", "negative", "unsafe", "metric"])(
     "rejects %s mismatch",

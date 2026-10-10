@@ -1,4 +1,6 @@
-import { FatalError, RetryableError } from "workflow";
+import { readLuminateBody } from "./readLuminateBody";
+import { checkLuminateRecordingResponse } from "./checkLuminateRecordingResponse";
+import { FatalError } from "workflow";
 import { getLuminateAccessToken } from "./getLuminateAccessToken";
 import {
   luminateStreamRequestSchema,
@@ -42,34 +44,10 @@ export async function fetchLuminateStreams(input: LuminateStreamRequest) {
     token = await getLuminateAccessToken(credentials, true);
     response = await send();
   }
-  if (!response.ok) {
-    await response.body?.cancel();
-    if (response.status === 404) return null;
-    if (response.status === 429 || response.status >= 500) {
-      const seconds = Number(response.headers.get("retry-after"));
-      throw new RetryableError("Luminate temporarily unavailable", {
-        retryAfter: `${Number.isFinite(seconds) && seconds > 0 ? Math.min(seconds, 300) : 60}s`,
-      });
-    }
-    throw new FatalError(`Luminate recording unavailable (HTTP ${response.status})`);
-  }
-  const reader = response.body?.getReader();
-  if (!reader) throw new FatalError("Empty Luminate response");
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  for (;;) {
-    const chunk = await reader.read();
-    if (chunk.done) break;
-    size += chunk.value.byteLength;
-    if (size > 1000000) {
-      await reader.cancel();
-      throw new FatalError("Luminate response exceeds size limit");
-    }
-    chunks.push(chunk.value);
-  }
+  if (!(await checkLuminateRecordingResponse(response))) return null;
   try {
     return {
-      ...normalizeLuminateStreams(JSON.parse(Buffer.concat(chunks).toString("utf8")), request),
+      ...normalizeLuminateStreams(await readLuminateBody(response, 1000000, "Luminate"), request),
       retrieved_at: new Date().toISOString(),
     };
   } catch {

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { catalogStreamsWorkflow } from "../catalogStreamsWorkflow";
+import { prepareCatalogStreamRunStep } from "../prepareCatalogStreamRunStep";
 import { fetchCatalogStreamTrackStep } from "../fetchCatalogStreamTrackStep";
 import { writeCatalogStreamTrackStep } from "../writeCatalogStreamTrackStep";
 import { markCatalogStreamRunStep } from "../markCatalogStreamRunStep";
@@ -44,6 +45,34 @@ describe("catalogStreamsWorkflow", () => {
       state: "unavailable",
     });
     expect(markCatalogStreamRunStep).toHaveBeenLastCalledWith("run", "partial");
+  });
+  it("keeps exhausted temporary auth outages isolated", async () => {
+    vi.mocked(fetchCatalogStreamTrackStep)
+      .mockRejectedValueOnce(new Error("Luminate authentication temporarily unavailable"))
+      .mockResolvedValueOnce({ state: "unavailable" });
+    await catalogStreamsWorkflow("run");
+    expect(fetchCatalogStreamTrackStep).toHaveBeenCalledTimes(2);
+    expect(markCatalogStreamRunStep).toHaveBeenLastCalledWith("run", "partial");
+  });
+  it("stops repeated recording authorization failure", async () => {
+    vi.mocked(fetchCatalogStreamTrackStep).mockRejectedValueOnce(
+      new Error("Luminate recording unavailable (HTTP 401)"),
+    );
+    await catalogStreamsWorkflow("run");
+    expect(fetchCatalogStreamTrackStep).toHaveBeenCalledTimes(1);
+    expect(markCatalogStreamRunStep).toHaveBeenLastCalledWith(
+      "run",
+      "failed",
+      "provider_authentication_failed",
+    );
+  });
+  it("marks preparation revocation cancelled", async () => {
+    vi.mocked(prepareCatalogStreamRunStep).mockRejectedValueOnce(
+      new Error("Catalog stream run revoked"),
+    );
+    await catalogStreamsWorkflow("run");
+    expect(fetchCatalogStreamTrackStep).not.toHaveBeenCalled();
+    expect(markCatalogStreamRunStep).toHaveBeenLastCalledWith("run", "cancelled");
   });
   it("stops after a revocation fence refuses a write", async () => {
     vi.clearAllMocks();

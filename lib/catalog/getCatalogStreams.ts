@@ -23,6 +23,7 @@ export async function getCatalogStreams(accountId: string, input: CatalogPlaycou
     !(await selectAccountCatalog({
       accountIds: await getCatalogOwnerIds(accountId),
       catalogId: q.catalog_id,
+      throwOnError: true,
     }))
   )
     return { error: "Catalog not found", status: 404 } as const;
@@ -33,14 +34,33 @@ export async function getCatalogStreams(accountId: string, input: CatalogPlaycou
   });
   const latestRun = await selectLatestCatalogStreamRun(q.catalog_id);
   const coverage = latestRun?.coverage;
+  const observations = new Map<
+    string,
+    Awaited<ReturnType<typeof selectCatalogStreamObservations>>
+  >();
+  // Bounded parallel reads preserve the SQL per-recording limit and avoid serial page latency.
+  for (let offset = 0; offset < page.songs.length; offset += 5) {
+    await Promise.all(
+      page.songs.slice(offset, offset + 5).map(async song => {
+        observations.set(
+          song.isrc,
+          await selectCatalogStreamObservations({
+            catalogId: q.catalog_id,
+            isrc: song.isrc,
+            since,
+            until,
+          }),
+        );
+      }),
+    );
+  }
   const recordings = [];
   for (const song of page.songs) {
-    const versions = await selectCatalogStreamObservations({
-      catalogId: q.catalog_id,
-      isrc: song.isrc,
-      since,
-      until,
-    });
+    const versions = (observations.get(song.isrc) ?? []).sort(
+      (a, b) =>
+        b.retrieved_at.localeCompare(a.retrieved_at) ||
+        (b.run_id ?? "").localeCompare(a.run_id ?? ""),
+    );
     const latest = new Map<string, (typeof versions)[number]>();
     for (const row of versions) if (!latest.has(row.date)) latest.set(row.date, row);
     const identity = versions[0]?.provider_recording_id ?? null;

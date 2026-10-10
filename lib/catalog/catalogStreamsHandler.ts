@@ -48,6 +48,7 @@ export async function catalogStreamsHandler(
     response.headers.set("Cache-Control", "private, no-store");
     return response;
   } catch {
+    console.error("[catalogStreamsHandler] operation failed");
     return errorResponse("Catalog streams unavailable", 503);
   }
 }

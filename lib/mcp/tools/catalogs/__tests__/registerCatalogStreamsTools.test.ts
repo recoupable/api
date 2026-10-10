@@ -46,6 +46,11 @@ describe("daily stream MCP tools", () => {
       action: "enable",
     });
   });
+  it("scopes successful history reads to the resolved actor", async () => {
+    const query = { catalog_id: id, since: "2026-09-02", days: 1, page: 1, limit: 25 };
+    await handlers.get("get_catalog_streams")!(query as never, {} as never);
+    expect(getCatalogStreams).toHaveBeenCalledWith("derived", query);
+  });
   it("rejects unauthenticated read requests", async () => {
     vi.mocked(resolveAccountId).mockResolvedValue({ accountId: null, error: "Denied" });
     expect(await handlers.get("get_catalog_streams")!({} as never, {} as never)).toMatchObject({

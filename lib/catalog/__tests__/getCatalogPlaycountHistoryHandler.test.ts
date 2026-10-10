@@ -55,6 +55,8 @@ describe("getCatalogPlaycountHistoryHandler", () => {
   });
   it("returns failure when history cannot be read", async () => {
     vi.mocked(getCatalogPlaycountHistory).mockRejectedValue(new Error("unavailable"));
-    expect((await getCatalogPlaycountHistoryHandler(request(), id)).status).toBe(503);
+    const response = await getCatalogPlaycountHistoryHandler(request(), id);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ error: "Catalog playcount history unavailable" });
   });
 });

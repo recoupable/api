@@ -1,3 +1,5 @@
+import { NextResponse } from "next/server";
+import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import type { NextRequest } from "next/server";
 import { catalogStreamsHandler } from "@/lib/catalog/catalogStreamsHandler";
 /**
@@ -13,4 +15,13 @@ export async function GET(
   context: { params: Promise<{ catalogId: string }> },
 ) {
   return catalogStreamsHandler(request, (await context.params).catalogId, "history");
+}
+
+/**
+ * Answer browser preflight for authenticated cross-origin calls.
+ *
+ * @returns CORS preflight response.
+ */
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 200, headers: getCorsHeaders() });
 }

@@ -32,6 +32,9 @@ describe("fetchLuminateStreams", () => {
     const result = await fetchLuminateStreams(input);
     expect(fetcher.mock.calls[1][0]).toContain("id_type=isrc");
     expect(fetcher.mock.calls[1][0]).toContain("aggregate_interval=day");
+    expect(new URL(fetcher.mock.calls[1][0]).searchParams.get("location")).toBe("AA");
+    expect(new URL(fetcher.mock.calls[1][0]).searchParams.get("start_date")).toBe(input.since);
+    expect(new URL(fetcher.mock.calls[1][0]).searchParams.get("end_date")).toBe(input.until);
     expect(result?.days[0].streams).toBe(2);
     expect(JSON.stringify(result)).not.toContain("private-token");
   });
@@ -51,7 +54,7 @@ describe("fetchLuminateStreams", () => {
       vi.fn().mockResolvedValue(new Response("private-password", { status: 403 })),
     );
     await expect(fetchLuminateStreams(input)).rejects.toThrow(
-      "Luminate authentication unavailable (HTTP 403)",
+      /^Luminate authentication unavailable \(HTTP 403\)$/,
     );
   });
   it("rejects invalid identifiers before sending credentials", async () => {

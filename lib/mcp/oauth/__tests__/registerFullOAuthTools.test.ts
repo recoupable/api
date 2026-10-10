@@ -50,6 +50,13 @@ vi.mock("../../tools", () => ({
       { inputSchema: z.object({ active: z.boolean() }) },
       operation,
     );
+    for (const name of [
+      "get_catalog_playcount_history",
+      "get_catalog_streams",
+      "manage_catalog_stream_tracking",
+    ]) {
+      server.registerTool(name, { inputSchema: z.object({}) }, operation);
+    }
     server.registerTool("get_api_key", { inputSchema: z.object({}) }, operation);
   },
 }));

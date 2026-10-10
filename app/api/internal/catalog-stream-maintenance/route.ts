@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     const run = await start(catalogStreamsMaintenanceWorkflow);
     return NextResponse.json({ status: "success", workflow_run_id: run.runId }, { status: 202 });
   } catch {
+    console.error("[route] operation failed");
     return NextResponse.json({ error: "Catalog stream dispatch unavailable" }, { status: 503 });
   }
 }

@@ -194,7 +194,7 @@
       "mcp:read"
     ],
     "status": "requires OAuth execution audit before enablement",
-    "authorizationWork": "Standard API-key/Privy MCP checks current catalog access. Hidden and denied for delegated OAuth pending selected-organization grant audit. Collection controls can initiate provider requests."
+    "authorizationWork": "Standard API-key/Privy MCP checks current catalog access. Hidden and denied for delegated OAuth pending selected-organization grant audit. This read uses saved observations and performs no provider calls or billing."
   },
   {
     "name": "get_chats",

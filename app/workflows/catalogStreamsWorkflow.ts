@@ -16,8 +16,16 @@ export async function catalogStreamsWorkflow(runId: string) {
       } catch (error) {
         const message = error instanceof Error ? error.message : "";
         if (
-          message.includes("Luminate authentication") ||
-          message === "Luminate is not configured"
+          message === "Catalog stream run revoked" ||
+          message === "Recording removed from catalog"
+        ) {
+          await markCatalogStreamRunStep(runId, "cancelled");
+          return;
+        }
+        if (
+          message === "Luminate is not configured" ||
+          /^Luminate authentication unavailable \(HTTP \d+\)$/.test(message) ||
+          /^Luminate recording unavailable \(HTTP (401|403)\)$/.test(message)
         ) {
           await markCatalogStreamRunStep(runId, "failed", "provider_authentication_failed");
           return;
@@ -31,7 +39,15 @@ export async function catalogStreamsWorkflow(runId: string) {
       }
     }
     await markCatalogStreamRunStep(runId, incomplete ? "partial" : "complete");
-  } catch {
+  } catch (error) {
+    console.error("[catalogStreamsWorkflow] collection failed", { runId });
+    if (
+      error instanceof Error &&
+      ["Catalog stream run revoked", "Recording removed from catalog"].includes(error.message)
+    ) {
+      await markCatalogStreamRunStep(runId, "cancelled");
+      return;
+    }
     await markCatalogStreamRunStep(runId, "failed", "collection_failed_or_revoked");
   }
 }

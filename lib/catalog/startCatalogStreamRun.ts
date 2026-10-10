@@ -16,6 +16,7 @@ export async function startCatalogStreamRun(catalogId: string) {
     const workflow = await start(catalogStreamsWorkflow, [run.id]);
     return { state: "started" as const, run_id: run.id, workflow_run_id: workflow.runId };
   } catch {
+    console.error("[startCatalogStreamRun] operation failed");
     await updateCatalogStreamRun(run.id, "failed", "workflow_start_failed");
     throw new Error("Unable to start catalog stream collection");
   }

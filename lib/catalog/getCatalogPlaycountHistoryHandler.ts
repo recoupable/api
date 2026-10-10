@@ -34,6 +34,7 @@ export async function getCatalogPlaycountHistoryHandler(
     response.headers.set("Cache-Control", "private, no-store");
     return response;
   } catch {
+    console.error("[getCatalogPlaycountHistoryHandler] operation failed");
     return errorResponse("Catalog playcount history unavailable", 503);
   }
 }

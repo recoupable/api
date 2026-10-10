@@ -5,11 +5,11 @@ describe("Luminate token cache", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("private upstream detail")));
     await expect(
       getLuminateAccessToken({ apiKey: "k", username: "u", password: "p" }),
-    ).rejects.toThrow("Luminate authentication temporarily unavailable");
+    ).rejects.toThrow(/^Luminate authentication temporarily unavailable$/);
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(null)));
     await expect(
       getLuminateAccessToken({ apiKey: "k", username: "u", password: "p" }),
-    ).rejects.toThrow("Invalid Luminate authentication response");
+    ).rejects.toThrow(/^Invalid Luminate authentication response$/);
   });
   it("shares concurrent authentication and refreshes when credentials rotate", async () => {
     const fetcher = vi

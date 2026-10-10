@@ -4,7 +4,11 @@ import { getCatalogStreams } from "../getCatalogStreams";
 import { selectAccountCatalog } from "@/lib/supabase/account_catalogs/selectAccountCatalog";
 import { upsertCatalogStreamTracking } from "@/lib/supabase/catalog_stream_tracking/upsertCatalogStreamTracking";
 import { selectCatalogStreamObservations } from "@/lib/supabase/catalog_stream_observations/selectCatalogStreamObservations";
+import { consumeOAuthRateLimit } from "@/lib/supabase/oauth_rate_limits/consumeOAuthRateLimit";
 import { startCatalogStreamRun } from "../startCatalogStreamRun";
+vi.mock("@/lib/supabase/oauth_rate_limits/consumeOAuthRateLimit", () => ({
+  consumeOAuthRateLimit: vi.fn().mockResolvedValue(0),
+}));
 vi.mock("../getCatalogOwnerIds", () => ({
   getCatalogOwnerIds: vi.fn().mockResolvedValue(["owner"]),
 }));
@@ -56,9 +60,22 @@ describe("catalog daily streams", () => {
       enabled: true,
     });
   });
+  it("throttles repeated controls before writes or provider traffic", async () => {
+    vi.mocked(consumeOAuthRateLimit).mockResolvedValueOnce(30);
+    expect(
+      await manageCatalogStreamTracking("account", { catalog_id: catalog, action: "enable" }),
+    ).toEqual({ error: "Too many tracking requests", status: 429 });
+    expect(upsertCatalogStreamTracking).not.toHaveBeenCalled();
+    expect(startCatalogStreamRun).not.toHaveBeenCalled();
+  });
   it("pauses without starting a workflow", async () => {
     await manageCatalogStreamTracking("account", { catalog_id: catalog, action: "disable" });
     expect(startCatalogStreamRun).not.toHaveBeenCalled();
+    expect(upsertCatalogStreamTracking).toHaveBeenCalledWith({
+      catalog_id: catalog,
+      owner_id: "owner",
+      enabled: false,
+    });
   });
   it("keeps unmeasured recordings visible and suppresses growth", async () => {
     const r = await getCatalogStreams("account", {
@@ -96,6 +113,7 @@ describe("catalog daily streams", () => {
         retrieved_at: "2026-09-04",
       },
       { date: "2026-09-01", streams: 1, provider_recording_id: "MR1", retrieved_at: "2026-09-03" },
+      { date: "2026-09-02", streams: 3, provider_recording_id: "MR1", retrieved_at: "2026-09-03" },
     ] as never);
     expect(
       await getCatalogStreams("account", {
@@ -105,7 +123,13 @@ describe("catalog daily streams", () => {
         page: 1,
         limit: 25,
       }),
-    ).toMatchObject({ data: { recordings: [{ state: "incomplete" }] } });
+    ).toMatchObject({
+      data: {
+        recordings: [
+          { state: "incomplete", missing_days: ["2026-09-01"], percentage_growth: null },
+        ],
+      },
+    });
   });
   it("never joins different provider recording identities into growth", async () => {
     vi.mocked(selectCatalogStreamObservations).mockResolvedValue([
