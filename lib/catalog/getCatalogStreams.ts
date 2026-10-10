@@ -1,7 +1,7 @@
 import {
-  validateCatalogPlaycountHistoryQuery,
-  type CatalogPlaycountHistoryQuery,
-} from "./validateCatalogPlaycountHistoryQuery";
+  validateCatalogStreamHistoryQuery,
+  type CatalogStreamHistoryQuery,
+} from "./validateCatalogStreamHistoryQuery";
 import { getCatalogOwnerIds } from "./getCatalogOwnerIds";
 import { selectAccountCatalog } from "@/lib/supabase/account_catalogs/selectAccountCatalog";
 import { selectCatalogRecordingPage } from "@/lib/supabase/catalog_songs/selectCatalogRecordingPage";
@@ -10,8 +10,8 @@ import { selectLatestCatalogStreamRun } from "@/lib/supabase/catalog_stream_runs
 import { compareSpotifyDailyStreams } from "./compareSpotifyDailyStreams";
 
 /** Read source-reported calendar-day streams, keeping provider identities and missing dates separate. */
-export async function getCatalogStreams(accountId: string, input: CatalogPlaycountHistoryQuery) {
-  const parsed = validateCatalogPlaycountHistoryQuery(input);
+export async function getCatalogStreams(accountId: string, input: CatalogStreamHistoryQuery) {
+  const parsed = validateCatalogStreamHistoryQuery(input);
   if (!parsed.success) return { error: "Invalid stream history query", status: 400 } as const;
   const q = parsed.data;
   const boundary = Date.parse(q.since);

@@ -1,5 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { catalogPlaycountHistoryQuerySchema } from "@/lib/catalog/validateCatalogPlaycountHistoryQuery";
+import { catalogStreamHistoryQuerySchema } from "@/lib/catalog/validateCatalogStreamHistoryQuery";
 import { catalogStreamTrackingSchema } from "@/lib/catalog/validateCatalogStreamTracking";
 import { getCatalogStreams } from "@/lib/catalog/getCatalogStreams";
 import { manageCatalogStreamTracking } from "@/lib/catalog/manageCatalogStreamTracking";
@@ -14,8 +14,8 @@ export function registerCatalogStreamsTools(server: McpServer): void {
     "get_catalog_streams",
     {
       description:
-        "Read saved Luminate worldwide daily stream totals across reporting DSPs for an accessible catalog. Not Spotify-only. Compare complete equal periods with since (current period start) and days (1–31); page until has_more is false. Missing dates and recording identity changes suppress growth. Includes latest collection attempt/coverage and retrieval timestamps. No provider requests. Summaries are page-scoped and current-membership only.",
-      inputSchema: catalogPlaycountHistoryQuerySchema,
+        "Read saved Luminate worldwide daily stream totals across reporting DSPs for an accessible catalog. Not Spotify-only. Compare complete equal periods with since (current period start) and days (1–366); page until has_more is false. Missing dates and recording identity changes suppress growth. Includes latest collection attempt/coverage and retrieval timestamps. No provider requests. Summaries are page-scoped and current-membership only.",
+      inputSchema: catalogStreamHistoryQuerySchema,
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async (input, extra) => {
