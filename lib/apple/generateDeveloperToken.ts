@@ -6,7 +6,7 @@ const TOKEN_TTL_SECONDS = 3600;
 /** Re-mint this far ahead of expiry so an in-flight request never carries a dead token. */
 const REFRESH_MARGIN_SECONDS = 300;
 
-let cached: { token: string; expiresAt: number } | null = null;
+const tokens = new Map<string, { token: string; expiresAt: number }>();
 
 const base64url = (input: string | Buffer) => Buffer.from(input).toString("base64url");
 
@@ -46,11 +46,17 @@ function normalizePem(value: string): string {
  * filesystem to read a `.p8` from), `APPLE_MUSIC_KEY_ID`, and
  * `APPLE_MUSIC_TEAM_ID`.
  *
+ * @param options - Optional web origin and shorter lifetime; catalog defaults remain unchanged.
  * @returns A signed developer token, reused until it nears expiry.
  * @throws If any of the three credentials is missing.
  */
-export function generateDeveloperToken(): string {
+export function generateDeveloperToken(
+  options: { origin?: string[]; ttlSeconds?: number } = {},
+): string {
   const now = Math.floor(Date.now() / 1000);
+  const ttl = options.ttlSeconds ?? TOKEN_TTL_SECONDS;
+  const cacheKey = JSON.stringify(options);
+  const cached = tokens.get(cacheKey);
 
   if (cached && cached.expiresAt - REFRESH_MARGIN_SECONDS > now) {
     return cached.token;
@@ -59,11 +65,18 @@ export function generateDeveloperToken(): string {
   const privateKey = createPrivateKey(normalizePem(requireEnv("APPLE_MUSIC_PRIVATE_KEY")));
   const keyId = requireEnv("APPLE_MUSIC_KEY_ID");
   const teamId = requireEnv("APPLE_MUSIC_TEAM_ID");
-  const expiresAt = now + TOKEN_TTL_SECONDS;
+  const expiresAt = now + ttl;
 
   const signingInput = [
     base64url(JSON.stringify({ alg: "ES256", kid: keyId })),
-    base64url(JSON.stringify({ iss: teamId, iat: now, exp: expiresAt })),
+    base64url(
+      JSON.stringify({
+        iss: teamId,
+        iat: now,
+        exp: expiresAt,
+        ...(options.origin ? { origin: options.origin } : {}),
+      }),
+    ),
   ].join(".");
 
   const signature = cryptoSign("sha256", Buffer.from(signingInput), {
@@ -72,7 +85,7 @@ export function generateDeveloperToken(): string {
   });
 
   const token = `${signingInput}.${base64url(signature)}`;
-  cached = { token, expiresAt };
+  tokens.set(cacheKey, { token, expiresAt });
 
   return token;
 }
