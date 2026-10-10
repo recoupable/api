@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
+import { getCatalogStreams } from "../getCatalogStreams";
 import { manageCatalogStreamTracking } from "../manageCatalogStreamTracking";
 import { catalogStreamsHandler } from "../catalogStreamsHandler";
 vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
@@ -61,6 +62,30 @@ describe("catalog streams HTTP", () => {
     );
     expect(r.status).toBe(400);
     expect(manageCatalogStreamTracking).not.toHaveBeenCalled();
+  });
+  it("accepts a year of saved stream history with bounded pagination", async () => {
+    const r = await catalogStreamsHandler(
+      new NextRequest("https://local/api?since=2025-01-01&days=366"),
+      id,
+      "history",
+    );
+    expect(r.status).toBe(200);
+    expect(getCatalogStreams).toHaveBeenCalledWith("derived-account", {
+      catalog_id: id,
+      since: "2025-01-01",
+      days: 366,
+      page: 1,
+      limit: 25,
+    });
+  });
+  it("rejects periods above one year before reading history", async () => {
+    const r = await catalogStreamsHandler(
+      new NextRequest("https://local/api?since=2025-01-01&days=367"),
+      id,
+      "history",
+    );
+    expect(r.status).toBe(400);
+    expect(getCatalogStreams).not.toHaveBeenCalled();
   });
   it("rejects duplicate history parameters", async () => {
     const r = await catalogStreamsHandler(

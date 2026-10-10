@@ -92,6 +92,46 @@ describe("catalog daily streams", () => {
       data: { platform: "all_dsps", recordings: [{ state: "incomplete", current_streams: null }] },
     });
   });
+  it("compares complete equal 366-day periods without changing collection", async () => {
+    const boundary = Date.parse("2024-01-01T00:00:00Z");
+    const day = 86400000;
+    vi.mocked(selectCatalogStreamObservations).mockResolvedValue(
+      Array.from({ length: 732 }, (_, index) => ({
+        date: new Date(boundary + (index - 366) * day).toISOString().slice(0, 10),
+        streams: index < 366 ? 1 : 3,
+        provider_recording_id: "MR1",
+        retrieved_at: "2025-01-03",
+        run_id: "run",
+      })) as never,
+    );
+    const result = await getCatalogStreams("account", {
+      catalog_id: catalog,
+      since: "2024-01-01",
+      days: 366,
+      page: 1,
+      limit: 25,
+    });
+    expect(selectCatalogStreamObservations).toHaveBeenCalledWith({
+      catalogId: catalog,
+      isrc: "USAAA2400001",
+      since: "2022-12-31",
+      until: "2025-01-01",
+    });
+    expect(result).toMatchObject({
+      data: {
+        periods: { days: 366 },
+        recordings: [
+          {
+            state: "comparable",
+            previous_streams: 366,
+            current_streams: 1098,
+            percentage_growth: 200,
+          },
+        ],
+      },
+    });
+    expect(startCatalogStreamRun).not.toHaveBeenCalled();
+  });
   it("uses latest correction and preserves missing days", async () => {
     vi.mocked(selectCatalogStreamObservations).mockResolvedValue([
       { date: "2026-09-02", streams: 3, provider_recording_id: "MR1", retrieved_at: "2026-09-04" },
