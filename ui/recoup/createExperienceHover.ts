@@ -6,7 +6,8 @@ export function createExperienceHover(container: HTMLElement, openFeature: (id: 
   const panel = document.createElement("div");
   panel.className = "experience-hover";
   panel.hidden = true;
-  panel.setAttribute("role", "region");
+  panel.setAttribute("role", "button");
+  panel.tabIndex = 0;
   document.body.append(panel);
   let timer: ReturnType<typeof setTimeout>;
   let current: HTMLElement | null = null;
@@ -33,8 +34,8 @@ export function createExperienceHover(container: HTMLElement, openFeature: (id: 
     if (!feature) return;
     hide();
     current = card;
-    panel.setAttribute("aria-label", `${feature.title} preview`);
-    panel.innerHTML = `<div class="hover-thumbnail">${feature.video ? `<video muted loop playsinline src="${escapeHtml(feature.video)}" aria-hidden="true"></video>` : ""}<div class="hover-image-shade"></div><span class="hover-category">${escapeHtml(feature.category)}</span><h3>${escapeHtml(feature.title)}</h3></div><div class="hover-information"><p>${escapeHtml(feature.description)}</p><div class="hover-actions"><button class="hover-start">Start experience <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div></div>`;
+    panel.setAttribute("aria-label", `Start ${feature.title}`);
+    panel.innerHTML = `<div class="hover-thumbnail">${feature.video ? `<video muted loop playsinline src="${escapeHtml(feature.video)}" aria-hidden="true"></video>` : ""}<div class="hover-image-shade"></div><span class="hover-category">${escapeHtml(feature.category)}</span><h3>${escapeHtml(feature.title)}</h3></div><div class="hover-information"><p>${escapeHtml(feature.description)}</p></div>`;
     const rect = card.getBoundingClientRect();
     const width = Math.min(rect.width * 1.35, 500, window.innerWidth - 32);
     panel.style.width = `${width}px`;
@@ -78,7 +79,7 @@ export function createExperienceHover(container: HTMLElement, openFeature: (id: 
       if (!matchMedia("(prefers-reduced-motion: reduce)").matches)
         void video.play().catch(() => {});
     }
-    panel.querySelector<HTMLButtonElement>(".hover-start")!.onclick = () => {
+    panel.onclick = () => {
       hide();
       openFeature(feature.id);
     };
@@ -126,6 +127,11 @@ export function createExperienceHover(container: HTMLElement, openFeature: (id: 
     },
     { passive: false },
   );
+  panel.addEventListener("keydown", event => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    panel.click();
+  });
   panel.addEventListener("pointerenter", cancelTimer);
   panel.addEventListener("pointerleave", scheduleHide);
   panel.addEventListener("focusin", cancelTimer);
