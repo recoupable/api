@@ -39,6 +39,11 @@ export interface ReleaseCaseReview {
   policy_version: string;
   state: "saved" | "unavailable";
   stale: boolean | null;
-  snapshot: Omit<ReleaseCaseProjection, "latest_review"> | null;
+  /** Immutable; reviews saved before `release_format` was projected do not contain it. */
+  snapshot:
+    | (Omit<ReleaseCaseProjection, "latest_review" | "release_format"> & {
+        release_format?: ReleaseFormatObservation;
+      })
+    | null;
   note: string | null;
 }

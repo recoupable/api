@@ -1,6 +1,6 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import { contextOperationSchema, processContextOperation } from "../processContextOperation";
-import type { ReleaseCaseProjection } from "../releaseCaseTypes";
+import type { ReleaseCaseProjection, ReleaseCaseReview } from "../releaseCaseTypes";
 import type { ReleaseFormatObservation } from "../releaseFormatTypes";
 // Isolate module initialization from hosted Supabase credentials; tests inject authorization.
 vi.mock("../authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));
@@ -95,6 +95,15 @@ describe("release format observation", () => {
     expectTypeOf<ReleaseFormatObservation["physical_format"]>().toEqualTypeOf<"unknown">();
     expectTypeOf<ReleaseFormatObservation["format_state"]>().toEqualTypeOf<
       "single" | "album" | "compilation" | "unknown"
+    >();
+  });
+  it("types saved review snapshots from before the format projection without release_format", () => {
+    // Snapshots are immutable; reviews saved before the migration never contained the field.
+    const { release_format: _omitted, latest_review: _latest, ...legacy } = projection;
+    const snapshot: ReleaseCaseReview["snapshot"] = legacy;
+    expect(snapshot).not.toHaveProperty("release_format");
+    expectTypeOf<NonNullable<ReleaseCaseReview["snapshot"]>["release_format"]>().toEqualTypeOf<
+      ReleaseFormatObservation | undefined
     >();
   });
   it("rejects client-supplied format fields on read_release_case", () => {
