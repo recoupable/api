@@ -244,3 +244,137 @@
 .experience-row {
   scroll-snap-type: none;
 }
+
+/* Artwork-led cards with details revealed on hover or keyboard focus. */
+:root {
+  --experience-overlay: rgba(0, 0, 0, 0.84);
+  --experience-on-art: #fff;
+}
+.experience-row {
+  grid-auto-columns: calc((100% - 48px) / 2.5);
+  padding-block: 12px 20px;
+}
+.experience-row .card {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 16px;
+  isolation: isolate;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+.experience-row .card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(to bottom, transparent 28%, var(--experience-overlay) 100%);
+  pointer-events: none;
+}
+.experience-row .card video,
+.experience-row .card .art,
+.experience-row .card .media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
+.experience-row .card-category,
+.experience-row .preview-label,
+.experience-row .card-arrow {
+  display: none;
+}
+.experience-row .card-title {
+  position: absolute;
+  z-index: 2;
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  margin: 0;
+  color: var(--experience-on-art);
+  font-size: clamp(24px, 2.3vw, 34px);
+  line-height: 1.08;
+  letter-spacing: -0.8px;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  transition: transform 180ms ease;
+}
+.experience-row .card-description {
+  position: absolute;
+  z-index: 2;
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  margin: 0;
+  color: var(--experience-on-art);
+  font-size: 15px;
+  line-height: 1.4;
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 180ms ease,
+    transform 180ms ease;
+}
+.experience-row .card-description::after {
+  content: "Start experience ↗";
+  display: block;
+  margin-top: 12px;
+  font-weight: 600;
+}
+@media (hover: hover) {
+  .experience-row .card:hover {
+    transform: scale(1.025);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  }
+  .experience-row .card:hover .card-title {
+    transform: translateY(-90px);
+  }
+  .experience-row .card:hover .card-description {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.experience-row .card:focus-visible .card-title {
+  transform: translateY(-90px);
+}
+.experience-row .card:focus-visible .card-description {
+  opacity: 1;
+  transform: translateY(0);
+}
+@media (max-width: 900px) {
+  .experience-row {
+    grid-auto-columns: calc((100% - 24px) / 1.5);
+  }
+}
+@media (max-width: 600px) {
+  .experience-row {
+    grid-auto-columns: 86%;
+  }
+  .experience-row .card {
+    aspect-ratio: 4 / 3;
+  }
+  .experience-row .card-title,
+  .experience-row .card-description {
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+  }
+}
+@media (hover: none) {
+  .experience-row .card-title {
+    transform: translateY(-90px);
+  }
+  .experience-row .card-description {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .experience-row .card,
+  .experience-row .card-title,
+  .experience-row .card-description {
+    transition: none;
+  }
+}
