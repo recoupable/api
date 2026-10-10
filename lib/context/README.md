@@ -277,3 +277,13 @@ withdrawal, replay and history behavior applies.
 
 This requires the database company-assessment purpose migration before API release.
 Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
+
+### Artist research freshness and reuse planning
+
+Implemented + fixture-tested; not dispatched, not paid, not deployed. Three deterministic, model-free, database-free helpers in `lib/context/enrichment/` prepare the incremental artist-research path for #2129 without changing the existing `artist-research-v1` module, the recorded planner, Sites research or any RPC:
+
+- `normalizeContextResearchSources` turns raw search results into at most 20 underlying stories: https-only canonical URLs (fragments, credentials and tracking parameters removed), reduced-precision publication dates (`day`, `month`, `year` or `unknown`, never guessed; `last_updated` is a labelled fallback), the caller-supplied `retrievedAt`, identical title+snippet copies collapsed into one `storyKey` with every copy URL listed, and a `scope` that separates focal-artist, collaborator-only and unattributed snippets by whole-name match only. Snippet text is carried as data; nothing in it is interpreted.
+- `planContextArtistResearchRefresh` decides `reuse`, `collect` or `blocked` from the prior accepted research (`fresh`, `stale` after `maxAgeDays`, default 90, or `withdrawn`) and the normalized candidates, and reports the budget it would spend: at most one search call and one model call, zero for reuse or blocked. A failed bounded search reuses fresh prior research or blocks; it never retries. Collaborator-only evidence alone never triggers a paid call. `maxModelCalls: 0` blocks a collect so the CE07 spending gate can refuse before any provider call.
+- `mergeContextArtistResearchClaims` keeps every prior claim verbatim with its result/version, source, story, date precision and kind (`unclassified` until the recipe supplies one), marks new claims, and counts corroboration by distinct underlying stories so syndicated copies confirm a claim once. Conflicting claims are retained side by side; nothing is rewritten or dropped.
+
+Not done here: dispatching `artist_research` through the recorded planner, persisting `published_at`/`retrieved_at` on source versions, skipping an identical search when prior research is fresh, near-duplicate (non-identical) story detection, and any HTTP/MCP action. Paid research still requires CE07 (#2123) and durable dispatch (#2122).
