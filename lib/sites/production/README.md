@@ -47,6 +47,8 @@ Example HTTP body for `PATCH /api/sites/{id}`:
 
 The saved draft retains internal evidence for review. Public responses already strip the entire production context and brand-world specification. Normal Sites credit checks, asset limits, concept gate and rendered review remain in force.
 
+Public serialization (`lib/sites/serializePublicSiteSnapshot.ts`) is an explicit allowlist: `name`, `artistName`, `releaseUrl`, `assets` (`url`, `name` and `type` only) and `design`. Any other key stored on a published snapshot, including saved brief and request IDs, evidence documents, gaps, creative direction, reviews, the brand-world specification, asset generation provenance or a field added later, is excluded by default rather than removed by name. Playback audio still reads the stored row, never the public copy.
+
 ## Concept selection contract
 
 PATCH `/api/sites/{id}` with `action: "concepts"`, current `revision`, optional `instruction` and `contextBriefId`; MCP uses `propose_site_concepts`. This may spend on context collection and one pitch call, but creates no assets, implementation or draft changes. Response: `{ concepts: { status, candidates, reason }, revision }`. Status is `ready`, `needs-context`, or `no-good-concept`.
