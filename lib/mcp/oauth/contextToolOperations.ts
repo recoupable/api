@@ -112,7 +112,8 @@ export const contextToolOperations = {
   },
   ingest_campaign_brief: {
     name: "import_music_campaign_brief",
-    description: "Save a structured music campaign brief as context.",
+    description:
+      "Save a structured music campaign brief as context, optionally naming channels and already-saved workspace subjects being promoted. Links are candidates, not ownership or rights; raw URLs and files are not accepted.",
     readOnly: false,
   },
   ingest_supporting_text: {
