@@ -1,6 +1,6 @@
-vi.mock("@/lib/sites/activity/limitSiteRequest", () => ({ limitSiteRequest: vi.fn() }));
 import { beforeEach, expect, it, vi } from "vitest";
 import { processPlayerOperation } from "../processPlayerOperation";
+vi.mock("@/lib/sites/activity/limitSiteRequest", () => ({ limitSiteRequest: vi.fn() }));
 const mocks = vi.hoisted(() => ({
   access: vi.fn(),
   artists: vi.fn(),

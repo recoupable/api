@@ -1,7 +1,7 @@
-export { playerPreflight as OPTIONS } from "@/lib/players/playerPreflight";
 import { recordListeningEvent } from "@/lib/players/recordListeningEvent";
 import { publicPlayerResponse } from "@/lib/players/publicPlayerResponse";
 import { z } from "zod";
+export { playerPreflight as OPTIONS } from "@/lib/players/playerPreflight";
 /**
  * Record reported SDK playback, never authoritative DSP stream totals.
  *

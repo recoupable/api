@@ -1,6 +1,6 @@
-export { playerPreflight as OPTIONS } from "@/lib/players/playerPreflight";
 import { exchangePlayerSpotify } from "@/lib/players/exchangePlayerSpotify";
 import { publicPlayerResponse } from "@/lib/players/publicPlayerResponse";
+export { playerPreflight as OPTIONS } from "@/lib/players/playerPreflight";
 /**
  * PKCE exchange and provider-verified artist fan capture.
  *

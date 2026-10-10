@@ -1,7 +1,7 @@
 import { z } from "zod";
-vi.mock("@/lib/sites/activity/limitSiteRequest", () => ({ limitSiteRequest: vi.fn() }));
 import { beforeEach, expect, it, vi } from "vitest";
 import { readPlayerFans } from "../readPlayerFans";
+vi.mock("@/lib/sites/activity/limitSiteRequest", () => ({ limitSiteRequest: vi.fn() }));
 const m = vi.hoisted(() => ({ access: vi.fn(), player: vi.fn(), fans: vi.fn() }));
 vi.mock("@/lib/sites/authorizeSiteWorkspace", () => ({ authorizeSiteWorkspace: m.access }));
 vi.mock("@/lib/supabase/release_players/selectReleasePlayer", () => ({
