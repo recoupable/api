@@ -17,11 +17,38 @@ function deps() {
       collectContextSocials(a, b, page, {
         access: async () => true,
         profiles: async () => [],
-        posts: async () => ({ posts: [], totalCount: 120 }),
+        posts: async () => ({ posts: [post], totalCount: 120 }),
+        media: async () => [mediaRow],
       }),
     ),
   };
 }
+const post = {
+  id: "p1",
+  post_url: "https://www.instagram.com/p/1",
+  updated_at: "2026-08-20T00:00:00+00:00",
+  views: null,
+  likes: 1,
+  comments: 0,
+  reposts: null,
+};
+const mediaRow = {
+  id: "p1",
+  caption: "studio week two",
+  published_at: "2026-08-20T00:00:00+00:00",
+  media: [
+    {
+      position: 0,
+      kind: "image",
+      provider_url: "https://cdn.example/1.jpg",
+      width: 1080,
+      height: 1350,
+      alt: null,
+      source: "apify_instagram",
+    },
+  ],
+  media_observed_at: "2026-10-10T12:00:00+00:00",
+};
 it("retains pages together and explicitly limits collection", async () => {
   const d = deps();
   await collectContextSocialEvidence(
@@ -46,6 +73,34 @@ it("retains pages together and explicitly limits collection", async () => {
       }),
     }),
   );
+});
+it("saves retained captions and media as reference-only provider references, never bytes", async () => {
+  const d = deps();
+  await collectContextSocialEvidence(
+    id,
+    id,
+    "request",
+    { subjectId: id, collectionVersion: "v1", maxPages: 1 },
+    d,
+  );
+  const call = d.rpc.mock.calls.find(c => c[0] === "complete_context_enrichment");
+  type Saved = { p_result: { content: { pages: { posts: unknown[] }[] } } };
+  const [, args] = call as unknown as [string, Saved];
+  const result = args.p_result;
+  const saved = result.content.pages[0].posts[0];
+  expect(saved).toMatchObject({
+    id: "p1",
+    caption: "studio week two",
+    published_at: "2026-08-20T00:00:00+00:00",
+    media: [expect.objectContaining({ provider_url: "https://cdn.example/1.jpg", kind: "image" })],
+    usage_status: "reference_only",
+    retained_bytes: null,
+    provider_url_status: "may_expire",
+  });
+  const serialized = JSON.stringify(result);
+  expect(serialized).not.toContain("base64");
+  expect(serialized).not.toContain("not returned by this stored-metrics query");
+  expect(serialized).toContain("no bytes retained");
 });
 it("checks workspace before reuse and makes no social read", async () => {
   const d = deps();

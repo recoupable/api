@@ -42,12 +42,26 @@ const profile = (username: string, extra: Record<string, unknown> = {}) => ({
   latestPosts: [
     {
       url: `https://www.instagram.com/p/${username}1`,
+      type: "Image",
+      caption: `first post by ${username} @friend #era`,
+      displayUrl: `https://cdn/${username}-p1.jpg`,
+      dimensionsWidth: 1080,
+      dimensionsHeight: 1350,
       timestamp: "2026-08-20T00:00:00.000Z",
       likesCount: 10,
       commentsCount: 2,
     },
   ],
   ...extra,
+});
+const imageEntry = (url: string) => ({
+  position: 0,
+  kind: "image",
+  provider_url: url,
+  width: 1080,
+  height: 1350,
+  alt: null,
+  source: "apify_instagram",
 });
 
 const artistPayload = {
@@ -149,6 +163,10 @@ describe("handleInstagramProfileScraperResults", () => {
         updated_at: "2026-08-20T00:00:00.000Z",
         likes: 10,
         comments: 2,
+        caption: "first post by alice @friend #era",
+        published_at: "2026-08-20T00:00:00.000Z",
+        media: [imageEntry("https://cdn/alice-p1.jpg")],
+        media_observed_at: expect.any(String),
       },
     ]);
     expect(upsertSocialPosts).toHaveBeenCalledWith([
@@ -174,6 +192,65 @@ describe("handleInstagramProfileScraperResults", () => {
 
     expect(upsertPosts).toHaveBeenCalledOnce();
     expect(handleInstagramProfileFollowUpRuns).not.toHaveBeenCalled();
+  });
+
+  it("retains carousel media references in order and never writes empty media over a legacy post", async () => {
+    mockDataset([
+      profile("alice", {
+        latestPosts: [
+          {
+            url: "https://www.instagram.com/p/alice-carousel",
+            type: "Sidecar",
+            caption: "tour recap",
+            timestamp: "2026-09-01T12:00:00.000Z",
+            displayUrl: "https://cdn/alice-c0.jpg",
+            likesCount: 3,
+            childPosts: [
+              { type: "Image", displayUrl: "https://cdn/alice-c0.jpg" },
+              { type: "Video", displayUrl: "https://cdn/alice-c1.jpg" },
+            ],
+          },
+          {
+            url: "https://www.instagram.com/p/alice-legacy",
+            timestamp: "2026-07-01T00:00:00.000Z",
+            likesCount: 1,
+          },
+        ],
+      }),
+    ]);
+
+    await handleInstagramProfileScraperResults(artistPayload);
+
+    const [rows] = vi.mocked(upsertPosts).mock.calls[0];
+    expect(rows[0]).toMatchObject({
+      post_url: "https://www.instagram.com/p/alice-carousel",
+      caption: "tour recap",
+      published_at: "2026-09-01T12:00:00.000Z",
+      media: [
+        expect.objectContaining({
+          position: 0,
+          kind: "image",
+          provider_url: "https://cdn/alice-c0.jpg",
+        }),
+        expect.objectContaining({
+          position: 1,
+          kind: "video",
+          provider_url: "https://cdn/alice-c1.jpg",
+        }),
+      ],
+    });
+    expect(rows[0].media_observed_at).toEqual(expect.any(String));
+    // No caption/media reported: the row carries no media keys at all, and
+    // upsertPosts writes it in a separate call from the carousel row (see
+    // upsertPosts.test.ts), so whatever an earlier scrape retained is kept.
+    expect(rows[1]).toEqual({
+      post_url: "https://www.instagram.com/p/alice-legacy",
+      updated_at: "2026-07-01T00:00:00.000Z",
+      published_at: "2026-07-01T00:00:00.000Z",
+      likes: 1,
+      comments: null,
+    });
+    expect(JSON.stringify(rows)).not.toContain("base64");
   });
 
   it("follow-up failure is logged, never thrown", async () => {
