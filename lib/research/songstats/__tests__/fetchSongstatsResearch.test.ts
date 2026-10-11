@@ -188,6 +188,100 @@ describe("fetchSongstatsResearch", () => {
     });
   });
 
+  it("maps artist albums through catalog and strips noisy titles when primary", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: {
+        catalog: [
+          { title: "Take Care", songstats_track_id: "alb_1" },
+          { title: "Headlines (Remix)", songstats_track_id: "alb_2" },
+        ],
+      },
+    });
+
+    const result = await fetchSongstatsResearch("/artist/artist_1/albums", {
+      isPrimary: "true",
+    });
+
+    expect(result).toEqual({
+      status: 200,
+      data: [{ title: "Take Care", songstats_track_id: "alb_1", id: "alb_1" }],
+    });
+  });
+
+  it("maps artist albums without title filter when is_primary=false", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: {
+        catalog: [
+          { title: "Take Care", songstats_track_id: "alb_1" },
+          { title: "Headlines (Remix)", songstats_track_id: "alb_2" },
+        ],
+      },
+    });
+
+    const result = await fetchSongstatsResearch("/artist/artist_1/albums", {
+      isPrimary: "false",
+    });
+
+    expect(fetchSongstats).toHaveBeenCalledWith("/artists/catalog", {
+      songstats_artist_id: "artist_1",
+      is_primary: "false",
+      isPrimary: "false",
+    });
+    expect(result).toEqual({
+      status: 200,
+      data: [
+        { title: "Take Care", songstats_track_id: "alb_1", id: "alb_1" },
+        { title: "Headlines (Remix)", songstats_track_id: "alb_2", id: "alb_2" },
+      ],
+    });
+  });
+
+  it("defaults is_primary=true on album routes when query is omitted", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: { catalog: [] },
+    });
+
+    await fetchSongstatsResearch("/artist/artist_1/albums");
+
+    expect(fetchSongstats).toHaveBeenCalledWith("/artists/catalog", {
+      songstats_artist_id: "artist_1",
+      is_primary: "true",
+      isPrimary: "true",
+    });
+  });
+
+  it("maps artist tracks to top_tracks instead of full catalog", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: {
+        data: [
+          {
+            source: "spotify",
+            top_tracks: [
+              { title: "God's Plan", songstats_track_id: "tr_1" },
+              { title: "Nice For What feat. Lil Wayne", songstats_track_id: "tr_2" },
+            ],
+          },
+        ],
+      },
+    });
+
+    const result = await fetchSongstatsResearch("/artist/artist_1/tracks");
+
+    expect(fetchSongstats).toHaveBeenCalledWith("/artists/top_tracks", {
+      songstats_artist_id: "artist_1",
+      source: "spotify",
+      metric: "popularity",
+    });
+    expect(result).toEqual({
+      status: 200,
+      data: [{ title: "God's Plan", songstats_track_id: "tr_1", id: "tr_1" }],
+    });
+  });
+
   it("maps past artist playlists to top_playlists with scope=total", async () => {
     vi.mocked(fetchSongstats).mockResolvedValue({
       status: 200,
