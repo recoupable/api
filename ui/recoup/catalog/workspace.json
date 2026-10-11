@@ -21,7 +21,7 @@
   },
   {
     "id": "check-release-metadata",
-    "title": "Check my release metadata",
+    "title": "Check release metadata",
     "category": "Promote",
     "art": "check-release-metadata",
     "description": "Compare release details across your distributor export and available listings, with exact discrepancies to review.",
@@ -42,7 +42,7 @@
   },
   {
     "id": "import-catalog",
-    "title": "Import my catalog",
+    "title": "Import a catalog",
     "category": "Catalog",
     "art": "import-catalog",
     "description": "Organize a catalog spreadsheet into releases and recordings, with duplicates and uncertain matches flagged.",
@@ -62,7 +62,7 @@
   },
   {
     "id": "check-song-credits",
-    "title": "Check my song credits",
+    "title": "Check song credits",
     "category": "Catalog",
     "art": "check-song-credits",
     "description": "Compare your song’s contributor credits across supplied documents and available listings, with gaps and conflicts flagged.",
@@ -83,7 +83,7 @@
   },
   {
     "id": "explain-music-contract",
-    "title": "Explain this music contract",
+    "title": "Explain a music contract",
     "category": "Catalog",
     "art": "explain-music-contract",
     "description": "Understand the rights, payment terms, obligations, and questions raised by your music agreement.",
@@ -103,7 +103,7 @@
   },
   {
     "id": "organize-publishing",
-    "title": "Organize my publishing",
+    "title": "Organize publishing records",
     "category": "Catalog",
     "art": "organize-publishing",
     "description": "Organize compositions, writers, publishers, shares, and registration records, with missing details flagged.",

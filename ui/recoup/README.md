@@ -8,6 +8,10 @@ All 30 workflow cards are organized into looping horizontal sections. Rows recyc
 
 Execution belongs to the host agent and existing Recoup skills/tools. Skill names are hints, not a skill installation mechanism. Install the Recoup skills plugin alongside the MCP connection. Tool/skill availability and missing inputs must be checked in the conversation. This version does not run generation inside the gallery, persist projects, upload files, add file handlers, or alter consent. Files are attached in the host conversation. Existing limited-scope connections remain limited; opening the library does not expand them.
 
+## Card naming
+
+Use sentence-case action titles with natural wording and no fixed word count. Use “Create” for generated assets and specific task verbs for research, comparisons, checks, and catalog management. Name the actual task or output, rather than a branded metaphor. Keep stable IDs and skill mappings independent of display names. Existing preview films may contain their original titles until their media is refreshed; changing a catalog title does not edit text baked into a video.
+
 ## Dependency boundary
 
 The browser SDKs live in the private `@recoup/explore-ui` workspace. The API uses the SDK version supported by its existing MCP adapter; it registers standard UI resource/tool metadata directly. Browser-only SDK upgrades do not force a change to the shared API transport.

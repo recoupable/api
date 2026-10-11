@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { buildWorkflowPrompt } from "../buildWorkflowPrompt";
 const feature = {
-  title: "Make cover art",
+  title: "Create cover art",
   skill: "recoup-content-make-graphics",
   mode: "cover",
   outputs: ["Square cover"],
