@@ -22,6 +22,7 @@ describe("buildAccountCreditsResponse plan fields", () => {
       plan: "starter",
       task_limit: 3,
       min_cadence_minutes: 1440,
+      analyze_limit: null,
       timestamp: "2026-08-01T00:00:00.000Z",
     });
   });
@@ -33,6 +34,7 @@ describe("buildAccountCreditsResponse plan fields", () => {
       plan: "free",
       task_limit: 1,
       min_cadence_minutes: 10080,
+      analyze_limit: 5,
     });
     expect(buildAccountCreditsResponse({ creditsUsage: usage(0), plan: "pro" })).toMatchObject({
       total_credits: PRO_CREDITS,
@@ -40,6 +42,7 @@ describe("buildAccountCreditsResponse plan fields", () => {
       plan: "pro",
       task_limit: null,
       min_cadence_minutes: 60,
+      analyze_limit: null,
     });
   });
 });
