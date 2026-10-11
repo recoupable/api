@@ -28,7 +28,7 @@ export function registerRecoupExtension(server: McpServer) {
   server.registerTool(
     "open_recoup_workflows",
     {
-      title: "Open Recoup workflows",
+      title: "Recoup",
       description:
         "Open Recoup's visual music workflow library. Explore release planning, cover art, fan experiences, lyric videos, song hooks and artist research, then start a brief in the conversation.",
       inputSchema: {},
