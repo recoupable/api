@@ -14,7 +14,10 @@ export function registerRecoupExtension(server: McpServer) {
           ui: {
             csp: {
               connectDomains: [],
-              resourceDomains: ["https://d8j0ntlcm91z4.cloudfront.net"],
+              resourceDomains: [
+                "https://d8j0ntlcm91z4.cloudfront.net",
+                "https://api.recoupable.dev",
+              ],
             },
           },
           "openai/ui": {

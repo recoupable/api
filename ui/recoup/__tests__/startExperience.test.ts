@@ -47,3 +47,17 @@ it("shows failure feedback and allows retry", async () => {
   await open("cover");
   expect(status.textContent).toContain("sent");
 });
+it.each([
+  ["add-release", "recoup-release-add-release"],
+  ["check-release-metadata", "recoup-release-check-metadata"],
+  ["import-catalog", "recoup-catalog-import-catalog"],
+  ["check-song-credits", "recoup-song-check-credits"],
+  ["explain-music-contract", "recoup-catalog-explain-contract"],
+  ["organize-publishing", "recoup-catalog-organize-publishing"],
+])("hands %s to its corresponding skill", async (id, skill) => {
+  const { start } = elements();
+  const send = vi.fn().mockResolvedValue({});
+  await start(send)(id);
+  expect(send).toHaveBeenCalledOnce();
+  expect(send).toHaveBeenCalledWith(expect.stringContaining(skill));
+});

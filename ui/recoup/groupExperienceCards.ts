@@ -24,41 +24,40 @@ export function groupExperienceCards(container: HTMLElement) {
     section.innerHTML = `<div class="section-heading"><h3 id="section-${category}">${title}</h3></div><div class="experience-row" tabindex="0" role="region" aria-label="${title}"></div>`;
     const row = section.querySelector<HTMLElement>(".experience-row")!;
     const looping = matching.length > 1;
-    const cloneCard = (button: HTMLElement) => {
-      const clone = button.cloneNode(true) as HTMLElement;
-      clone.setAttribute("aria-hidden", "true");
-      clone.tabIndex = -1;
-      return clone;
-    };
-    const cycle = [...matching];
-    if (looping) {
-      while (cycle.length < 8) cycle.push(...matching.map(cloneCard));
-    }
-    const before = looping ? cycle.map(cloneCard) : [];
-    before.forEach(button => row.append(button));
-    cycle.forEach(button => row.append(button));
-    if (looping) cycle.map(cloneCard).forEach(button => row.append(button));
+    matching.forEach(button => row.append(button));
+    // One node per workflow. Keep one offscreen card before the viewport.
+    if (looping) row.prepend(matching[matching.length - 1]);
+    row.style.overflowAnchor = "none";
     let originX = 0;
     let originScroll = 0;
     let activePointer: number | null = null;
     let dragged = false;
-    let span = 0;
+    let stride = 0;
     const measureLoop = () => {
       if (!looping) return;
-      const nextSpan = matching[0].offsetLeft - before[0].offsetLeft;
-      if (nextSpan <= 0 || nextSpan === span) return;
-      const relativePosition = span ? (row.scrollLeft - span) / span : 0;
-      span = nextSpan;
-      row.scrollLeft = span * (1 + relativePosition);
+      const children = [...row.children] as HTMLElement[];
+      const nextStride = children[1].offsetLeft - children[0].offsetLeft;
+      if (nextStride <= 0 || nextStride === stride) return;
+      const relativePosition = stride ? row.scrollLeft / stride : 1;
+      stride = nextStride;
+      row.scrollLeft = stride * relativePosition;
       row.classList.add("has-more");
     };
     const wrapScroll = () => {
-      if (!span) return;
-      const position = row.scrollLeft;
-      const offset = position < span / 2 ? span : position >= span * 1.5 ? -span : 0;
-      if (!offset) return;
-      row.scrollLeft = position + offset;
-      originScroll += offset;
+      // Reordering offscreen nodes keeps their video decoder and listeners intact.
+      if (!stride || row.scrollWidth - row.clientWidth < stride * 1.5) return;
+      let position = row.scrollLeft;
+      while (position >= stride * 1.5) {
+        row.append(row.firstElementChild!);
+        position -= stride;
+        originScroll -= stride;
+      }
+      while (position < stride * 0.5) {
+        row.prepend(row.lastElementChild!);
+        position += stride;
+        originScroll += stride;
+      }
+      if (position !== row.scrollLeft) row.scrollLeft = position;
     };
     row.addEventListener("pointerdown", event => {
       if (event.pointerType !== "mouse" || event.button !== 0) return;
@@ -75,6 +74,7 @@ export function groupExperienceCards(container: HTMLElement) {
       row.setPointerCapture(event.pointerId);
       row.classList.add("dragging");
       row.scrollLeft = originScroll - distance;
+      wrapScroll();
       event.preventDefault();
     });
     const endDrag = () => {
@@ -95,6 +95,12 @@ export function groupExperienceCards(container: HTMLElement) {
       true,
     );
     row.addEventListener("dragstart", event => event.preventDefault());
+    row.addEventListener("keydown", event => {
+      if (event.target !== row || !["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+      event.preventDefault();
+      row.scrollLeft += event.key === "ArrowRight" ? stride : -stride;
+      wrapScroll();
+    });
     row.addEventListener("scroll", wrapScroll, { passive: true });
     const resizeObserver = new ResizeObserver(measureLoop);
     resizeObserver.observe(row);
