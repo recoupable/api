@@ -42,9 +42,18 @@ export type ValidatedSendEmailRequest = Omit<SendEmailBody, "to" | "subject"> & 
  * Validation outcome. Always carries `rawBody` — the request body as received —
  * so the handler can record it in `email_send_log` on both the rejected and the
  * accepted paths without re-reading the request.
+ *
+ * The rejected branch also carries `accountId` whenever one could be resolved,
+ * so an account-scoped `email_send_log` audit sees failures and not just
+ * successes. **It is the best-known account, not proof of authorization:** it is
+ * the authenticated account when auth succeeded and the request was rejected
+ * later (no recipient on file, recipient restriction), but the account the body
+ * *claimed* when auth itself failed — which is the case that matters, since an
+ * expired credential is exactly how a legitimate account's sends go missing from
+ * the audit (chat#1889). Never read it as evidence a caller held the account.
  */
 export type ValidateSendEmailResult =
-  | { rawBody: string; error: NextResponse }
+  | { rawBody: string; accountId?: string; error: NextResponse }
   | { rawBody: string; data: ValidatedSendEmailRequest };
 
 /**
@@ -83,7 +92,7 @@ export async function validateSendEmailBody(
 
   const authContext = await validateAuthContext(request, { accountId: result.data.account_id });
   if (authContext instanceof NextResponse) {
-    return { rawBody, error: authContext };
+    return { rawBody, accountId: result.data.account_id, error: authContext };
   }
 
   let to = result.data.to ?? [];
@@ -93,6 +102,7 @@ export async function validateSendEmailBody(
     if (to.length === 0) {
       return {
         rawBody,
+        accountId: authContext.accountId,
         error: NextResponse.json(
           { status: "error", error: "No email address found for the authenticated account." },
           { status: 400, headers: getCorsHeaders() },
@@ -108,6 +118,7 @@ export async function validateSendEmailBody(
   if (recipientCheck.allowed === false) {
     return {
       rawBody,
+      accountId: authContext.accountId,
       error: NextResponse.json(
         {
           status: "error",
