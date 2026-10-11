@@ -1,0 +1,124 @@
+[
+  {
+    "id": "add-release",
+    "title": "Add a release",
+    "category": "Promote",
+    "art": "add-release",
+    "description": "Add a release from a supported link or distributor export and review its details and ordered tracks.",
+    "skill": "recoup-release-add-release",
+    "mode": "add",
+    "outputs": [
+      "Release details",
+      "Ordered tracks",
+      "Missing information"
+    ],
+    "inputs": [
+      "Release link or export"
+    ],
+    "status": "Skill-backed concept",
+    "number": 25,
+    "video": "https://d8j0ntlcm91z4.cloudfront.net/user_2zdokGh7BDcXq7kUhDXHw7JGrCp/hf_20261011_181415_e04d4fd5-f683-4d4f-a801-05328ae2dd1e.mp4"
+  },
+  {
+    "id": "check-release-metadata",
+    "title": "Check my release metadata",
+    "category": "Promote",
+    "art": "check-release-metadata",
+    "description": "Compare release details across your distributor export and available listings, with exact discrepancies to review.",
+    "skill": "recoup-release-check-metadata",
+    "mode": "compare",
+    "outputs": [
+      "Field discrepancies",
+      "Source references",
+      "Correction status"
+    ],
+    "inputs": [
+      "Release",
+      "Distributor export or listing"
+    ],
+    "status": "Skill-backed concept",
+    "number": 26,
+    "video": "https://d8j0ntlcm91z4.cloudfront.net/user_2zdokGh7BDcXq7kUhDXHw7JGrCp/hf_20261011_181441_fa68ec51-c19d-4156-911c-0e8cd031e5a6.mp4"
+  },
+  {
+    "id": "import-catalog",
+    "title": "Import my catalog",
+    "category": "Catalog",
+    "art": "import-catalog",
+    "description": "Organize a catalog spreadsheet into releases and recordings, with duplicates and uncertain matches flagged.",
+    "skill": "recoup-catalog-import-catalog",
+    "mode": "import",
+    "outputs": [
+      "Organized catalog",
+      "Source mapping",
+      "Review queue"
+    ],
+    "inputs": [
+      "Catalog CSV or spreadsheet"
+    ],
+    "status": "Skill-backed concept",
+    "number": 27,
+    "video": "https://d8j0ntlcm91z4.cloudfront.net/user_2zdokGh7BDcXq7kUhDXHw7JGrCp/hf_20261011_181448_9bad1b53-2e7d-4759-866a-249ce2db0116.mp4"
+  },
+  {
+    "id": "check-song-credits",
+    "title": "Check my song credits",
+    "category": "Catalog",
+    "art": "check-song-credits",
+    "description": "Compare your song’s contributor credits across supplied documents and available listings, with gaps and conflicts flagged.",
+    "skill": "recoup-song-check-credits",
+    "mode": "review",
+    "outputs": [
+      "Contributor comparison",
+      "Credit gaps",
+      "Source references"
+    ],
+    "inputs": [
+      "Song",
+      "Credit documents or listings"
+    ],
+    "status": "Skill-backed concept",
+    "number": 28,
+    "video": "https://d8j0ntlcm91z4.cloudfront.net/user_2zdokGh7BDcXq7kUhDXHw7JGrCp/hf_20261011_181458_4ec7d513-3997-41bf-a1e0-18097cfc9eeb.mp4"
+  },
+  {
+    "id": "explain-music-contract",
+    "title": "Explain this music contract",
+    "category": "Catalog",
+    "art": "explain-music-contract",
+    "description": "Understand the rights, payment terms, obligations, and questions raised by your music agreement.",
+    "skill": "recoup-catalog-explain-contract",
+    "mode": "explain",
+    "outputs": [
+      "Clause explanations",
+      "Key terms",
+      "Questions to resolve"
+    ],
+    "inputs": [
+      "Music agreement"
+    ],
+    "status": "Skill-backed concept",
+    "number": 29,
+    "video": "https://d8j0ntlcm91z4.cloudfront.net/user_2zdokGh7BDcXq7kUhDXHw7JGrCp/hf_20261011_181503_af377d0a-3914-43c4-87e6-dab29fc4194f.mp4"
+  },
+  {
+    "id": "organize-publishing",
+    "title": "Organize my publishing",
+    "category": "Catalog",
+    "art": "organize-publishing",
+    "description": "Organize compositions, writers, publishers, shares, and registration records, with missing details flagged.",
+    "skill": "recoup-catalog-organize-publishing",
+    "mode": "organize",
+    "outputs": [
+      "Composition inventory",
+      "Recorded shares",
+      "Registration gaps"
+    ],
+    "inputs": [
+      "Work lists, split sheets, or registration exports"
+    ],
+    "status": "Skill-backed concept",
+    "number": 30,
+    "video": "https://api.recoupable.dev/mcp/organize-publishing.mp4"
+  }
+]

@@ -34,7 +34,10 @@ describe("Recoup extension protocol", () => {
       expect(resource.contents[0].mimeType).toBe("text/html;profile=mcp-app");
       expect(resource.contents[0].text).toContain("Make cover art");
       expect(resource.contents[0]._meta?.ui).toMatchObject({
-        csp: { connectDomains: [], resourceDomains: ["https://d8j0ntlcm91z4.cloudfront.net"] },
+        csp: {
+          connectDomains: [],
+          resourceDomains: ["https://d8j0ntlcm91z4.cloudfront.net", "https://api.recoupable.dev"],
+        },
       });
     } finally {
       await client.close();

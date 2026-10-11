@@ -4,7 +4,7 @@ A real MCP Apps UI served by the existing authenticated `/mcp` route. The `open_
 
 ## Experience
 
-All 24 workflow cards are visible immediately and open a focused brief form. Category filters and search across titles/descriptions/outputs narrow the full library without a show-more step. Search trims surrounding spaces and combines with the selected category; an empty state resets both. Preview films can be paused, respect reduced motion, pause behind dialogs, and fall back to readable artwork if loading fails. “Continue in chat” sends the brief, selected skill, mode and intended outputs through the MCP Apps bridge. It uses OpenAI's message extension when negotiated and standard `ui/message` otherwise. A standalone browser preview clearly identifies itself and offers a copy fallback instead of pretending to execute work. Briefs remain in memory per workflow for the current page session, including after closing with Escape or clicking the backdrop. No brief is persisted to browser storage. Pending/sent state survives reopening and blocks duplicate submissions; successful sends offer a new brief or a return to the library. Editing after a failed send clears stale recovery controls.
+All 30 workflow cards are organized into looping horizontal sections. Hover expands a card to show its description; clicking the thumbnail or expanded card sends the selected workflow directly into the host conversation. The agent uses existing context and asks for missing essentials. Pending sends block duplicate clicks and failures allow retry. Preview films respect reduced motion and provide readable artwork when loading fails. Files are attached in the host conversation.
 
 Execution belongs to the host agent and existing Recoup skills/tools. Skill names are hints, not a skill installation mechanism. Install the Recoup skills plugin alongside the MCP connection. Tool/skill availability and missing inputs must be checked in the conversation. This version does not run generation inside the gallery, persist projects, upload files, add file handlers, or alter consent. Files are attached in the host conversation. Existing limited-scope connections remain limited; opening the library does not expand them.
 
@@ -19,14 +19,14 @@ The browser SDKs live in the private `@recoup/explore-ui` workspace. The API use
 - `node scripts/mcp-extension/build-host.mjs`: create a local SDK host harness at `ui/recoup/host.html`. Serve this directory with a loopback static server. The harness shows received messages; it does not send them to a model or remote service.
 - `pnpm dev`, `pnpm build`, `pnpm test` and the OAuth typecheck build the UI first. Rebuild after editing UI source during development.
 
-The 24 Higgsfield films are referenced by their HTTPS URLs; they are concept previews, not outputs generated from the current brief. They depend on that media host remaining available. The CSP allows only that media origin and no direct API connections. Do not put account files, tokens or private input data in this bundle.
+The original and five new Higgsfield films are referenced by their HTTPS URLs; the publishing card uses an authored eight-second motion graphic served from `/mcp/organize-publishing.mp4`. All films are concept previews, not outputs generated from the current brief. External films depend on their media host remaining available. The CSP allows the existing media origin and the Recoup API origin and no direct API connections. Do not put account files, tokens or private input data in this bundle.
 
 ## Host verification after deployment
 
 1. Connect the deployed `/mcp` endpoint with normal Recoup OAuth, or refresh an existing connection's tool metadata.
 2. Confirm `open_recoup_workflows`, `ui://recoup/explore.html`, and both global/thread entrypoints are discovered.
-3. Open Recoup from the sidebar and a conversation panel. Check light/dark and narrow widths, video playback/pause, reduced motion, keyboard navigation, search and the brief dialog.
-4. Send a harmless brief. Verify it reaches the correct conversation and the agent resolves the intended installed skill. Check a send failure retains the brief and offers copying.
+3. Open Recoup from the sidebar and a conversation panel. Check light/dark and narrow widths, video playback/pause, reduced motion, keyboard navigation, looping rows and hover expansion.
+4. Click a card. Verify its request reaches the correct conversation and the agent resolves the intended installed skill. Check a send failure provides feedback and permits retry.
 5. Exercise a real authorized workflow with the required inputs and verify its actual output. Gallery handoff alone is not end-to-end generation verification.
 
 Local protocol and harness tests do not prove ChatGPT installation, native entrypoint display, or production workflow execution. Those checks require the deployed branch and a connected host.
