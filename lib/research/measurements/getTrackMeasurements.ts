@@ -19,7 +19,7 @@ export type GetTrackMeasurementsParams = {
 export type GetTrackMeasurementsResult = { data: unknown } | { error: string; status: number };
 
 const NO_DATA_ERROR =
-  "No measurements for this track yet — create a historical measurement-job to backfill it";
+  "No measurements for this track yet — create a current measurement job to capture it";
 
 /**
  * A track's measured series from the store, or — when `aggregate=run_rate` —

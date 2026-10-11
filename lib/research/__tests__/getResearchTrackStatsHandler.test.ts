@@ -30,10 +30,10 @@ describe("getResearchTrackStatsHandler", () => {
     expect(getTrackStatsApifyFirst).not.toHaveBeenCalled();
   });
 
-  it("returns 200 with the Songstats stats envelope on success", async () => {
+  it("returns 200 with the stats envelope on success", async () => {
     vi.mocked(validateGetResearchTrackStatsRequest).mockResolvedValue({
       accountId: "acc_1",
-      params: { isrc: "USQY51771120", source: "spotify" },
+      isrc: "USQY51771120",
     });
     vi.mocked(getTrackStatsApifyFirst).mockResolvedValue({
       data: {
@@ -54,7 +54,7 @@ describe("getResearchTrackStatsHandler", () => {
   it("maps an upstream error result to an error response", async () => {
     vi.mocked(validateGetResearchTrackStatsRequest).mockResolvedValue({
       accountId: "acc_1",
-      params: { isrc: "BADISRC", source: "spotify" },
+      isrc: "BADISRC",
     });
     vi.mocked(getTrackStatsApifyFirst).mockResolvedValue({
       error: "Request failed with status 404",

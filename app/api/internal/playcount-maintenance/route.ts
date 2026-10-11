@@ -7,8 +7,7 @@ export const revalidate = 0;
 
 /**
  * GET /api/internal/playcount-maintenance — Vercel Cron entrypoint that
- * drains the Songstats backfill queue (budget-gated) and re-runs due monthly
- * snapshots. Cron-only (CRON_SECRET bearer).
+ * re-runs due monthly snapshots. Cron-only (CRON_SECRET bearer).
  *
  * @param request - The incoming Next.js request.
  * @returns A NextResponse with the started run ids.

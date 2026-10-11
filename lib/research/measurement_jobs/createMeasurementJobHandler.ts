@@ -8,9 +8,7 @@ import { validateCreateMeasurementJobRequest } from "@/lib/research/measurement_
  * POST /api/research/measurement-jobs
  *
  * One async ingest resource. `source:"current"` captures present counts via the
- * snapshot pipeline (replaces `POST /api/research/snapshots`); `source:"historical"`
- * enqueues Songstats deep backfill ranked by all-time streams (idempotent —
- * already-backfilled songs are skipped). Returns 202.
+ * snapshot pipeline (replaces `POST /api/research/snapshots`). Returns 202.
  *
  * @param request - The incoming HTTP request.
  * @returns The JSON response.

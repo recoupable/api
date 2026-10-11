@@ -19,50 +19,43 @@ describe("validateGetResearchTrackHistoricStatsRequest", () => {
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }) as never,
     );
     const r = await validateGetResearchTrackHistoricStatsRequest(
-      new NextRequest("http://x/?isrc=USQY51771120&source=spotify"),
+      new NextRequest("http://x/?isrc=USQY51771120"),
     );
     expect((r as NextResponse).status).toBe(401);
   });
 
-  it("returns 400 when no track identifier is provided", async () => {
+  it("returns 400 when isrc is missing", async () => {
     const r = await validateGetResearchTrackHistoricStatsRequest(
       new NextRequest("http://x/?source=spotify"),
     );
     expect((r as NextResponse).status).toBe(400);
-    expect((await (r as NextResponse).json()).error).toContain("identifier");
+    expect((await (r as NextResponse).json()).error).toBe("isrc parameter is required");
   });
 
-  it("returns 400 when more than one identifier is provided (exactly one required)", async () => {
+  it("returns 400 when source is anything but spotify", async () => {
     const r = await validateGetResearchTrackHistoricStatsRequest(
-      new NextRequest("http://x/?isrc=USQY51771120&spotify_track_id=abc&source=spotify"),
+      new NextRequest("http://x/?isrc=USQY51771120&source=deezer"),
     );
     expect((r as NextResponse).status).toBe(400);
-    expect((await (r as NextResponse).json()).error).toContain("exactly one");
+    expect((await (r as NextResponse).json()).error).toBe("source must be spotify");
   });
 
-  it("returns 400 when source is missing", async () => {
+  it("returns accountId + isrc + the optional date window", async () => {
     const r = await validateGetResearchTrackHistoricStatsRequest(
-      new NextRequest("http://x/?isrc=USQY51771120"),
-    );
-    expect((r as NextResponse).status).toBe(400);
-    expect((await (r as NextResponse).json()).error).toBe("source parameter is required");
-  });
-
-  it("forwards identifier + source + the historic passthroughs on success", async () => {
-    const r = await validateGetResearchTrackHistoricStatsRequest(
-      new NextRequest(
-        "http://x/?isrc=USQY51771120&source=spotify&start_date=2024-06-09&end_date=2025-06-09&with_aggregates=true",
-      ),
+      new NextRequest("http://x/?isrc=USQY51771120&start_date=2024-06-09&end_date=2025-06-09"),
     );
     expect(r).toEqual({
       accountId: "acc_1",
-      params: {
-        isrc: "USQY51771120",
-        source: "spotify",
-        start_date: "2024-06-09",
-        end_date: "2025-06-09",
-        with_aggregates: "true",
-      },
+      isrc: "USQY51771120",
+      startDate: "2024-06-09",
+      endDate: "2025-06-09",
     });
+  });
+
+  it("omits the window keys when no dates are given", async () => {
+    const r = await validateGetResearchTrackHistoricStatsRequest(
+      new NextRequest("http://x/?isrc=USQY51771120"),
+    );
+    expect(r).toEqual({ accountId: "acc_1", isrc: "USQY51771120" });
   });
 });
