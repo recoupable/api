@@ -15,7 +15,7 @@ describe("Recoup extension protocol", () => {
     try {
       const { tools } = await client.listTools();
       const open = tools.find(tool => tool.name === "open_recoup_workflows");
-      expect(open?.title).toBe("Open Recoup workflows");
+      expect(open?.title).toBe("Recoup");
       expect(client.getServerVersion()?.icons).toEqual([
         {
           src: "https://api.recoupable.dev/recoup-extension-icon.svg",
