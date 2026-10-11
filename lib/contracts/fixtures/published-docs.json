@@ -1,0 +1,51 @@
+{
+  "evidence": "Copyable syntax only. URLs are placeholders; no provider, payment or customer workflow is exercised.",
+  "sourceHashes": {
+    "content/docs/source/api-reference/openapi/accounts.json": "f1bdfe7150f4bda12381a16c4a89da2322b6a871e204e1e1da48c87ed1b95a64",
+    "content/docs/source/api-reference/openapi/content.json": "ebe0ced0ee49d1394a5275e9cd57f451d27c2fd1d667b963c299a382ada87f5e",
+    "content/docs/source/api-reference/openapi/research.json": "320cfd7dac57be22a8e2da95f48f2888bbff8c3dfe5016cf0773c0a24201459d"
+  },
+  "examples": {
+    "image": {
+      "prompt": "Edit the lighting while preserving this artist.",
+      "image_urls": [
+        "https://example.com/artist.png"
+      ],
+      "num_images": 1
+    },
+    "video": {
+      "prompt": "Slow camera push with natural movement.",
+      "image_url": "https://example.com/artist.png",
+      "duration": 15,
+      "resolution": "768P"
+    },
+    "lipsync": {
+      "prompt": "The artist performs the supplied vocal phrase.",
+      "image_url": "https://example.com/artist.png",
+      "audio_url": "https://example.com/selected-clip.mp3",
+      "duration": 15
+    },
+    "topup": {
+      "credits": 2500000,
+      "successUrl": "https://chat.recoupable.dev/credits/success"
+    },
+    "headless": {
+      "messages": [
+        {
+          "id": "user-1",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "Summarize my next release."
+            }
+          ]
+        }
+      ]
+    },
+    "trackStats": {
+      "isrc": "USQY51771120",
+      "source": "spotify"
+    }
+  }
+}
