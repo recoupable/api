@@ -8,6 +8,8 @@ export interface TriggerCreateContentPayload {
   lipsync: boolean;
   /** Controls caption length: "none" skips captions, "short", "medium", or "long". */
   captionLength: "none" | "short" | "medium" | "long";
+  /** Which DSP logo to overlay on the video: "none", "spotify", or "apple". */
+  dsp: "none" | "spotify" | "apple";
   /** Whether to upscale image and video for higher quality. */
   upscale: boolean;
   /** GitHub repo URL so the task can fetch artist files. */
