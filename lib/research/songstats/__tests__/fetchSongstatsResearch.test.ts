@@ -43,6 +43,39 @@ describe("fetchSongstatsResearch", () => {
     expect((await fetchSongstatsResearch("/artist/spotify/spotify_1/get-ids")).data).toEqual(data);
   });
 
+  it.each(["", "   ", 42])("uses valid nested IDs when an outer ID is unusable: %s", async id => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: { id, artist_info: { songstats_artist_id: "artist_1" } },
+    });
+    expect((await fetchSongstatsResearch("/artist/spotify/spotify_1/get-ids")).data).toMatchObject({
+      id: "artist_1",
+    });
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: { id, track_info: { songstats_track_id: "track_1" } },
+    });
+    expect((await fetchSongstatsResearch("/track/spotify/spotify_1/get-ids")).data).toMatchObject({
+      id: "track_1",
+      songstats_track_ids: ["track_1"],
+    });
+  });
+
+  it.each(["", "   "])("does not export an unusable nested or lookup ID: %s", async id => {
+    vi.mocked(fetchSongstats).mockResolvedValue({ status: 200, data: { artist_info: { id } } });
+    expect(
+      (await fetchSongstatsResearch("/artist/spotify/spotify_1/get-ids")).data,
+    ).not.toHaveProperty("id");
+    vi.mocked(fetchSongstats).mockResolvedValue({ status: 200, data: { track_info: { id } } });
+    expect(
+      (await fetchSongstatsResearch("/track/spotify/spotify_1/get-ids")).data,
+    ).not.toHaveProperty("songstats_track_ids");
+    vi.mocked(fetchSongstats).mockResolvedValue({ status: 200, data: { id } });
+    expect(
+      (await fetchSongstatsResearch("/track/spotify/spotify_1/get-ids")).data,
+    ).not.toHaveProperty("songstats_track_ids");
+  });
+
   it("maps artist searches to SongStats artist search and keeps the public results family", async () => {
     vi.mocked(fetchSongstats).mockResolvedValue({
       status: 200,

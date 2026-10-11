@@ -6,7 +6,7 @@ import { isRecord } from "@/lib/research/songstats/isRecord";
  */
 export function normalizeTrackLookupObject(value: unknown): unknown {
   const record = normalizeTrackObject(value);
-  if (!isRecord(record) || typeof record.id !== "string") return record;
+  if (!isRecord(record) || typeof record.id !== "string" || !record.id.trim()) return record;
 
   return {
     ...record,

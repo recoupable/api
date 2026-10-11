@@ -12,10 +12,13 @@ export function normalizeTrackObject(value: unknown): unknown {
   const normalized = normalizeTrackRecord(record);
   if (!isRecord(record.track_info)) return normalized;
   const info = normalizeTrackRecord(record.track_info);
-  if (!isRecord(info) || typeof info.id !== "string") return normalized;
+  if (!isRecord(info) || typeof info.id !== "string" || !info.id.trim()) return normalized;
   return {
     ...record,
-    id: isRecord(normalized) ? (normalized.id ?? info.id) : info.id,
+    id:
+      isRecord(normalized) && typeof normalized.id === "string" && normalized.id.trim()
+        ? normalized.id
+        : info.id,
     track_info: info,
   };
 }

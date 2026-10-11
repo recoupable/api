@@ -11,10 +11,13 @@ export function normalizeArtistObject(value: unknown): unknown {
   const normalized = normalizeArtistRecord(record);
   if (!isRecord(record.artist_info)) return normalized;
   const info = normalizeArtistRecord(record.artist_info);
-  if (!isRecord(info) || typeof info.id !== "string") return normalized;
+  if (!isRecord(info) || typeof info.id !== "string" || !info.id.trim()) return normalized;
   return {
     ...record,
-    id: isRecord(normalized) ? (normalized.id ?? info.id) : info.id,
+    id:
+      isRecord(normalized) && typeof normalized.id === "string" && normalized.id.trim()
+        ? normalized.id
+        : info.id,
     artist_info: info,
   };
 }
