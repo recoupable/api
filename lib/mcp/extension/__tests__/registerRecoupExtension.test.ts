@@ -32,7 +32,7 @@ describe("Recoup extension protocol", () => {
       expect(result.structuredContent).toMatchObject({ title: "Recoup", version: 1 });
       const resource = await client.readResource({ uri: "ui://recoup/explore.html" });
       expect(resource.contents[0].mimeType).toBe("text/html;profile=mcp-app");
-      expect(resource.contents[0].text).toContain("Make cover art");
+      expect(resource.contents[0].text).toContain("Create cover art");
       expect(resource.contents[0]._meta?.ui).toMatchObject({
         csp: {
           connectDomains: [],
