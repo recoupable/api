@@ -1,0 +1,61 @@
+{
+  "description": "Golden valuation-band cases shared verbatim between recoupable/api (lib/catalog/computeValuationBand.ts) and recoupable/marketing (lib/valuation/computeCatalogValuation.ts). The two copies of this file must stay byte-identical, and each repo has a test asserting its implementation reproduces every case to the cent. If a test fails, the implementations have diverged: fix the code or update this fixture in BOTH repos in the same change. Formula: annualGross = (totalStreams / catalogAgeYears) * 0.0035; band = annualGross * grossUp{1.25,1.4,1.6} * (1 - 0.15) * (1 - 0.25) * multiple{10,13,16}; catalogAgeYears = round(msSince(earliestReleaseDate) / 365.25d) clamped to >= 1, defaulting to 5 when earliestReleaseDate is null. Band keys here are low/mid/high; marketing names the middle value 'central'.",
+  "cases": [
+    {
+      "name": "large catalog with unknown release date falls back to the 5y default age",
+      "input": {
+        "totalStreams": 16308837441,
+        "earliestReleaseDate": null,
+        "now": "2026-07-06T00:00:00.000Z"
+      },
+      "expected": {
+        "catalogAgeYears": 5,
+        "low": 90972733.85,
+        "mid": 132456300.49,
+        "high": 186312158.93
+      }
+    },
+    {
+      "name": "zero streams yields a zero band",
+      "input": {
+        "totalStreams": 0,
+        "earliestReleaseDate": "2020-01-01T00:00:00.000Z",
+        "now": "2026-07-06T00:00:00.000Z"
+      },
+      "expected": {
+        "catalogAgeYears": 7,
+        "low": 0,
+        "mid": 0,
+        "high": 0
+      }
+    },
+    {
+      "name": "ten-year catalog ages from its earliest release date",
+      "input": {
+        "totalStreams": 100000000,
+        "earliestReleaseDate": "2016-07-01T00:00:00.000Z",
+        "now": "2026-07-01T00:00:00.000Z"
+      },
+      "expected": {
+        "catalogAgeYears": 10,
+        "low": 278906.25,
+        "mid": 406087.5,
+        "high": 571200
+      }
+    },
+    {
+      "name": "months-old catalog clamps age to one year",
+      "input": {
+        "totalStreams": 1000000,
+        "earliestReleaseDate": "2026-05-01T00:00:00.000Z",
+        "now": "2026-07-06T00:00:00.000Z"
+      },
+      "expected": {
+        "catalogAgeYears": 1,
+        "low": 27890.63,
+        "mid": 40608.75,
+        "high": 57120
+      }
+    }
+  ]
+}
