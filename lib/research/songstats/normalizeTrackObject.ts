@@ -1,5 +1,5 @@
 import { firstRecord } from "@/lib/research/songstats/firstRecord";
-import { pickString } from "@/lib/research/songstats/pickString";
+import { normalizeTrackRecord } from "@/lib/research/songstats/normalizeTrackRecord";
 
 /**
  * Unwraps and normalizes a single track object from a SongStats payload.
@@ -7,7 +7,5 @@ import { pickString } from "@/lib/research/songstats/pickString";
 export function normalizeTrackObject(value: unknown): unknown {
   const record = firstRecord(value);
   if (!record) return value;
-
-  const id = pickString(record, ["songstats_track_id", "track_id", "id"]);
-  return id ? { ...record, id } : record;
+  return normalizeTrackRecord(record);
 }
