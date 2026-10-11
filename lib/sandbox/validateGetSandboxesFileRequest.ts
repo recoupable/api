@@ -7,6 +7,7 @@ import { z } from "zod";
 
 const getSandboxesFileQuerySchema = z.object({
   path: z.string({ message: "path is required" }).min(1, "path cannot be empty"),
+  account_id: z.string().uuid("account_id must be a valid UUID").optional(),
 });
 
 export interface ValidatedGetSandboxesFileParams {
@@ -21,6 +22,7 @@ export interface ValidatedGetSandboxesFileParams {
  *
  * Query parameters:
  * - path: The file path within the repository (required)
+ * - account_id: Filter to a specific account (validated against org membership)
  *
  * @param request - The NextRequest object
  * @returns A NextResponse with an error if validation fails, or validated params
@@ -31,6 +33,7 @@ export async function validateGetSandboxesFileRequest(
   const { searchParams } = new URL(request.url);
   const queryParams = {
     path: searchParams.get("path") ?? undefined,
+    account_id: searchParams.get("account_id") ?? undefined,
   };
 
   const queryResult = getSandboxesFileQuerySchema.safeParse(queryParams);
@@ -45,7 +48,7 @@ export async function validateGetSandboxesFileRequest(
     );
   }
 
-  const { path } = queryResult.data;
+  const { path, account_id: targetAccountId } = queryResult.data;
 
   const authResult = await validateAuthContext(request);
   if (authResult instanceof NextResponse) {
@@ -56,6 +59,7 @@ export async function validateGetSandboxesFileRequest(
 
   const { params, error } = await buildGetSandboxesParams({
     account_id: accountId,
+    target_account_id: targetAccountId,
   });
 
   if (error) {
