@@ -5,7 +5,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
-export const createImageBodySchema = z.object({
+const imageParamsSchema = z.strictObject({
   prompt: z.string().min(1).optional(),
   image_urls: z.array(z.string().url()).min(1).max(10).optional(),
   num_images: z.number().int().min(1).max(4).optional().default(1),
@@ -15,6 +15,25 @@ export const createImageBodySchema = z.object({
   output_format: z.enum(["jpeg", "png", "webp"]).optional().default("webp"),
   sync_mode: z.boolean().optional().default(false),
 });
+
+// The existing hosted worker used these two aliases. Preserve their editing
+// intent during rollout, but emit only the current Muse Image contract.
+export const createImageBodySchema = imageParamsSchema
+  .extend({
+    reference_image_url: z.string().url().optional(),
+    images: z.array(z.string().url()).optional(),
+  })
+  .transform(({ reference_image_url, images, ...current }): z.input<typeof imageParamsSchema> => {
+    const references = [
+      ...new Set([
+        ...(current.image_urls ?? []),
+        ...(reference_image_url ? [reference_image_url] : []),
+        ...(images ?? []),
+      ]),
+    ];
+    return { ...current, ...(references.length > 0 && { image_urls: references }) };
+  })
+  .pipe(imageParamsSchema);
 
 export type ValidatedCreateImageBody = { accountId: string } & z.infer<
   typeof createImageBodySchema

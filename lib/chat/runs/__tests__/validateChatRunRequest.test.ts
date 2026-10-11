@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
+import { convertToModelMessages } from "ai";
 
 import { validateChatRunRequest } from "@/lib/chat/runs/validateChatRunRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
@@ -93,6 +94,41 @@ describe("validateChatRunRequest", () => {
       expect.anything(),
       expect.objectContaining({ accountId: "member-acc" }),
     );
+  });
+
+  it.each([
+    { id: "m1", role: "user", content: "legacy content" },
+    { id: "m1", role: "user", parts: [] },
+    { id: "m1", role: "user", parts: [{ type: "text", text: 42 }] },
+    { id: "m1", role: "invalid", parts: [{ type: "text", text: "hi" }] },
+    { id: "m1", role: "user", parts: [{ type: "file", url: "https://x.test/a" }] },
+  ])("rejects malformed UIMessage inputs before authentication: %j", async message => {
+    const result = await validateChatRunRequest(req({ messages: [message] }));
+    expect(result).toBeInstanceOf(NextResponse);
+    if (!(result instanceof NextResponse)) return;
+    expect(result.status).toBe(400);
+    expect(await result.json()).toMatchObject({ status: "error", missing_fields: ["messages"] });
+    expect(validateAuthContext).not.toHaveBeenCalled();
+  });
+
+  it("preserves supported non-text parts and converts them without provider work", async () => {
+    const messages = [
+      {
+        id: "m1",
+        role: "user",
+        parts: [
+          { type: "text", text: "Inspect this file" },
+          { type: "file", mediaType: "text/plain", url: "data:text/plain;base64,aGk=" },
+          { type: "data-context", data: { release: "test release" } },
+        ],
+      },
+    ];
+    const result = await validateChatRunRequest(req({ messages }));
+    if (result instanceof NextResponse) throw new Error(await result.text());
+    expect(result.messages).toEqual(messages);
+    const converted = await convertToModelMessages(result.messages);
+    expect(converted).toHaveLength(1);
+    expect(converted[0]).toMatchObject({ role: "user" });
   });
 });
 
