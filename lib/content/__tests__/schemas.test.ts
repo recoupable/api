@@ -68,18 +68,11 @@ describe("createImageBodySchema", () => {
     );
   });
 
-  it("does not carry template, resolution, or a caller-supplied model — dropped params", () => {
-    const result = createImageBodySchema.safeParse({
-      prompt: "test",
-      template: "artist-caption-bedroom",
-      resolution: "2K",
-      model: "fal-ai/some-other-model",
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect("template" in result.data).toBe(false);
-      expect("resolution" in result.data).toBe(false);
-      expect("model" in result.data).toBe(false);
+  it("rejects unsupported template, resolution and caller model controls", () => {
+    for (const field of ["template", "resolution", "model"]) {
+      expect(
+        createImageBodySchema.safeParse({ prompt: "test", [field]: "unsupported" }).success,
+      ).toBe(false);
     }
   });
 });
@@ -143,30 +136,19 @@ describe("createVideoBodySchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("does not carry mode, template, video_url, audio_url, aspect_ratio, negative_prompt, or generate_audio — dropped params", () => {
-    const result = createVideoBodySchema.safeParse({
-      prompt: "test",
-      mode: "lipsync",
-      template: "artist-caption-bedroom",
-      video_url: "https://example.com/clip.mp4",
-      audio_url: "https://example.com/audio.mp3",
-      aspect_ratio: "16:9",
-      negative_prompt: "no text",
-      generate_audio: true,
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      for (const key of [
-        "mode",
-        "template",
-        "video_url",
-        "audio_url",
-        "aspect_ratio",
-        "negative_prompt",
-        "generate_audio",
-      ]) {
-        expect(key in result.data).toBe(false);
-      }
+  it("rejects obsolete semantic controls before billable generation", () => {
+    for (const field of [
+      "mode",
+      "template",
+      "video_url",
+      "audio_url",
+      "aspect_ratio",
+      "negative_prompt",
+      "generate_audio",
+    ]) {
+      expect(
+        createVideoBodySchema.safeParse({ prompt: "test", [field]: "unsupported" }).success,
+      ).toBe(false);
     }
   });
 });

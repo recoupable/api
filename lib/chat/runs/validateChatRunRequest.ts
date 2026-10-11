@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import type { UIMessage } from "ai";
+import { safeValidateUIMessages, type UIMessage } from "ai";
 import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { errorResponse } from "@/lib/networking/errorResponse";
@@ -17,7 +17,7 @@ import { DEFAULT_MODEL } from "@/lib/const";
  */
 export const chatRunBodySchema = z.object({
   prompt: z.string().optional(),
-  messages: z.array(z.any()).optional(),
+  messages: z.array(z.unknown()).optional(),
   artistId: z.string().uuid("artistId must be a valid UUID").optional(),
   accountId: z.string().optional(),
   organizationId: z.string().optional(),
@@ -71,15 +71,26 @@ export async function validateChatRunRequest(
     return errorResponse("Exactly one of prompt or messages must be provided", 400);
   }
 
+  // Use the same SDK contract as the workflow converter before any session,
+  // sandbox, key or workflow can be provisioned. Do not reduce parts to text:
+  // file, reasoning, tool and data parts also belong to UIMessage.
+  const validatedMessages = await safeValidateUIMessages({
+    messages: hasPrompt
+      ? [{ id: generateUUID(), role: "user", parts: [{ type: "text", text: trimmedPrompt }] }]
+      : messages,
+  });
+  if (!validatedMessages.success) {
+    return validationErrorResponse(
+      "Invalid messages: expected AI SDK UIMessage objects with id, role and non-empty parts",
+      ["messages"],
+    );
+  }
+
   const auth = await validateAuthContext(request, {
     accountId,
     organizationId: organizationId ?? null,
   });
   if (auth instanceof NextResponse) return auth;
-
-  const uiMessages: UIMessage[] = hasPrompt
-    ? [{ id: generateUUID(), role: "user", parts: [{ type: "text", text: trimmedPrompt }] }]
-    : (messages as UIMessage[]);
 
   // `||` not `??`: an empty/whitespace model must fall back too, or "" would
   // be persisted as provenance and sent to the workflow as the model id.
@@ -88,7 +99,7 @@ export async function validateChatRunRequest(
   return {
     accountId: auth.accountId,
     orgId: auth.orgId,
-    messages: uiMessages,
+    messages: validatedMessages.data,
     artistId,
     modelId: trimmedModel || DEFAULT_MODEL,
     triggerRunId: trigger_run_id,
