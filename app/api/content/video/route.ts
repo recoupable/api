@@ -18,7 +18,7 @@ export async function OPTIONS() {
  * is validated by `validateCreateVideoBody` in `lib/content/video/`.
  *
  * @param request - JSON body with prompt, optional image_url/end_image_url,
- *   integer duration and resolution (see validateCreateVideoBody for the schema).
+ *   optional integer duration (5–15) and resolution ("480P" or "768P").
  * @returns A 200 NextResponse with the generated video URL and related metadata,
  *   400 on a bad body, 502 when the upstream returns no video, or 500 on other
  *   generation errors.

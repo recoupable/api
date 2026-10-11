@@ -1,9 +1,10 @@
 {
   "evidence": "Copyable syntax only. URLs are placeholders; no provider, payment or customer workflow is exercised.",
+  "sourceRepository": "recoupable/marketing",
   "sourceHashes": {
-    "content/docs/source/api-reference/openapi/accounts.json": "f1bdfe7150f4bda12381a16c4a89da2322b6a871e204e1e1da48c87ed1b95a64",
-    "content/docs/source/api-reference/openapi/content.json": "ebe0ced0ee49d1394a5275e9cd57f451d27c2fd1d667b963c299a382ada87f5e",
-    "content/docs/source/api-reference/openapi/research.json": "320cfd7dac57be22a8e2da95f48f2888bbff8c3dfe5016cf0773c0a24201459d"
+    "content/docs/source/api-reference/openapi/accounts.json": "db81e931f01769677503410969c8a2f4e2bd00745be8648e1c6635a2a8166afd",
+    "content/docs/source/api-reference/openapi/content.json": "2b8d2b504107cb9ecc6ac6be97c238b34fd4a3b2056ad40e80d9c4765e35fcbc",
+    "content/docs/source/api-reference/openapi/research.json": "698f422e0c3fd39470294431590ff4f62a263c18c081a2365d24dcd0fe34df96"
   },
   "examples": {
     "image": {
@@ -27,7 +28,7 @@
     },
     "topup": {
       "credits": 2500000,
-      "successUrl": "https://chat.recoupable.dev/credits/success"
+      "successUrl": "https://chat.recoupable.dev?credits=success"
     },
     "headless": {
       "messages": [
@@ -46,6 +47,17 @@
     "trackStats": {
       "isrc": "USQY51771120",
       "source": "spotify"
+    },
+    "historicalMeasurementJob": {
+      "scope": {
+        "isrcs": [
+          "USQY51771120"
+        ]
+      },
+      "source": "historical",
+      "platforms": [
+        "spotify"
+      ]
     }
   }
 }

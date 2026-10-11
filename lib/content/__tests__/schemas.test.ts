@@ -69,10 +69,14 @@ describe("createImageBodySchema", () => {
   });
 
   it("rejects unsupported template, resolution and caller model controls", () => {
-    for (const field of ["template", "resolution", "model"]) {
-      expect(
-        createImageBodySchema.safeParse({ prompt: "test", [field]: "unsupported" }).success,
-      ).toBe(false);
+    for (const [field, value] of Object.entries({
+      template: "artist-caption-bedroom",
+      resolution: "2K",
+      model: "fal-ai/nano-banana-2",
+    })) {
+      expect(createImageBodySchema.safeParse({ prompt: "test", [field]: value }).success).toBe(
+        false,
+      );
     }
   });
 });
@@ -137,18 +141,18 @@ describe("createVideoBodySchema", () => {
   });
 
   it("rejects obsolete semantic controls before billable generation", () => {
-    for (const field of [
-      "mode",
-      "template",
-      "video_url",
-      "audio_url",
-      "aspect_ratio",
-      "negative_prompt",
-      "generate_audio",
-    ]) {
-      expect(
-        createVideoBodySchema.safeParse({ prompt: "test", [field]: "unsupported" }).success,
-      ).toBe(false);
+    for (const [field, value] of Object.entries({
+      mode: "lipsync",
+      template: "artist-caption-bedroom",
+      video_url: "https://example.com/source.mp4",
+      audio_url: "https://example.com/song.mp3",
+      aspect_ratio: "9:16",
+      negative_prompt: "blurry",
+      generate_audio: true,
+    })) {
+      expect(createVideoBodySchema.safeParse({ prompt: "test", [field]: value }).success).toBe(
+        false,
+      );
     }
   });
 });

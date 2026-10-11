@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createLipsyncHandler } from "../createLipsyncHandler";
 import fal from "@/lib/fal/server";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
+import { consumeOAuthRateLimit } from "@/lib/supabase/oauth_rate_limits/consumeOAuthRateLimit";
 import { chargeForGeneration } from "@/lib/content/chargeForGeneration";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
@@ -13,6 +14,10 @@ vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
   ensureCreditsOrShortCircuit: vi.fn(),
 }));
 vi.mock("@/lib/content/chargeForGeneration", () => ({ chargeForGeneration: vi.fn() }));
+
+vi.mock("@/lib/supabase/oauth_rate_limits/consumeOAuthRateLimit", () => ({
+  consumeOAuthRateLimit: vi.fn(),
+}));
 
 const valid = {
   prompt: "The artist sings the supplied song",
@@ -30,6 +35,7 @@ const request = (body: unknown) =>
 describe("hosted lipsync generation boundary", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(consumeOAuthRateLimit).mockResolvedValue(0);
     vi.mocked(ensureCreditsOrShortCircuit).mockResolvedValue(null);
     vi.mocked(fal.subscribe).mockResolvedValue({
       data: { video: { url: "https://x.test/audio-driven.mp4" } },
@@ -40,6 +46,9 @@ describe("hosted lipsync generation boundary", () => {
   it("preserves selected audio and uses the existing fixed LTX model with bounded output and model-specific billing", async () => {
     const response = await createLipsyncHandler(request(valid));
     expect(response.status).toBe(200);
+    expect(consumeOAuthRateLimit).toHaveBeenCalledWith(expect.stringMatching(/^[a-f0-9]{64}$/), [
+      { key: expect.stringMatching(/^[a-f0-9]{64}$/), limit: 30 },
+    ]);
     expect(fal.subscribe).toHaveBeenCalledWith("fal-ai/ltx-2-19b/audio-to-video", {
       input: expect.objectContaining({
         prompt: valid.prompt,
@@ -84,6 +93,21 @@ describe("hosted lipsync generation boundary", () => {
       NextResponse.json({ error: "insufficient_credits" }, { status: 402 }),
     );
     expect((await createLipsyncHandler(request(valid))).status).toBe(402);
+    expect(fal.subscribe).not.toHaveBeenCalled();
+  });
+
+  it("limits repeated account generations before provider spend", async () => {
+    vi.mocked(consumeOAuthRateLimit).mockResolvedValue(12);
+    const response = await createLipsyncHandler(request(valid));
+    expect(response.status).toBe(429);
+    expect(response.headers.get("Retry-After")).toBe("12");
+    expect(fal.subscribe).not.toHaveBeenCalled();
+    expect(chargeForGeneration).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the shared limiter is unavailable", async () => {
+    vi.mocked(consumeOAuthRateLimit).mockRejectedValue(new Error("database unavailable"));
+    expect((await createLipsyncHandler(request(valid))).status).toBe(503);
     expect(fal.subscribe).not.toHaveBeenCalled();
   });
 

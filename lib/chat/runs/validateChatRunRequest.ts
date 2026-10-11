@@ -1,11 +1,11 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { safeValidateUIMessages, type UIMessage } from "ai";
+import type { UIMessage } from "ai";
 import { z } from "zod";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { validationErrorResponse } from "@/lib/zod/validationErrorResponse";
-import { generateUUID } from "@/lib/uuid/generateUUID";
+import { validateChatRunMessages } from "./validateChatRunMessages";
 import { DEFAULT_MODEL } from "@/lib/const";
 
 /**
@@ -36,15 +36,7 @@ export type ChatRunRequest = {
   triggerRunId?: string;
 };
 
-/**
- * Validates a `POST /api/chat/runs` request end-to-end: parses + validates
- * the body, runs auth via `validateAuthContext` (x-api-key, with org-key
- * account override), and normalizes `prompt`/`messages` into a `UIMessage[]`.
- *
- * @param request - The incoming NextRequest.
- * @returns A NextResponse error short-circuit (400/401/403) or the validated,
- *   auth-augmented request ready to provision + start a workflow run.
- */
+/** Validate the SDK message contract and auth before provisioning a durable run. */
 export async function validateChatRunRequest(
   request: NextRequest,
 ): Promise<NextResponse | ChatRunRequest> {
@@ -74,11 +66,7 @@ export async function validateChatRunRequest(
   // Use the same SDK contract as the workflow converter before any session,
   // sandbox, key or workflow can be provisioned. Do not reduce parts to text:
   // file, reasoning, tool and data parts also belong to UIMessage.
-  const validatedMessages = await safeValidateUIMessages({
-    messages: hasPrompt
-      ? [{ id: generateUUID(), role: "user", parts: [{ type: "text", text: trimmedPrompt }] }]
-      : messages,
-  });
+  const validatedMessages = await validateChatRunMessages(trimmedPrompt, messages);
   if (!validatedMessages.success) {
     return validationErrorResponse(
       "Invalid messages: expected AI SDK UIMessage objects with id, role and non-empty parts",

@@ -7,6 +7,7 @@ import { createCreditsSessionBodySchema } from "@/lib/stripe/createCreditsSessio
 import { validateChatRunRequest } from "@/lib/chat/runs/validateChatRunRequest";
 import { validateGetResearchTrackStatsRequest } from "@/lib/research/validateGetResearchTrackStatsRequest";
 import { creditsToUsd } from "@/lib/credits/creditsToUsd";
+import { createMeasurementJobBodySchema } from "@/lib/research/measurement_jobs/validateCreateMeasurementJobRequest";
 import fixture from "../fixtures/published-docs.json";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({
@@ -14,6 +15,9 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({
 }));
 vi.mock("@/lib/research/ensureResearchCredits", () => ({
   ensureResearchCredits: vi.fn().mockResolvedValue(null),
+}));
+vi.mock("@/lib/research/measurement_jobs/ensureSongstatsPaymentMethod", () => ({
+  ensureSongstatsPaymentMethod: vi.fn().mockResolvedValue(null),
 }));
 
 describe("published documentation examples against the current API contract", () => {
@@ -59,5 +63,11 @@ describe("published documentation examples against the current API contract", ()
     expect(result).not.toBeInstanceOf(NextResponse);
     if (!(result instanceof NextResponse))
       expect(result.params).toEqual(fixture.examples.trackStats);
+  });
+
+  it("accepts the retained historical backfill example without creating a job or checkout", () => {
+    expect(createMeasurementJobBodySchema.parse(fixture.examples.historicalMeasurementJob)).toEqual(
+      fixture.examples.historicalMeasurementJob,
+    );
   });
 });

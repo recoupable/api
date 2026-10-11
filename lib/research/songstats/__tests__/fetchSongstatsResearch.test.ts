@@ -12,6 +12,37 @@ describe("fetchSongstatsResearch", () => {
     vi.clearAllMocks();
   });
 
+  it("exposes a research ID for nested artist lookup payloads while preserving metadata", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: { artist_info: { songstats_artist_id: "artist_1", name: "Drake" }, links: [] },
+    });
+    const result = await fetchSongstatsResearch("/artist/spotify/spotify_1/get-ids");
+    expect(result.data).toEqual({
+      id: "artist_1",
+      artist_info: { id: "artist_1", songstats_artist_id: "artist_1", name: "Drake" },
+      links: [],
+    });
+  });
+
+  it("resolves nested track lookup and detail payloads through the same generic ID", async () => {
+    const data = { track_info: { songstats_track_id: "track_1", title: "Hotline Bling" } };
+    vi.mocked(fetchSongstats).mockResolvedValue({ status: 200, data });
+    const detail = await fetchSongstatsResearch("/track/track_1");
+    const lookup = await fetchSongstatsResearch("/track/spotify/spotify_1/get-ids");
+    expect(detail.data).toEqual({
+      id: "track_1",
+      track_info: { id: "track_1", songstats_track_id: "track_1", title: "Hotline Bling" },
+    });
+    expect(lookup.data).toMatchObject({ id: "track_1", songstats_track_ids: ["track_1"] });
+  });
+
+  it("preserves lookup payloads with no usable identifier instead of inventing one", async () => {
+    const data = { artist_info: { name: "Unknown" } };
+    vi.mocked(fetchSongstats).mockResolvedValue({ status: 200, data });
+    expect((await fetchSongstatsResearch("/artist/spotify/spotify_1/get-ids")).data).toEqual(data);
+  });
+
   it("maps artist searches to SongStats artist search and keeps the public results family", async () => {
     vi.mocked(fetchSongstats).mockResolvedValue({
       status: 200,
