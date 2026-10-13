@@ -6,6 +6,7 @@ import {
   processContextOperation,
 } from "@/lib/context/processContextOperation";
 import fixture from "../fixtures/published-docs.json";
+import contextFixture from "../fixtures/context-contract.json";
 import { contextToolOperations } from "@/lib/mcp/oauth/contextToolOperations";
 
 vi.mock("@/lib/context/authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));
@@ -46,7 +47,7 @@ function withoutDescriptions(value: unknown): unknown {
 
 describe("published Context request catalog", () => {
   it("maps the reference actions to the current delegated tool names and permissions", () => {
-    expect(fixture.contracts.contextMcpOperations).toEqual(mcpOperations);
+    expect(contextFixture.mcpOperations).toEqual(mcpOperations);
   });
   it("distinguishes accepted URL syntax from the pilot ingestion restriction", async () => {
     const accountId = "11111111-1111-4111-8111-111111111111";
@@ -69,10 +70,13 @@ describe("published Context request catalog", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
   it("matches every provider-neutral action and its actual request fields", () => {
-    expect(withoutDescriptions(fixture.contracts.contextRequestSchemas)).toEqual(schemas);
+    expect(withoutDescriptions(contextFixture.requestSchemas)).toEqual(schemas);
+    expect(contextFixture.sourceHash).toBe(
+      fixture.sourceHashes["content/docs/source/api-reference/openapi/context.json"],
+    );
   });
 
   it("records the provider-bound planning action still missing from the reference", () => {
-    expect(fixture.contracts.contextUndocumentedActions).toEqual(undocumentedActions);
+    expect(contextFixture.undocumentedActions).toEqual(undocumentedActions);
   });
 });

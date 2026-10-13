@@ -1,9 +1,14 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import startTwitterProfileScraping from "@/lib/apify/twitter/startTwitterProfileScraping";
 import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
 import { validateCatalogStreamHistoryQuery } from "@/lib/catalog/validateCatalogStreamHistoryQuery";
 import { createNothingToResumeResponse } from "@/lib/chat/createNothingToResumeResponse";
 import { createTaskBodySchema } from "@/lib/tasks/createTaskSchemas";
 import fixture from "../fixtures/published-docs.json";
+
+const { start } = vi.hoisted(() => ({ start: vi.fn() }));
+vi.mock("@/lib/apify/client", () => ({ default: { actor: () => ({ start }) } }));
+vi.mock("@/lib/apify/getApifyWebhooks", () => ({ getApifyWebhooks: () => [] }));
 
 describe("published contract semantics", () => {
   it("describes the actual base and per-post credit amounts", () => {
@@ -13,8 +18,13 @@ describe("published contract semantics", () => {
     );
   });
 
-  it("states the implemented X fetch default and required auth/error outcomes", () => {
-    expect(fixture.contracts.social.twitterDefaultDepth).toBe(10);
+  it("states the implemented X fetch default and required auth/error outcomes", async () => {
+    start.mockResolvedValue({ id: "fixture-run", defaultDatasetId: "fixture-dataset" });
+    await startTwitterProfileScraping("fixture");
+    expect(start).toHaveBeenLastCalledWith(
+      expect.objectContaining({ maxItems: fixture.contracts.social.twitterDefaultDepth }),
+      expect.any(Object),
+    );
     expect(fixture.contracts.social.security).not.toHaveLength(0);
     expect(fixture.contracts.social.responses).toEqual(
       expect.arrayContaining(["401", "403", "404", "500"]),
@@ -48,6 +58,9 @@ describe("published contract semantics", () => {
       model: "fixture-model",
     });
     expect(fixture.contracts.taskModelType).toBe(typeof parsed.model);
+    const { model: _model, ...withoutModel } = parsed;
+    expect(createTaskBodySchema.parse(withoutModel).model).toBeUndefined();
+    expect(fixture.contracts.taskModelRequired).toBe(false);
     expect(fixture.contracts.taskReadResponses).toContain("402");
   });
 

@@ -415,6 +415,7 @@ import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 // Import shared domain logic
 import { sharedDomainFunction } from "@/lib/[domain]/sharedDomainFunction";
 
@@ -431,7 +432,7 @@ export function registerToolNameTool(server: McpServer): void {
     },
     async (args, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
-      const { accountId, error } = await resolveAccountId({ authInfo });
+      const { accountId, error } = await resolveAccountId({ authInfo, accountIdOverride: undefined });
       const orgId = authInfo?.extra?.orgId ?? null;
 
       if (error) return getToolResultError(error);
