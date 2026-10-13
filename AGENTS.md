@@ -244,7 +244,6 @@ Both API keys and Privy access tokens resolve to an `accountId`. Never accept `a
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 const authResult = await validateAuthContext(request, {
-  accountId: body.account_id,        // Optional: for account_id override
   organizationId: body.organization_id, // Optional: for org context
 });
 
@@ -416,6 +415,7 @@ import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 // Import shared domain logic
 import { sharedDomainFunction } from "@/lib/[domain]/sharedDomainFunction";
 
@@ -432,9 +432,10 @@ export function registerToolNameTool(server: McpServer): void {
     },
     async (args, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
-      const accountId = authInfo?.extra?.accountId;
+      const { accountId, error } = await resolveAccountId({ authInfo, accountIdOverride: undefined });
       const orgId = authInfo?.extra?.orgId ?? null;
 
+      if (error) return getToolResultError(error);
       if (!accountId) {
         return getToolResultError("Authentication required.");
       }
