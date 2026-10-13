@@ -6,6 +6,7 @@ import {
   processContextOperation,
 } from "@/lib/context/processContextOperation";
 import fixture from "../fixtures/published-docs.json";
+import { contextToolOperations } from "@/lib/mcp/oauth/contextToolOperations";
 
 vi.mock("@/lib/context/authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));
 
@@ -17,10 +18,20 @@ const schemas = contextOperationSchema.options
     const { $schema: _dialect, ...request } = z.toJSONSchema(schema, { io: "input" });
     return request;
   });
+const mcpOperations = Object.fromEntries(
+  Object.entries(contextToolOperations)
+    .filter(([action]) => !undocumentedActions.includes(action))
+    .map(([action, { name, readOnly }]) => [action, { name, readOnly }]),
+);
 
 // Optional provider-free export used to refresh the maintained OpenAPI request union.
 if (process.env.RECOUP_CONTEXT_SCHEMA_OUTPUT)
   writeFileSync(process.env.RECOUP_CONTEXT_SCHEMA_OUTPUT, JSON.stringify(schemas, null, 2) + "\n");
+if (process.env.RECOUP_CONTEXT_MCP_OUTPUT)
+  writeFileSync(
+    process.env.RECOUP_CONTEXT_MCP_OUTPUT,
+    JSON.stringify(mcpOperations, null, 2) + "\n",
+  );
 
 function withoutDescriptions(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(withoutDescriptions);
@@ -34,6 +45,9 @@ function withoutDescriptions(value: unknown): unknown {
 }
 
 describe("published Context request catalog", () => {
+  it("maps the reference actions to the current delegated tool names and permissions", () => {
+    expect(fixture.contracts.contextMcpOperations).toEqual(mcpOperations);
+  });
   it("distinguishes accepted URL syntax from the pilot ingestion restriction", async () => {
     const accountId = "11111111-1111-4111-8111-111111111111";
     const rpc = vi.fn();

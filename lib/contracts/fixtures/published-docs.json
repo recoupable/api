@@ -2,12 +2,12 @@
   "evidence": "Provider-free request syntax and static contract claims only. URLs are placeholders; no provider, payment or customer workflow is exercised.",
   "sourceRepository": "recoupable/marketing",
   "sourceHashes": {
-    "content/docs/source/api-reference/openapi/accounts.json": "db81e931f01769677503410969c8a2f4e2bd00745be8648e1c6635a2a8166afd",
-    "content/docs/source/api-reference/openapi/content.json": "06baa189ad89f871c8772131cdc06084c173f967aa9769638ec1483f5ff74f85",
+    "content/docs/source/api-reference/openapi/accounts.json": "8bf9e1c0cbc2ebace75f5959c1a8f6c013db10c01b99a958904f16552d6379bd",
+    "content/docs/source/api-reference/openapi/content.json": "1a6fdf661f2045406e668af4d3495b8b770bf6bd7584f4e300bcf54cb2efecde",
     "content/docs/source/api-reference/openapi/research.json": "2671ceab80a9ff88d26053bcf27a7ac36aee0c3955a8a3dd7c91f71a27ed5b09",
-    "content/docs/source/api-reference/openapi/releases.json": "24743273d5d0637d20e725127ea159ba3255031fecad9843dee28990664cca21",
-    "content/docs/source/api-reference/openapi/social.json": "1921c6777b279fdac635023d3f4b0587e6d30d2d4f0ea78a3c62e25188772581",
-    "content/docs/source/api-reference/openapi/context.json": "902cff5146fe178d2f92469c7af8fb66df558d100577c3588bca29bc9ac045a9"
+    "content/docs/source/api-reference/openapi/releases.json": "69da8732a457891e5d954cecdb201ed59c1d84255cd5b0edefb6e0cab2e80bd7",
+    "content/docs/source/api-reference/openapi/social.json": "9cee87d2f36b268335f3f393b73ae97a31a0ce095fd882cdb62f771e84564b64",
+    "content/docs/source/api-reference/openapi/context.json": "6c6d122b8afbdc6a93fa6dadcbe5c54446508740ad298c57650fa59980e6fe9f"
   },
   "examples": {
     "image": {
@@ -1045,6 +1045,112 @@
     ],
     "contextUndocumentedActions": [
       "plan_catalog_members"
-    ]
+    ],
+    "contextMcpOperations": {
+      "list_release_cases": {
+        "name": "list_music_release_cases",
+        "readOnly": true
+      },
+      "read_release_case": {
+        "name": "read_music_release_case",
+        "readOnly": true
+      },
+      "read_release_case_review": {
+        "name": "read_music_release_case_review",
+        "readOnly": true
+      },
+      "review_release_case": {
+        "name": "record_music_release_case_review",
+        "readOnly": false
+      },
+      "save_brief": {
+        "name": "save_music_context_brief",
+        "readOnly": false
+      },
+      "read_brief": {
+        "name": "read_music_context_brief",
+        "readOnly": true
+      },
+      "plan": {
+        "name": "plan_music_context_research",
+        "readOnly": true
+      },
+      "list_executions": {
+        "name": "list_music_context_executions",
+        "readOnly": true
+      },
+      "list_catalog_members": {
+        "name": "list_music_context_catalog_members",
+        "readOnly": true
+      },
+      "list_release_tracks": {
+        "name": "list_music_context_release_tracks",
+        "readOnly": true
+      },
+      "read_release_track_observations": {
+        "name": "read_music_release_track_observations",
+        "readOnly": true
+      },
+      "review_release_track_identities": {
+        "name": "review_music_release_track_identities",
+        "readOnly": true
+      },
+      "verify_release_tracks": {
+        "name": "verify_music_release_tracks",
+        "readOnly": false
+      },
+      "expand_catalog_members": {
+        "name": "expand_music_context_catalog",
+        "readOnly": false
+      },
+      "read_execution": {
+        "name": "read_music_context_execution",
+        "readOnly": true
+      },
+      "ingest_catalog": {
+        "name": "import_catalog_context",
+        "readOnly": false
+      },
+      "ingest_artist": {
+        "name": "import_artist_context",
+        "readOnly": false
+      },
+      "ingest_songwriter_name": {
+        "name": "import_songwriter_context",
+        "readOnly": false
+      },
+      "ingest_company_name": {
+        "name": "import_music_company_context",
+        "readOnly": false
+      },
+      "ingest_campaign_brief": {
+        "name": "import_music_campaign_brief",
+        "readOnly": false
+      },
+      "ingest_supporting_text": {
+        "name": "import_music_supporting_text",
+        "readOnly": false
+      },
+      "ingest_release": {
+        "name": "import_music_release_context",
+        "readOnly": false
+      },
+      "verify_release": {
+        "name": "verify_music_release",
+        "readOnly": false
+      },
+      "ingest": {
+        "name": "import_song_context",
+        "readOnly": false
+      },
+      "read": {
+        "name": "read_music_context",
+        "readOnly": true
+      },
+      "brief": {
+        "name": "compile_music_context_brief",
+        "readOnly": true
+      }
+    }
   }
 }
