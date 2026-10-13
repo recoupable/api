@@ -42,7 +42,7 @@ describe("usage cursors", () => {
     ["invalid", "valid-id"],
     ["2026-08-27T11:56:57.123456Z", "id),or(injected"],
     ["2026-08-27T11:56:57.123456Z"],
-  ])("rejects malformed time keysets %j", values => {
+  ])("rejects malformed time keysets %j", (...values) => {
     const cursor = `v1:${Buffer.from(JSON.stringify(values)).toString("base64url")}`;
     expect(decodeUsageCursor("created_at", cursor)).toBeNull();
   });

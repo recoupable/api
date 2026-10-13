@@ -136,6 +136,7 @@ describe("postArtistSocialsScrapeHandler", () => {
       makeRequest({ artist_account_id: ARTIST_ID, posts: 20 }),
     );
     expect(response.status).toBe(200);
+    expect(deductSocialScrapeCredits).toHaveBeenCalledTimes(1);
     expect(deductSocialScrapeCredits).toHaveBeenCalledWith(
       ACCOUNT_ID,
       250_000,
