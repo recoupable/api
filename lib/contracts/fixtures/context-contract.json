@@ -1,6 +1,6 @@
 {
   "evidence": "Provider-free request syntax and static contract claims only. URLs are placeholders; no provider, payment or customer workflow is exercised.",
-  "sourceHash": "6c6d122b8afbdc6a93fa6dadcbe5c54446508740ad298c57650fa59980e6fe9f",
+  "sourceHash": "de67b0fecf1759ffad99f0f32eedd2e9b33e22c7feebcebfd961e4d26d21262e",
   "requestSchemas": [
     {
       "type": "object",
