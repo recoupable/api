@@ -7,7 +7,8 @@
     "content/docs/source/api-reference/openapi/research.json": "e41af080333df4740bf2a217fc40c588b95ae7cf0d73728a0caaff7367f25547",
     "content/docs/source/api-reference/openapi/releases.json": "69da8732a457891e5d954cecdb201ed59c1d84255cd5b0edefb6e0cab2e80bd7",
     "content/docs/source/api-reference/openapi/social.json": "2dc915ae58d1fc6d2bca1ba04401b161c5f67a91b31f93cf4d0869ef7d9d0a9d",
-    "content/docs/source/api-reference/openapi/context.json": "de67b0fecf1759ffad99f0f32eedd2e9b33e22c7feebcebfd961e4d26d21262e"
+    "content/docs/source/api-reference/openapi/context.json": "de67b0fecf1759ffad99f0f32eedd2e9b33e22c7feebcebfd961e4d26d21262e",
+    "content/docs/source/api-reference/sites/overview.mdx": "2ed1d428d0ec8006530e8cd2201de5ce151c0d3618ea60850730779a11d73658"
   },
   "examples": {
     "image": {
@@ -117,6 +118,14 @@
       "403",
       "500"
     ],
-    "callbackHeader": "x-callback-secret"
+    "callbackHeader": "x-callback-secret",
+    "siteDeleteMethods": [
+      "PATCH"
+    ],
+    "siteDeleteExample": {
+      "action": "delete",
+      "revision": 3,
+      "generationToken": "TOKEN_FROM_GENERATION"
+    }
   }
 }

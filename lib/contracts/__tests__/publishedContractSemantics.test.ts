@@ -5,12 +5,21 @@ import { validateCatalogStreamHistoryQuery } from "@/lib/catalog/validateCatalog
 import { createNothingToResumeResponse } from "@/lib/chat/createNothingToResumeResponse";
 import { createTaskBodySchema } from "@/lib/tasks/createTaskSchemas";
 import fixture from "../fixtures/published-docs.json";
+import * as siteRoute from "@/app/api/sites/[id]/route";
+import { actionSchema } from "@/lib/sites/schema";
 
 const { start } = vi.hoisted(() => ({ start: vi.fn() }));
 vi.mock("@/lib/apify/client", () => ({ default: { actor: () => ({ start }) } }));
 vi.mock("@/lib/apify/getApifyWebhooks", () => ({ getApifyWebhooks: () => [] }));
+vi.mock("@/lib/sites/siteOperationHandler", () => ({ siteOperationHandler: vi.fn() }));
 
 describe("published contract semantics", () => {
+  it("documents a real Sites HTTP method and valid deletion JSON body", () => {
+    expect(fixture.contracts.siteDeleteMethods).toHaveLength(1);
+    for (const method of fixture.contracts.siteDeleteMethods)
+      expect(typeof siteRoute[method as keyof typeof siteRoute]).toBe("function");
+    expect(actionSchema.parse(fixture.contracts.siteDeleteExample).action).toBe("delete");
+  });
   it("describes the actual base and per-post credit amounts", () => {
     expect(fixture.contracts.social.baseCredits).toBe(getSocialScrapeCreditCost());
     expect(fixture.contracts.social.perPostCredits).toBe(
