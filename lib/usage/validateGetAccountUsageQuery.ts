@@ -7,6 +7,7 @@ import { decodeUsageCursor } from "@/lib/usage/decodeUsageCursor";
 import type { UsageCursor, UsageSort } from "@/lib/usage/usageSort";
 import { startOfCurrentUtcMonth } from "@/lib/usage/startOfCurrentUtcMonth";
 import { invalidCursorMessage } from "@/lib/usage/invalidCursorMessage";
+import { normalizeUsageTimestamp } from "@/lib/usage/normalizeUsageTimestamp";
 
 const iso = z.string().datetime({ offset: true });
 
@@ -73,10 +74,8 @@ export async function validateGetAccountUsageQuery(
     );
   }
   const now = new Date();
-  const from = parsed.data.from
-    ? new Date(parsed.data.from).toISOString()
-    : startOfCurrentUtcMonth(now);
-  const to = parsed.data.to ? new Date(parsed.data.to).toISOString() : now.toISOString();
+  const from = normalizeUsageTimestamp(parsed.data.from ?? startOfCurrentUtcMonth(now));
+  const to = normalizeUsageTimestamp(parsed.data.to ?? now.toISOString());
   if (from >= to) {
     return NextResponse.json(
       { error: "from must be earlier than to" },

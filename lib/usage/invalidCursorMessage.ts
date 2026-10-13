@@ -9,5 +9,5 @@ import type { UsageSort } from "@/lib/usage/usageSort";
 export function invalidCursorMessage(sort: UsageSort): string {
   return sort === "cost"
     ? "cursor: expected <credits_deducted>:<id> for sort=cost"
-    : "cursor: Invalid ISO datetime";
+    : "cursor: expected a next_cursor token or legacy ISO datetime for sort=created_at";
 }

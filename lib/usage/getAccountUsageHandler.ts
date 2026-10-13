@@ -48,7 +48,7 @@ export async function getAccountUsageHandler(
     const series = query.cursor
       ? {}
       : { series_bucket: seriesBucket, series: buildUsageSeries(periodRows, seriesBucket) };
-    const last = events[events.length - 1];
+    const last = rows[rows.length - 1];
 
     return NextResponse.json(
       {

@@ -126,4 +126,32 @@ describe("postArtistSocialsScrapeHandler", () => {
     expect(ensureSocialScrapeCredits).not.toHaveBeenCalled();
     expect(deductSocialScrapeCredits).not.toHaveBeenCalled();
   });
+
+  it("charges only started runs when another profile fails to start", async () => {
+    vi.mocked(scrapeProfileUrlBatch).mockResolvedValue([
+      { runId: "started", datasetId: "dataset", error: null, profileUrl: null },
+      { runId: null, datasetId: null, error: "Provider unavailable", profileUrl: null },
+    ]);
+    const response = await postArtistSocialsScrapeHandler(
+      makeRequest({ artist_account_id: ARTIST_ID, posts: 20 }),
+    );
+    expect(response.status).toBe(200);
+    expect(deductSocialScrapeCredits).toHaveBeenCalledWith(
+      ACCOUNT_ID,
+      250_000,
+      "POST /api/artist/socials/scrape",
+    );
+    expect(await response.json()).toHaveLength(2);
+  });
+
+  it("does not deduct credits when every profile fails to start", async () => {
+    vi.mocked(scrapeProfileUrlBatch).mockResolvedValue([
+      { runId: null, datasetId: null, error: "Provider unavailable", profileUrl: null },
+    ]);
+    const response = await postArtistSocialsScrapeHandler(
+      makeRequest({ artist_account_id: ARTIST_ID, posts: 20 }),
+    );
+    expect(response.status).toBe(200);
+    expect(deductSocialScrapeCredits).not.toHaveBeenCalled();
+  });
 });
