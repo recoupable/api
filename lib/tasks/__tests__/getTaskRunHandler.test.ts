@@ -19,6 +19,10 @@ vi.mock("@/lib/trigger/fetchTriggerRuns", () => ({
   fetchTriggerRuns: vi.fn(),
 }));
 
+vi.mock("@/lib/supabase/scheduled_actions/selectScheduledActions", () => ({
+  selectScheduledActions: vi.fn(),
+}));
+
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
@@ -61,8 +65,14 @@ describe("getTaskRunHandler", () => {
 
   describe("retrieve mode", () => {
     it("wraps a single run in { status, runs[] }", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "retrieve", runId: "run_123" });
-      vi.mocked(retrieveTaskRun).mockResolvedValue(mockRun);
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
+        mode: "retrieve",
+        runId: "run_123",
+        accountId: "acc_123",
+      });
+      vi.mocked(retrieveTaskRun).mockResolvedValue(
+        mockRun as unknown as Awaited<ReturnType<typeof retrieveTaskRun>>,
+      );
 
       const response = await getTaskRunHandler(createMockRequest());
       const json = await response.json();
@@ -73,8 +83,32 @@ describe("getTaskRunHandler", () => {
       expect(json.runs[0].id).toBe("run_123");
     });
 
+    it.each([
+      { payload: { accountId: "other" }, tags: ["account:other"] },
+      { payload: {}, tags: [] },
+      { payload: { accountId: "other" }, tags: ["account:acc_123"] },
+    ])("hides foreign or unattributed run details: %j", async ownership => {
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
+        mode: "retrieve",
+        runId: "run_123",
+        accountId: "acc_123",
+      });
+      vi.mocked(retrieveTaskRun).mockResolvedValue({
+        ...mockRun,
+        ...ownership,
+        output: { private: "hidden" },
+      } as unknown as Awaited<ReturnType<typeof retrieveTaskRun>>);
+      const response = await getTaskRunHandler(createMockRequest());
+      expect(response.status).toBe(404);
+      expect(await response.json()).toEqual({ status: "error", error: "Task run not found" });
+    });
+
     it("returns 404 when run is not found", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "retrieve", runId: "run_x" });
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
+        mode: "retrieve",
+        runId: "run_x",
+        accountId: "acc_123",
+      });
       vi.mocked(retrieveTaskRun).mockResolvedValue(null);
 
       const response = await getTaskRunHandler(createMockRequest());
@@ -82,13 +116,17 @@ describe("getTaskRunHandler", () => {
     });
 
     it("returns 500 when retrieveTaskRun throws", async () => {
-      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({ mode: "retrieve", runId: "run_123" });
+      vi.mocked(validateGetTaskRunQuery).mockResolvedValue({
+        mode: "retrieve",
+        runId: "run_123",
+        accountId: "acc_123",
+      });
       vi.mocked(retrieveTaskRun).mockRejectedValue(new Error("API error"));
 
       const response = await getTaskRunHandler(createMockRequest());
       expect(response.status).toBe(500);
       const json = await response.json();
-      expect(json.error).toBe("API error");
+      expect(json.error).toBe("Failed to retrieve task runs");
     });
   });
 
@@ -114,7 +152,9 @@ describe("getTaskRunHandler", () => {
         accountId: "acc_123",
         limit: 20,
       });
-      vi.mocked(fetchTriggerRuns).mockResolvedValue([mockRun]);
+      vi.mocked(fetchTriggerRuns).mockResolvedValue([
+        { ...mockRun, createdAt: mockRun.createdAt.toISOString() },
+      ]);
 
       const response = await getTaskRunHandler(createMockRequest());
       const json = await response.json();

@@ -17,14 +17,14 @@ export async function OPTIONS() {
 /**
  * GET /api/tasks/runs
  *
- * Retrieves the status of a Trigger.dev task run.
- * Returns one of three possible statuses:
- * - pending: Task is still running
- * - complete: Task completed successfully with data
- * - failed: Task failed with error message
+ * Lists recent runs for the authenticated account or retrieves one owned run.
+ * Returns { status: "success", runs: [...] } on success.
+ * Missing, inaccessible, or unattributed runs return 404 without run details.
  *
  * Query parameters:
- * - runId (required): The unique identifier of the task run
+ * - runId (optional): Retrieve one run instead of listing recent runs
+ * - account_id (optional): Target account, subject to existing access checks
+ * - limit (optional): List size, 1–100; defaults to 20
  *
  * @param request - The request object containing query parameters.
  * @returns A NextResponse with task run status.

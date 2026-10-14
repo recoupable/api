@@ -1,7 +1,7 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
-import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
+import { canReadTaskRun } from "@/lib/tasks/canReadTaskRun";
 import { retrieveVideoFunction } from "@/lib/video/retrieveVideo";
 import { retrieveVideoContentFunction } from "@/lib/video/retrieveVideoContent";
 import { createOAuthVideoLocator } from "./createOAuthVideoLocator";
@@ -18,27 +18,7 @@ export async function executeFullOAuthTool(
   });
   if (name === "get_task_run_status") {
     const job = await retrieveTaskRun(z.string().parse(args.runId));
-    if (!job) throw new Error("Run not found");
-    const payload = z
-      .object({
-        accountId: z.string().optional(),
-        account_id: z.string().optional(),
-        externalId: z.string().optional(),
-      })
-      .safeParse(job.payload);
-    let owned =
-      payload.success &&
-      (payload.data.accountId === accountId || payload.data.account_id === accountId);
-    if (!owned && payload.success && payload.data.externalId) {
-      const tasks = await selectScheduledActions({
-        id: payload.data.externalId,
-        account_id: accountId,
-      });
-      owned = tasks.some(
-        task => task.id === payload.data.externalId && task.account_id === accountId,
-      );
-    }
-    if (!owned) throw new Error("Run access denied");
+    if (!job || !(await canReadTaskRun(job, accountId))) throw new Error("Task run not found");
     return result({
       id: job.id,
       status: job.status,
