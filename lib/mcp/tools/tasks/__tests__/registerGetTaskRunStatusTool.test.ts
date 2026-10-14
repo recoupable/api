@@ -222,7 +222,7 @@ describe("registerGetTaskRunStatusTool", () => {
       content: [
         {
           type: "text",
-          text: expect.stringContaining("Failed to retrieve task run"),
+          text: JSON.stringify({ success: false, message: "Failed to retrieve task run" }),
         },
       ],
     });
