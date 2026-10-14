@@ -100,7 +100,7 @@ describe("validateGetTaskRunQuery", () => {
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "retrieve", runId: "run_abc123" });
+      expect(result).toEqual({ mode: "retrieve", runId: "run_abc123", accountId: "acc_123" });
     });
 
     it("trims whitespace from runId", async () => {
@@ -111,7 +111,7 @@ describe("validateGetTaskRunQuery", () => {
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "retrieve", runId: "run_abc123" });
+      expect(result).toEqual({ mode: "retrieve", runId: "run_abc123", accountId: "acc_123" });
     });
 
     it("returns list mode with custom limit", async () => {
@@ -125,6 +125,37 @@ describe("validateGetTaskRunQuery", () => {
   });
 
   describe("account_id override", () => {
+    it("rejects an unauthorized override even when retrieving a run", async () => {
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId: "acc_123",
+        orgId: null,
+        authToken: "key",
+      });
+      vi.mocked(checkIsAdmin).mockResolvedValue(false);
+      vi.mocked(validateAccountIdOverride).mockResolvedValue(
+        NextResponse.json({ error: "denied" }, { status: 403 }),
+      );
+      const result = await validateGetTaskRunQuery(
+        createMockRequest("http://localhost/api/tasks/runs?runId=run_123&account_id=other"),
+      );
+      expect(result).toBeInstanceOf(NextResponse);
+      expect((result as NextResponse).status).toBe(403);
+    });
+
+    it("retains an authorized override when retrieving a run", async () => {
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId: "acc_123",
+        orgId: null,
+        authToken: "key",
+      });
+      vi.mocked(checkIsAdmin).mockResolvedValue(false);
+      vi.mocked(validateAccountIdOverride).mockResolvedValue({ accountId: "member" });
+      const result = await validateGetTaskRunQuery(
+        createMockRequest("http://localhost/api/tasks/runs?runId=run_123&account_id=member"),
+      );
+      expect(result).toEqual({ mode: "retrieve", runId: "run_123", accountId: "member" });
+    });
+
     it("allows admin to query any account", async () => {
       vi.mocked(validateAuthContext).mockResolvedValue({
         accountId: "admin_acc",
