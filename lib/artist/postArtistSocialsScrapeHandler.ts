@@ -20,7 +20,7 @@ import { endpointModelId } from "@/lib/credits/endpointModelId";
  * - artist_account_id (required): The unique identifier of the artist account
  * - posts (optional): Recent-posts depth forwarded to each platform scraper
  *
- * Costs 5 credits plus 1 per requested post, per social profile scraped.
+ * Costs 50,000 + 10,000 × requested posts micro-dollar credits per profile.
  * Credits are gated up-front against the number of linked profiles and
  * deducted for the profiles whose scrape actually started.
  *
@@ -71,10 +71,11 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
       validatedBody.posts,
     );
 
-    if (results.length) {
+    const started = results.filter(result => result.runId);
+    if (started.length) {
       await deductSocialScrapeCredits(
         authResult.accountId,
-        costPerProfile * results.length,
+        costPerProfile * started.length,
         endpointModelId(request, "/api/artist/socials/scrape"),
       );
 
@@ -86,16 +87,14 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
         socials.map(s => [s.social?.profile_url ?? "", s.social?.id ?? null]),
       );
       await upsertApifyScraperRuns(
-        results
-          .filter(r => r.runId)
-          .map(r => ({
-            run_id: r.runId as string,
-            account_id: authResult.accountId,
-            social_id: r.profileUrl ? (socialByUrl.get(r.profileUrl) ?? null) : null,
-            platform: r.profileUrl ? getSocialPlatformByLink(r.profileUrl).toLowerCase() : null,
-            batch_id: batchId,
-            origin: "artist",
-          })),
+        started.map(r => ({
+          run_id: r.runId as string,
+          account_id: authResult.accountId,
+          social_id: r.profileUrl ? (socialByUrl.get(r.profileUrl) ?? null) : null,
+          platform: r.profileUrl ? getSocialPlatformByLink(r.profileUrl).toLowerCase() : null,
+          batch_id: batchId,
+          origin: "artist",
+        })),
       );
     }
 
