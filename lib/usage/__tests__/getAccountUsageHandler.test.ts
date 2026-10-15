@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { getAccountUsageHandler } from "@/lib/usage/getAccountUsageHandler";
+import { decodeUsageCursor } from "@/lib/usage/decodeUsageCursor";
 import { validateGetAccountUsageQuery } from "@/lib/usage/validateGetAccountUsageQuery";
 import { selectUsagePage } from "@/lib/usage/selectUsagePage";
 import { selectAllUsageEvents } from "@/lib/admins/credits/selectAllUsageEvents";
@@ -79,7 +80,10 @@ describe("getAccountUsageHandler", () => {
     expect(body.events.map((e: { id: string }) => e.id)).toEqual(["b", "a"]);
     expect(body.events[0].credits_deducted).toBe(20000);
     expect(body.events[0].usd).toBe("$0.02");
-    expect(body.next_cursor).toBe("2026-08-10T10:00:00.000Z");
+    expect(decodeUsageCursor("created_at", body.next_cursor)).toEqual({
+      createdAt: "2026-08-10T10:00:00.000000Z",
+      id: "a",
+    });
     // First page: the series covers the whole period at the span's bucket.
     expect(body.series_bucket).toBe("day");
     expect(body.series).toEqual([

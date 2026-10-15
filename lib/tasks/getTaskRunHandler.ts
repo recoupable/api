@@ -3,11 +3,12 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetTaskRunQuery } from "./validateGetTaskRunQuery";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
+import { canReadTaskRun } from "./canReadTaskRun";
 import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
 
 /**
  * Handles GET /api/tasks/runs requests.
- * Always returns { status: "success", runs: [...] }.
+ * Returns { status: "success", runs: [...] } for authorized successful reads.
  * When runId is provided, runs contains a single element.
  * When omitted, runs contains recent runs for the authenticated account.
  *
@@ -34,7 +35,7 @@ export async function getTaskRunHandler(request: NextRequest): Promise<NextRespo
 
     const result = await retrieveTaskRun(validatedQuery.runId);
 
-    if (result === null) {
+    if (!result || !(await canReadTaskRun(result, validatedQuery.accountId))) {
       return NextResponse.json(
         { status: "error", error: "Task run not found" },
         { status: 404, headers: getCorsHeaders() },
@@ -50,7 +51,7 @@ export async function getTaskRunHandler(request: NextRequest): Promise<NextRespo
     return NextResponse.json(
       {
         status: "error",
-        error: error instanceof Error ? error.message : "Internal server error",
+        error: "Failed to retrieve task runs",
       },
       { status: 500, headers: getCorsHeaders() },
     );

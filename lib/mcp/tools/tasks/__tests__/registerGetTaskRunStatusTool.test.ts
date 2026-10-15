@@ -12,6 +12,10 @@ vi.mock("@/lib/trigger/retrieveTaskRun", () => ({
   retrieveTaskRun: (...args: unknown[]) => mockRetrieveTaskRun(...args),
 }));
 
+vi.mock("@/lib/supabase/scheduled_actions/selectScheduledActions", () => ({
+  selectScheduledActions: vi.fn(),
+}));
+
 vi.mock("@/lib/mcp/resolveAccountId", () => ({
   resolveAccountId: (...args: unknown[]) => mockResolveAccountId(...args),
 }));
@@ -113,6 +117,7 @@ describe("registerGetTaskRunStatusTool", () => {
       error: null,
     });
     mockRetrieveTaskRun.mockResolvedValue({
+      payload: { accountId: "acc_123" },
       status: "complete",
       data: null,
       metadata: null,
@@ -138,6 +143,7 @@ describe("registerGetTaskRunStatusTool", () => {
       error: null,
     });
     mockRetrieveTaskRun.mockResolvedValue({
+      payload: { accountId: "acc_123" },
       status: "complete",
       data: { output: "done" },
       metadata: { logs: ["step 1", "step 2"] },
@@ -162,6 +168,20 @@ describe("registerGetTaskRunStatusTool", () => {
         },
       ],
     });
+  });
+
+  it("does not expose a foreign run through the API-key tool", async () => {
+    mockResolveAccountId.mockResolvedValue({ accountId: "acc_123", error: null });
+    mockRetrieveTaskRun.mockResolvedValue({
+      payload: { accountId: "other" },
+      output: "private-output",
+    });
+    const result = await registeredHandler(
+      { runId: "foreign" },
+      createMockExtra({ accountId: "acc_123" }),
+    );
+    expect(JSON.stringify(result)).toContain("not found");
+    expect(JSON.stringify(result)).not.toContain("private-output");
   });
 
   it("returns error when task run is not found", async () => {
@@ -202,7 +222,7 @@ describe("registerGetTaskRunStatusTool", () => {
       content: [
         {
           type: "text",
-          text: expect.stringContaining("Trigger API error"),
+          text: JSON.stringify({ success: false, message: "Failed to retrieve task run" }),
         },
       ],
     });

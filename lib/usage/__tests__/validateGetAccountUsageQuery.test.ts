@@ -42,15 +42,15 @@ describe("validateGetAccountUsageQuery", () => {
 
   it("defaults to the current UTC month up to now, 20 items", async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-08-27T12:00:00.000Z"));
+    vi.setSystemTime(new Date("2026-08-27T12:00:00.000000Z"));
     const result = await validateGetAccountUsageQuery(req(), ACCOUNT_ID);
     expect(result).toEqual({
       accountId: ACCOUNT_ID,
       limit: 20,
       sort: "created_at",
       cursor: undefined,
-      from: "2026-08-01T00:00:00.000Z",
-      to: "2026-08-27T12:00:00.000Z",
+      from: "2026-08-01T00:00:00.000000Z",
+      to: "2026-08-27T12:00:00.000000Z",
     });
   });
 
@@ -65,9 +65,9 @@ describe("validateGetAccountUsageQuery", () => {
       accountId: ACCOUNT_ID,
       limit: 5,
       sort: "created_at",
-      cursor: { createdAt: "2026-08-15T10:00:00.000Z" },
-      from: "2026-08-09T22:00:00.000Z",
-      to: "2026-08-20T00:00:00.000Z",
+      cursor: { createdAt: "2026-08-15T10:00:00.000000Z" },
+      from: "2026-08-09T22:00:00.000000Z",
+      to: "2026-08-20T00:00:00.000000Z",
     });
   });
 
