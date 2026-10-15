@@ -19,6 +19,10 @@ export const sendEmailBodySchema = z
     html: z.string().optional(),
     headers: z.record(z.string(), z.string()).default({}).optional(),
     chat_id: z.string().optional(),
+    idempotency_key: z
+      .string()
+      .max(256, "idempotency_key must be at most 256 characters")
+      .optional(),
     account_id: z.string().uuid("account_id must be a valid UUID").optional(),
   })
   // Guard: never send an empty/footer-only email. A malformed or empty body

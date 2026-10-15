@@ -14,6 +14,12 @@ export interface ProcessAndSendEmailInput {
   html?: string;
   headers?: Record<string, string>;
   room_id?: string;
+  /**
+   * Makes the send exactly-once for a retried or replayed caller. Scheduled
+   * runs re-execute on crash or redeploy and would otherwise deliver the same
+   * report again (chat#1918). Forwarded to Resend, which dedupes on it.
+   */
+  idempotencyKey?: string;
 }
 
 export interface ProcessAndSendEmailSuccess {
@@ -39,7 +45,7 @@ export type ProcessAndSendEmailResult = ProcessAndSendEmailSuccess | ProcessAndS
 export async function processAndSendEmail(
   input: ProcessAndSendEmailInput,
 ): Promise<ProcessAndSendEmailResult> {
-  const { to, cc = [], subject, text, html = "", headers = {}, room_id } = input;
+  const { to, cc = [], subject, text, html = "", headers = {}, room_id, idempotencyKey } = input;
 
   const roomData = room_id ? await selectRoomWithArtist(room_id) : null;
   const footer = getEmailFooter(room_id, roomData?.artist_name || undefined);
@@ -51,14 +57,17 @@ export async function processAndSendEmail(
   // card, DESIGN.md font stack, and the existing footer as the layout footer.
   const htmlWithLayout = renderEmailLayout({ bodyHtml, footerHtml: footer });
 
-  const result = await sendEmailWithResend({
-    from: RECOUP_FROM_EMAIL,
-    to,
-    cc: cc.length > 0 ? cc : undefined,
-    subject,
-    html: htmlWithLayout,
-    headers,
-  });
+  const result = await sendEmailWithResend(
+    {
+      from: RECOUP_FROM_EMAIL,
+      to,
+      cc: cc.length > 0 ? cc : undefined,
+      subject,
+      html: htmlWithLayout,
+      headers,
+    },
+    idempotencyKey ? { idempotencyKey } : undefined,
+  );
 
   if (result instanceof NextResponse) {
     const data = await result.json();
