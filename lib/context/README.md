@@ -277,3 +277,56 @@ withdrawal, replay and history behavior applies.
 
 This requires the database company-assessment purpose migration before API release.
 Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
+
+### Registry evidence projection (MusicBrainz and MLC)
+
+`collectContextMusicBrainz` and `collectContextMlc` now save a bounded
+`projection` beside the raw adapter result in each registry observation
+(`musicbrainz_recordings`, `mlc_recordings`, `mlc_works`, `mlc_work_candidates`).
+Their module keys moved to `musicbrainz-isrc-v2` and `mlc-<operation>-v2`, so
+results saved before the projection existed are not reused.
+`projectRegistryEvidence` is a pure function over the adapter output; it makes no
+provider call and reads only keys the adapters already observe (`recordings[].id`,
+`title`, `artist-credit[].name`, `mlcsongCode`, `mlcSongCode`, `iswc`, `primaryTitle`,
+`workTitle`, `writers[].writerFirstName/writerLastName/writerIPI`,
+`publishers[].collectionShare`, plus `publisherName`, `publisherIpiNumber`,
+`writerRoleCode` and `publisherRoleCode` when the source supplies them). Everything
+else stays in the raw trace. The projection carries `claimKind: "registry_claim"`,
+`identityConfirmed: false`, `ownershipVerified: false`, recording MBIDs, MLC song
+codes with `iswc: null` when absent, credited roles with `name`/`ipi`/`roleCode: null`
+when absent, and collection shares with `party: null` when absent,
+`territory: "unknown"`, `effectiveFrom/To: null` and `dateState: "unknown"`; no
+identifier, share, territory or date is ever synthesised.
+
+Every credit and share carries a `record` reference to the source record it was
+read from: a MusicBrainz recording MBID, an MLC work song code, or an MLC recording
+row (its ISRC and linked song code). Claims from different candidates are never
+merged. MLC recording rows supply a recording title and one artist string, so their
+work IDs keep `title: null` and their artist credit has `order: null`; rows or
+recordings without a song code or MBID are left in the raw trace and counted in a
+limitation. More than one recording or work candidate yields `needs_review` with a
+`multiple_candidates` conflict; publisher collection shares above 100% for one song
+code yield an `inconsistent_share_total` conflict that is reported, not corrected.
+Each projected list (recordings, candidates, per-record credits, publishers and the
+combined credit list) holds at most 100 entries with a limitation naming the source
+count; conflict counts and share totals use the complete source response. An
+unrecognised payload shape yields `status: "unknown"` with a limitation instead of a
+throw. Identifier mismatches never reach the projection because the adapters reject
+them first.
+
+The `company_onboarding` assessment recipe now includes the four registry topics.
+Saved registry observations with `partial` coverage are eligible as cited
+documents. The saved document is the full adapter result (including the raw trace)
+plus the projection; the projection does not shrink it, so a large lookup can be
+excluded by the brief size limit and then appears as a missing topic. `not_found`
+lookups are saved with `unknown` coverage and also surface as missing topics, the
+same as topics never collected; the saved row keeps the difference, the brief does
+not yet. Guidance states that registry lookups are source assertions and collection
+shares, not proven ownership, identity or collection authority.
+
+State: implemented and fixture-tested only. Planner dispatch for these modules is
+still blocked (`permittedModules: []`), no live MusicBrainz or MLC call has been made
+for this slice, no rights or ownership is inferred, and no HTTP/MCP action, database
+migration or docs contract changes. The MLC credential guard
+(`getRecoupMlcAccessToken`) is unit-tested to fail before any provider request when
+`MLC_USERNAME`/`MLC_PASSWORD` are unset and to keep credential values out of errors.

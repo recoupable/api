@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { lookupMusicBrainzIsrc } from "../providers/lookupMusicBrainzIsrc";
+import { projectRegistryEvidence } from "./projectRegistryEvidence";
 import { runContextEnrichment } from "./runContextEnrichment";
 type Dependencies = Omit<Parameters<typeof runContextEnrichment>[4], "call"> & {
   resolveRecording?: (owner: string, requestId: string, subjectId: string) => Promise<string>;
@@ -36,7 +37,7 @@ export async function collectContextMusicBrainz(
     owner,
     requestId,
     {
-      key: "musicbrainz-isrc-v1",
+      key: "musicbrainz-isrc-v2",
       topic: "musicbrainz_recordings",
       subjectId: recordingSubjectId,
       provider: "musicbrainz",
@@ -58,7 +59,15 @@ export async function collectContextMusicBrainz(
       call: async () => {
         const result = await lookupMusicBrainzIsrc(isrc, deps.acquirePermit, deps.fetcher);
         return {
-          content: { ...result, identityConfirmed: false },
+          content: {
+            ...result,
+            identityConfirmed: false,
+            projection: projectRegistryEvidence({
+              provider: "musicbrainz",
+              operation: "isrc",
+              payload: result,
+            }),
+          },
           coverage: result.status === "not_found" ? "unknown" : "partial",
           trace: result.trace,
           observedSources: [

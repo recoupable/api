@@ -107,3 +107,38 @@ it("includes the submitted release locator without claiming verified release met
   expect(result.missingTopics).toContain("release_metadata");
   expect(result.readiness).toBe("partial");
 });
+
+it("includes saved MLC work evidence as a registry claim and lists absent registry topics", () => {
+  const registry = {
+    ...document,
+    id: "66666666-6666-4666-8666-666666666666",
+    topic: "mlc_works",
+    evidenceKind: "observation" as const,
+    text: JSON.stringify({
+      status: "source_found",
+      ownershipVerified: false,
+      projection: {
+        claimKind: "registry_claim",
+        ownershipVerified: false,
+        workIds: [{ provider: "mlc", songCode: "123", iswc: null, title: "Fixture Work" }],
+        shares: [{ party: "Fixture Music", percent: 50, territory: "unknown" }],
+      },
+    }),
+  };
+  const result = compileContextBrief({
+    ownerId: owner,
+    requests: [{ id: request, subjectIds: [subject] }],
+    documents: [document, registry],
+    purpose: "company_onboarding",
+    maxCharacters: 12000,
+  });
+  expect(result.documents).toEqual([document, registry]);
+  expect(result.text).toContain("registry_claim");
+  expect(result.text).toContain('"territory":"unknown"');
+  expect(result.missingTopics).toEqual(
+    expect.arrayContaining(["musicbrainz_recordings", "mlc_recordings", "mlc_work_candidates"]),
+  );
+  expect(result.missingTopics).not.toContain("mlc_works");
+  expect(result.input_manifest.excludedTopics).toEqual([]);
+  expect(result.guidance).toMatch(/not proven ownership/i);
+});
