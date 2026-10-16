@@ -2485,28 +2485,40 @@ type BaseDatabase = {
       };
       posts: {
         Row: {
+          caption: string | null;
           comments: number | null;
           id: string;
           likes: number | null;
+          media: Json;
+          media_observed_at: string | null;
           post_url: string;
+          published_at: string | null;
           reposts: number | null;
           updated_at: string;
           views: number | null;
         };
         Insert: {
+          caption?: string | null;
           comments?: number | null;
           id?: string;
           likes?: number | null;
+          media?: Json;
+          media_observed_at?: string | null;
           post_url: string;
+          published_at?: string | null;
           reposts?: number | null;
           updated_at?: string;
           views?: number | null;
         };
         Update: {
+          caption?: string | null;
           comments?: number | null;
           id?: string;
           likes?: number | null;
+          media?: Json;
+          media_observed_at?: string | null;
           post_url?: string;
+          published_at?: string | null;
           reposts?: number | null;
           updated_at?: string;
           views?: number | null;
