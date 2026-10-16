@@ -13,6 +13,8 @@ const recipes = {
       "recording_metadata",
       "release_metadata",
       "release_locator",
+      "unreleased_recording",
+      "planned_release",
     ],
   },
   creative_direction: {
