@@ -104,6 +104,12 @@ export const contextToolOperations = {
       "Create a context request from a submitted songwriter name. A name is not verified identity.",
     readOnly: false,
   },
+  resolve_songwriter_identity: {
+    name: "resolve_songwriter_identity",
+    description:
+      "Link a saved songwriter-name request to an explicitly selected organization professional. Requires the professional ID and confirmation; names never select identity. Not roster enrollment or rights.",
+    readOnly: false,
+  },
   ingest_company_name: {
     name: "import_music_company_context",
     description:
