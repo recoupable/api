@@ -9,6 +9,7 @@ import type { McpAuthInfo } from "../verifyApiKey";
 import type { OAuthAccess } from "../../oauth/resolveOAuthAccess";
 import { contextToolOperations } from "./contextToolOperations";
 import { fullOAuthToolPolicy } from "./fullOAuthToolPolicy";
+import { undelegatedContextActions } from "./undelegatedContextActions";
 
 type Extra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 type Args = Record<string, unknown>;
@@ -56,6 +57,7 @@ export function registerFullOAuthTools(
         const action = option.shape.action.value as keyof typeof contextToolOperations;
         const metadata = contextToolOperations[action];
         if (!metadata) throw new Error(`Missing delegated context policy for ${action}`);
+        if (undelegatedContextActions.includes(action)) continue;
         register(
           name,
           { ...config, description: metadata.description, inputSchema: option },
