@@ -32,7 +32,8 @@ export async function collectContextCatalogEstimate(
     owner,
     requestId,
     {
-      key: "catalog-valuation-v1",
+      // v2: saved content carries the `estimate` label; v1 results must not be reused.
+      key: "catalog-valuation-v2",
       topic: "catalog_valuation",
       subjectId: args.subjectId,
       provider: "recoup",
