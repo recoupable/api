@@ -60,3 +60,80 @@ it("rejects reversed dates and invented campaign fields before storage", async (
   expect(authorize).not.toHaveBeenCalled();
   expect(rpc).not.toHaveBeenCalled();
 });
+
+const promoted = [
+  {
+    request_id: "00000000-0000-4000-8000-000000000011",
+    subject_id: "00000000-0000-4000-8000-000000000012",
+  },
+];
+
+it("forwards channels and already-saved promoted subjects to the database without dispatch", async () => {
+  const rpc = vi.fn(async () => ({ id: "request", status: "partial" }));
+  const dispatch = vi.fn();
+  const authorize = vi.fn(async () => ({
+    accountId: actor,
+    ownerId: workspace,
+    organizationId: workspace,
+  }));
+  const linked = { ...brief, channels: ["Short-form video", "Radio"], promoted };
+  await processContextOperation(
+    actor,
+    {
+      action: "ingest_campaign_brief",
+      brief: linked,
+      organization_id: workspace,
+      idempotency_key: "campaign-links",
+    },
+    { authorize, rpc, dispatch },
+  );
+  expect(rpc).toHaveBeenCalledWith("create_context_campaign_brief_request", {
+    p_owner: workspace,
+    p_actor: actor,
+    p_brief: linked,
+    p_key: "campaign-links",
+  });
+  expect(dispatch).not.toHaveBeenCalled();
+});
+
+it("rejects raw links, file references and ambiguous promoted entries before authorization", async () => {
+  const authorize = vi.fn();
+  const rpc = vi.fn();
+  for (const invalid of [
+    { ...brief, promoted_url: "https://example.com/release" },
+    { ...brief, promoted: ["https://example.com/release"] },
+    { ...brief, promoted: [{ request_id: "https://example.com/release", subject_id: workspace }] },
+    { ...brief, promoted: [{ ...promoted[0], url: "https://example.com/release" }] },
+    { ...brief, promoted: [promoted[0], promoted[0]] },
+    { ...brief, file_path: "/private/artwork.png" },
+    { ...brief, channels: ["file:plan.pdf"] },
+    { ...brief, channels: ["TikTok", "tiktok"] },
+    { ...brief, channels: Array.from({ length: 11 }, (_, i) => `channel ${i}`) },
+  ]) {
+    await expect(
+      processContextOperation(
+        actor,
+        { action: "ingest_campaign_brief", brief: invalid, idempotency_key: "campaign-links" },
+        { authorize, rpc, dispatch: vi.fn() },
+      ),
+    ).rejects.toThrow();
+  }
+  expect(authorize).not.toHaveBeenCalled();
+  expect(rpc).not.toHaveBeenCalled();
+});
+
+it("forwards a legacy brief without link fields unchanged", async () => {
+  const rpc = vi.fn(async () => ({ id: "request", status: "partial" }));
+  const authorize = vi.fn(async () => ({
+    accountId: actor,
+    ownerId: workspace,
+    organizationId: workspace,
+  }));
+  await processContextOperation(
+    actor,
+    { action: "ingest_campaign_brief", brief, idempotency_key: "campaign-legacy" },
+    { authorize, rpc, dispatch: vi.fn() },
+  );
+  const call = rpc.mock.calls[0] as unknown as [string, { p_brief: Record<string, unknown> }];
+  expect(Object.keys(call[1].p_brief).sort()).toEqual(Object.keys(brief).sort());
+});

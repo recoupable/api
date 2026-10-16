@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 import { authorizeContextOwner } from "./authorizeContextOwner";
 import { contextIngestSchema } from "./schema";
+import { campaignBriefSchema } from "./campaignBriefSchema";
 import { parseContextUrl } from "./parseContextUrl";
 import { parseContextReleaseUrl } from "./parseContextReleaseUrl";
 import type { ContextBriefDocument } from "./selectContextDocuments";
@@ -126,17 +127,7 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
   }),
   z.strictObject({
     action: z.literal("ingest_campaign_brief"),
-    brief: z
-      .strictObject({
-        name: z.string().trim().min(2).max(200),
-        goal: z.string().trim().min(2).max(2000),
-        audience: z.string().trim().max(500).optional(),
-        start_date: z.iso.date().optional(),
-        end_date: z.iso.date().optional(),
-      })
-      .refine(value => !value.start_date || !value.end_date || value.end_date >= value.start_date, {
-        message: "Campaign end date must not precede start date",
-      }),
+    brief: campaignBriefSchema,
     organization_id: z.uuid().optional(),
     idempotency_key: contextIngestSchema.shape.idempotency_key,
   }),
