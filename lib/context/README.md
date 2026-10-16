@@ -50,6 +50,8 @@ The public metadata path invokes no LLM. Spotify metadata has no per-call model 
 
 The live test does not verify deployed Supabase, HTTP credentials, MCP transport or hosted Vercel Workflow execution. Release migrations through the database repository PR before deploying dependent code. Keep production activation separate from local proof.
 
+Release order, rollback switches, the ordered migration list and the hosted verification checklist are in [`docs/context-release-runbook.md`](../../docs/context-release-runbook.md); `__tests__/contextReleaseRunbook.test.ts` keeps it aligned with the shipped actions and switches.
+
 ## Next milestone
 
 ### Compile task-specific evidence briefs
