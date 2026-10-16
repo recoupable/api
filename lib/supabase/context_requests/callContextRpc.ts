@@ -29,6 +29,7 @@ export async function callContextRpc(
     "create_context_campaign_brief_request",
     "create_context_supporting_text_request",
     "create_context_release_request",
+    "create_context_video_request",
     "read_context_request",
     "list_context_request_targets",
     "list_context_artist_request_target",
