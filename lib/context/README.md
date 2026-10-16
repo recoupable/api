@@ -36,6 +36,8 @@ Source versions and results are immutable. Identical current artist metadata is 
 
 Database request claims use fencing tokens and a two-minute metadata lease. Retrying `ingest` can recover an expired claim or failed dispatch. This lease is not a creative-generation cap. The current pilot has no scheduled dispatch-gap recovery sweep, automatic enrichment, or paid retries.
 
+Ingest failure states are distinct and recoverable. `runContextRequest` persists `request.error` as `<code>: <recovery guidance>` with one of `unsupported_input`, `recording_unavailable` (Spotify 404/410), `provider_outage` (429, 5xx, timeout), `provider_rejected` (other non-OK status), `provider_response_invalid` (payload fails the track schema or lacks a verified ISRC), `identity_conflict` (`Recording mismatch`, `Conflicting recording identity`, `Conflicting artist identity`, or a relinked recording) or `unknown`; `read` exposes it, and the text never includes a raw provider body. No artist, recording or release record is created on any failure. A failed request is re-claimed by retrying `ingest` with the same idempotency key once the cause is corrected. Album URLs belong to `ingest_release`; playlists and artist pages are rejected at validation with an explicit message in the HTTP 400 `issues[]`.
+
 ## Scope and costs
 
 `release_metadata` contains track/release facts and artwork URLs. `artist_metadata` contains credited provider identity/name; it is **not artist research**. Metadata coverage is explicitly partial and says no audio was analyzed. Other requested topics are unavailable. Requests are partial when topics are missing.
