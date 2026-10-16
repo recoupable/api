@@ -22,3 +22,11 @@ it("records a review plan after metadata while preserving the workflow result", 
   expect(calls).toEqual(["metadata", "plan"]);
   expect(plan).toHaveBeenCalledWith("actor", "owner", "request");
 });
+
+it("returns a failed request, such as a quarantined identity conflict, without planning", async () => {
+  const request = { id: "request", status: "failed", output: { identityConflicts: [{}] } };
+  metadata.mockResolvedValueOnce(request);
+  plan.mockClear();
+  await expect(contextWorkflow("actor", "owner", "request")).resolves.toBe(request);
+  expect(plan).not.toHaveBeenCalled();
+});
