@@ -3042,6 +3042,87 @@ type BaseDatabase = {
           },
         ];
       };
+      scheduled_posts: {
+        Row: {
+          account_id: string;
+          cover_url: string | null;
+          created_at: string;
+          created_by_account_id: string | null;
+          description: string | null;
+          error_message: string | null;
+          id: string;
+          platform: string;
+          post_url: string | null;
+          privacy: string | null;
+          publish_at: string | null;
+          status: string;
+          sub_account_id: string | null;
+          tags: string[] | null;
+          text_verified: boolean | null;
+          title: string | null;
+          updated_at: string;
+          video_url: string;
+          workflow_run_id: string | null;
+        };
+        Insert: {
+          account_id: string;
+          cover_url?: string | null;
+          created_at?: string;
+          created_by_account_id?: string | null;
+          description?: string | null;
+          error_message?: string | null;
+          id?: string;
+          platform: string;
+          post_url?: string | null;
+          privacy?: string | null;
+          publish_at?: string | null;
+          status: string;
+          sub_account_id?: string | null;
+          tags?: string[] | null;
+          text_verified?: boolean | null;
+          title?: string | null;
+          updated_at?: string;
+          video_url: string;
+          workflow_run_id?: string | null;
+        };
+        Update: {
+          account_id?: string;
+          cover_url?: string | null;
+          created_at?: string;
+          created_by_account_id?: string | null;
+          description?: string | null;
+          error_message?: string | null;
+          id?: string;
+          platform?: string;
+          post_url?: string | null;
+          privacy?: string | null;
+          publish_at?: string | null;
+          status?: string;
+          sub_account_id?: string | null;
+          tags?: string[] | null;
+          text_verified?: boolean | null;
+          title?: string | null;
+          updated_at?: string;
+          video_url?: string;
+          workflow_run_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_posts_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "scheduled_posts_created_by_account_id_fkey";
+            columns: ["created_by_account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       segment_rooms: {
         Row: {
           id: string;
