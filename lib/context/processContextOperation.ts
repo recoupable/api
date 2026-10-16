@@ -165,6 +165,11 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     organization_id: z.string().uuid().optional(),
   }),
   z.strictObject({
+    action: z.literal("cancel"),
+    request_id: z.uuid(),
+    organization_id: z.uuid().optional(),
+  }),
+  z.strictObject({
     action: z.literal("brief"),
     ...briefFields,
   }),
@@ -322,6 +327,10 @@ export async function processContextOperation(
       permittedModules: [],
     });
     return { page, plan, collectionPermitted: false };
+  }
+  if (args.action === "cancel") {
+    const { processCancelContextRequest } = await import("./processCancelContextRequest");
+    return processCancelContextRequest(accountId, ownerId, args.request_id);
   }
   if (args.action === "read_execution") {
     const execution = await deps.rpc("read_context_execution", {
