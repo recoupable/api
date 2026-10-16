@@ -7,6 +7,8 @@ import { callContextRpc } from "@/lib/supabase/context_requests/callContextRpc";
 import { dispatchContextRequest } from "./dispatchContextRequest";
 import { dispatchContextReleaseVerification } from "./dispatchContextReleaseVerification";
 import { dispatchContextReleaseTrackIsrcs } from "./dispatchContextReleaseTrackIsrcs";
+import { classifyContextOperationError } from "./classifyContextOperationError";
+import { formatContextOperationError } from "./formatContextOperationError";
 /** POST /api/context: authenticated ingestion, progress, and task-specific context selection. */
 export async function contextOperationHandler(request: NextRequest) {
   const parsed = validateContextOperationBody(await request.json().catch(() => null));
@@ -26,13 +28,8 @@ export async function contextOperationHandler(request: NextRequest) {
         : 200,
       headers: getCorsHeaders(),
     });
-  } catch {
-    return NextResponse.json(
-      {
-        error:
-          "Context operation could not complete. Check scope, request ID and provider availability; retry ingestion with the same idempotency key.",
-      },
-      { status: 409, headers: getCorsHeaders() },
-    );
+  } catch (error) {
+    const { status, body } = formatContextOperationError(classifyContextOperationError(error));
+    return NextResponse.json(body, { status, headers: getCorsHeaders() });
   }
 }
