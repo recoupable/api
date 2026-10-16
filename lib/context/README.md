@@ -132,6 +132,8 @@ Guest admission is capped at 100 new workspaces/day globally, metadata only. Unc
 
 Still outside this addition: automatic paid enrichment/credit settlement, Sites creation from saved context, signup completion email delivery, cross-device claim links, and a UI organization destination picker. Do not promise an emailed or generated experience from this metadata screen.
 
+Workspace routing contract (fixture-tested; not live-verified): a claim without `organization_id` adopts into the personal account, so the request's `owner_id` and `created_by` are both the verified account. A claim naming an `organization_id` is re-authorized against current membership first; the organization becomes `owner_id` while the signed-in account stays `created_by`, and reads remain scoped to that owner. Adoption binds the first verified actor/destination pair: the same pair is idempotent (`reused: true`, same request), any other account or workspace receives `Guest work already claimed`, and an expired unclaimed session can no longer be read, resumed, adopted or completed. The Chat UI still claims into the personal account only. Campaign attribution is not captured on guest start or carried onto the adopted request yet; when added it is a separate field, never folded into `topics` or the task purpose.
+
 ### Expand a catalog request
 
 Authenticated `action: expand_catalog_members` accepts `request_id`, `subject_id`, optional
