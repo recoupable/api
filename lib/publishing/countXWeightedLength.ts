@@ -1,7 +1,8 @@
 // X's counting rules (twitter-text v3): any URL, with or without a scheme,
 // counts as 23; an emoji sequence counts as 2; code points in the ranges below
-// count as 1; everything else (e.g. CJK) counts as 2.
-const URL_PATTERN = /(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*)?/gi;
+// count as 1; everything else (e.g. CJK) counts as 2. Trailing punctuation
+// after a URL is not part of it.
+const URL_PATTERN = /(?:https?:\/\/)?(?:[a-z0-9-]+\.)+[a-z]{2,}(?:\/[^\s]*[^\s.,!?;:)'"])?/gi;
 const URL_WEIGHT = 23;
 const SINGLE_WEIGHT_RANGES: Array<[number, number]> = [
   [0, 4351],

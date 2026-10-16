@@ -35,11 +35,15 @@ export async function publishInstagram({ target, post }: PublishInput): Promise<
   const mediaId = findValue(published, ["id", "media_id"]);
   if (!mediaId) throw new Error("Instagram did not return a media id after publishing");
 
+  // The Reel is live from here on: a failed read-back must not fail the post.
   const media = await executePostAction(target, "INSTAGRAM_GET_IG_MEDIA", {
     ig_media_id: mediaId,
     fields: "permalink,caption",
-  });
-  const postUrl = findValue(media, ["permalink"]) ?? `https://www.instagram.com/reel/${mediaId}/`;
+  }).catch(() => null);
+  const username = findValue(me, ["username"]);
+  const postUrl =
+    findValue(media, ["permalink"]) ??
+    (username ? `https://www.instagram.com/${username}/` : "https://www.instagram.com/");
 
   return { postUrl, textVerified: findValue(media, ["caption"]) === post.description };
 }

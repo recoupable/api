@@ -11,6 +11,10 @@ describe("countXWeightedLength", () => {
     expect(countXWeightedLength("see recoupable.dev/podcast")).toBe(4 + 23);
   });
 
+  it("keeps trailing punctuation out of the URL", () => {
+    expect(countXWeightedLength("Listen: recoupable.dev/podcast, now.")).toBe(8 + 23 + 6);
+  });
+
   it("counts CJK characters and emoji as 2", () => {
     expect(countXWeightedLength("音楽")).toBe(4);
     expect(countXWeightedLength("🎵")).toBe(2);

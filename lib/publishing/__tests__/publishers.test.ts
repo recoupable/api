@@ -69,6 +69,23 @@ describe("platform publishers", () => {
     );
   });
 
+  it("instagram: a failed read-back still returns the post as live", async () => {
+    actions({
+      INSTAGRAM_GET_USER_INFO: { data: { id: "ig1", username: "recoupableai" } },
+      INSTAGRAM_POST_IG_USER_MEDIA: { data: { id: "c1" } },
+      INSTAGRAM_POST_IG_USER_MEDIA_PUBLISH: { data: { id: "m1" } },
+      INSTAGRAM_GET_IG_MEDIA: new Error("INSTAGRAM_GET_IG_MEDIA failed: timeout"),
+    });
+    const result = await publishInstagram({
+      target,
+      post: { ...base, platform: "instagram", description: "C" },
+    } as never);
+    expect(result).toEqual({
+      postUrl: "https://www.instagram.com/recoupableai/",
+      textVerified: false,
+    });
+  });
+
   it("x: retries the media upload, posts with media_media_ids, ignores the t.co suffix", async () => {
     vi.useFakeTimers();
     let uploads = 0;
