@@ -2,8 +2,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetTaskRunQuery } from "./validateGetTaskRunQuery";
-import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
-import { canReadTaskRun } from "./canReadTaskRun";
+import { readTaskRunForAccount } from "./readTaskRunForAccount";
 import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
 
 /**
@@ -33,9 +32,12 @@ export async function getTaskRunHandler(request: NextRequest): Promise<NextRespo
       );
     }
 
-    const result = await retrieveTaskRun(validatedQuery.runId);
+    const result = await readTaskRunForAccount({
+      runId: validatedQuery.runId,
+      accountId: validatedQuery.accountId,
+    });
 
-    if (!result || !(await canReadTaskRun(result, validatedQuery.accountId))) {
+    if (!result) {
       return NextResponse.json(
         { status: "error", error: "Task run not found" },
         { status: 404, headers: getCorsHeaders() },
