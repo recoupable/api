@@ -42,7 +42,7 @@ export async function postSocialScrapeHandler(
     );
 
     if (scrapeResult) {
-      if (scrapeResult.error) {
+      if (scrapeResult.state === "failed") {
         return NextResponse.json(
           {
             status: "error",
@@ -59,14 +59,12 @@ export async function postSocialScrapeHandler(
         getSocialScrapeCreditCost(validated.posts),
         endpointModelId(request, "/api/socials/[id]/scrape"),
       );
-      if (scrapeResult.runId) {
-        await registerRootApifyRun({
-          runId: scrapeResult.runId,
-          accountId: validated.account_id,
-          socialId: social.id,
-          profileUrl: social.profile_url,
-        });
-      }
+      await registerRootApifyRun({
+        runId: scrapeResult.runId,
+        accountId: validated.account_id,
+        socialId: social.id,
+        profileUrl: social.profile_url,
+      });
       return NextResponse.json(
         {
           runId: scrapeResult.runId,
