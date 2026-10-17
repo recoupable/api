@@ -48,11 +48,18 @@ describe("postSocialScrapeHandler", () => {
   });
 
   it("returns 200 with { runId, datasetId } on success and deducts the base $0.05", async () => {
-    vi.mocked(scrapeProfileUrl).mockResolvedValue({ runId: "r1", datasetId: "d1" } as never);
+    vi.mocked(scrapeProfileUrl).mockResolvedValue({
+      state: "started",
+      runId: "r1",
+      datasetId: "d1",
+      error: null,
+      supported: true,
+    });
     const res = await postSocialScrapeHandler(request, SOCIAL_ID);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ runId: "r1", datasetId: "d1" });
     expect(scrapeProfileUrl).toHaveBeenCalledWith(social.profile_url, social.username, undefined);
+    expect(deductSocialScrapeCredits).toHaveBeenCalledTimes(1);
     expect(deductSocialScrapeCredits).toHaveBeenCalledWith(
       ACCOUNT_ID,
       50_000,
@@ -76,9 +83,16 @@ describe("postSocialScrapeHandler", () => {
       account_id: ACCOUNT_ID,
       posts: 20,
     });
-    vi.mocked(scrapeProfileUrl).mockResolvedValue({ runId: "r1", datasetId: "d1" } as never);
+    vi.mocked(scrapeProfileUrl).mockResolvedValue({
+      state: "started",
+      runId: "r1",
+      datasetId: "d1",
+      error: null,
+      supported: true,
+    });
     await postSocialScrapeHandler(request, SOCIAL_ID);
     expect(scrapeProfileUrl).toHaveBeenCalledWith(social.profile_url, social.username, 20);
+    expect(deductSocialScrapeCredits).toHaveBeenCalledTimes(1);
     expect(deductSocialScrapeCredits).toHaveBeenCalledWith(
       ACCOUNT_ID,
       250_000,
@@ -87,19 +101,27 @@ describe("postSocialScrapeHandler", () => {
   });
 
   it("does not deduct credits when the scrape fails to start", async () => {
-    vi.mocked(scrapeProfileUrl).mockResolvedValue({ error: "boom" } as never);
+    vi.mocked(scrapeProfileUrl).mockResolvedValue({
+      state: "failed",
+      runId: null,
+      datasetId: null,
+      error: "boom",
+      supported: true,
+    });
     await postSocialScrapeHandler(request, SOCIAL_ID);
     expect(deductSocialScrapeCredits).not.toHaveBeenCalled();
+    expect(upsertApifyScraperRuns).not.toHaveBeenCalled();
   });
 
   it("does not deduct credits when the platform is unsupported", async () => {
-    vi.mocked(scrapeProfileUrl).mockResolvedValue(null as never);
+    vi.mocked(scrapeProfileUrl).mockResolvedValue(null);
     await postSocialScrapeHandler(request, SOCIAL_ID);
     expect(deductSocialScrapeCredits).not.toHaveBeenCalled();
+    expect(upsertApifyScraperRuns).not.toHaveBeenCalled();
   });
 
   it("returns 400 when platform unsupported (scrapeProfileUrl returns null)", async () => {
-    vi.mocked(scrapeProfileUrl).mockResolvedValue(null as never);
+    vi.mocked(scrapeProfileUrl).mockResolvedValue(null);
     const res = await postSocialScrapeHandler(request, SOCIAL_ID);
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({
@@ -110,7 +132,13 @@ describe("postSocialScrapeHandler", () => {
   });
 
   it("returns 500 when scrape result includes an error", async () => {
-    vi.mocked(scrapeProfileUrl).mockResolvedValue({ error: "boom" } as never);
+    vi.mocked(scrapeProfileUrl).mockResolvedValue({
+      state: "failed",
+      runId: null,
+      datasetId: null,
+      error: "boom",
+      supported: true,
+    });
     const res = await postSocialScrapeHandler(request, SOCIAL_ID);
     expect(res.status).toBe(500);
   });

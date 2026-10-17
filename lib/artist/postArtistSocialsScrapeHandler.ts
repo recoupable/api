@@ -71,7 +71,7 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
       validatedBody.posts,
     );
 
-    const started = results.filter(result => result.runId);
+    const started = results.filter(result => result.state === "started");
     if (started.length) {
       await deductSocialScrapeCredits(
         authResult.accountId,
@@ -88,7 +88,7 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
       );
       await upsertApifyScraperRuns(
         started.map(r => ({
-          run_id: r.runId as string,
+          run_id: r.runId,
           account_id: authResult.accountId,
           social_id: r.profileUrl ? (socialByUrl.get(r.profileUrl) ?? null) : null,
           platform: r.profileUrl ? getSocialPlatformByLink(r.profileUrl).toLowerCase() : null,

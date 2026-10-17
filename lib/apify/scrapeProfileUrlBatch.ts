@@ -1,4 +1,5 @@
-import { ProfileScrapeResult, ScrapeProfileResult, scrapeProfileUrl } from "./scrapeProfileUrl";
+import { ScrapeProfileResult, scrapeProfileUrl } from "./scrapeProfileUrl";
+import type { ProfileScrapeResult } from "./profileScrapeResult";
 
 export type BatchProfileScrapeResult = ProfileScrapeResult & { profileUrl: string | null };
 
@@ -22,10 +23,5 @@ export const scrapeProfileUrlBatch = async (
     .filter(
       (result): result is ScrapeProfileResult & { profileUrl: string | null } => result !== null,
     )
-    .map(({ runId, datasetId, error, profileUrl }) => ({
-      runId,
-      datasetId,
-      error,
-      profileUrl,
-    }));
+    .map(({ supported: _supported, ...result }) => result);
 };
