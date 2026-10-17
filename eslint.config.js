@@ -84,6 +84,29 @@ export default [
     },
   },
   {
+    files: [
+      "app/api/**/*.ts",
+      "lib/tasks/*Handler.ts",
+      "lib/mcp/tools/**/*.ts",
+      "lib/mcp/oauth/**/*.ts",
+    ],
+    ignores: ["**/*.test.ts", "**/__tests__/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/trigger/retrieveTaskRun", "**/trigger/retrieveTaskRun.*"],
+              message:
+                "Use readTaskRunForAccount so task-run retrieval includes account authorization.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // Public API surface — CLAUDE.md mandates JSDoc on all API routes.
     files: ["app/api/**/*.ts"],
     rules: jsdocStrictRules,
