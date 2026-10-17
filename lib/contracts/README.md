@@ -19,7 +19,7 @@ the artifact, selected schemas, operation/status identities and both fixture cop
 The API fixture records Marketing source-file hashes rather than a circular commit pin.
 
 `publishedResponses.test.ts` calls the actual Artist Profile and Project GET exports
-with real Next request/response and auth code. Only external dependency seams are
-mocked. It checks Artist 404, both Projects 401 envelopes, and Projects 404; it does not
+with real Next request/response and auth code. Profile, project-access and credential
+dependencies are mocked. It checks Artist 404, both Projects 401 envelopes, and Projects 404; it does not
 claim coverage of every API error or hosted authentication. It also rejects the old
 message-only Artist schema and responses missing required fields.
