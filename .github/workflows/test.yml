@@ -29,3 +29,6 @@ jobs:
 
       - name: Run tests
         run: pnpm test
+
+      - name: Check response contract types
+        run: pnpm typecheck:response-contracts

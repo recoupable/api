@@ -1,6 +1,6 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { getApiKeyAccountId } from "@/lib/auth/getApiKeyAccountId";
 import { getAuthenticatedAccountId } from "@/lib/auth/getAuthenticatedAccountId";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
@@ -54,10 +54,7 @@ export async function validateAuthContext(
 
   // Enforce exactly one auth mechanism
   if ((hasApiKey && hasAuth) || (!hasApiKey && !hasAuth)) {
-    return NextResponse.json(
-      { status: "error", error: "Exactly one of x-api-key or Authorization must be provided" },
-      { status: 401, headers: getCorsHeaders() },
-    );
+    return errorResponse("Exactly one of x-api-key or Authorization must be provided", 401);
   }
 
   let accountId: string;
@@ -103,10 +100,7 @@ export async function validateAuthContext(
     });
 
     if (!hasOrgAccess) {
-      return NextResponse.json(
-        { status: "error", error: "Access denied to specified organization_id" },
-        { status: 403, headers: getCorsHeaders() },
-      );
+      return errorResponse("Access denied to specified organization_id", 403);
     }
   }
 
