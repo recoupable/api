@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getBearerToken } from "@/lib/auth/getBearerToken";
 import { getAccountIdByApiKey } from "@/lib/auth/getAccountIdByApiKey";
 import { getOrCreateAccountIdByAuthToken } from "@/lib/privy/getOrCreateAccountIdByAuthToken";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { messageErrorResponse } from "@/lib/networking/messageErrorResponse";
 
 /**
  * Extracts and validates the authentication token from the request,
@@ -25,16 +25,7 @@ export async function getAuthenticatedAccountId(
   const authToken = getBearerToken(authHeader);
 
   if (!authToken) {
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Authorization header with Bearer token required",
-      },
-      {
-        status: 401,
-        headers: getCorsHeaders(),
-      },
-    );
+    return messageErrorResponse("Authorization header with Bearer token required", 401);
   }
 
   // A Recoup API key sent as a Bearer token: validate it as an API key instead
@@ -42,10 +33,7 @@ export async function getAuthenticatedAccountId(
   if (authToken.startsWith("recoup_sk_")) {
     const accountId = await getAccountIdByApiKey(authToken);
     if (!accountId) {
-      return NextResponse.json(
-        { status: "error", message: "Unauthorized" },
-        { status: 401, headers: getCorsHeaders() },
-      );
+      return messageErrorResponse("Unauthorized", 401);
     }
     return accountId;
   }
@@ -57,15 +45,6 @@ export async function getAuthenticatedAccountId(
     console.error("[ERROR] Authentication failed:", error);
     const message =
       error instanceof Error ? error.message : "Failed to verify authentication token";
-    return NextResponse.json(
-      {
-        status: "error",
-        message,
-      },
-      {
-        status: 401,
-        headers: getCorsHeaders(),
-      },
-    );
+    return messageErrorResponse(message, 401);
   }
 }

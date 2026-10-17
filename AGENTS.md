@@ -149,6 +149,13 @@ Use **"account"** terminology, never "entity" or "user". All entities in the sys
 
 ### API Response Shapes
 
+The shared error and authentication-message envelopes are typed in
+`lib/networking/errorResponseSchemas.ts`. Use `errorResponse` or
+`messageErrorResponse` while preserving an endpoint's existing wire shape.
+The bounded published response-schema export and coordinated Marketing fixture
+workflow are documented in `lib/contracts/README.md`; run
+`pnpm typecheck:response-contracts` and the contract tests when changing them.
+
 Keep response bodies **flat** — put fields at the root level, not nested inside a `data` wrapper:
 
 ```typescript
