@@ -6,8 +6,9 @@ existing authentication and override checks. Missing, foreign, contradictory, or
 unattributed ownership returns `null`; provider and ownership-lookup failures
 propagate to the transport's existing error handler.
 
-REST, API-key MCP, and full delegated OAuth use this operation. ESLint prevents
-raw `retrieveTaskRun` imports in API routes, task handlers, and MCP transports.
+REST single-run reads, API-key MCP, and full delegated OAuth use this operation.
+REST list mode retains its existing account-tag filter through `fetchTriggerRuns`.
+ESLint prevents raw `retrieveTaskRun` imports in API routes, task handlers, and MCP transports.
 The runtime ownership tests remain necessary: a valid import does not prove that
 the operation still enforces its policy.
 
