@@ -41,7 +41,7 @@
     ],
     "additionalProperties": {}
   },
-  "ErrorOrMessageResponse": {
+  "AuthenticationErrorResponse": {
     "anyOf": [
       {
         "type": "object",

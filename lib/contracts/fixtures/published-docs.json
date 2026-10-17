@@ -2,7 +2,7 @@
   "evidence": "Provider-free request syntax and static contract claims only. URLs are placeholders; no provider, payment or customer workflow is exercised.",
   "responseEvidence": "Selected route exports use real request, response and authentication code under dependency mocks. No live provider, customer or hosted route is exercised.",
   "sourceRepository": "recoupable/marketing",
-  "apiResponseSchemaSha256": "f65397b0466feee5a4d6d2c1b49dcfaa50b419e281e0dcd8ec58bbbb0ee41237",
+  "apiResponseSchemaSha256": "e18d3bfedf61547dd5c28264c3f69d3d4bebb11f62ae15c953a6bac118690bfd",
   "responseSchemas": [
     {
       "specification": "releases.json",
@@ -92,50 +92,25 @@
       "status": 404,
       "mediaType": "application/json",
       "schema": {
-        "anyOf": [
-          {
-            "type": "object",
-            "properties": {
-              "status": {
-                "description": "Always `error`.",
-                "type": "string",
-                "enum": [
-                  "error"
-                ]
-              },
-              "error": {
-                "description": "Human-readable error message or documented error code.",
-                "type": "string"
-              }
-            },
-            "required": [
-              "status",
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
               "error"
-            ],
-            "additionalProperties": {}
+            ]
           },
-          {
-            "type": "object",
-            "properties": {
-              "status": {
-                "description": "Always `error`.",
-                "type": "string",
-                "enum": [
-                  "error"
-                ]
-              },
-              "message": {
-                "description": "Human-readable authentication error message.",
-                "type": "string"
-              }
-            },
-            "required": [
-              "status",
-              "message"
-            ],
-            "additionalProperties": {}
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
           }
-        ]
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
       }
     }
   ],
@@ -146,7 +121,7 @@
     "content/docs/source/api-reference/openapi/releases.json": "026d07948366d6498489d93fb8c809e919403d6154bd90d85aa0151d89150f3c",
     "content/docs/source/api-reference/openapi/social.json": "8d903dea3ecc0eb29c198ccc4ab23449f8929132c7c346151dd03461a828de80",
     "content/docs/source/api-reference/openapi/context.json": "de67b0fecf1759ffad99f0f32eedd2e9b33e22c7feebcebfd961e4d26d21262e",
-    "content/docs/source/api-reference/openapi/projects.json": "32a254f2f98244fdc491b2692a95dc3186d5b319beee07c261ef37ef69c69cd1",
+    "content/docs/source/api-reference/openapi/projects.json": "ccf2eea18ad384efefad04b170cfbdcbec84dc9cf29e9660064ba89cef219fc0",
     "content/docs/source/api-reference/sites/overview.mdx": "2ed1d428d0ec8006530e8cd2201de5ce151c0d3618ea60850730779a11d73658"
   },
   "examples": {

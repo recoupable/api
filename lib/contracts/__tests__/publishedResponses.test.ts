@@ -18,6 +18,7 @@ vi.mock("@/lib/privy/getOrCreateAccountIdByAuthToken", () => ({
 vi.mock("@/lib/projects/hasProjectAccess", () => ({ hasProjectAccess: vi.fn() }));
 
 const id = "11111111-1111-4111-8111-111111111111";
+const accountId = "22222222-2222-4222-8222-222222222222";
 const ajv = new Ajv({ allErrors: true });
 ajv.addKeyword({ keyword: "example", valid: true });
 
@@ -118,7 +119,7 @@ describe("published response schemas against route exports", () => {
   });
 
   it("keeps a foreign project indistinguishable from an unknown project", async () => {
-    vi.mocked(getAccountIdByApiKey).mockResolvedValue(id);
+    vi.mocked(getAccountIdByApiKey).mockResolvedValue(accountId);
     const response = await getProject(
       new NextRequest(`https://api.example/api/projects/${id}`, {
         headers: { "x-api-key": "test-key" },
@@ -130,6 +131,7 @@ describe("published response schemas against route exports", () => {
     const validate = responseContract("/api/projects/{projectId}", 404);
     expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
     expect(body).toEqual({ status: "error", error: "Project not found" });
-    expect(hasProjectAccess).toHaveBeenCalledExactlyOnceWith(id, id);
+    expect(hasProjectAccess).toHaveBeenCalledExactlyOnceWith(id, accountId);
+    expect(validate({ status: "error", message: "Project not found" })).toBe(false);
   });
 });

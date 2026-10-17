@@ -10,7 +10,7 @@ const messageErrorResponseSchema = z.looseObject({ status, message });
 export const errorResponseSchemas = {
   ErrorResponse: errorResponseSchema,
   MessageErrorResponse: messageErrorResponseSchema,
-  ErrorOrMessageResponse: z.union([errorResponseSchema, messageErrorResponseSchema]),
+  AuthenticationErrorResponse: z.union([errorResponseSchema, messageErrorResponseSchema]),
 };
 
 export type ErrorResponseBody = z.infer<typeof errorResponseSchema>;

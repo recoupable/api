@@ -28,8 +28,8 @@ describe("API-owned error response schemas", () => {
   it("keeps each selected published response pinned to the producer schema", () => {
     for (const response of fixture.responseSchemas) {
       const expected =
-        response.specification === "projects.json"
-          ? generated.ErrorOrMessageResponse
+        response.specification === "projects.json" && response.status === 401
+          ? generated.AuthenticationErrorResponse
           : generated.ErrorResponse;
       expect(response.schema).toEqual(expected);
     }
