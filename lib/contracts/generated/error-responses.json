@@ -1,0 +1,90 @@
+{
+  "ErrorResponse": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "description": "Always `error`.",
+        "type": "string",
+        "enum": [
+          "error"
+        ]
+      },
+      "error": {
+        "description": "Human-readable error message or documented error code.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status",
+      "error"
+    ],
+    "additionalProperties": {}
+  },
+  "MessageErrorResponse": {
+    "type": "object",
+    "properties": {
+      "status": {
+        "description": "Always `error`.",
+        "type": "string",
+        "enum": [
+          "error"
+        ]
+      },
+      "message": {
+        "description": "Human-readable authentication error message.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "status",
+      "message"
+    ],
+    "additionalProperties": {}
+  },
+  "AuthenticationErrorResponse": {
+    "anyOf": [
+      {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "message": {
+            "description": "Human-readable authentication error message.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "message"
+        ],
+        "additionalProperties": {}
+      }
+    ]
+  }
+}
