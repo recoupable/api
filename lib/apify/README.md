@@ -29,6 +29,10 @@ pnpm exec vitest run \
 
 The type test compiles valid and invalid examples with strict null checks even
 though the repository-wide TypeScript configuration currently disables them.
+It also typechecks the real result producers and both handler consumers with
+strict null checks and their actual dependencies. That check gates diagnostics
+in these five modules; it does not require unrelated dependency modules to
+complete a repository-wide strict-null migration.
 The route tests invoke the exported production `POST` functions with
 `NextRequest` objects and run the real validation, dispatch, result mapping, and
 deduction wrapper. Authentication, account access, stored rows, platform calls,
@@ -52,4 +56,5 @@ To check the gate itself, temporarily duplicate the artist handler's
 `deductSocialScrapeCredits` call and run the handler and route tests. The exact
 call-count assertions must fail, even though the debit arguments remain correct.
 Restore the implementation and rerun the command. Widening the started state's
-`error` to `string | null` must similarly fail the strict type test.
+`error` to `string | null` or returning `runId: null` from the real started-result
+constructor must similarly fail the strict type test.

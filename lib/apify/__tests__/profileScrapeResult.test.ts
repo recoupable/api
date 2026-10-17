@@ -48,3 +48,35 @@ it("rejects contradictory scrape states with strict null checks", () => {
 
   expect(diagnostics).toEqual([]);
 });
+
+it("typechecks the real scrape producers and consumers with strict null checks", () => {
+  const root = path.resolve(__dirname, "../../..");
+  const config = ts.readConfigFile(path.join(root, "tsconfig.json"), ts.sys.readFile);
+  expect(config.error).toBeUndefined();
+  const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, root);
+  expect(parsed.errors).toEqual([]);
+  const files = [
+    "lib/apify/profileScrapeResult.ts",
+    "lib/apify/scrapeProfileUrl.ts",
+    "lib/apify/scrapeProfileUrlBatch.ts",
+    "lib/artist/postArtistSocialsScrapeHandler.ts",
+    "lib/socials/postSocialScrapeHandler.ts",
+  ].map(file => path.join(root, file));
+  const owned = new Set(files);
+  const program = ts.createProgram(files, {
+    ...parsed.options,
+    incremental: false,
+    noEmit: true,
+    strictNullChecks: true,
+  });
+  const diagnostics = ts
+    .getPreEmitDiagnostics(program)
+    .filter(diagnostic => !diagnostic.file || owned.has(diagnostic.file.fileName))
+    .map(diagnostic => ({
+      file: diagnostic.file ? path.relative(root, diagnostic.file.fileName) : undefined,
+      code: diagnostic.code,
+      message: ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+    }));
+
+  expect(diagnostics).toEqual([]);
+}, 30_000);
