@@ -6,7 +6,8 @@ import startYoutubeProfileScraping from "@/lib/apify/youtube/startYoutubeProfile
 import startFacebookProfileScraping from "@/lib/apify/facebook/startFacebookProfileScraping";
 import startLinkedinProfileScraping from "@/lib/apify/linkedin/startLinkedinProfileScraping";
 import { getUsernameFromProfileUrl } from "@/lib/socials/getUsernameFromProfileUrl";
-import type { ApifyRunLineage } from "@/lib/apify/types";
+import type { ApifyRunInfo, ApifyRunLineage } from "@/lib/apify/types";
+import type { ProfileScrapeResult } from "@/lib/apify/profileScrapeResult";
 
 /** Per-scrape options that only some platforms honor. */
 export interface ScrapeProfileOptions {
@@ -19,18 +20,7 @@ type ScrapeRunner = (
   posts?: number,
   lineage?: ApifyRunLineage,
   options?: ScrapeProfileOptions,
-) => Promise<{
-  runId: string;
-  datasetId: string;
-  error?: string;
-  data?: unknown;
-} | null>;
-
-export interface ProfileScrapeResult {
-  runId: string | null;
-  datasetId: string | null;
-  error: string | null;
-}
+) => Promise<ApifyRunInfo | null>;
 
 export type ScrapeProfileResult = ProfileScrapeResult & {
   supported: boolean;
@@ -98,8 +88,9 @@ export const scrapeProfileUrl = async (
       ? await platform.scraper(finalUsername, posts, lineage, options)
       : await platform.scraper(finalUsername, posts, lineage);
 
-    if (!result) {
+    if (!result?.runId) {
       return {
+        state: "failed",
         runId: null,
         datasetId: null,
         error: "Failed to start scrape",
@@ -108,13 +99,15 @@ export const scrapeProfileUrl = async (
     }
 
     return {
-      runId: result.runId ?? null,
+      state: "started",
+      runId: result.runId,
       datasetId: result.datasetId ?? null,
-      error: result.error ?? null,
+      error: null,
       supported: true,
     };
   } catch (error) {
     return {
+      state: "failed",
       runId: null,
       datasetId: null,
       error: error instanceof Error ? error.message : "Failed to start scrape",

@@ -27,7 +27,36 @@ describe("scrapeProfileUrl", () => {
   it("dispatches linkedin.com to the LinkedIn scraper", async () => {
     const r = await scrapeProfileUrl("https://www.linkedin.com/in/drew-thurlow", "drew-thurlow");
     expect(li).toHaveBeenCalledWith("drew-thurlow", undefined, { origin: "artist" });
-    expect(r).toMatchObject({ supported: true, runId: "li-run", datasetId: "li-ds" });
+    expect(r).toEqual({
+      state: "started",
+      supported: true,
+      runId: "li-run",
+      datasetId: "li-ds",
+      error: null,
+    });
+  });
+  it.each([null, { runId: "", datasetId: "dataset" }])(
+    "returns a failed attempt when the provider did not start a run: %j",
+    async result => {
+      li.mockResolvedValue(result);
+      expect(await scrapeProfileUrl("https://linkedin.com/in/a", "a")).toEqual({
+        state: "failed",
+        runId: null,
+        datasetId: null,
+        error: "Failed to start scrape",
+        supported: true,
+      });
+    },
+  );
+  it("returns a failed attempt when the provider throws", async () => {
+    li.mockRejectedValue(new Error("Provider unavailable"));
+    expect(await scrapeProfileUrl("https://linkedin.com/in/a", "a")).toEqual({
+      state: "failed",
+      runId: null,
+      datasetId: null,
+      error: "Provider unavailable",
+      supported: true,
+    });
   });
   it("forwards posts to the platform scraper", async () => {
     await scrapeProfileUrl("https://www.linkedin.com/in/drew-thurlow", "drew-thurlow", 20);
