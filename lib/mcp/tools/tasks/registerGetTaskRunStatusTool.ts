@@ -6,8 +6,7 @@ import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
-import { canReadTaskRun } from "@/lib/tasks/canReadTaskRun";
-import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
+import { readTaskRunForAccount } from "@/lib/tasks/readTaskRunForAccount";
 
 const getTaskRunStatusSchema = z.object({
   runId: z.string().describe("The unique identifier of the task run to check."),
@@ -43,9 +42,9 @@ export function registerGetTaskRunStatusTool(server: McpServer): void {
       }
 
       try {
-        const result = await retrieveTaskRun(args.runId);
+        const result = await readTaskRunForAccount({ runId: args.runId, accountId });
 
-        if (!result || !(await canReadTaskRun(result, accountId))) {
+        if (!result) {
           return getToolResultError("Task run not found");
         }
 

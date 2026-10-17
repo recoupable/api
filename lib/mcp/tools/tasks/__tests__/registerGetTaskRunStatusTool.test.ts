@@ -142,7 +142,7 @@ describe("registerGetTaskRunStatusTool", () => {
       accountId: "acc_123",
       error: null,
     });
-    mockRetrieveTaskRun.mockResolvedValue({
+    const job = {
       payload: { accountId: "acc_123" },
       status: "complete",
       data: { output: "done" },
@@ -152,7 +152,8 @@ describe("registerGetTaskRunStatusTool", () => {
       startedAt: "2024-01-01T00:00:01.000Z",
       finishedAt: "2024-01-01T00:00:05.000Z",
       durationMs: 4000,
-    });
+    };
+    mockRetrieveTaskRun.mockResolvedValue(job);
 
     const result = await registeredHandler(
       { runId: "run_123" },
@@ -164,7 +165,7 @@ describe("registerGetTaskRunStatusTool", () => {
       content: [
         {
           type: "text",
-          text: expect.stringContaining('"status":"complete"'),
+          text: JSON.stringify(job),
         },
       ],
     });
@@ -180,8 +181,11 @@ describe("registerGetTaskRunStatusTool", () => {
       { runId: "foreign" },
       createMockExtra({ accountId: "acc_123" }),
     );
-    expect(JSON.stringify(result)).toContain("not found");
-    expect(JSON.stringify(result)).not.toContain("private-output");
+    expect(result).toEqual({
+      content: [
+        { type: "text", text: JSON.stringify({ success: false, message: "Task run not found" }) },
+      ],
+    });
   });
 
   it("returns error when task run is not found", async () => {
