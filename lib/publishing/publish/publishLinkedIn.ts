@@ -1,12 +1,15 @@
 import { proxyLinkedIn } from "@/lib/publishing/proxyLinkedIn";
 import { escapeLinkedInText } from "@/lib/publishing/escapeLinkedInText";
+import { getLinkedInMemberUrn } from "@/lib/publishing/getLinkedInMemberUrn";
+import { fetchBytes } from "@/lib/publishing/fetchBytes";
+import { waitForLinkedInVideo } from "@/lib/publishing/waitForLinkedInVideo";
+import {
+  uploadLinkedInVideoParts,
+  type LinkedInUploadInstruction,
+} from "@/lib/publishing/uploadLinkedInVideoParts";
 import type { PublishInput, PublishResult } from "@/lib/publishing/publish/types";
 
 const REST = "https://api.linkedin.com/rest";
-const PROCESSING_POLLS = 24;
-const PROCESSING_POLL_MS = 5000;
-
-type UploadInstruction = { uploadUrl: string; firstByte: number; lastByte: number };
 
 /**
  * LinkedIn native video, as the connected member or as a Page when
@@ -22,7 +25,7 @@ type UploadInstruction = { uploadUrl: string; firstByte: number; lastByte: numbe
  */
 export async function publishLinkedIn({ target, post }: PublishInput): Promise<PublishResult> {
   const connection = target.connectedAccountId;
-  const owner = post.sub_account_id ?? (await memberUrn(connection));
+  const owner = post.sub_account_id ?? (await getLinkedInMemberUrn(connection));
   const video = await fetchBytes(post.video_url);
   const cover = post.cover_url ? await fetchBytes(post.cover_url) : null;
 
@@ -37,20 +40,11 @@ export async function publishLinkedIn({ target, post }: PublishInput): Promise<P
   const value = (init.data.value ?? {}) as {
     video: string;
     uploadToken?: string;
-    uploadInstructions: UploadInstruction[];
+    uploadInstructions: LinkedInUploadInstruction[];
     thumbnailUploadUrl?: string;
   };
 
-  const etags: string[] = [];
-  for (const part of value.uploadInstructions) {
-    const response = await fetch(part.uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": "application/octet-stream" },
-      body: video.slice(part.firstByte, part.lastByte + 1),
-    });
-    if (!response.ok) throw new Error(`LinkedIn video part upload returned ${response.status}`);
-    etags.push(response.headers.get("etag") ?? "");
-  }
+  const etags = await uploadLinkedInVideoParts(video, value.uploadInstructions);
 
   if (cover && value.thumbnailUploadUrl) {
     const response = await fetch(value.thumbnailUploadUrl, {
@@ -68,7 +62,7 @@ export async function publishLinkedIn({ target, post }: PublishInput): Promise<P
       uploadedPartIds: etags,
     },
   });
-  await waitUntilAvailable(connection, value.video);
+  await waitForLinkedInVideo(connection, value.video);
 
   const commentary = escapeLinkedInText(post.description ?? "");
   const created = await proxyLinkedIn(connection, "POST", `${REST}/posts`, {
@@ -97,50 +91,4 @@ export async function publishLinkedIn({ target, post }: PublishInput): Promise<P
     postUrl: `https://www.linkedin.com/feed/update/${postUrn}/`,
     textVerified: live?.data.commentary === commentary,
   };
-}
-
-/**
- * The connected member's person URN.
- *
- * @param connection - LinkedIn connected account id.
- * @returns `urn:li:person:<id>`.
- */
-async function memberUrn(connection: string): Promise<string> {
-  const me = await proxyLinkedIn(connection, "GET", "https://api.linkedin.com/v2/userinfo");
-  if (typeof me.data.sub !== "string")
-    throw new Error("LinkedIn member id not found on the connection");
-  return `urn:li:person:${me.data.sub}`;
-}
-
-/**
- * Download a file the caller published by URL.
- *
- * @param url - Public file URL.
- * @returns The bytes.
- */
-async function fetchBytes(url: string): Promise<ArrayBuffer> {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error(`Could not fetch ${url}: ${response.status}`);
-  return response.arrayBuffer();
-}
-
-/**
- * Poll the video until LinkedIn has processed it.
- *
- * @param connection - LinkedIn connected account id.
- * @param videoUrn - The uploaded video's URN.
- */
-async function waitUntilAvailable(connection: string, videoUrn: string): Promise<void> {
-  for (let poll = 0; poll < PROCESSING_POLLS; poll++) {
-    const { data } = await proxyLinkedIn(
-      connection,
-      "GET",
-      `${REST}/videos/${encodeURIComponent(videoUrn)}`,
-    );
-    if (data.status === "AVAILABLE") return;
-    if (data.status === "PROCESSING_FAILED")
-      throw new Error("LinkedIn could not process the video");
-    await new Promise(resolve => setTimeout(resolve, PROCESSING_POLL_MS));
-  }
-  throw new Error("LinkedIn video was still processing after 2 minutes");
 }

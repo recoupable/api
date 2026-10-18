@@ -1,6 +1,7 @@
 import { executePostAction } from "@/lib/publishing/executePostAction";
 import { uploadConnectorFile } from "@/lib/composio/connectors/uploadConnectorFile";
 import { findValue } from "@/lib/publishing/findValue";
+import { findYouTubeSnippet } from "@/lib/publishing/findYouTubeSnippet";
 import type { PublishInput, PublishResult } from "@/lib/publishing/publish/types";
 
 const MUSIC_CATEGORY = "10";
@@ -40,41 +41,25 @@ export async function publishYouTube({ target, post }: PublishInput): Promise<Pu
   const videoId = video?.id ?? findValue(upload, ["videoId", "id"]);
   if (!videoId) throw new Error("YouTube did not return a video id");
 
+  // snake_case: the camelCase form of this action silently drops `tags`.
   await executePostAction(target, "YOUTUBE_UPDATE_VIDEO", {
-    videoId,
-    ...metadata,
-    privacyStatus: post.privacy ?? "public",
+    video_id: videoId,
+    title: post.title,
+    description: metadata.description,
+    category_id: MUSIC_CATEGORY,
+    privacy_status: post.privacy ?? "public",
+    ...(metadata.tags && { tags: metadata.tags }),
   });
 
   const details = await executePostAction(target, "YOUTUBE_GET_VIDEO_DETAILS_BATCH", {
     id: videoId,
     part: "snippet",
   }).catch(() => null);
-  const snippet = findSnippet(details);
+  const snippet = findYouTubeSnippet(details);
 
   return {
     postUrl: `https://www.youtube.com/watch?v=${videoId}`,
     textVerified:
       snippet?.title === post.title && (snippet?.description ?? "") === (post.description ?? ""),
   };
-}
-
-/**
- * The first item's snippet, wherever the envelope nests `items`.
- *
- * @param details - YOUTUBE_GET_VIDEO_DETAILS_BATCH result.
- * @returns The snippet, or null.
- */
-function findSnippet(details: unknown): { title?: string; description?: string } | null {
-  let current = details;
-  for (let depth = 0; depth < 8 && current && typeof current === "object"; depth++) {
-    const record = current as Record<string, unknown>;
-    if (Array.isArray(record.items)) {
-      return (
-        (record.items[0] as { snippet?: { title?: string; description?: string } })?.snippet ?? null
-      );
-    }
-    current = record.data ?? record.result ?? record.response;
-  }
-  return null;
 }

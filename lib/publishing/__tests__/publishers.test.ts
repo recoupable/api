@@ -136,7 +136,7 @@ describe("platform publishers", () => {
     expect(executePostAction).toHaveBeenCalledWith(
       target,
       "YOUTUBE_UPDATE_VIDEO",
-      expect.objectContaining({ videoId: "v1", privacyStatus: "public" }),
+      expect.objectContaining({ video_id: "v1", privacy_status: "public" }),
     );
   });
 

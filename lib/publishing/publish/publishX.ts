@@ -1,6 +1,7 @@
 import { executePostAction } from "@/lib/publishing/executePostAction";
 import { uploadConnectorFile } from "@/lib/composio/connectors/uploadConnectorFile";
 import { findValue } from "@/lib/publishing/findValue";
+import { liveXText } from "@/lib/publishing/liveXText";
 import type { PublishInput, PublishResult } from "@/lib/publishing/publish/types";
 
 const UPLOAD_ATTEMPTS = 6;
@@ -47,21 +48,4 @@ export async function publishX({ target, post }: PublishInput): Promise<PublishR
     postUrl: `https://x.com/i/status/${tweetId}`,
     textVerified: liveXText(lookup) === post.description,
   };
-}
-
-/**
- * The post's text as X stores it, minus the trailing media link X appends and
- * with its HTML entities decoded.
- *
- * @param lookup - TWITTER_POST_LOOKUP_BY_POST_ID result.
- * @returns The comparable text, or null.
- */
-function liveXText(lookup: unknown): string | null {
-  const text = findValue(lookup, ["text"]);
-  if (text === null) return null;
-  return text
-    .replace(/\s*https:\/\/t\.co\/\w+$/, "")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&");
 }
