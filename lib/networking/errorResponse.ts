@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import type { ErrorResponseBody } from "@/lib/networking/errorResponseSchemas";
 
 /**
  * Builds a JSON error response in the standard `{ status: "error", error }`
@@ -16,8 +17,8 @@ export function errorResponse(
   error: string,
   status: number,
   extra: Record<string, unknown> = {},
-): NextResponse {
-  return NextResponse.json(
+): NextResponse<ErrorResponseBody> {
+  return NextResponse.json<ErrorResponseBody>(
     { ...extra, status: "error", error },
     { status, headers: getCorsHeaders() },
   );

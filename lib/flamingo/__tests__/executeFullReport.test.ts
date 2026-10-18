@@ -74,7 +74,10 @@ describe("executeFullReport — credits", () => {
           } as never)
         : (plainPreset(name) as never),
     );
-    vi.mocked(callFlamingoGenerate).mockResolvedValue({ response: "ok", elapsed_seconds: 3 });
+    vi.mocked(callFlamingoGenerate).mockImplementation(async ({ prompt }) => ({
+      response: "ok",
+      elapsed_seconds: prompt === plainPreset(FULL_REPORT_SECTIONS[0].preset).prompt ? 17 : 3,
+    }));
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const { report } = await executeFullReport(AUDIO, "acc_1");
@@ -83,6 +86,13 @@ describe("executeFullReport — credits", () => {
       error: expect.stringContaining("Section failed"),
     });
     expect(chargeForFlamingoCall).toHaveBeenCalledTimes(N - 1);
+    expect(vi.mocked(chargeForFlamingoCall).mock.calls.map(([args]) => args)).toEqual(
+      Array.from({ length: N - 1 }, () => ({
+        accountId: "acc_1",
+        elapsedSeconds: 3,
+        audioUrl: AUDIO,
+      })),
+    );
     errorSpy.mockRestore();
   });
 });

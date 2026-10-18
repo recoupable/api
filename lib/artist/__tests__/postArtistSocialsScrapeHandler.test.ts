@@ -8,6 +8,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import { ensureSocialScrapeCredits } from "@/lib/socials/ensureSocialScrapeCredits";
 import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredits";
+import { upsertApifyScraperRuns } from "@/lib/supabase/apify_scraper_runs/upsertApifyScraperRuns";
 
 vi.mock("@/lib/supabase/apify_scraper_runs/upsertApifyScraperRuns", () => ({
   upsertApifyScraperRuns: vi.fn(async () => ({ data: null, error: null })),
@@ -45,8 +46,8 @@ describe("postArtistSocialsScrapeHandler", () => {
     vi.mocked(ensureSocialScrapeCredits).mockResolvedValue(null);
     vi.mocked(selectAccountSocials).mockResolvedValue(TWO_SOCIALS as never);
     vi.mocked(scrapeProfileUrlBatch).mockResolvedValue([
-      { runId: "r1", datasetId: "d1", error: null, profileUrl: null },
-      { runId: "r2", datasetId: "d2", error: null, profileUrl: null },
+      { state: "started", runId: "r1", datasetId: "d1", error: null, profileUrl: null },
+      { state: "started", runId: "r2", datasetId: "d2", error: null, profileUrl: null },
     ]);
   });
 
@@ -97,6 +98,7 @@ describe("postArtistSocialsScrapeHandler", () => {
       ],
       undefined,
     );
+    expect(deductSocialScrapeCredits).toHaveBeenCalledTimes(1);
     expect(deductSocialScrapeCredits).toHaveBeenCalledWith(
       ACCOUNT_ID,
       100_000,
@@ -106,11 +108,12 @@ describe("postArtistSocialsScrapeHandler", () => {
 
   it("forwards posts and deducts ($0.05 + $0.01 × posts) per profile actually scraped", async () => {
     vi.mocked(scrapeProfileUrlBatch).mockResolvedValue([
-      { runId: "r1", datasetId: "d1", error: null, profileUrl: null },
+      { state: "started", runId: "r1", datasetId: "d1", error: null, profileUrl: null },
     ]);
     await postArtistSocialsScrapeHandler(makeRequest({ artist_account_id: ARTIST_ID, posts: 20 }));
     expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 500_000);
     expect(scrapeProfileUrlBatch).toHaveBeenCalledWith(expect.any(Array), 20);
+    expect(deductSocialScrapeCredits).toHaveBeenCalledTimes(1);
     expect(deductSocialScrapeCredits).toHaveBeenCalledWith(
       ACCOUNT_ID,
       250_000,
@@ -129,8 +132,14 @@ describe("postArtistSocialsScrapeHandler", () => {
 
   it("charges only started runs when another profile fails to start", async () => {
     vi.mocked(scrapeProfileUrlBatch).mockResolvedValue([
-      { runId: "started", datasetId: "dataset", error: null, profileUrl: null },
-      { runId: null, datasetId: null, error: "Provider unavailable", profileUrl: null },
+      { state: "started", runId: "started", datasetId: "dataset", error: null, profileUrl: null },
+      {
+        state: "failed",
+        runId: null,
+        datasetId: null,
+        error: "Provider unavailable",
+        profileUrl: null,
+      },
     ]);
     const response = await postArtistSocialsScrapeHandler(
       makeRequest({ artist_account_id: ARTIST_ID, posts: 20 }),
@@ -142,17 +151,47 @@ describe("postArtistSocialsScrapeHandler", () => {
       250_000,
       "POST /api/artist/socials/scrape",
     );
-    expect(await response.json()).toHaveLength(2);
+    expect(await response.json()).toEqual([
+      { runId: "started", datasetId: "dataset", error: null },
+      { runId: null, datasetId: null, error: "Provider unavailable" },
+    ]);
+    expect(upsertApifyScraperRuns).toHaveBeenCalledTimes(1);
+    expect(upsertApifyScraperRuns).toHaveBeenCalledWith([
+      {
+        run_id: "started",
+        account_id: ACCOUNT_ID,
+        social_id: null,
+        platform: null,
+        batch_id: expect.any(String),
+        origin: "artist",
+      },
+    ]);
+    expect(vi.mocked(scrapeProfileUrlBatch).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(deductSocialScrapeCredits).mock.invocationCallOrder[0],
+    );
+    expect(vi.mocked(deductSocialScrapeCredits).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(upsertApifyScraperRuns).mock.invocationCallOrder[0],
+    );
   });
 
   it("does not deduct credits when every profile fails to start", async () => {
     vi.mocked(scrapeProfileUrlBatch).mockResolvedValue([
-      { runId: null, datasetId: null, error: "Provider unavailable", profileUrl: null },
+      {
+        state: "failed",
+        runId: null,
+        datasetId: null,
+        error: "Provider unavailable",
+        profileUrl: null,
+      },
     ]);
     const response = await postArtistSocialsScrapeHandler(
       makeRequest({ artist_account_id: ARTIST_ID, posts: 20 }),
     );
     expect(response.status).toBe(200);
     expect(deductSocialScrapeCredits).not.toHaveBeenCalled();
+    expect(upsertApifyScraperRuns).not.toHaveBeenCalled();
+    expect(await response.json()).toEqual([
+      { runId: null, datasetId: null, error: "Provider unavailable" },
+    ]);
   });
 });

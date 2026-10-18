@@ -1,7 +1,6 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
-import { canReadTaskRun } from "@/lib/tasks/canReadTaskRun";
+import { readTaskRunForAccount } from "@/lib/tasks/readTaskRunForAccount";
 import { retrieveVideoFunction } from "@/lib/video/retrieveVideo";
 import { retrieveVideoContentFunction } from "@/lib/video/retrieveVideoContent";
 import { createOAuthVideoLocator } from "./createOAuthVideoLocator";
@@ -17,8 +16,8 @@ export async function executeFullOAuthTool(
     content: [{ type: "text", text: JSON.stringify(data) }],
   });
   if (name === "get_task_run_status") {
-    const job = await retrieveTaskRun(z.string().parse(args.runId));
-    if (!job || !(await canReadTaskRun(job, accountId))) throw new Error("Task run not found");
+    const job = await readTaskRunForAccount({ runId: z.string().parse(args.runId), accountId });
+    if (!job) throw new Error("Task run not found");
     return result({
       id: job.id,
       status: job.status,
