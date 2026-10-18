@@ -59,6 +59,7 @@ export async function callContextRpc(
     "claim_context_request",
     "commit_spotify_context",
     "fail_context_request",
+    "cancel_context_request",
     "read_context_documents",
     "resolve_context_spotify_release",
   ];

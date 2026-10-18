@@ -37,12 +37,16 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
-    expect(tools).toHaveLength(84);
+    expect(tools).toHaveLength(85);
     for (const operation of Object.values(contextToolOperations)) {
       const tool = tools.find(tool => tool.name === operation.name)!;
       expect(Object.keys(tool.inputSchema.properties ?? {}).length).toBeGreaterThan(0);
       expect(tool.inputSchema.properties).not.toHaveProperty("action");
       expect(tool.annotations?.readOnlyHint).toBe(operation.readOnly);
+      // Cancellation cannot be undone, so clients must not treat it as an additive update.
+      expect(tool.annotations?.destructiveHint).toBe(
+        operation.name === "cancel_music_context_request",
+      );
     }
     const artist = tools.find(tool => tool.name === "create_new_artist")!;
     expect(artist.inputSchema.properties).not.toHaveProperty("active_conversation_id");

@@ -89,13 +89,21 @@ describe("persistent request orchestration", () => {
       expect.objectContaining({ p_request: "request", p_payload: context }),
     );
   });
-  it("does not call providers for completed or already claimed work", async () => {
+  it.each([
+    { status: "completed", claims: false },
+    { status: "cancelled", claims: false },
+    { status: "queued", claims: true },
+  ])("does not call providers for $status or already claimed work", async ({ status, claims }) => {
     const deps = setup();
     deps.rpc.mockImplementation(async name =>
-      name === "read_context_request" ? { ...request, status: "completed" } : (false as never),
+      name === "read_context_request" ? { ...request, status } : (false as never),
     );
-    await runContextRequest("actor", "owner", "request", deps as never);
+    await expect(runContextRequest("actor", "owner", "request", deps as never)).resolves.toEqual({
+      ...request,
+      status,
+    });
     expect(deps.extract).not.toHaveBeenCalled();
+    expect(deps.rpc.mock.calls.some(([name]) => name === "claim_context_request")).toBe(claims);
   });
   it("records failure rather than leaving an apparently successful job", async () => {
     const deps = setup();
