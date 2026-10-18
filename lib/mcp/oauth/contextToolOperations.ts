@@ -126,6 +126,12 @@ export const contextToolOperations = {
     description: "Create a context request from a Spotify release URL.",
     readOnly: false,
   },
+  ingest_video: {
+    name: "import_music_video_context",
+    description:
+      "Save one YouTube music-video URL as an unresolved private locator. The uploading channel is not treated as the artist; no captions, lyrics, recording match or artist research are collected or inferred.",
+    readOnly: false,
+  },
   verify_release: {
     name: "verify_music_release",
     description: "Start provider verification for a saved release context request.",
