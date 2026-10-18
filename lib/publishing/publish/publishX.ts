@@ -39,8 +39,8 @@ export async function publishX({ target, post }: PublishInput): Promise<PublishR
   const tweetId = findValue(created, ["id"]);
   if (!tweetId) throw new Error("X did not return a post id");
 
-  const lookup = await executePostAction(target, "TWITTER_POST_LOOKUP_BY_POST_IDS", {
-    ids: [tweetId],
+  const lookup = await executePostAction(target, "TWITTER_POST_LOOKUP_BY_POST_ID", {
+    id: tweetId,
   }).catch(() => null);
 
   return {
@@ -53,7 +53,7 @@ export async function publishX({ target, post }: PublishInput): Promise<PublishR
  * The post's text as X stores it, minus the trailing media link X appends and
  * with its HTML entities decoded.
  *
- * @param lookup - TWITTER_POST_LOOKUP_BY_POST_IDS result.
+ * @param lookup - TWITTER_POST_LOOKUP_BY_POST_ID result.
  * @returns The comparable text, or null.
  */
 function liveXText(lookup: unknown): string | null {
