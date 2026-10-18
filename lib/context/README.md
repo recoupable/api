@@ -277,3 +277,24 @@ withdrawal, replay and history behavior applies.
 
 This requires the database company-assessment purpose migration before API release.
 Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
+
+### Error contract
+
+Every failure thrown inside `processContextOperation` is classified by
+`classifyContextOperationError` into a `ContextOperationError` and formatted the same
+way on both transports: HTTP returns `{error, code, retryable, guidance}` with the status
+below, and the MCP `context` tool returns `{success: false, code, message, retryable,
+guidance}` with `isError: true`. Codes: `permission_denied` 403, `not_found` 404,
+`conflict` 409, `unsupported_input` 422, `not_ready` 409, `unavailable` 503,
+`budget_exhausted` 402 (reserved for the spend path in #2123), `storage_failed` 409 (an
+unrecognized database rule rejection; not retryable as sent), `internal` 500. Messages and
+guidance are authored per code; raw database and provider diagnostics stay on the error
+`cause`, are logged server-side for `internal`, `storage_failed` and `unavailable`, and are
+never returned. An owner-scoped `select ... into strict` that matches no row (missing or
+other-workspace record) is `not_found`. Caller input is validated before the operation on
+both transports (schema failures stay HTTP 400 / MCP `InvalidParams`), so a Zod failure
+inside it comes from a stored RPC result: a root type mismatch (the lookup returned
+nothing) is `not_found`, a `state`/`status` mismatch is `not_ready`, and any other field
+(for example a release identity that is already confirmed) is `conflict`.
+`cancel`, source withdrawal, scoped correction and selected-topic refresh are not yet
+exposed (tracked in #2122 and #2124); when added they reuse this contract.

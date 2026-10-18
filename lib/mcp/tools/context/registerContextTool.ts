@@ -11,6 +11,8 @@ import { callContextRpc } from "@/lib/supabase/context_requests/callContextRpc";
 import { dispatchContextRequest } from "@/lib/context/dispatchContextRequest";
 import { dispatchContextReleaseVerification } from "@/lib/context/dispatchContextReleaseVerification";
 import { dispatchContextReleaseTrackIsrcs } from "@/lib/context/dispatchContextReleaseTrackIsrcs";
+import { classifyContextOperationError } from "@/lib/context/classifyContextOperationError";
+import { getContextToolResultError } from "./getContextToolResultError";
 /** Same domain operations and ownership rules as POST /api/context. */
 export function registerContextTool(server: McpServer) {
   server.registerTool(
@@ -35,10 +37,8 @@ export function registerContextTool(server: McpServer) {
             dispatchReleaseTracks: dispatchContextReleaseTrackIsrcs,
           }),
         );
-      } catch {
-        return getToolResultError(
-          "Context operation failed. Verify access and retry using the same idempotency key.",
-        );
+      } catch (error) {
+        return getContextToolResultError(classifyContextOperationError(error));
       }
     },
   );
