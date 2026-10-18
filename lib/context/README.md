@@ -277,3 +277,54 @@ withdrawal, replay and history behavior applies.
 
 This requires the database company-assessment purpose migration before API release.
 Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
+
+### Withdraw a source
+
+Use the same HTTP `POST /api/context` or MCP Context operation to withdraw one
+recorded source input of a saved request, for example a private note or an
+incorrect page that must stop informing briefs:
+
+```json
+{
+  "action": "withdraw_source",
+  "request_id": "<existing request UUID>",
+  "source_version_id": "<a sourceVersionIds entry from a brief input_manifest>"
+}
+```
+
+Name the source with exactly one of `source_id` or `source_version_id`; brief
+and saved-brief input manifests expose version IDs as `sourceVersionIds`, and the
+receipt returns the resolved `source_id`. Add `organization_id` for the existing authorized
+organization scope; membership is rechecked inside the transaction. The source
+must belong to the workspace and be recorded as an input of `request_id` through
+saved result lineage; arbitrary IDs and sources only linked to other requests are
+rejected. The operation calls the existing `withdraw_context_source` primitive:
+every saved result that depends on any version of the source is relabelled
+`withdrawn` (replacing its earlier status, such as `stale` or `partial`; rows are
+kept), documents whose current result depended on it lose that result (revision
+bumped), and `read_context_documents`, `accept_context_result` and
+`read_context_brief` withhold the evidence on the next read, so saved briefs that
+depend on it return `state: unavailable`.
+
+The withdrawal is sticky for that workspace, source kind and URL. Writers re-create
+sources through the active-source index, so a database trigger makes any later
+row with the same owner, kind and URL born withdrawn, after waiting for an
+in-flight withdrawal to commit. A slow older job or a new ingestion therefore
+cannot republish the source: writers that need that evidence accepted fail closed
+with an acceptance conflict, and evidence kept against a born-withdrawn row stays
+history that reads never return. Other workspaces and
+other source kinds are unaffected. There is no restore operation yet, so delegated
+MCP marks `withdraw_music_context_source` destructive.
+
+The receipt (`context-source-withdrawal-v1`) reports `withdrawn_at`,
+`already_withdrawn` and the source's recorded lineage in `affected`: results that
+depend on it, documents holding such a result, and the request IDs whose attempts
+produced them. Replaying the same withdrawal returns the same receipt without
+touching timestamps or revisions. A writer that already holds a document lock can
+deadlock with a concurrent withdrawal; PostgreSQL aborts one transaction, the API
+returns 409 and the caller retries.
+
+This does not delete original bytes or storage objects, correct or refresh
+evidence, recompute briefs, de-duplicate articles, or spend credits; those remain
+separate lifecycle work. It requires the database source-withdrawal migration
+before API release. Fixture-tested only; not hosted-verified.
