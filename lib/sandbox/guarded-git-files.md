@@ -4,7 +4,7 @@ Owning work: app #2116 / #2140, Context checkpoint D. This adds an opt-in condit
 
 ## Read, edit, save
 
-1. `GET /api/sandboxes/file?path=drafts/notes.txt&include_revision=true` returns `{ status: "success", content, sha }`. Binary files also return `encoding: "base64"`. The content and SHA come from the same GitHub Contents response on `main`; no separate latest-content fetch is used.
+1. `GET /api/sandboxes/file?path=drafts/notes.txt&include_revision=true` returns `{ status: "success", content, sha }`. Files with recognized binary extensions also return `encoding: "base64"`. The content and SHA come from the same GitHub Contents response on `main`; no separate latest-content fetch is used.
 2. Retain that SHA with the draft. Send the usual uploaded-blob URL to `POST /api/sandboxes/files`, adding `expected_sha` to the corresponding file:
 
    ```json
@@ -15,17 +15,17 @@ Owning work: app #2116 / #2140, Context checkpoint D. This adds an opt-in condit
    ```
 
 3. A guarded update passes the exact condition to GitHub's atomic Contents update on `main`. It never fetches/replaces the condition or automatically retries a conflict. Successful entries in `uploaded` return the resulting blob `sha`.
-4. If every upload fails and at least one is a GitHub 409 conflict, HTTP 409 returns `{ status: "error", error, conflicts: ["notes.txt"] }`. For partial success, existing HTTP 200 is retained with `uploaded`, `errors` and `conflicts`. Inspect every entry; this batch is not a transaction. Keep the local draft, read the latest content and reconcile explicitly before uploading again. Existing temporary-blob deletion still happens after every attempt, including conflicts; a retry needs a new upload URL.
+4. If every upload fails with a GitHub 409 conflict, HTTP 409 returns `{ status: "error", error, conflicts: ["notes.txt"] }`. All-failed batches with mixed conflict/other failures retain HTTP 500 and include both errors and conflicts. For partial success, existing HTTP 200 is retained with `uploaded`, `errors` and `conflicts`. Inspect every entry; this batch is not a transaction. Keep the local draft, read the latest content and reconcile explicitly before uploading again. Existing temporary-blob deletion still happens after every attempt, including conflicts; a retry needs a new upload URL.
 
 Authentication and existing account snapshot/submodule resolution run before GitHub file access. The client cannot select an arbitrary repository or branch through these fields. Read and write conditions must refer to the same logical account/path and resolved repository. Repository authorization/submodule policy remains an independent existing boundary; this change is not an authorization redesign.
 
 ## Compatibility and limits
 
-- Omit `include_revision` to retain the existing raw-file read. Omit `expected_sha` to retain legacy create/update behavior on the repository default branch, including its latest-SHA lookup. Legacy writes remain unguarded and must not be counted as D acceptance.
+- Omit `include_revision` to retain the existing raw-file read. Omit `expected_sha` to retain legacy create/update behavior on the repository default branch, including its latest-SHA lookup. Both guarded and legacy paths reject dot/traversal/backslash/control segments. Legacy writes remain unguarded and must not be counted as D acceptance.
 - Version-aware clients must always include their observed condition for updates. No current UI/worker is silently migrated by adding this API option. A required-condition rollout would be a separate compatibility change.
 - Guarded reads and writes use `main`, matching the existing raw-file read and submodule discovery branch. No arbitrary ref, default-branch inference, create-if-absent condition or new-file token is introduced. A missing `main`/file is an error, not a fallback to a different branch or legacy write.
 - Conditions are 40-character lowercase Git blob SHAs, representing content equality, not a monotonically increasing edit counter. Identical bytes can legitimately have the same SHA. This does not detect an edit/revert history or a file moved away and restored with identical content.
-- Versioned reads support regular files whose content GitHub includes inline as base64 (normally up to 1 MB). Missing/unsupported content, directories and symlink responses are rejected rather than pairing a SHA with separately fetched bytes. Legacy binary/raw reads remain available for larger files.
+- Versioned reads support regular files whose content GitHub includes inline as base64 (normally up to 1 MB). Unknown binary files that are not valid UTF-8 are rejected rather than decoded with replacement characters. Missing/unsupported content, directories and symlink responses are rejected rather than pairing a SHA with separately fetched bytes. Legacy binary/raw reads remain available for larger files.
 - Only upstream 409 is classified as a conflict; missing access, validation errors and unavailable providers are not relabeled as successful writes. The returned revision is a blob SHA, not an ETag, source-version ID or accepted Context document version.
 - A Git commit does not synchronize already running sandbox files, publish accepted facts, change rights, or update financial records. Existing uncontrolled writers can still overwrite content later. This feature protects the guarded commit attempt itself.
 

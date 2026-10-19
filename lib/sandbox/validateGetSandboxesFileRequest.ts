@@ -3,10 +3,14 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { buildGetSandboxesParams } from "./buildGetSandboxesParams";
+import { isRelativeRepoFilePath } from "@/lib/github/isRelativeRepoFilePath";
 import { z } from "zod";
 
 const getSandboxesFileQuerySchema = z.object({
-  path: z.string({ message: "path is required" }).min(1, "path cannot be empty"),
+  path: z
+    .string({ message: "path is required" })
+    .min(1, "path cannot be empty")
+    .refine(isRelativeRepoFilePath, "Invalid repository file path"),
   include_revision: z.enum(["true", "false"]).optional(),
 });
 

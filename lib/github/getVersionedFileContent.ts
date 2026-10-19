@@ -1,3 +1,5 @@
+import { isUtf8 } from "node:buffer";
+import { isRelativeRepoFilePath } from "./isRelativeRepoFilePath";
 import { parseGitHubRepoUrl } from "./parseGitHubRepoUrl";
 
 /** Read content and its update condition from one GitHub response on main. */
@@ -10,6 +12,7 @@ export async function getVersionedFileContent({
   path: string;
   format?: "base64";
 }): Promise<{ content: string; sha: string; encoding?: "base64" } | { error: string }> {
+  if (!isRelativeRepoFilePath(path)) return { error: "Invalid repository file path" };
   const repo = parseGitHubRepoUrl(githubRepo);
   if (!repo) return { error: "Invalid GitHub repository URL" };
   const token = process.env.GITHUB_TOKEN;
@@ -35,6 +38,8 @@ export async function getVersionedFileContent({
     return { error: "Versioned reads require a regular file with inline base64 content" };
   }
   const buffer = Buffer.from(file.content, "base64");
+  if (format !== "base64" && !isUtf8(buffer))
+    return { error: "File is not valid UTF-8; versioned text editing is unavailable" };
   return {
     content: buffer.toString(format === "base64" ? "base64" : "utf-8"),
     sha: file.sha,

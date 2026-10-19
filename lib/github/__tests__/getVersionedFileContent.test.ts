@@ -64,3 +64,17 @@ it("does not fetch with invalid repository input or missing credentials", async 
   expect(await getVersionedFileContent(params)).toHaveProperty("error");
   expect(fetchMock).not.toHaveBeenCalled();
 });
+
+it("refuses invalid UTF-8 rather than returning corrupted editable text", async () => {
+  fetchMock.mockResolvedValue(
+    Response.json({
+      type: "file",
+      encoding: "base64",
+      content: Buffer.from([255, 128]).toString("base64"),
+      sha: "a".repeat(40),
+    }),
+  );
+  expect(await getVersionedFileContent(params)).toEqual({
+    error: "File is not valid UTF-8; versioned text editing is unavailable",
+  });
+});

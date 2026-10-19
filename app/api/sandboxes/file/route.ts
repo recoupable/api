@@ -31,6 +31,7 @@ export async function OPTIONS() {
  * Response (200):
  * - status: "success"
  * - content: string - The raw file content
+ * - encoding: "base64" - Present for recognized binary extensions; content is base64
  * - sha: string - Present for include_revision=true; use as files[].expected_sha
  *
  * Error (400/401/403/404):

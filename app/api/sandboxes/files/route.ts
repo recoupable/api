@@ -37,7 +37,7 @@ export async function OPTIONS() {
  * - uploaded: Array<{ path: string, sha: string }>
  *
  * Partial successes retain 200 with uploaded/errors and optional conflicts.
- * All-failed batches with a Git conflict return 409 with conflicts (file names).
+ * All-failed batches where every failure is a Git conflict return 409 with conflicts (file names).
  * No batch-level transaction or automatic conflict retry is performed.
  *
  * Error (400/401/403/404/409/500):

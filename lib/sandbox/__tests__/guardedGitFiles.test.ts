@@ -142,6 +142,48 @@ describe("guarded Git file route exports", () => {
     expect(provider).not.toHaveBeenCalled();
   });
 
+  it.each([
+    "../../../other/repo/contents/x",
+    "dir/../draft.txt",
+    "./draft.txt",
+    "dir\\..\\draft.txt",
+  ])("rejects unsafe paths before provider access: %s", async path => {
+    for (const suffix of ["", "&include_revision=true"]) {
+      const response = await GET(
+        new NextRequest(
+          `https://api.example/api/sandboxes/file?path=${encodeURIComponent(path)}${suffix}`,
+        ),
+      );
+      expect(response.status).toBe(400);
+    }
+    const response = await POST(
+      new NextRequest("https://api.example/api/sandboxes/files", {
+        method: "POST",
+        body: JSON.stringify({
+          path,
+          files: [{ name: "draft.txt", url: "https://blob.example/draft" }],
+        }),
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(provider).not.toHaveBeenCalled();
+  });
+
+  it.each([undefined, "a".repeat(40)])("accepts a valid or omitted SHA: %s", async expected => {
+    const response = await save("Valid", expected === undefined ? undefined : sha(stored));
+    expect(response.status).toBe(200);
+  });
+
+  it.each(["A".repeat(40), "a".repeat(39), "g".repeat(40)])(
+    "rejects malformed SHA at its field path: %s",
+    async expected => {
+      const response = await save("Invalid", expected);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ missing_fields: ["files", 0, "expected_sha"] });
+      expect(provider).not.toHaveBeenCalled();
+    },
+  );
+
   it("rejects invalid conditions before downloading or writing", async () => {
     expect((await save("Invalid", "")).status).toBe(400);
     expect(provider).not.toHaveBeenCalled();

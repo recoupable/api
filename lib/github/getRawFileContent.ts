@@ -1,3 +1,4 @@
+import { isRelativeRepoFilePath } from "./isRelativeRepoFilePath";
 import { parseGitHubRepoUrl } from "./parseGitHubRepoUrl";
 
 /**
@@ -21,6 +22,7 @@ export async function getRawFileContent({
   path: string;
   format?: "base64";
 }): Promise<{ content: string; encoding?: "base64" } | { error: string }> {
+  if (!isRelativeRepoFilePath(path)) return { error: "Invalid repository file path" };
   const repoInfo = parseGitHubRepoUrl(githubRepo);
   if (!repoInfo) {
     return { error: "Invalid GitHub repository URL" };

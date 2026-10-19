@@ -13,7 +13,7 @@ import { downloadFile } from "./downloadFile";
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
  * Accepts JSON body with:
- * - files: Array of { url, name } objects
+ * - files: Array of { url, name, expected_sha? } objects; expected_sha guards updates on main
  * - path: Target directory path within the repository (optional, defaults to root)
  * - message: Commit message (optional, defaults to "Upload files via API")
  *
@@ -21,7 +21,7 @@ import { downloadFile } from "./downloadFile";
  * the temporary blob.
  *
  * @param request - The request object
- * @returns A NextResponse with uploaded file details or error
+ * @returns Uploaded receipts plus optional errors/conflicts; 409 when every failed upload conflicts.
  */
 export async function postSandboxesFilesHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validatePostSandboxesFilesRequest(request);
@@ -97,7 +97,10 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
         error: `All uploads failed: ${errors.join("; ")}`,
         ...(conflicts.length > 0 && { conflicts }),
       },
-      { status: conflicts.length > 0 ? 409 : 500, headers: getCorsHeaders() },
+      {
+        status: conflicts.length > 0 && conflicts.length === errors.length ? 409 : 500,
+        headers: getCorsHeaders(),
+      },
     );
   }
 
