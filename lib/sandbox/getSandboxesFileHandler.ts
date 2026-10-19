@@ -3,6 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetSandboxesFileRequest } from "./validateGetSandboxesFileRequest";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { getRawFileContent } from "@/lib/github/getRawFileContent";
+import { getVersionedFileContent } from "@/lib/github/getVersionedFileContent";
 import { resolveSubmodulePath } from "@/lib/github/resolveSubmodulePath";
 import { isBinaryFile } from "@/lib/github/isBinaryFile";
 
@@ -50,7 +51,9 @@ export async function getSandboxesFileHandler(request: NextRequest): Promise<Nex
 
   const resolved = await resolveSubmodulePath({ githubRepo, path });
   const format = isBinaryFile(path) ? ("base64" as const) : undefined;
-  const result = await getRawFileContent({ ...resolved, format });
+  const result = validated.includeRevision
+    ? await getVersionedFileContent({ ...resolved, format })
+    : await getRawFileContent({ ...resolved, format });
 
   if ("error" in result) {
     return NextResponse.json(
@@ -63,6 +66,7 @@ export async function getSandboxesFileHandler(request: NextRequest): Promise<Nex
     {
       status: "success",
       content: result.content,
+      ...("sha" in result && { sha: result.sha }),
       ...("encoding" in result && { encoding: result.encoding }),
     },
     { status: 200, headers: getCorsHeaders() },

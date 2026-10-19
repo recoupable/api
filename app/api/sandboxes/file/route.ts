@@ -26,10 +26,16 @@ export async function OPTIONS() {
  *
  * Query parameters:
  * - path: string (required) - The file path within the repository
+ * - include_revision: "true" (optional) - Read content and blob SHA together from main
+ *
+ * Paths must be canonical relative paths: dot/traversal, backslashes, malformed Unicode
+ * and leading/trailing/doubled slashes return 400, including for legacy callers.
  *
  * Response (200):
  * - status: "success"
  * - content: string - The raw file content
+ * - encoding: "base64" - Present for recognized binary extensions; content is base64
+ * - sha: string - Present for include_revision=true; use as files[].expected_sha
  *
  * Error (400/401/403/404):
  * - status: "error"
