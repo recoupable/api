@@ -116,7 +116,7 @@
   ],
   "sourceHashes": {
     "content/docs/source/api-reference/openapi/accounts.json": "0803ba921d739f023353e7ec6807ff407542483a679ee1cf5226539637f424d7",
-    "content/docs/source/api-reference/openapi/content.json": "547f73de1fb95855e0fa9686ce96b1a910e57d31058c092a8ee100ff1a4d5762",
+    "content/docs/source/api-reference/openapi/content.json": "d33ae4faca41d97d56dd1468373e99bcecd5f19ed857a34e6c5dd9a1e6705101",
     "content/docs/source/api-reference/openapi/research.json": "e41af080333df4740bf2a217fc40c588b95ae7cf0d73728a0caaff7367f25547",
     "content/docs/source/api-reference/openapi/releases.json": "026d07948366d6498489d93fb8c809e919403d6154bd90d85aa0151d89150f3c",
     "content/docs/source/api-reference/openapi/social.json": "27c3953e379c558d017271fa4e323d5818a63b83ff310b2f97a1599c8bd5aa2f",
@@ -272,6 +272,67 @@
           "expected_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
         }
       ]
+    },
+    "uploadSchema": {
+      "type": "object",
+      "required": [
+        "files"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Target directory within the resolved repository; omitted or empty means root. Use a canonical relative path. Dot/traversal segments, backslashes, control characters, malformed Unicode and leading/trailing/doubled slashes return 400. These checks also apply to legacy requests.",
+          "example": "assets/images"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "url",
+              "name"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "The URL of the file to upload",
+                "example": "https://example.com/files/album-cover.png"
+              },
+              "name": {
+                "type": "string",
+                "description": "Nonempty relative file name/path under the target directory. Use a canonical relative path. Dot/traversal segments, backslashes, control characters, malformed Unicode and leading/trailing/doubled slashes return 400. These checks also apply to legacy requests.",
+                "example": "album-cover.png",
+                "minLength": 1
+              },
+              "expected_sha": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{40}$",
+                "description": "Optional observed blob SHA from the matching versioned read. When provided, update the existing file on main only if its current contents still match. Omission retains unguarded legacy create/update behavior; no automatic conflict retry occurs.",
+                "example": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              }
+            }
+          },
+          "description": "Array of files to upload, each with a URL and target filename",
+          "minItems": 1
+        },
+        "message": {
+          "type": "string",
+          "description": "Optional commit message. Defaults to 'Upload files via API'.",
+          "example": "Add new album artwork"
+        }
+      },
+      "example": {
+        "path": "drafts",
+        "message": "Update release notes",
+        "files": [
+          {
+            "name": "notes.txt",
+            "url": "https://example.com/staged/notes.txt",
+            "expected_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ]
+      }
     },
     "responses": [
       {

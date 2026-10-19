@@ -38,6 +38,17 @@ function publishedContract(method: string, path: string, status: number) {
     item => item.method === method && item.path === path && item.status === status,
   );
   expect(contract, `Missing ${method} ${path} ${status} response contract`).toBeDefined();
+  const fields =
+    method === "GET"
+      ? ["status", "content", "sha", "encoding"]
+      : status === 200
+        ? ["status", "uploaded", "errors", "conflicts"]
+        : ["status", "error", "conflicts"];
+  for (const field of fields) expect(contract!.schema.properties).toHaveProperty(field);
+  if (method === "POST" && status === 200) {
+    expect(contract!.schema.properties).toHaveProperty("uploaded.items.properties.path");
+    expect(contract!.schema.properties).toHaveProperty("uploaded.items.properties.sha");
+  }
   return ajv.compile(contract!.schema);
 }
 
@@ -76,6 +87,9 @@ describe("published guarded Git file contract", () => {
       "Missing coordinated guarded Git documentation fixture",
     ).toBeDefined();
     const body = fixture.guardedGitFiles.upload;
+    expect(fixture.guardedGitFiles.uploadSchema.properties).toHaveProperty(
+      "files.items.properties.expected_sha",
+    );
     const result = await validatePostSandboxesFilesRequest(
       new NextRequest("https://api.example/api/sandboxes/files", {
         method: "POST",
