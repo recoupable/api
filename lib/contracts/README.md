@@ -59,6 +59,6 @@ Then update Marketing's canonical Context specification and
 regenerate both fixture copies. Exported source contracts do not prove that the
 required database release or any customer workflow is live.
 
-The Context fixture keeps its own response pointers under `evidenceSchemas`.
+The Context fixture's `evidenceResponseReferences` point to local definitions under `evidenceSchemas`.
 `evidenceResponseReferenceSource` separately records the canonical Marketing
 document and its OpenAPI pointers; `sourceHash` binds that document's exact bytes.
