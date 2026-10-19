@@ -105,8 +105,8 @@ export const scrapeProfileUrl = async (
       error: null,
       supported: true,
     };
-  } catch {
-    console.error("[ERROR] Failed to start profile scrape");
+  } catch (error) {
+    console.error("[ERROR] Failed to start profile scrape:", error);
     return {
       state: "failed",
       runId: null,
