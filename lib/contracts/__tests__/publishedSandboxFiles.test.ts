@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET } from "@/app/api/sandboxes/file/route";
 import { getVersionedFileContent } from "@/lib/github/getVersionedFileContent";
+import { commitFileContent } from "@/lib/github/commitFileContent";
 import { buildFileUploadResponse } from "@/lib/sandbox/buildFileUploadResponse";
 import { validatePostSandboxesFilesRequest } from "@/lib/sandbox/validatePostSandboxesFilesRequest";
 import fixture from "../fixtures/published-docs.json";
@@ -102,6 +103,35 @@ describe("published guarded Git file contract", () => {
       expect(result.files[0].expected_sha).toMatch(/^[a-f0-9]{40}$/);
     }
   });
+
+  it.each([404, 422])(
+    "maps repository rejection %i to an ordinary upload failure",
+    async status => {
+      const fetchMock = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValueOnce(new Response("Synthetic repository rejection", { status }));
+      try {
+        const result = await commitFileContent({
+          url: "https://api.example/repos/example/drafts/contents/notes.txt",
+          token: "synthetic",
+          message: "Save draft",
+          content: Buffer.from("Edited draft"),
+          sha: fixture.guardedGitFiles.upload.files[0].expected_sha,
+          guarded: true,
+        });
+        expect(result).toEqual({ error: "Could not save versioned file" });
+        if (!("error" in result)) throw new Error("Expected a rejected save");
+        const response = buildFileUploadResponse([], [`notes.txt: ${result.error}`], []);
+        const body = await response.json();
+        expect(response.status).toBe(500);
+        expect(body).not.toHaveProperty("conflicts");
+        const validate = publishedContract("POST", "/api/sandboxes/files", 500);
+        expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
+      } finally {
+        fetchMock.mockRestore();
+      }
+    },
+  );
 
   it.each([
     {
