@@ -93,7 +93,7 @@ export async function postSocialScrapeHandler(
     return NextResponse.json(
       {
         status: "error",
-        error: error instanceof Error ? error.message : "Internal server error",
+        error: "Internal server error",
       },
       {
         status: 500,

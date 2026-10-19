@@ -110,7 +110,7 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
     return NextResponse.json(
       {
         status: "error",
-        message: error instanceof Error ? error.message : "Internal server error",
+        message: "Internal server error",
       },
       {
         status: 500,

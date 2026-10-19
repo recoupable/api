@@ -49,12 +49,12 @@ describe("scrapeProfileUrl", () => {
     },
   );
   it("returns a failed attempt when the provider throws", async () => {
-    li.mockRejectedValue(new Error("Provider unavailable"));
+    li.mockRejectedValue(new Error("provider-canary-7f91"));
     expect(await scrapeProfileUrl("https://linkedin.com/in/a", "a")).toEqual({
       state: "failed",
       runId: null,
       datasetId: null,
-      error: "Provider unavailable",
+      error: "Failed to start scrape",
       supported: true,
     });
   });

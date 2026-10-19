@@ -43,8 +43,6 @@ export async function getAuthenticatedAccountId(
     return accountId;
   } catch (error) {
     console.error("[ERROR] Authentication failed:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to verify authentication token";
-    return messageErrorResponse(message, 401);
+    return messageErrorResponse("Failed to verify authentication token", 401);
   }
 }

@@ -147,6 +147,6 @@ describe("postSocialScrapeHandler", () => {
     vi.mocked(selectSocials).mockRejectedValue(new Error("db down"));
     const res = await postSocialScrapeHandler(request, SOCIAL_ID);
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ status: "error", error: "db down" });
+    expect(await res.json()).toEqual({ status: "error", error: "Internal server error" });
   });
 });
