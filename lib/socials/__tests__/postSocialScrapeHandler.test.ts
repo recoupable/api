@@ -105,7 +105,7 @@ describe("postSocialScrapeHandler", () => {
       state: "failed",
       runId: null,
       datasetId: null,
-      error: "boom",
+      error: "Failed to start scrape",
       supported: true,
     });
     await postSocialScrapeHandler(request, SOCIAL_ID);
@@ -136,7 +136,7 @@ describe("postSocialScrapeHandler", () => {
       state: "failed",
       runId: null,
       datasetId: null,
-      error: "boom",
+      error: "Failed to start scrape",
       supported: true,
     });
     const res = await postSocialScrapeHandler(request, SOCIAL_ID);
