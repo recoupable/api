@@ -1,29 +1,23 @@
 import { writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import { z } from "zod";
 import {
   contextOperationSchema,
   processContextOperation,
 } from "@/lib/context/processContextOperation";
 import fixture from "../fixtures/published-docs.json";
 import contextFixture from "../fixtures/context-contract.json";
-import { contextToolOperations } from "@/lib/mcp/oauth/contextToolOperations";
+import { buildContextOperationCatalog } from "../buildContextOperationCatalog";
 
 vi.mock("@/lib/context/authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));
 
 // Provider-bound planning remains a documented gap until its public module contract is stable.
-const undocumentedActions = ["plan_catalog_members"];
-const schemas = contextOperationSchema.options
-  .filter(schema => !undocumentedActions.includes(schema.shape.action.value))
-  .map(schema => {
-    const { $schema: _dialect, ...request } = z.toJSONSchema(schema, { io: "input" });
-    return request;
-  });
-const mcpOperations = Object.fromEntries(
-  Object.entries(contextToolOperations)
-    .filter(([action]) => !undocumentedActions.includes(action))
-    .map(([action, { name, readOnly }]) => [action, { name, readOnly }]),
-);
+const {
+  undocumentedActions,
+  requestSchemas: schemas,
+  mcpOperations,
+  standardMcpOperations,
+  evidenceSchemas,
+} = buildContextOperationCatalog();
 
 // Optional provider-free export used to refresh the maintained OpenAPI request union.
 if (process.env.RECOUP_CONTEXT_SCHEMA_OUTPUT)
@@ -32,6 +26,16 @@ if (process.env.RECOUP_CONTEXT_MCP_OUTPUT)
   writeFileSync(
     process.env.RECOUP_CONTEXT_MCP_OUTPUT,
     JSON.stringify(mcpOperations, null, 2) + "\n",
+  );
+if (process.env.RECOUP_CONTEXT_STANDARD_MCP_OUTPUT)
+  writeFileSync(
+    process.env.RECOUP_CONTEXT_STANDARD_MCP_OUTPUT,
+    JSON.stringify(standardMcpOperations, null, 2) + "\n",
+  );
+if (process.env.RECOUP_CONTEXT_EVIDENCE_OUTPUT)
+  writeFileSync(
+    process.env.RECOUP_CONTEXT_EVIDENCE_OUTPUT,
+    JSON.stringify(evidenceSchemas, null, 2) + "\n",
   );
 
 function withoutDescriptions(value: unknown): unknown {
@@ -48,6 +52,19 @@ function withoutDescriptions(value: unknown): unknown {
 describe("published Context request catalog", () => {
   it("maps the reference actions to the current delegated tool names and permissions", () => {
     expect(contextFixture.mcpOperations).toEqual(mcpOperations);
+  });
+  it("documents evidence tools separately from delegated connection capabilities", () => {
+    expect(contextFixture.standardMcpOperations).toEqual(standardMcpOperations);
+    expect(Object.keys(standardMcpOperations)).toEqual([
+      "attach_evidence",
+      "read_evidence_attachment",
+      "list_evidence_attachments",
+    ]);
+    for (const action of Object.keys(standardMcpOperations))
+      expect(mcpOperations).not.toHaveProperty(action);
+  });
+  it("keeps published evidence receipts and pages aligned with actual response validators", () => {
+    expect(withoutDescriptions(contextFixture.evidenceSchemas)).toEqual(evidenceSchemas);
   });
   it("distinguishes accepted URL syntax from the pilot ingestion restriction", async () => {
     const accountId = "11111111-1111-4111-8111-111111111111";

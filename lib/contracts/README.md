@@ -42,3 +42,12 @@ Authentication, account/repository lookup and file reads are mocked. These check
 do not write GitHub files or verify hosted authorization, sandbox concurrency or
 client adoption. The examples and resolved schemas live in `guardedGitFiles` in
 the same coordinated fixture, separate from the API-owned error-envelope export.
+
+`buildContextOperationCatalog` exports the current request schemas and separates
+delegated tool names from standard-only evidence tools. The Context fixture checks
+both maps and the evidence receipt/page schemas. Run `contextContract.test.ts` with
+`RECOUP_CONTEXT_SCHEMA_OUTPUT`, `RECOUP_CONTEXT_MCP_OUTPUT`,
+`RECOUP_CONTEXT_STANDARD_MCP_OUTPUT` and `RECOUP_CONTEXT_EVIDENCE_OUTPUT` to save
+those four exports, then update Marketing's canonical Context specification and
+regenerate both fixture copies. Exported source contracts do not prove that the
+required database release or any customer workflow is live.
