@@ -31,6 +31,7 @@ const UNUSED_FIELDS: Record<
 export const createPostBodySchema = z
   .strictObject({
     account_id: z.string().uuid().optional(),
+    artist_account_id: z.string().uuid().optional(),
     platform: z.enum(POST_PLATFORMS),
     sub_account_id: nonBlank.optional(),
     video_url: z.string().url(),

@@ -11,6 +11,7 @@ export function toPost(row: Tables<"scheduled_posts">) {
   return {
     id: row.id,
     account_id: row.account_id,
+    artist_account_id: row.artist_account_id,
     platform: row.platform,
     sub_account_id: row.sub_account_id,
     status: row.status,

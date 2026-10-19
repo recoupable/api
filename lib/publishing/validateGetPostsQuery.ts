@@ -5,6 +5,7 @@ import { POST_PLATFORMS, POST_STATUSES } from "@/lib/publishing/const";
 
 export const getPostsQuerySchema = z.object({
   account_id: z.string().uuid().optional(),
+  artist_account_id: z.string().uuid().optional(),
   status: z.enum(POST_STATUSES).optional(),
   platform: z.enum(POST_PLATFORMS).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
@@ -22,6 +23,7 @@ export type GetPostsQuery = z.infer<typeof getPostsQuerySchema>;
 export function validateGetPostsQuery(searchParams: URLSearchParams): NextResponse | GetPostsQuery {
   const result = getPostsQuerySchema.safeParse({
     account_id: searchParams.get("account_id") ?? undefined,
+    artist_account_id: searchParams.get("artist_account_id") ?? undefined,
     status: searchParams.get("status") ?? undefined,
     platform: searchParams.get("platform") ?? undefined,
     limit: searchParams.get("limit") ?? undefined,
