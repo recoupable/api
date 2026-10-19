@@ -169,6 +169,21 @@ describe("guarded Git file route exports", () => {
     expect(provider).not.toHaveBeenCalled();
   });
 
+  it.each(["../x", "dir\\x", "a/", "./x", "\ud800"])(
+    "rejects an unsafe upload name before fetching: %s",
+    async name => {
+      const response = await POST(
+        new NextRequest("https://api.example/api/sandboxes/files", {
+          method: "POST",
+          body: JSON.stringify({ files: [{ name, url: "https://blob.example/draft" }] }),
+        }),
+      );
+      expect(response.status).toBe(400);
+      expect(await response.json()).toMatchObject({ missing_fields: ["files", 0, "name"] });
+      expect(provider).not.toHaveBeenCalled();
+    },
+  );
+
   it.each([undefined, "a".repeat(40)])("accepts a valid or omitted SHA: %s", async expected => {
     const response = await save("Valid", expected === undefined ? undefined : sha(stored));
     expect(response.status).toBe(200);

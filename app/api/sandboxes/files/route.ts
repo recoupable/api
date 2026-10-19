@@ -32,6 +32,9 @@ export async function OPTIONS() {
  * - path: string (optional) - Target directory path within the repository
  * - message: string (optional) - Commit message (defaults to "Upload files via API")
  *
+ * Paths must be canonical relative paths: dot/traversal, backslashes, malformed Unicode
+ * and leading/trailing/doubled slashes return 400, including for legacy callers.
+ *
  * Response (200):
  * - status: "success"
  * - uploaded: Array<{ path: string, sha: string }>

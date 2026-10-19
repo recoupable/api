@@ -7,6 +7,7 @@ import { createOrUpdateFileContent } from "@/lib/github/createOrUpdateFileConten
 import type { CreateFileResult } from "@/lib/github/createOrUpdateFileContent";
 import { del } from "@vercel/blob";
 import { downloadFile } from "./downloadFile";
+import { buildFileUploadResponse } from "./buildFileUploadResponse";
 
 /**
  * Handler for uploading files to a sandbox's GitHub repository.
@@ -90,27 +91,5 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
     await Promise.allSettled(allBlobUrls.map(url => del(url)));
   }
 
-  if (uploaded.length === 0) {
-    return NextResponse.json(
-      {
-        status: "error",
-        error: `All uploads failed: ${errors.join("; ")}`,
-        ...(conflicts.length > 0 && { conflicts }),
-      },
-      {
-        status: conflicts.length > 0 && conflicts.length === errors.length ? 409 : 500,
-        headers: getCorsHeaders(),
-      },
-    );
-  }
-
-  return NextResponse.json(
-    {
-      status: "success",
-      uploaded,
-      ...(errors.length > 0 && { errors }),
-      ...(conflicts.length > 0 && { conflicts }),
-    },
-    { status: 200, headers: getCorsHeaders() },
-  );
+  return buildFileUploadResponse(uploaded, errors, conflicts);
 }

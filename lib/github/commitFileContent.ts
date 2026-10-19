@@ -16,6 +16,9 @@ export async function commitFileContent({
   sha?: string;
   guarded: boolean;
 }): Promise<CreateFileResult | { error: string; conflict?: boolean }> {
+  if (guarded && (typeof sha !== "string" || !/^[a-f0-9]{40}$/.test(sha))) {
+    return { error: "A valid observed SHA is required for a guarded file update" };
+  }
   try {
     const response = await fetch(url, {
       method: "PUT",
