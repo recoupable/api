@@ -115,6 +115,19 @@ describe("evidence HTTP and standard Context MCP", () => {
     expect(result.isError).toBe(true);
     expect(result.content[0].text).not.toContain("idempotency");
   });
+  it.each(operations)("HTTP gives action-specific retry guidance for $action", async operation => {
+    vi.mocked(callContextRpc).mockRejectedValueOnce(
+      new Error("Synthetic private dependency detail"),
+    );
+    const response = await http(operation);
+    expect(response.status).toBe(409);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    const { error } = await response.json();
+    expect(error).not.toMatch(/Synthetic private|ingestion/);
+    if (operation.action === "attach_evidence")
+      expect(error).toContain("same source version, targets and idempotency key");
+    else expect(error).not.toContain("idempotency");
+  });
   it("rejects identity overrides on both interfaces", async () => {
     const input = { ...operations[0], account_id: actor };
     expect((await http(input)).status).toBe(400);

@@ -9,6 +9,7 @@ import type { McpAuthInfo } from "../verifyApiKey";
 import type { OAuthAccess } from "../../oauth/resolveOAuthAccess";
 import { contextToolOperations } from "./contextToolOperations";
 import { fullOAuthToolPolicy } from "./fullOAuthToolPolicy";
+import { isStandardOnlyContextTool } from "./isStandardOnlyContextTool";
 
 type Extra = RequestHandlerExtra<ServerRequest, ServerNotification>;
 type Args = Record<string, unknown>;
@@ -48,13 +49,7 @@ export function registerFullOAuthTools(
       ].includes(name)
     )
       return;
-    if (
-      Object.values(contextToolOperations).some(
-        metadata =>
-          "delegated" in metadata && metadata.delegated === false && metadata.name === name,
-      )
-    )
-      return;
+    if (isStandardOnlyContextTool(name)) return;
     if (name === "context" && !operation) {
       if (!(config.inputSchema instanceof z.ZodDiscriminatedUnion))
         throw new Error("Context operations must have individually discoverable schemas");

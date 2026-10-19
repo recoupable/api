@@ -9,6 +9,7 @@ import { callContextRpc } from "@/lib/supabase/context_requests/callContextRpc";
 import { dispatchContextRequest } from "@/lib/context/dispatchContextRequest";
 import { dispatchContextReleaseVerification } from "@/lib/context/dispatchContextReleaseVerification";
 import { dispatchContextReleaseTrackIsrcs } from "@/lib/context/dispatchContextReleaseTrackIsrcs";
+import { getContextFailureReason } from "@/lib/context/getContextFailureReason";
 
 /** Shared authenticated handler for combined and individually discoverable Context tools. */
 export async function handleContextToolOperation(
@@ -32,7 +33,8 @@ export async function handleContextToolOperation(
         includeMaterialEvidence: !authInfo?.extra?.oauth,
       }),
     );
-  } catch {
+  } catch (error) {
+    console.error("[context] MCP operation failed", { reason: getContextFailureReason(error) });
     return {
       ...getToolResultError(
         "Context operation unavailable. Check workspace access and operation arguments.",

@@ -338,7 +338,7 @@
       "mcp:read"
     ],
     "status": "excluded until delegated organization-grant audit",
-    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement bind the authenticated actor, selected owner, source version and cursor to current organization grants on every page; withhold inaccessible receipts while preserving bounded cursor progress. Listing grants no write or paid execution authority."
+    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement bind the authenticated actor, selected owner, source version and cursor to current organization grants on every page; tell clients to pass the returned next_id as after_id while has_more is true, including empty pages with withheld receipts; withhold inaccessible receipts while preserving bounded cursor progress. Listing grants no write or paid execution authority."
   },
   {
     "name": "list_professional_roster",

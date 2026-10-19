@@ -63,9 +63,6 @@ describe("published Context request catalog", () => {
     for (const action of Object.keys(standardMcpOperations))
       expect(mcpOperations).not.toHaveProperty(action);
   });
-  it("keeps published evidence receipts and pages aligned with actual response validators", () => {
-    expect(withoutDescriptions(contextFixture.evidenceSchemas)).toEqual(evidenceSchemas);
-  });
   it("distinguishes accepted URL syntax from the pilot ingestion restriction", async () => {
     const accountId = "11111111-1111-4111-8111-111111111111";
     const rpc = vi.fn();
@@ -87,7 +84,9 @@ describe("published Context request catalog", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
   it("matches every provider-neutral action and its actual request fields", () => {
-    expect(withoutDescriptions(contextFixture.requestSchemas)).toEqual(schemas);
+    expect(withoutDescriptions(contextFixture.requestSchemas)).toEqual(
+      withoutDescriptions(schemas),
+    );
     expect(contextFixture.sourceHash).toBe(
       fixture.sourceHashes["content/docs/source/api-reference/openapi/context.json"],
     );

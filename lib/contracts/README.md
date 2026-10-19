@@ -45,9 +45,16 @@ the same coordinated fixture, separate from the API-owned error-envelope export.
 
 `buildContextOperationCatalog` exports the current request schemas and separates
 delegated tool names from standard-only evidence tools. The Context fixture checks
-both maps and the evidence receipt/page schemas. Run `contextContract.test.ts` with
-`RECOUP_CONTEXT_SCHEMA_OUTPUT`, `RECOUP_CONTEXT_MCP_OUTPUT`,
-`RECOUP_CONTEXT_STANDARD_MCP_OUTPUT` and `RECOUP_CONTEXT_EVIDENCE_OUTPUT` to save
-those four exports, then update Marketing's canonical Context specification and
+both maps and the evidence receipt/page schemas. Generate the four exports with:
+
+```sh
+RECOUP_CONTEXT_SCHEMA_OUTPUT=/tmp/context-requests.json \
+RECOUP_CONTEXT_MCP_OUTPUT=/tmp/context-mcp.json \
+RECOUP_CONTEXT_STANDARD_MCP_OUTPUT=/tmp/context-standard-mcp.json \
+RECOUP_CONTEXT_EVIDENCE_OUTPUT=/tmp/context-evidence.json \
+pnpm exec vitest run lib/contracts/__tests__/contextContract.test.ts
+```
+
+Then update Marketing's canonical Context specification and
 regenerate both fixture copies. Exported source contracts do not prove that the
 required database release or any customer workflow is live.
