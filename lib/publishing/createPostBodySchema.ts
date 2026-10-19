@@ -39,7 +39,11 @@ export const createPostBodySchema = z
     description: nonBlank.optional(),
     privacy: z.enum(["public", "unlisted", "private"]).optional(),
     tags: z.array(nonBlank).optional(),
-    publish_at: z.string().datetime({ offset: true }).optional(),
+    publish_at: z
+      .string()
+      .datetime({ offset: true })
+      .refine(value => Date.parse(value) > Date.now(), "publish_at must be in the future")
+      .optional(),
   })
   .superRefine((body, ctx) => {
     for (const field of UNUSED_FIELDS[body.platform]) {

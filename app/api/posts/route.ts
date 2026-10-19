@@ -16,14 +16,13 @@ export async function OPTIONS() {
  * POST /api/posts
  *
  * Publishes a video with its copy to one connected social account (contract:
- * recoupable/docs#375, tracking recoupable/app#2241). Publish-now only for
- * now; `publish_at` is rejected until scheduling ships.
+ * recoupable/docs#375, tracking recoupable/app#2241), now or at `publish_at`.
  *
  * @param request - JSON body `{ platform, video_url, cover_url?, title?,
- *   description?, privacy?, tags?, sub_account_id?, account_id? }`.
+ *   description?, privacy?, tags?, sub_account_id?, publish_at?, account_id? }`.
  * @returns 202 `{ id, status }` with a Location header, 400 on a bad body, 401
- *   unauthenticated, 403 on a denied override, 409 when the platform is not
- *   connected, or 500.
+ *   unauthenticated, 402 without credits, 403 on a denied override, 409 when
+ *   the platform is not connected, or 500.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   return createPostHandler(request);

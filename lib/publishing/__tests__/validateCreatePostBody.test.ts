@@ -116,15 +116,6 @@ describe("validateCreatePostBody", () => {
     await expect400({ platform: "tiktok", video_url: video, description: "d" }, "platform");
   });
 
-  it("rejects publish_at until scheduling ships, before auth", async () => {
-    const json = await expect400(
-      { platform: "x", video_url: video, description: "d", publish_at: "2026-10-20T15:00:00Z" },
-      "publish_at",
-    );
-    expect(json.error).toContain("Scheduling is not available yet");
-    expect(validateAuthContext).not.toHaveBeenCalled();
-  });
-
   it("returns the auth failure as-is", async () => {
     const denied = NextResponse.json({ status: "error" }, { status: 403 });
     vi.mocked(validateAuthContext).mockResolvedValue(denied);
