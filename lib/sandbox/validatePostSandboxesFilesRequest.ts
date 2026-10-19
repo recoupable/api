@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { buildGetSandboxesParams } from "./buildGetSandboxesParams";
+import { isRelativeRepoFilePath } from "@/lib/github/isRelativeRepoFilePath";
 import { z } from "zod";
 
 const postSandboxesFilesSchema = z.object({
@@ -10,11 +11,25 @@ const postSandboxesFilesSchema = z.object({
     .array(
       z.object({
         url: z.string().url("Each file must have a valid URL"),
-        name: z.string().min(1, "Each file must have a name"),
+        name: z
+          .string()
+          .min(1, "Each file must have a name")
+          .refine(isRelativeRepoFilePath, "Invalid repository file path"),
+        expected_sha: z
+          .string()
+          .regex(/^[a-f0-9]{40}$/, "expected_sha must be a Git blob SHA")
+          .optional(),
       }),
     )
     .min(1, "At least one file is required"),
-  path: z.string().optional().default(""),
+  path: z
+    .string()
+    .refine(
+      value => value === "" || isRelativeRepoFilePath(value),
+      "Invalid repository directory path",
+    )
+    .optional()
+    .default(""),
   message: z.string().optional().default("Upload files via API"),
 });
 
@@ -24,7 +39,7 @@ export interface ValidatedPostSandboxesFilesParams {
   accountIds?: string[];
   path: string;
   message: string;
-  files: { url: string; name: string }[];
+  files: { url: string; name: string; expected_sha?: string }[];
 }
 
 /**

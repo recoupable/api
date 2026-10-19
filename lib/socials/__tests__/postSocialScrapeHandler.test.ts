@@ -105,7 +105,7 @@ describe("postSocialScrapeHandler", () => {
       state: "failed",
       runId: null,
       datasetId: null,
-      error: "boom",
+      error: "Failed to start scrape",
       supported: true,
     });
     await postSocialScrapeHandler(request, SOCIAL_ID);
@@ -136,7 +136,7 @@ describe("postSocialScrapeHandler", () => {
       state: "failed",
       runId: null,
       datasetId: null,
-      error: "boom",
+      error: "Failed to start scrape",
       supported: true,
     });
     const res = await postSocialScrapeHandler(request, SOCIAL_ID);
@@ -147,6 +147,6 @@ describe("postSocialScrapeHandler", () => {
     vi.mocked(selectSocials).mockRejectedValue(new Error("db down"));
     const res = await postSocialScrapeHandler(request, SOCIAL_ID);
     expect(res.status).toBe(500);
-    expect(await res.json()).toEqual({ status: "error", error: "db down" });
+    expect(await res.json()).toEqual({ status: "error", error: "Internal server error" });
   });
 });
