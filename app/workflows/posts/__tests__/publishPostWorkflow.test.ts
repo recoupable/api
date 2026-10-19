@@ -5,6 +5,11 @@ import { markPostStep } from "../markPostStep";
 
 vi.mock("../publishPostStep", () => ({ publishPostStep: vi.fn() }));
 vi.mock("../markPostStep", () => ({ markPostStep: vi.fn() }));
+vi.mock("@/lib/credits/recordCreditDeduction", () => ({
+  recordCreditDeduction: vi.fn(async () => ({ success: true })),
+}));
+
+const params = { accountId: "acct", platform: "x" as const, creditsToCharge: 10_000 };
 
 describe("publishPostWorkflow", () => {
   beforeEach(() => {
@@ -17,7 +22,7 @@ describe("publishPostWorkflow", () => {
       postUrl: "https://x.com/i/status/1",
       textVerified: true,
     });
-    const result = await publishPostWorkflow("p1");
+    const result = await publishPostWorkflow("p1", params);
     expect(markPostStep).toHaveBeenCalledWith("p1", {
       status: "posted",
       post_url: "https://x.com/i/status/1",
@@ -30,7 +35,7 @@ describe("publishPostWorkflow", () => {
     vi.mocked(publishPostStep).mockRejectedValue(
       new Error("YOUTUBE_MULTIPART_UPLOAD_VIDEO failed: quotaExceeded"),
     );
-    const result = await publishPostWorkflow("p1");
+    const result = await publishPostWorkflow("p1", params);
     expect(markPostStep).toHaveBeenCalledWith("p1", {
       status: "failed",
       error_message: "YOUTUBE_MULTIPART_UPLOAD_VIDEO failed: quotaExceeded",
@@ -44,7 +49,7 @@ describe("publishPostWorkflow", () => {
       textVerified: false,
     });
     vi.mocked(markPostStep).mockRejectedValue(new Error("db down"));
-    await expect(publishPostWorkflow("p1")).rejects.toThrow("db down");
+    await expect(publishPostWorkflow("p1", params)).rejects.toThrow("db down");
     expect(markPostStep).not.toHaveBeenCalledWith(
       "p1",
       expect.objectContaining({ status: "failed" }),
