@@ -235,4 +235,35 @@ describe("postSandboxesFilesHandler", () => {
     // Blobs must be cleaned up even when an unhandled exception occurs
     expect(del).toHaveBeenCalledWith("https://blob.example.com/f.txt");
   });
+  it("reports a partial conflict without losing the successful receipt", async () => {
+    vi.mocked(validatePostSandboxesFilesRequest).mockResolvedValue({
+      accountIds: ["acc-1"],
+      path: "",
+      message: "Edit",
+      files: [
+        { url: "https://blob.example.com/a.txt", name: "a.txt", expected_sha: "a".repeat(40) },
+        { url: "https://blob.example.com/b.txt", name: "b.txt", expected_sha: "b".repeat(40) },
+      ],
+    });
+    vi.mocked(selectAccountSnapshots).mockResolvedValue([
+      { github_repo: "https://github.com/owner/repo" } as never,
+    ]);
+    mockFetch.mockResolvedValue({
+      ok: true,
+      arrayBuffer: async () => new TextEncoder().encode("Draft").buffer,
+    });
+    vi.mocked(resolveSubmodulePath).mockImplementation(async params => params);
+    vi.mocked(createOrUpdateFileContent)
+      .mockResolvedValueOnce({ path: "a.txt", sha: "c".repeat(40) })
+      .mockResolvedValueOnce({ error: "File changed", conflict: true });
+    const response = await postSandboxesFilesHandler(mockRequest);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      status: "success",
+      uploaded: [{ path: "a.txt", sha: "c".repeat(40) }],
+      errors: ["b.txt: File changed"],
+      conflicts: ["b.txt"],
+    });
+    expect(del).toHaveBeenCalledTimes(2);
+  });
 });

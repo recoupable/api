@@ -7,12 +7,14 @@ import { z } from "zod";
 
 const getSandboxesFileQuerySchema = z.object({
   path: z.string({ message: "path is required" }).min(1, "path cannot be empty"),
+  include_revision: z.enum(["true", "false"]).optional(),
 });
 
 export interface ValidatedGetSandboxesFileParams {
   accountIds?: string[];
   orgId?: string;
   path: string;
+  includeRevision?: boolean;
 }
 
 /**
@@ -31,6 +33,7 @@ export async function validateGetSandboxesFileRequest(
   const { searchParams } = new URL(request.url);
   const queryParams = {
     path: searchParams.get("path") ?? undefined,
+    include_revision: searchParams.get("include_revision") ?? undefined,
   };
 
   const queryResult = getSandboxesFileQuerySchema.safeParse(queryParams);
@@ -72,5 +75,6 @@ export async function validateGetSandboxesFileRequest(
     accountIds: params.accountIds,
     orgId: orgId ?? undefined,
     path,
+    ...(queryResult.data.include_revision === "true" && { includeRevision: true }),
   };
 }

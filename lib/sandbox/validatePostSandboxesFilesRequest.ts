@@ -11,6 +11,10 @@ const postSandboxesFilesSchema = z.object({
       z.object({
         url: z.string().url("Each file must have a valid URL"),
         name: z.string().min(1, "Each file must have a name"),
+        expected_sha: z
+          .string()
+          .regex(/^[a-f0-9]{40}$/, "expected_sha must be a Git blob SHA")
+          .optional(),
       }),
     )
     .min(1, "At least one file is required"),
@@ -24,7 +28,7 @@ export interface ValidatedPostSandboxesFilesParams {
   accountIds?: string[];
   path: string;
   message: string;
-  files: { url: string; name: string }[];
+  files: { url: string; name: string; expected_sha?: string }[];
 }
 
 /**

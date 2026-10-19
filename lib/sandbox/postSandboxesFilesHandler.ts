@@ -52,6 +52,7 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
 
   const uploaded: CreateFileResult[] = [];
   const errors: string[] = [];
+  const conflicts: string[] = [];
   const allBlobUrls = files.map(file => file.url);
 
   try {
@@ -70,9 +71,11 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
         path: resolved.path,
         content,
         message,
+        ...(file.expected_sha !== undefined && { expectedSha: file.expected_sha }),
       });
 
       if ("error" in result) {
+        if (result.conflict) conflicts.push(file.name);
         errors.push(`${file.name}: ${result.error}`);
       } else {
         uploaded.push(result);
@@ -89,8 +92,12 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
 
   if (uploaded.length === 0) {
     return NextResponse.json(
-      { status: "error", error: `All uploads failed: ${errors.join("; ")}` },
-      { status: 500, headers: getCorsHeaders() },
+      {
+        status: "error",
+        error: `All uploads failed: ${errors.join("; ")}`,
+        ...(conflicts.length > 0 && { conflicts }),
+      },
+      { status: conflicts.length > 0 ? 409 : 500, headers: getCorsHeaders() },
     );
   }
 
@@ -99,6 +106,7 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
       status: "success",
       uploaded,
       ...(errors.length > 0 && { errors }),
+      ...(conflicts.length > 0 && { conflicts }),
     },
     { status: 200, headers: getCorsHeaders() },
   );
