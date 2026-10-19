@@ -9,6 +9,7 @@ import { parseContextReleaseUrl } from "./parseContextReleaseUrl";
 import type { ContextBriefDocument } from "./selectContextDocuments";
 import { compileContextBrief } from "./compileContextBrief";
 import type { ContextRequestRecord } from "./runContextRequest";
+import { readContextMaterialEvidence } from "./readContextMaterialEvidence";
 
 const briefFields = {
   request_id: z.uuid(),
@@ -467,7 +468,22 @@ export async function processContextOperation(
     p_request: args.request_id,
   })) as ContextRequestRecord & { output?: { subjectIds?: string[]; gaps?: unknown[] } };
   if (!request) throw new Error("Context request not found");
-  if (args.action === "read") return { request };
+  if (args.action === "read") {
+    const materialEvidence = await readContextMaterialEvidence({
+      ownerId,
+      requestId: args.request_id,
+      request,
+      rpc: deps.rpc,
+    });
+    if (materialEvidence === undefined) return { request };
+    const current = await (deps.authorize ?? authorizeContextOwner)(
+      accountId,
+      args.organization_id,
+    );
+    if (current.ownerId.toLowerCase() !== ownerId.toLowerCase())
+      throw new Error("Material evidence owner changed");
+    return { request, material_evidence: materialEvidence };
+  }
   const requestIds = [...new Set([args.request_id, ...args.additional_request_ids])];
   const requests = [request];
   for (const id of requestIds.slice(1)) {

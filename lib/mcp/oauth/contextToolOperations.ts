@@ -139,7 +139,8 @@ export const contextToolOperations = {
   },
   read: {
     name: "read_music_context",
-    description: "Read the status and results of a saved music context request.",
+    description:
+      "Read saved request status and, for supporting text, a current metadata-only evidence receipt. Does not verify file origin or business facts.",
     readOnly: true,
   },
   brief: {

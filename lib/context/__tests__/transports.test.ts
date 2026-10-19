@@ -111,3 +111,46 @@ it.each([
   expect(processContextOperation).toHaveBeenCalledTimes(1);
   expect(processContextOperation).toHaveBeenLastCalledWith("actor", operation, expect.any(Object));
 });
+
+it("HTTP and MCP preserve the material receipt while HTTP prevents private caching", async () => {
+  const operation = { action: "read", request_id: "11111111-1111-4111-8111-111111111111" };
+  const saved = {
+    request: { id: operation.request_id },
+    material_evidence: {
+      state: "available",
+      source_version_ids: ["22222222-2222-4222-8222-222222222222"],
+      evidence_kind: "customer_assertion",
+      draft_origin: { state: "not_recorded" },
+    },
+  };
+  vi.mocked(processContextOperation).mockResolvedValueOnce(saved as never);
+  const response = await contextOperationHandler(
+    new NextRequest("http://localhost/api/context", {
+      method: "POST",
+      body: JSON.stringify(operation),
+    }),
+  );
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  expect(await response.json()).toEqual(saved);
+  const registerTool = vi.fn();
+  registerContextTool({ registerTool } as never);
+  vi.mocked(processContextOperation).mockResolvedValueOnce(saved as never);
+  const result = await registerTool.mock.calls[0][2](operation, {});
+  expect(JSON.parse(result.content[0].text)).toEqual(saved);
+});
+
+it("material receipt failures stay private and redact internal diagnostics", async () => {
+  vi.mocked(processContextOperation).mockRejectedValueOnce(
+    new Error("Synthetic private /path/database detail"),
+  );
+  const response = await contextOperationHandler(
+    new NextRequest("http://localhost/api/context", {
+      method: "POST",
+      body: JSON.stringify({ action: "read", request_id: "11111111-1111-4111-8111-111111111111" }),
+    }),
+  );
+  expect(response.status).toBe(409);
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  expect(JSON.stringify(await response.json())).not.toContain("/path/database");
+});

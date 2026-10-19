@@ -13,6 +13,10 @@ export async function contextOperationHandler(request: NextRequest) {
   if (parsed instanceof NextResponse) return parsed;
   const auth = await validateAuthContext(request, { organizationId: parsed.organization_id });
   if (auth instanceof NextResponse) return auth;
+  const headers = {
+    ...getCorsHeaders(),
+    ...(parsed.action === "read" ? { "Cache-Control": "private, no-store" } : {}),
+  };
   try {
     const result = await processContextOperation(auth.accountId, parsed, {
       rpc: callContextRpc,
@@ -24,7 +28,7 @@ export async function contextOperationHandler(request: NextRequest) {
       status: ["ingest", "verify_release", "verify_release_tracks"].includes(parsed.action)
         ? 202
         : 200,
-      headers: getCorsHeaders(),
+      headers,
     });
   } catch {
     return NextResponse.json(
@@ -32,7 +36,7 @@ export async function contextOperationHandler(request: NextRequest) {
         error:
           "Context operation could not complete. Check scope, request ID and provider availability; retry ingestion with the same idempotency key.",
       },
-      { status: 409, headers: getCorsHeaders() },
+      { status: 409, headers },
     );
   }
 }
