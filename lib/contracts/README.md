@@ -35,8 +35,9 @@ the old message-only Artist schema and responses missing required fields.
 the actual GET export returns the declared version/encoding fields, the POST
 validator preserves the observed SHA, and the shared upload response builder
 matches the published 200/409/500 schemas without dropping partial receipts.
-Explicit declaration checks reject removal of optional request/response fields;
-accepting extra JSON properties alone is not evidence that the docs declare them.
+Explicit declaration checks cover request `expected_sha`, GET `sha`/`encoding`,
+and POST `errors`/`conflicts`; they do not cover every optional field. Accepting
+extra JSON properties alone is not evidence that the docs declare them.
 Authentication, account/repository lookup and file reads are mocked. These checks
 do not write GitHub files or verify hosted authorization, sandbox concurrency or
 client adoption. The examples and resolved schemas live in `guardedGitFiles` in
