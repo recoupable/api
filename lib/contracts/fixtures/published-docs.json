@@ -116,7 +116,7 @@
   ],
   "sourceHashes": {
     "content/docs/source/api-reference/openapi/accounts.json": "0803ba921d739f023353e7ec6807ff407542483a679ee1cf5226539637f424d7",
-    "content/docs/source/api-reference/openapi/content.json": "e4665353f493850f366833386c4c26e7e2e08eca0a6a8c81c1386c98022254d8",
+    "content/docs/source/api-reference/openapi/content.json": "65a70807962d7bf2862531c165436f047952ea8229fe3527e218a0d4bd9c154e",
     "content/docs/source/api-reference/openapi/research.json": "e41af080333df4740bf2a217fc40c588b95ae7cf0d73728a0caaff7367f25547",
     "content/docs/source/api-reference/openapi/releases.json": "026d07948366d6498489d93fb8c809e919403d6154bd90d85aa0151d89150f3c",
     "content/docs/source/api-reference/openapi/social.json": "27c3953e379c558d017271fa4e323d5818a63b83ff310b2f97a1599c8bd5aa2f",
@@ -308,7 +308,7 @@
               "expected_sha": {
                 "type": "string",
                 "pattern": "^[a-f0-9]{40}$",
-                "description": "Optional observed blob SHA from the matching versioned read. When provided, update the existing file on main only if its current contents still match. Omission retains unguarded legacy create/update behavior; no automatic conflict retry occurs. If the target was deleted after the read, do not retry without the condition. This upload has no dedicated missing-target status: non-conflict failures return 500 when no file succeeds, or appear in `errors` alongside successful receipts in a 200 partial result. A missing target is not guaranteed to return 404 or 409; reread the path before deciding how to recover.",
+                "description": "Optional observed blob SHA from the matching versioned read. When provided, update the existing file on main only if its current contents still match. Omission retains unguarded legacy create/update behavior; no automatic conflict retry occurs. See the upload operation's missing-target recovery guidance before retrying a failed save.",
                 "example": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
               }
             }
