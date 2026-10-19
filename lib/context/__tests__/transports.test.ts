@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { contextOperationHandler } from "../contextOperationHandler";
 import { processContextOperation } from "../processContextOperation";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { registerContextTool } from "@/lib/mcp/tools/context/registerContextTool";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
+afterEach(() => vi.restoreAllMocks());
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(async () => ({ accountId: "actor" })),
 }));
@@ -140,11 +141,13 @@ it("HTTP and MCP preserve the material receipt while HTTP prevents private cachi
   expect(JSON.parse(result.content[0].text)).toEqual(saved);
 });
 
-it("material receipt failures stay private and redact internal diagnostics", async () => {
+it.each([
+  ["Synthetic private /path/database detail", "dependency_or_access"],
+  ["Material evidence could not be verified", "material_evidence_unverified"],
+  ["Material evidence owner changed", "owner_changed"],
+])("material receipt failures stay private and redact diagnostics: %s", async (message, reason) => {
   const diagnostic = vi.spyOn(console, "error").mockImplementation(() => {});
-  vi.mocked(processContextOperation).mockRejectedValueOnce(
-    new Error("Synthetic private /path/database detail"),
-  );
+  vi.mocked(processContextOperation).mockRejectedValueOnce(new Error(message));
   const response = await contextOperationHandler(
     new NextRequest("http://localhost/api/context", {
       method: "POST",
@@ -157,8 +160,7 @@ it("material receipt failures stay private and redact internal diagnostics", asy
     error:
       "Context operation could not complete. Check scope, request ID and provider availability; retry ingestion with the same idempotency key.",
   });
-  expect(diagnostic.mock.calls).toEqual([["[context] read failed"]]);
-  diagnostic.mockRestore();
+  expect(diagnostic.mock.calls).toEqual([["[context] read failed", { reason }]]);
 });
 
 it("delegated OAuth keeps material receipt expansion disabled by server transport policy", async () => {

@@ -30,8 +30,16 @@ export async function contextOperationHandler(request: NextRequest) {
         : 200,
       headers,
     });
-  } catch {
-    if (parsed.action === "read") console.error("[context] read failed");
+  } catch (error) {
+    if (parsed.action === "read") {
+      const reason =
+        error instanceof Error && error.message === "Material evidence could not be verified"
+          ? "material_evidence_unverified"
+          : error instanceof Error && error.message === "Material evidence owner changed"
+            ? "owner_changed"
+            : "dependency_or_access";
+      console.error("[context] read failed", { reason });
+    }
     return NextResponse.json(
       {
         error:
