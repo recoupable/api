@@ -137,7 +137,7 @@ describe("postArtistSocialsScrapeHandler", () => {
         state: "failed",
         runId: null,
         datasetId: null,
-        error: "Provider unavailable",
+        error: "Failed to start scrape",
         profileUrl: null,
       },
     ]);
@@ -153,7 +153,7 @@ describe("postArtistSocialsScrapeHandler", () => {
     );
     expect(await response.json()).toEqual([
       { runId: "started", datasetId: "dataset", error: null },
-      { runId: null, datasetId: null, error: "Provider unavailable" },
+      { runId: null, datasetId: null, error: "Failed to start scrape" },
     ]);
     expect(upsertApifyScraperRuns).toHaveBeenCalledTimes(1);
     expect(upsertApifyScraperRuns).toHaveBeenCalledWith([
@@ -180,7 +180,7 @@ describe("postArtistSocialsScrapeHandler", () => {
         state: "failed",
         runId: null,
         datasetId: null,
-        error: "Provider unavailable",
+        error: "Failed to start scrape",
         profileUrl: null,
       },
     ]);
@@ -191,7 +191,7 @@ describe("postArtistSocialsScrapeHandler", () => {
     expect(deductSocialScrapeCredits).not.toHaveBeenCalled();
     expect(upsertApifyScraperRuns).not.toHaveBeenCalled();
     expect(await response.json()).toEqual([
-      { runId: null, datasetId: null, error: "Provider unavailable" },
+      { runId: null, datasetId: null, error: "Failed to start scrape" },
     ]);
   });
 });

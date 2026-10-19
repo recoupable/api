@@ -30,7 +30,7 @@ describe("scrapeProfileUrlBatch", () => {
         state: "failed",
         runId: null,
         datasetId: null,
-        error: "Provider unavailable",
+        error: "Failed to start scrape",
         supported: true,
       })
       .mockResolvedValueOnce(null);
@@ -52,7 +52,7 @@ describe("scrapeProfileUrlBatch", () => {
         state: "failed",
         runId: null,
         datasetId: null,
-        error: "Provider unavailable",
+        error: "Failed to start scrape",
         profileUrl: "https://youtube.com/@b",
       },
     ]);

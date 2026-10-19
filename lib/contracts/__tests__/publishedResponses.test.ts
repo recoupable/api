@@ -103,7 +103,9 @@ describe("published response schemas against route exports", () => {
       message: "Failed to verify authentication token",
     },
   ])("accepts Projects 401 from $name", async ({ headers, field, message }) => {
-    vi.mocked(getOrCreateAccountIdByAuthToken).mockRejectedValue("invalid test token");
+    vi.mocked(getOrCreateAccountIdByAuthToken).mockRejectedValue(
+      new Error("internal-auth-canary-7f91"),
+    );
     const response = await getProject(
       new NextRequest(`https://api.example/api/projects/${id}`, { headers }),
       { params: Promise.resolve({ projectId: id }) },
@@ -113,6 +115,7 @@ describe("published response schemas against route exports", () => {
     const validate = responseContract("/api/projects/{projectId}", 401);
     expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
     expect(body).toEqual({ status: "error", [field]: message });
+    expect(JSON.stringify(body)).not.toContain("internal-auth-canary-7f91");
     expect(validate({ status: body.status })).toBe(false);
     expect(validate({ [field]: message })).toBe(false);
     expect(hasProjectAccess).not.toHaveBeenCalled();

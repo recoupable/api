@@ -7,13 +7,14 @@ import { createOrUpdateFileContent } from "@/lib/github/createOrUpdateFileConten
 import type { CreateFileResult } from "@/lib/github/createOrUpdateFileContent";
 import { del } from "@vercel/blob";
 import { downloadFile } from "./downloadFile";
+import { buildFileUploadResponse } from "./buildFileUploadResponse";
 
 /**
  * Handler for uploading files to a sandbox's GitHub repository.
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
  * Accepts JSON body with:
- * - files: Array of { url, name } objects
+ * - files: Array of { url, name, expected_sha? } objects; expected_sha guards updates on main
  * - path: Target directory path within the repository (optional, defaults to root)
  * - message: Commit message (optional, defaults to "Upload files via API")
  *
@@ -21,7 +22,7 @@ import { downloadFile } from "./downloadFile";
  * the temporary blob.
  *
  * @param request - The request object
- * @returns A NextResponse with uploaded file details or error
+ * @returns Uploaded receipts plus optional errors/conflicts; 409 when every failed upload conflicts.
  */
 export async function postSandboxesFilesHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validatePostSandboxesFilesRequest(request);
@@ -52,6 +53,7 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
 
   const uploaded: CreateFileResult[] = [];
   const errors: string[] = [];
+  const conflicts: string[] = [];
   const allBlobUrls = files.map(file => file.url);
 
   try {
@@ -70,9 +72,11 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
         path: resolved.path,
         content,
         message,
+        ...(file.expected_sha !== undefined && { expectedSha: file.expected_sha }),
       });
 
       if ("error" in result) {
+        if (result.conflict) conflicts.push(file.name);
         errors.push(`${file.name}: ${result.error}`);
       } else {
         uploaded.push(result);
@@ -87,19 +91,5 @@ export async function postSandboxesFilesHandler(request: NextRequest): Promise<N
     await Promise.allSettled(allBlobUrls.map(url => del(url)));
   }
 
-  if (uploaded.length === 0) {
-    return NextResponse.json(
-      { status: "error", error: `All uploads failed: ${errors.join("; ")}` },
-      { status: 500, headers: getCorsHeaders() },
-    );
-  }
-
-  return NextResponse.json(
-    {
-      status: "success",
-      uploaded,
-      ...(errors.length > 0 && { errors }),
-    },
-    { status: 200, headers: getCorsHeaders() },
-  );
+  return buildFileUploadResponse(uploaded, errors, conflicts);
 }
