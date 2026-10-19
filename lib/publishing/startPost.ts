@@ -2,13 +2,17 @@ import { start } from "workflow/api";
 import { insertScheduledPost } from "@/lib/supabase/scheduled_posts/insertScheduledPost";
 import { updateScheduledPost } from "@/lib/supabase/scheduled_posts/updateScheduledPost";
 import { publishPostWorkflow } from "@/app/workflows/posts/publishPostWorkflow";
+import { POST_CREDITS } from "@/lib/publishing/postCredits";
+import type { PostPlatform } from "@/lib/publishing/const";
 import type { ValidatedCreatePostBody } from "@/lib/publishing/validateCreatePostBody";
 import type { Tables } from "@/types/database.types";
 
 /**
  * Create the post row and hand it to the publish workflow.
  *
- * The insert comes first and is the claim, as in startMusicGeneration.
+ * The insert comes first and is the claim, as in startMusicGeneration. The
+ * price is passed to the workflow as a durable argument, so the price checked
+ * here is the price charged.
  *
  * @param validated - Validated body plus the resolved account.
  * @returns The inserted row.
@@ -29,7 +33,14 @@ export async function startPost(
     status: "publishing",
   });
 
-  const run = await start(publishPostWorkflow, [row.id]);
+  const run = await start(publishPostWorkflow, [
+    row.id,
+    {
+      accountId: validated.accountId,
+      platform: validated.platform as PostPlatform,
+      creditsToCharge: POST_CREDITS,
+    },
+  ]);
 
   // Best effort, as in startMusicGeneration: a post that is already
   // publishing must not be failed by a bookkeeping write.

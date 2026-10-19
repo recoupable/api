@@ -9,6 +9,7 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({ getCorsHeaders: vi.fn(() => 
 vi.mock("../validateCreatePostBody", () => ({ validateCreatePostBody: vi.fn() }));
 vi.mock("../findConnectedAccountId", () => ({ findConnectedAccountId: vi.fn() }));
 vi.mock("../startPost", () => ({ startPost: vi.fn() }));
+vi.mock("../ensurePostCredits", () => ({ ensurePostCredits: vi.fn(async () => null) }));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
 const postId = "3f1c2b7e-8a4d-4c1e-9b2a-6d5e4f3a2b1c";

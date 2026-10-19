@@ -45,7 +45,7 @@ describe("startPost", () => {
       tags: null,
       status: "publishing",
     });
-    expect(start).toHaveBeenCalledWith(expect.anything(), ["p1"]);
+    expect(start).toHaveBeenCalledWith(expect.anything(), ["p1", expect.any(Object)]);
     expect(result).toMatchObject({ workflow_run_id: "wrun_1" });
   });
 

@@ -4,6 +4,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateCreatePostBody } from "@/lib/publishing/validateCreatePostBody";
 import { findConnectedAccountId } from "@/lib/publishing/findConnectedAccountId";
+import { ensurePostCredits } from "@/lib/publishing/ensurePostCredits";
 import { startPost } from "@/lib/publishing/startPost";
 
 /**
@@ -15,7 +16,7 @@ import { startPost } from "@/lib/publishing/startPost";
  *
  * @param request - Incoming request with the post.
  * @returns 202 `{ id, status }` with a Location header, or the validation,
- *   auth or connection failure that stopped it.
+ *   auth, connection or credit failure that stopped it.
  */
 export async function createPostHandler(request: NextRequest): Promise<NextResponse> {
   const validated = await validateCreatePostBody(request);
@@ -32,6 +33,9 @@ export async function createPostHandler(request: NextRequest): Promise<NextRespo
         409,
       );
     }
+
+    const short = await ensurePostCredits(validated.accountId);
+    if (short) return short;
 
     const row = await startPost(validated);
 
