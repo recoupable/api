@@ -3,8 +3,10 @@ import { publishPostWorkflow } from "../publishPostWorkflow";
 import { publishPostStep } from "../publishPostStep";
 import { markPostStep } from "../markPostStep";
 
+vi.mock("workflow", () => ({ sleep: vi.fn() }));
 vi.mock("../publishPostStep", () => ({ publishPostStep: vi.fn() }));
 vi.mock("../markPostStep", () => ({ markPostStep: vi.fn() }));
+vi.mock("../claimScheduledPostStep", () => ({ claimScheduledPostStep: vi.fn() }));
 vi.mock("@/lib/credits/recordCreditDeduction", () => ({
   recordCreditDeduction: vi.fn(async () => ({ success: true })),
 }));

@@ -4,8 +4,10 @@ import { publishPostStep } from "../publishPostStep";
 import { markPostStep } from "../markPostStep";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 
+vi.mock("workflow", () => ({ sleep: vi.fn() }));
 vi.mock("../publishPostStep", () => ({ publishPostStep: vi.fn() }));
 vi.mock("../markPostStep", () => ({ markPostStep: vi.fn() }));
+vi.mock("../claimScheduledPostStep", () => ({ claimScheduledPostStep: vi.fn() }));
 vi.mock("@/lib/credits/recordCreditDeduction", () => ({ recordCreditDeduction: vi.fn() }));
 
 const params = { accountId: "acct", platform: "linkedin" as const, creditsToCharge: 10_000 };

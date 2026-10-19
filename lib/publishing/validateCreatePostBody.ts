@@ -15,10 +15,6 @@ export type ValidatedCreatePostBody = {
  * Parsed before auth so a malformed body fails as a 400 without an API-key
  * lookup; `account_id` reaches `validateAuthContext` only as an override.
  *
- * Publish-now only: `publish_at` is part of the published contract but its
- * scheduling ships in a follow-up (recoupable/app#2241), so it is rejected here
- * rather than accepted and ignored.
- *
  * @param request - Incoming request carrying the post.
  * @returns The validated body plus the resolved account, or a NextResponse the
  *   caller returns as-is (400, 401, or 403).
@@ -38,12 +34,6 @@ export async function validateCreatePostBody(
       400,
       { missing_fields: unknownKeys.length ? unknownKeys : firstError.path },
     );
-  }
-
-  if (result.data.publish_at !== undefined) {
-    return errorResponse("Scheduling is not available yet; omit publish_at to publish now", 400, {
-      missing_fields: ["publish_at"],
-    });
   }
 
   const authResult = await validateAuthContext(request, {

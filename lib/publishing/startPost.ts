@@ -8,7 +8,8 @@ import type { ValidatedCreatePostBody } from "@/lib/publishing/validateCreatePos
 import type { Tables } from "@/types/database.types";
 
 /**
- * Create the post row and hand it to the publish workflow.
+ * Create the post row and hand it to the publish workflow: `scheduled` when
+ * it has a `publish_at`, otherwise `publishing` right away.
  *
  * The insert comes first and is the claim, as in startMusicGeneration. The
  * price is passed to the workflow as a durable argument, so the price checked
@@ -30,7 +31,8 @@ export async function startPost(
     description: validated.description ?? null,
     privacy: validated.privacy ?? null,
     tags: validated.tags ?? null,
-    status: "publishing",
+    publish_at: validated.publish_at ?? null,
+    status: validated.publish_at ? "scheduled" : "publishing",
   });
 
   const run = await start(publishPostWorkflow, [
@@ -39,10 +41,13 @@ export async function startPost(
       accountId: validated.accountId,
       platform: validated.platform as PostPlatform,
       creditsToCharge: POST_CREDITS,
+      ...(validated.publish_at ? { publishAt: validated.publish_at } : {}),
     },
   ]);
 
   // Best effort, as in startMusicGeneration: a post that is already
-  // publishing must not be failed by a bookkeeping write.
+  // publishing must not be failed by a bookkeeping write. A scheduled post
+  // without its run id can still be cancelled: the run wakes, its claim step
+  // finds the post no longer scheduled, and it exits.
   return updateScheduledPost(row.id, { workflow_run_id: run.runId }).catch(() => row);
 }

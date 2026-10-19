@@ -43,6 +43,7 @@ describe("startPost", () => {
       description: "d",
       privacy: null,
       tags: null,
+      publish_at: null,
       status: "publishing",
     });
     expect(start).toHaveBeenCalledWith(expect.anything(), ["p1", expect.any(Object)]);

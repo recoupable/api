@@ -1,4 +1,6 @@
+import { sleep } from "workflow";
 import { publishPostStep } from "@/app/workflows/posts/publishPostStep";
+import { claimScheduledPostStep } from "@/app/workflows/posts/claimScheduledPostStep";
 import { markPostStep } from "@/app/workflows/posts/markPostStep";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
 import type { PostPlatform } from "@/lib/publishing/const";
@@ -7,6 +9,8 @@ export type PublishPostParams = {
   accountId: string;
   platform: PostPlatform;
   creditsToCharge: number;
+  /** ISO time to publish at; absent for publish-now. */
+  publishAt?: string;
 };
 
 /**
@@ -14,17 +18,26 @@ export type PublishPostParams = {
  * through the account's own connection, then record the live URL and whether
  * the live text matches what was submitted.
  *
- * Publish-now only; scheduling adds a `sleep(publish_at)` in front of the same
- * steps in a follow-up.
+ * A scheduled post sleeps until `publishAt`, then claims the row
+ * (`scheduled` → `publishing`); a post cancelled in the meantime is not
+ * claimed, so the run ends without publishing, marking or charging.
  *
  * Credits are deducted only once the post is recorded `posted`, so a failed
  * post costs nothing.
  *
  * @param postId - The scheduled_posts row id.
- * @param params - Who pays and the price quoted at create time.
+ * @param params - Who pays, the price quoted at create time, and when to
+ *   publish.
  */
 export async function publishPostWorkflow(postId: string, params: PublishPostParams) {
   "use workflow";
+
+  if (params.publishAt) {
+    await sleep(new Date(params.publishAt));
+    if (!(await claimScheduledPostStep(postId))) {
+      return { success: false as const, cancelled: true as const };
+    }
+  }
 
   let result: Awaited<ReturnType<typeof publishPostStep>>;
   try {
