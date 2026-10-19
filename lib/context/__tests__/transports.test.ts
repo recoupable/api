@@ -152,7 +152,10 @@ it("material receipt failures stay private and redact internal diagnostics", asy
   );
   expect(response.status).toBe(409);
   expect(response.headers.get("Cache-Control")).toBe("private, no-store");
-  expect(JSON.stringify(await response.json())).not.toContain("/path/database");
+  expect(await response.json()).toEqual({
+    error:
+      "Context operation could not complete. Check scope, request ID and provider availability; retry ingestion with the same idempotency key.",
+  });
 });
 
 it("delegated OAuth keeps material receipt expansion disabled by server transport policy", async () => {
