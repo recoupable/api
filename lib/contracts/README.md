@@ -30,3 +30,12 @@ dependencies are mocked. It checks Artist 404, both Projects 401 envelopes, and
 Projects 404. The latter requires `error`; the authentication union is only for 401.
 It does not claim coverage of every API error or hosted authentication. It also rejects
 the old message-only Artist schema and responses missing required fields.
+
+`publishedSandboxFiles.test.ts` checks the coordinated guarded-file examples:
+the actual GET export returns the declared version/encoding fields, the POST
+validator preserves the observed SHA, and the shared upload response builder
+matches the published 200/409/500 schemas without dropping partial receipts.
+Authentication, account/repository lookup and file reads are mocked. These checks
+do not write GitHub files or verify hosted authorization, sandbox concurrency or
+client adoption. The examples and resolved schemas live in `guardedGitFiles` in
+the same coordinated fixture, separate from the API-owned error-envelope export.
