@@ -31,6 +31,7 @@ export async function contextOperationHandler(request: NextRequest) {
       headers,
     });
   } catch {
+    if (parsed.action === "read") console.error("[context] read failed");
     return NextResponse.json(
       {
         error:

@@ -141,6 +141,7 @@ it("HTTP and MCP preserve the material receipt while HTTP prevents private cachi
 });
 
 it("material receipt failures stay private and redact internal diagnostics", async () => {
+  const diagnostic = vi.spyOn(console, "error").mockImplementation(() => {});
   vi.mocked(processContextOperation).mockRejectedValueOnce(
     new Error("Synthetic private /path/database detail"),
   );
@@ -156,6 +157,8 @@ it("material receipt failures stay private and redact internal diagnostics", asy
     error:
       "Context operation could not complete. Check scope, request ID and provider availability; retry ingestion with the same idempotency key.",
   });
+  expect(diagnostic.mock.calls).toEqual([["[context] read failed"]]);
+  diagnostic.mockRestore();
 });
 
 it("delegated OAuth keeps material receipt expansion disabled by server transport policy", async () => {

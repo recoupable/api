@@ -85,7 +85,7 @@ it("keeps the legacy material response when the trusted transport disables recei
 
 it("returns the exact current material receipt without text, locations or invented draft origin", async () => {
   const result = await read();
-  expect(result).toMatchObject({
+  expect(result).toEqual({
     request,
     material_evidence: {
       state: "available",
