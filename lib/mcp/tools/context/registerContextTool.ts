@@ -21,8 +21,9 @@ export function registerContextTool(server: McpServer) {
       inputSchema: contextOperationSchema,
     },
     async (args, extra) => {
+      const authInfo = extra.authInfo as McpAuthInfo | undefined;
       const { accountId, error } = await resolveAccountId({
-        authInfo: extra.authInfo as McpAuthInfo | undefined,
+        authInfo,
         accountIdOverride: undefined,
       });
       if (error || !accountId) return getToolResultError(error ?? "Authentication required");
@@ -33,6 +34,7 @@ export function registerContextTool(server: McpServer) {
             dispatch: dispatchContextRequest,
             dispatchRelease: dispatchContextReleaseVerification,
             dispatchReleaseTracks: dispatchContextReleaseTrackIsrcs,
+            includeMaterialEvidence: !authInfo?.extra?.oauth,
           }),
         );
       } catch {

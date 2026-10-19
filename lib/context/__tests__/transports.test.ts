@@ -154,3 +154,31 @@ it("material receipt failures stay private and redact internal diagnostics", asy
   expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   expect(JSON.stringify(await response.json())).not.toContain("/path/database");
 });
+
+it("delegated OAuth keeps material receipt expansion disabled by server transport policy", async () => {
+  const registerTool = vi.fn();
+  registerContextTool({ registerTool } as never);
+  const operation = { action: "read", request_id: "11111111-1111-4111-8111-111111111111" };
+  await registerTool.mock.calls[0][2](operation, {
+    authInfo: { extra: { oauth: { accountId: "actor" } } },
+  });
+  expect(processContextOperation).toHaveBeenLastCalledWith(
+    "actor",
+    operation,
+    expect.objectContaining({ includeMaterialEvidence: false }),
+  );
+});
+
+it("callers cannot enable receipt expansion through an input flag", async () => {
+  const response = await contextOperationHandler(
+    new NextRequest("http://localhost/api/context", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "read",
+        request_id: "11111111-1111-4111-8111-111111111111",
+        includeMaterialEvidence: true,
+      }),
+    }),
+  );
+  expect(response.status).toBe(400);
+});

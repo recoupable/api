@@ -181,6 +181,8 @@ export interface ContextOperationDependencies {
     subjectId: string,
   ) => Promise<unknown>;
   authorize?: typeof authorizeContextOwner;
+  /** Trusted transport policy; never read from client input. */
+  includeMaterialEvidence?: boolean;
 }
 /** Single authenticated operation surface used by HTTP, MCP and integration tests. */
 export async function processContextOperation(
@@ -469,6 +471,7 @@ export async function processContextOperation(
   })) as ContextRequestRecord & { output?: { subjectIds?: string[]; gaps?: unknown[] } };
   if (!request) throw new Error("Context request not found");
   if (args.action === "read") {
+    if (deps.includeMaterialEvidence === false) return { request };
     const materialEvidence = await readContextMaterialEvidence({
       ownerId,
       requestId: args.request_id,

@@ -71,6 +71,18 @@ beforeEach(() => {
 });
 const read = () => processContextOperation(actor, args, { authorize, rpc, dispatch });
 
+it("keeps the legacy material response when the trusted transport disables receipt expansion", async () => {
+  const result = await processContextOperation(actor, args, {
+    authorize,
+    rpc,
+    dispatch,
+    includeMaterialEvidence: false,
+  });
+  expect(result).toEqual({ request });
+  expect(rpc).toHaveBeenCalledTimes(1);
+  expect(authorize).toHaveBeenCalledTimes(1);
+});
+
 it("returns the exact current material receipt without text, locations or invented draft origin", async () => {
   const result = await read();
   expect(result).toMatchObject({

@@ -8,6 +8,10 @@ receipt includes `request_id`, `material_subject_id`, `document_id`,
 `draft_origin: { state: "not_recorded" }`. It is current evidence metadata, not
 a historical export, private-file capability or reviewed business assertion.
 
+This expansion is for HTTP and standard MCP. Delegated OAuth keeps the existing
+request-only read until the organization-grant audit; the server derives that
+transport policy from authenticated context, never a caller flag.
+
 The shared HTTP/MCP operation reuses `list_context_material_request_target` and
 `read_context_documents`. It validates the selected owner/request/material
 subject, current assertion, submission fingerprint and matching source references,
