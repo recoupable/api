@@ -12,10 +12,19 @@ it("keeps published evidence schemas and guidance aligned with the actual valida
   expect(fixture.evidenceSchemas).toEqual(buildContextOperationCatalog().evidenceSchemas);
 });
 it("connects both evidence response schemas to the public 200 contract", () => {
-  expect(fixture.evidenceResponseReferences).toEqual([
+  expect(fixture.evidenceResponseReferenceSource).toMatchObject({
+    repository: "recoupable/marketing",
+    path: "content/docs/source/api-reference/openapi/context.json",
+  });
+  expect(fixture.evidenceResponseReferenceSource.references).toEqual([
     "#/components/schemas/ContextEvidenceAttachmentReceipt",
     "#/components/schemas/ContextEvidenceAttachmentPage",
   ]);
+});
+it("resolves fixture references inside the fixture instead of treating source pointers as local", () => {
+  expect(fixture.evidenceResponseReferences).toEqual(
+    Object.keys(fixture.evidenceSchemas).map(name => `#/evidenceSchemas/${name}`),
+  );
 });
 it("preserves the workspace guidance on every documented action", () => {
   for (const action of requests.keys())

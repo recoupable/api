@@ -1208,9 +1208,17 @@
     }
   },
   "evidenceResponseReferences": [
-    "#/components/schemas/ContextEvidenceAttachmentReceipt",
-    "#/components/schemas/ContextEvidenceAttachmentPage"
+    "#/evidenceSchemas/receipt",
+    "#/evidenceSchemas/page"
   ],
+  "evidenceResponseReferenceSource": {
+    "repository": "recoupable/marketing",
+    "path": "content/docs/source/api-reference/openapi/context.json",
+    "references": [
+      "#/components/schemas/ContextEvidenceAttachmentReceipt",
+      "#/components/schemas/ContextEvidenceAttachmentPage"
+    ]
+  },
   "evidenceSchemas": {
     "receipt": {
       "type": "object",
