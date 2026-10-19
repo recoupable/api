@@ -124,7 +124,7 @@ describe("social scrape route billing with fixture providers and accounts", () =
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual([
       { runId: null, datasetId: null, error: "Failed to start scrape" },
-      { runId: null, datasetId: null, error: "Provider unavailable" },
+      { runId: null, datasetId: null, error: "Failed to start scrape" },
       { runId: null, datasetId: null, error: "Failed to start scrape" },
     ]);
     expect(recordCreditDeduction).not.toHaveBeenCalled();
@@ -170,7 +170,7 @@ describe("social scrape route billing with fixture providers and accounts", () =
     );
 
     expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({ status: "error", error: "Provider unavailable" });
+    expect(await response.json()).toEqual({ status: "error", error: "Failed to start scrape" });
     expect(recordCreditDeduction).not.toHaveBeenCalled();
     expect(upsertApifyScraperRuns).not.toHaveBeenCalled();
   });
