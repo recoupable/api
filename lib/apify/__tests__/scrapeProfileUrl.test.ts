@@ -49,14 +49,18 @@ describe("scrapeProfileUrl", () => {
     },
   );
   it("returns a failed attempt when the provider throws", async () => {
-    li.mockRejectedValue(new Error("Provider unavailable"));
+    const error = new Error("provider-canary-7f91");
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    li.mockRejectedValue(error);
     expect(await scrapeProfileUrl("https://linkedin.com/in/a", "a")).toEqual({
       state: "failed",
       runId: null,
       datasetId: null,
-      error: "Provider unavailable",
+      error: "Failed to start scrape",
       supported: true,
     });
+    expect(log).toHaveBeenCalledWith("[ERROR] Failed to start profile scrape:", error);
+    log.mockRestore();
   });
   it("forwards posts to the platform scraper", async () => {
     await scrapeProfileUrl("https://www.linkedin.com/in/drew-thurlow", "drew-thurlow", 20);
