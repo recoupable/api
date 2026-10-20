@@ -18,14 +18,20 @@ export async function getArtistFans(params: GetArtistFansParams) {
     limit,
   });
 
-  const fans = rows
-    .flatMap(row => row.fan_social)
-    .filter(Boolean)
-    .map(({ followerCount, followingCount, ...rest }) => ({
-      ...rest,
-      follower_count: followerCount,
-      following_count: followingCount,
-    }));
+  const fans = rows.flatMap(row => {
+    const comments = [row.latest_engagement_comment].flat().filter(Boolean);
+    return [row.fan_social]
+      .flat()
+      .filter(Boolean)
+      .map(({ followerCount, followingCount, ...rest }) => ({
+        ...rest,
+        follower_count: followerCount,
+        following_count: followingCount,
+        // A profile refresh or unrelated engagement timestamp is not a comment date.
+        last_comment_at:
+          comments.find(comment => comment.social_id === rest.id)?.commented_at ?? null,
+      }));
+  });
 
   return {
     status: "success" as const,
