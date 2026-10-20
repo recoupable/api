@@ -40,7 +40,7 @@ it("publishes an optional nullable comment date without changing the existing pr
     nullable: true,
     format: "date-time",
   });
-  expect(fan.required ?? []).not.toContain("last_comment_at");
+  expect("required" in fan ? fan.required : []).not.toContain("last_comment_at");
   expect(fan.properties.updated_at.format).toBe("date-time");
 });
 
