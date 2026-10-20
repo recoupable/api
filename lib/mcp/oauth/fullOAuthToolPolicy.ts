@@ -5,6 +5,22 @@ interface ToolPolicy {
 }
 /** Explicit inventory: a newly registered tool cannot silently become delegated authority. */
 export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
+  prepare_release_pack: { readOnly: false, destructive: false },
+  get_release_pack: { readOnly: true },
+  estimate_release_pack: { readOnly: false, destructive: false },
+  generate_release_pack: {
+    readOnly: false,
+    destructive: false,
+    notice: "Requires explicit approval of the complete current quote and budget. Never publishes.",
+  },
+  retry_release_pack: {
+    readOnly: false,
+    destructive: false,
+    notice:
+      "Paid retries require a fresh approved targeted quote; accepted work resumes without duplicate submission.",
+  },
+  upload_release_pack_asset: { readOnly: false, destructive: false },
+  export_release_pack: { readOnly: true },
   list_artists: { readOnly: true },
   get_artist_socials: { readOnly: true },
   artist_deep_research: { readOnly: true },

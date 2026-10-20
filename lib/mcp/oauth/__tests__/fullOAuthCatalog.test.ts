@@ -46,7 +46,7 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
-    expect(tools).toHaveLength(84);
+    expect(tools).toHaveLength(91);
     for (const [action, operation] of Object.entries(contextToolOperations)) {
       if (
         ["attach_evidence", "read_evidence_attachment", "list_evidence_attachments"].includes(

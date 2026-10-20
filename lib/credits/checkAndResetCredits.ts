@@ -2,7 +2,7 @@ import {
   selectCreditsUsage,
   type CreditsUsage,
 } from "@/lib/supabase/credits_usage/selectCreditsUsage";
-import { updateCreditsUsage } from "@/lib/supabase/credits_usage/updateCreditsUsage";
+import { refillCreditsToFloor } from "@/lib/supabase/credits_usage/refillCreditsToFloor";
 import { getAccountSubscriptionState } from "@/lib/credits/getAccountSubscriptionState";
 import { usdToCredits } from "@/lib/credits/usdToCredits";
 import { getPlanEntitlements } from "@/lib/plans/getPlanEntitlements";
@@ -65,19 +65,19 @@ export async function checkAndResetCredits(accountId: string): Promise<CheckAndR
   }
 
   const planTotal = usdToCredits(getPlanEntitlements(plan).credits_usd);
-  const remaining = creditsUsage.remaining_credits ?? 0;
-
-  // The timestamp advances on every due refill, including the no-op ones —
-  // otherwise the account re-evaluates as refill-due on every subsequent read.
-  // `remaining_credits` is omitted rather than written back as `max(remaining,
-  // planTotal)` when the balance already clears the total: writing a value read
-  // moments earlier would resurrect credits a concurrent deduction had spent.
-  const updates: Partial<Pick<CreditsUsage, "remaining_credits" | "timestamp">> = {
-    timestamp: new Date().toISOString(),
+  // The transaction rechecks the refill epoch and counts unconsumed pack holds.
+  // A stale reader cannot apply a second floor or resurrect concurrently spent funds.
+  const refilled = await refillCreditsToFloor({
+    accountId,
+    floor: planTotal,
+    expectedTimestamp: creditsUsage.timestamp,
+  });
+  return {
+    creditsUsage: {
+      ...creditsUsage,
+      remaining_credits: refilled.remainingCredits,
+      timestamp: refilled.timestamp,
+    },
+    plan,
   };
-  if (remaining < planTotal) updates.remaining_credits = planTotal;
-
-  const refilled = await updateCreditsUsage({ account_id: accountId, updates });
-
-  return { creditsUsage: refilled, plan };
 }

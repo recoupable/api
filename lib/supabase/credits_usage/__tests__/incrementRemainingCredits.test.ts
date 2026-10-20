@@ -1,70 +1,39 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { incrementRemainingCredits } from "@/lib/supabase/credits_usage/incrementRemainingCredits";
-
-const { selectCreditsUsageMock, updateCreditsUsageMock } = vi.hoisted(() => ({
-  selectCreditsUsageMock: vi.fn(),
-  updateCreditsUsageMock: vi.fn(),
-}));
-
-vi.mock("@/lib/supabase/credits_usage/selectCreditsUsage", () => ({
-  selectCreditsUsage: selectCreditsUsageMock,
-}));
-
-vi.mock("@/lib/supabase/credits_usage/updateCreditsUsage", () => ({
-  updateCreditsUsage: updateCreditsUsageMock,
-}));
-
-const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
-
-describe("incrementRemainingCredits", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("adds the credits to the current balance and returns the updated row", async () => {
-    selectCreditsUsageMock.mockResolvedValue([
-      {
-        account_id: ACCOUNT,
-        id: 1,
-        remaining_credits: 50,
-        timestamp: "2026-05-01T00:00:00Z",
-      },
-    ]);
-    updateCreditsUsageMock.mockResolvedValue({
-      account_id: ACCOUNT,
-      id: 1,
-      remaining_credits: 300,
-      timestamp: "2026-05-12T00:00:00Z",
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import supabase from "@/lib/supabase/serverClient";
+import { selectCreditsUsage } from "../selectCreditsUsage";
+import { incrementRemainingCredits } from "../incrementRemainingCredits";
+vi.mock("@/lib/supabase/serverClient", () => ({ default: { rpc: vi.fn() } }));
+vi.mock("../selectCreditsUsage", () => ({ selectCreditsUsage: vi.fn() }));
+const accountId = "123e4567-e89b-12d3-a456-426614174000";
+describe("atomic legacy topups", () => {
+  beforeEach(() => vi.clearAllMocks());
+  it("adds atomically and preserves the existing wallet-row return contract", async () => {
+    vi.mocked(supabase.rpc).mockResolvedValue({
+      data: { remainingCredits: 300 },
+      error: null,
+    } as never);
+    vi.mocked(selectCreditsUsage).mockResolvedValue([
+      { id: 1, account_id: accountId, remaining_credits: 300, timestamp: "2026-10-20" },
+    ] as never);
+    const row = await incrementRemainingCredits({ accountId, delta: 250 });
+    expect(supabase.rpc).toHaveBeenCalledWith("increment_credits_atomic", {
+      p_account_id: accountId,
+      p_delta: 250,
     });
-
-    const result = await incrementRemainingCredits({
-      accountId: ACCOUNT,
-      delta: 250,
-    });
-
-    expect(updateCreditsUsageMock).toHaveBeenCalledWith({
-      account_id: ACCOUNT,
-      updates: { remaining_credits: 300 },
-    });
-    expect(result.remaining_credits).toBe(300);
+    expect(row.remaining_credits).toBe(300);
+    expect(row.id).toBe(1);
   });
-
-  it("throws when no credits_usage row exists for the account", async () => {
-    selectCreditsUsageMock.mockResolvedValue([]);
-
-    await expect(incrementRemainingCredits({ accountId: ACCOUNT, delta: 100 })).rejects.toThrow(
-      /No credits usage/,
-    );
-    expect(updateCreditsUsageMock).not.toHaveBeenCalled();
+  it("rejects nonpositive increments before touching the wallet", async () => {
+    await expect(incrementRemainingCredits({ accountId, delta: 0 })).rejects.toThrow("positive");
+    expect(supabase.rpc).not.toHaveBeenCalled();
   });
-
-  it("rejects non-positive delta", async () => {
-    await expect(incrementRemainingCredits({ accountId: ACCOUNT, delta: 0 })).rejects.toThrow(
-      /positive/,
+  it("propagates a controlled missing-wallet error", async () => {
+    vi.mocked(supabase.rpc).mockResolvedValue({
+      data: null,
+      error: { message: "No credits usage found" },
+    } as never);
+    await expect(incrementRemainingCredits({ accountId, delta: 100 })).rejects.toThrow(
+      "No credits usage",
     );
-    await expect(incrementRemainingCredits({ accountId: ACCOUNT, delta: -5 })).rejects.toThrow(
-      /positive/,
-    );
-    expect(selectCreditsUsageMock).not.toHaveBeenCalled();
   });
 });
