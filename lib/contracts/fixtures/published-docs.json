@@ -116,7 +116,7 @@
   ],
   "sourceHashes": {
     "content/docs/source/api-reference/openapi/accounts.json": "0803ba921d739f023353e7ec6807ff407542483a679ee1cf5226539637f424d7",
-    "content/docs/source/api-reference/openapi/content.json": "1a6fdf661f2045406e668af4d3495b8b770bf6bd7584f4e300bcf54cb2efecde",
+    "content/docs/source/api-reference/openapi/content.json": "65a70807962d7bf2862531c165436f047952ea8229fe3527e218a0d4bd9c154e",
     "content/docs/source/api-reference/openapi/research.json": "e41af080333df4740bf2a217fc40c588b95ae7cf0d73728a0caaff7367f25547",
     "content/docs/source/api-reference/openapi/releases.json": "026d07948366d6498489d93fb8c809e919403d6154bd90d85aa0151d89150f3c",
     "content/docs/source/api-reference/openapi/social.json": "05ce4cf07816342e391b5c052e6bc9c309c449dfef94d9453d5025bae5d12177",
@@ -256,5 +256,248 @@
       "revision": 3,
       "generationToken": "TOKEN_FROM_GENERATION"
     }
+  },
+  "guardedGitFiles": {
+    "readQuery": {
+      "path": "drafts/notes.txt",
+      "include_revision": "true"
+    },
+    "upload": {
+      "path": "drafts",
+      "message": "Update release notes",
+      "files": [
+        {
+          "name": "notes.txt",
+          "url": "https://example.com/staged/notes.txt",
+          "expected_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    "uploadSchema": {
+      "type": "object",
+      "required": [
+        "files"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Target directory within the resolved repository; omitted or empty means root. Use a canonical relative path. Dot/traversal segments, backslashes, control characters, malformed Unicode and leading/trailing/doubled slashes return 400. These checks also apply to legacy requests.",
+          "example": "assets/images"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "url",
+              "name"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "The URL of the file to upload",
+                "example": "https://example.com/files/album-cover.png"
+              },
+              "name": {
+                "type": "string",
+                "description": "Nonempty relative file name/path under the target directory. Use a canonical relative path. Dot/traversal segments, backslashes, control characters, malformed Unicode and leading/trailing/doubled slashes return 400. These checks also apply to legacy requests.",
+                "example": "album-cover.png",
+                "minLength": 1
+              },
+              "expected_sha": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{40}$",
+                "description": "Optional observed blob SHA from the matching versioned read. When provided, update the existing file on main only if its current contents still match. Omission retains unguarded legacy create/update behavior; no automatic conflict retry occurs. See the upload operation's missing-target recovery guidance before retrying a failed save.",
+                "example": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              }
+            }
+          },
+          "description": "Array of files to upload, each with a URL and target filename",
+          "minItems": 1
+        },
+        "message": {
+          "type": "string",
+          "description": "Optional commit message. Defaults to 'Upload files via API'.",
+          "example": "Add new album artwork"
+        }
+      },
+      "example": {
+        "path": "drafts",
+        "message": "Update release notes",
+        "files": [
+          {
+            "name": "notes.txt",
+            "url": "https://example.com/staged/notes.txt",
+            "expected_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ]
+      }
+    },
+    "responses": [
+      {
+        "method": "GET",
+        "path": "/api/sandboxes/file",
+        "status": 200,
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "content"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "success"
+              ],
+              "description": "Status of the operation"
+            },
+            "content": {
+              "type": "string",
+              "description": "Text content, or base64 bytes for recognized binary extensions. Decode when encoding is base64. Versioned reads reject unknown non-UTF-8 binary content."
+            },
+            "encoding": {
+              "type": "string",
+              "enum": [
+                "base64"
+              ],
+              "description": "Present for recognized binary extensions, on both legacy and versioned reads. When absent, content is text."
+            },
+            "sha": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40}$",
+              "description": "Present when include_revision=true; use this reader-observed blob SHA as files[].expected_sha. Absent from legacy reads. It identifies the returned bytes, not an accepted Context source version.",
+              "example": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            }
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sandboxes/files",
+        "status": 200,
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "uploaded"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "success"
+              ],
+              "description": "Status of the operation"
+            },
+            "uploaded": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "The full path of the uploaded file in the repository"
+                  },
+                  "sha": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{40}$",
+                    "description": "Blob SHA of the newly saved file. Retain it as the next observed condition when editing these saved bytes.",
+                    "example": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                  }
+                },
+                "required": [
+                  "path",
+                  "sha"
+                ]
+              },
+              "description": "Array of uploaded file details",
+              "minItems": 1
+            },
+            "errors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Per-file failures retained alongside successful receipts. HTTP 200 does not mean every file was saved."
+            },
+            "conflicts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "description": "Submitted names of files rejected because their observed revision no longer matches."
+            }
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sandboxes/files",
+        "status": 409,
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "error",
+            "conflicts"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ]
+            },
+            "error": {
+              "type": "string",
+              "description": "Combined upload failure description."
+            },
+            "conflicts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "description": "Submitted names of files rejected because their observed revision no longer matches."
+            }
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sandboxes/files",
+        "status": 500,
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "error"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ]
+            },
+            "error": {
+              "type": "string",
+              "description": "Combined upload failure description."
+            },
+            "conflicts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "description": "Submitted names of files rejected because their observed revision no longer matches."
+            }
+          }
+        }
+      }
+    ]
   }
 }

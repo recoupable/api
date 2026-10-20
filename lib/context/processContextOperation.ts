@@ -9,6 +9,7 @@ import { parseContextReleaseUrl } from "./parseContextReleaseUrl";
 import type { ContextBriefDocument } from "./selectContextDocuments";
 import { compileContextBrief } from "./compileContextBrief";
 import type { ContextRequestRecord } from "./runContextRequest";
+import { readContextRequest } from "./readContextRequest";
 
 const briefFields = {
   request_id: z.uuid(),
@@ -180,6 +181,8 @@ export interface ContextOperationDependencies {
     subjectId: string,
   ) => Promise<unknown>;
   authorize?: typeof authorizeContextOwner;
+  /** Trusted transport policy; never read from client input. */
+  includeMaterialEvidence?: boolean;
 }
 /** Single authenticated operation surface used by HTTP, MCP and integration tests. */
 export async function processContextOperation(
@@ -467,7 +470,15 @@ export async function processContextOperation(
     p_request: args.request_id,
   })) as ContextRequestRecord & { output?: { subjectIds?: string[]; gaps?: unknown[] } };
   if (!request) throw new Error("Context request not found");
-  if (args.action === "read") return { request };
+  if (args.action === "read")
+    return readContextRequest({
+      accountId,
+      ownerId,
+      organizationId: args.organization_id,
+      requestId: args.request_id,
+      request,
+      deps,
+    });
   const requestIds = [...new Set([args.request_id, ...args.additional_request_ids])];
   const requests = [request];
   for (const id of requestIds.slice(1)) {

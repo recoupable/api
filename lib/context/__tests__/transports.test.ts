@@ -1,10 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { contextOperationHandler } from "../contextOperationHandler";
 import { processContextOperation } from "../processContextOperation";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { registerContextTool } from "@/lib/mcp/tools/context/registerContextTool";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
+afterEach(() => vi.restoreAllMocks());
 vi.mock("@/lib/auth/validateAuthContext", () => ({
   validateAuthContext: vi.fn(async () => ({ accountId: "actor" })),
 }));
@@ -110,4 +111,82 @@ it.each([
   await registerTool.mock.calls[0][2](operation, {});
   expect(processContextOperation).toHaveBeenCalledTimes(1);
   expect(processContextOperation).toHaveBeenLastCalledWith("actor", operation, expect.any(Object));
+});
+
+it("HTTP and MCP preserve the material receipt while HTTP prevents private caching", async () => {
+  const operation = { action: "read", request_id: "11111111-1111-4111-8111-111111111111" };
+  const saved = {
+    request: { id: operation.request_id },
+    material_evidence: {
+      state: "available",
+      source_version_ids: ["22222222-2222-4222-8222-222222222222"],
+      evidence_kind: "customer_assertion",
+      draft_origin: { state: "not_recorded" },
+    },
+  };
+  vi.mocked(processContextOperation).mockResolvedValueOnce(saved as never);
+  const response = await contextOperationHandler(
+    new NextRequest("http://localhost/api/context", {
+      method: "POST",
+      body: JSON.stringify(operation),
+    }),
+  );
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  expect(await response.json()).toEqual(saved);
+  const registerTool = vi.fn();
+  registerContextTool({ registerTool } as never);
+  vi.mocked(processContextOperation).mockResolvedValueOnce(saved as never);
+  const result = await registerTool.mock.calls[0][2](operation, {});
+  expect(JSON.parse(result.content[0].text)).toEqual(saved);
+});
+
+it.each([
+  ["Synthetic private /path/database detail", "dependency_or_access"],
+  ["Material evidence could not be verified", "material_evidence_unverified"],
+  ["Material evidence owner changed", "owner_changed"],
+])("material receipt failures stay private and redact diagnostics: %s", async (message, reason) => {
+  const diagnostic = vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.mocked(processContextOperation).mockRejectedValueOnce(new Error(message));
+  const response = await contextOperationHandler(
+    new NextRequest("http://localhost/api/context", {
+      method: "POST",
+      body: JSON.stringify({ action: "read", request_id: "11111111-1111-4111-8111-111111111111" }),
+    }),
+  );
+  expect(response.status).toBe(409);
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  expect(await response.json()).toEqual({
+    error:
+      "Context operation could not complete. Check scope, request ID and provider availability; retry ingestion with the same idempotency key.",
+  });
+  expect(diagnostic.mock.calls).toEqual([["[context] read failed", { reason }]]);
+});
+
+it("delegated OAuth keeps material receipt expansion disabled by server transport policy", async () => {
+  const registerTool = vi.fn();
+  registerContextTool({ registerTool } as never);
+  const operation = { action: "read", request_id: "11111111-1111-4111-8111-111111111111" };
+  await registerTool.mock.calls[0][2](operation, {
+    authInfo: { extra: { oauth: { accountId: "actor" } } },
+  });
+  expect(processContextOperation).toHaveBeenLastCalledWith(
+    "actor",
+    operation,
+    expect.objectContaining({ includeMaterialEvidence: false }),
+  );
+});
+
+it("callers cannot enable receipt expansion through an input flag", async () => {
+  const response = await contextOperationHandler(
+    new NextRequest("http://localhost/api/context", {
+      method: "POST",
+      body: JSON.stringify({
+        action: "read",
+        request_id: "11111111-1111-4111-8111-111111111111",
+        includeMaterialEvidence: true,
+      }),
+    }),
+  );
+  expect(response.status).toBe(400);
 });
