@@ -118,7 +118,7 @@
     "content/docs/source/api-reference/openapi/accounts.json": "b9f420adfb8b7297632d53ced154e7040b59914a73fc43f12fa21b259cf0eefa",
     "content/docs/source/api-reference/openapi/content.json": "321e7572ea3e47dd668c1fe2ce6962ea47affce0f8d0eaf73ab055126c34307c",
     "content/docs/source/api-reference/openapi/research.json": "3fcfacd89b9f4406d1df03dafae6f2cc798c00c4d72a031511ec8881c55d3107",
-    "content/docs/source/api-reference/openapi/releases.json": "48dba1c1bbf16b8d86acf89b064db2430db3a0783226ff2f1e5ea1e8cc483594",
+    "content/docs/source/api-reference/openapi/releases.json": "145f52789f49543aeb00d5c5b582be36f91d578192d56460213a27628d7f3411",
     "content/docs/source/api-reference/openapi/social.json": "41b9b89074e0ee0258f6a88e276e71e478c4a675512393cc4cd8b77fb9606398",
     "content/docs/source/api-reference/openapi/context.json": "8a95843d8146f9ce1efa9ae17baee1564bdf7188ad6dd9d1ae5e353ad53ea8e9",
     "content/docs/source/api-reference/openapi/projects.json": "b059cf8baa83a7f73a3c15db19f54fa56e46a3840e91bd42979b83550f543ace",
@@ -499,5 +499,140 @@
         }
       }
     ]
+  },
+  "artistFans": {
+    "schema": {
+      "type": "object",
+      "required": [
+        "status",
+        "fans",
+        "pagination"
+      ],
+      "example": {
+        "status": "success",
+        "fans": [
+          {
+            "id": "fan_fixture_known",
+            "username": "example_fan",
+            "last_comment_at": "2026-10-01T12:00:00Z"
+          },
+          {
+            "id": "fan_fixture_unknown",
+            "username": "example_fan_unknown",
+            "last_comment_at": null
+          }
+        ],
+        "pagination": {
+          "total_count": 2,
+          "page": 1,
+          "limit": 20,
+          "total_pages": 1
+        }
+      },
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "success"
+          ],
+          "description": "Status of the request"
+        },
+        "fans": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique identifier for the fan's social profile"
+              },
+              "username": {
+                "type": "string",
+                "description": "Username or handle on the platform"
+              },
+              "avatar": {
+                "type": "string",
+                "description": "URL to the fan's avatar/profile image"
+              },
+              "profile_url": {
+                "type": "string",
+                "description": "Full URL to the fan's profile on the platform"
+              },
+              "region": {
+                "type": "string",
+                "description": "Geographic region or location of the fan"
+              },
+              "bio": {
+                "type": "string",
+                "description": "Fan's biography or profile description"
+              },
+              "follower_count": {
+                "type": "integer",
+                "description": "Number of followers the fan has"
+              },
+              "following_count": {
+                "type": "integer",
+                "description": "Number of accounts the fan is following"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "ISO timestamp of when the fan data was last updated"
+              },
+              "last_comment_at": {
+                "type": "string",
+                "nullable": true,
+                "format": "date-time",
+                "description": "Timestamp of the latest stored comment linked to this fan relationship, only when the comment author matches this fan. Null means matching stored comment evidence is unavailable, not that the fan never commented. This is not the profile refresh time, a generic engagement time or a live cross-platform history.",
+                "example": "2026-10-01T12:00:00Z"
+              }
+            }
+          },
+          "description": "List of social profiles from fans across all platforms"
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "total_count": {
+              "type": "integer",
+              "description": "Total number of records available"
+            },
+            "page": {
+              "type": "integer",
+              "description": "Current page number"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Number of records per page"
+            },
+            "total_pages": {
+              "type": "integer",
+              "description": "Total number of pages available"
+            }
+          }
+        }
+      }
+    },
+    "example": {
+      "status": "success",
+      "fans": [
+        {
+          "id": "fan_fixture_known",
+          "username": "example_fan",
+          "last_comment_at": "2026-10-01T12:00:00Z"
+        },
+        {
+          "id": "fan_fixture_unknown",
+          "username": "example_fan_unknown",
+          "last_comment_at": null
+        }
+      ],
+      "pagination": {
+        "total_count": 2,
+        "page": 1,
+        "limit": 20,
+        "total_pages": 1
+      }
+    }
   }
 }
