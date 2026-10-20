@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { processPackOperation } from "../processPackOperation";
 import { runPackCommand } from "@/lib/supabase/release_pack_jobs/runPackCommand";
+import { importPackSources } from "../importPackSources";
+import { start } from "workflow/api";
 const fixture = vi.hoisted(() => ({ saved: null as any, composedAudio: "" }));
 vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
 vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
@@ -139,6 +141,111 @@ describe("new-buyer pack acceptance fixture", () => {
       return structuredClone(s);
     });
   });
+  const proposedWorld = {
+    starting_point: "established",
+    working_mode: "guided",
+    references: [
+      {
+        id: "artist",
+        title: "Supplied portrait",
+        url: "https://media.example/artist.png",
+        media_type: "image",
+        source_kind: "customer",
+        usage: "production",
+      },
+    ],
+    directions: [
+      {
+        id: "paper",
+        name: "Paper world",
+        concept: "Cream paper, ink, quiet movement",
+        reference_ids: ["artist"],
+        board_url: "https://media.example/board.png",
+      },
+    ],
+  };
+  const prepareWorld = (context: unknown) =>
+    processPackOperation("owner", "prepare", {
+      idempotency_key: "creative-first-use",
+      brief: {
+        artist_name: "New Artist",
+        song_title: "First Song",
+        audio_url: "https://music.example/source.wav",
+        occasion: "rediscovery",
+        creative_context: context,
+      },
+      deliverables: {
+        videos: 1,
+        quote_cards: 0,
+        artwork: 0,
+        carousels: 0,
+        visualizers: 0,
+        video_seconds: 8,
+      },
+    }) as Promise<any>;
+  it("retains a guided proposed board but cannot quote, spend or dispatch final production", async () => {
+    const prepared = await prepareWorld(proposedWorld);
+    expect(prepared.job.status).toBe("needs_input");
+    expect(prepared.job.brief.creative_context.directions[0].board_url).toBe(
+      "https://media.example/board.png",
+    );
+    await expect(
+      processPackOperation("owner", "estimate", { job_id: prepared.job.id }),
+    ).rejects.toThrow("Complete the saved brief");
+    await expect(
+      processPackOperation("owner", "generate", {
+        job_id: prepared.job.id,
+        quote_id: crypto.randomUUID(),
+        expected_revision: 1,
+        approved_max_usd: 1,
+      }),
+    ).rejects.toThrow("Pack brief is not ready");
+    expect(importPackSources).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
+    expect(vi.mocked(runPackCommand).mock.calls.some(([, action]) => action === "approve")).toBe(
+      false,
+    );
+  });
+  it.each(["guided", "autonomous"])(
+    "uses the selected %s world without polluting the saved source inputs",
+    async mode => {
+      const selected_by = mode === "guided" ? "customer" : "agent";
+      const prepared = await prepareWorld({
+        ...proposedWorld,
+        working_mode: mode,
+        selection: {
+          direction_id: "paper",
+          selected_by,
+          decision_note: "Selection captured in the continuing conversation",
+        },
+      });
+      expect(prepared.readiness.ready).toBe(true);
+      expect(prepared.job.brief.reference_image_urls).toEqual([]);
+      const estimated = (await processPackOperation("owner", "estimate", {
+        job_id: prepared.job.id,
+      })) as any;
+      expect(importPackSources).toHaveBeenCalledWith(
+        "owner",
+        expect.objectContaining({
+          creative_direction: "Paper world: Cream paper, ink, quiet movement",
+          reference_image_urls: ["https://media.example/artist.png"],
+        }),
+      );
+      await processPackOperation("owner", "generate", {
+        job_id: prepared.job.id,
+        quote_id: estimated.job.quote.id,
+        expected_revision: 1,
+        approved_max_usd: estimated.job.quote.maximum_usd,
+      });
+      const result = (await processPackOperation("owner", "get", {
+        job_id: prepared.job.id,
+      })) as any;
+      expect(result.job.status).toBe("completed");
+      expect(result.assets[0].usable).toBe(true);
+      expect(result.job.brief.creative_context.selection.selected_by).toBe(selected_by);
+      expect(result.job.brief.reference_image_urls).toEqual([]);
+    },
+  );
   it("prepares, quotes, runs and reads a reviewed song-backed video without an artist or repository", async () => {
     const prepared = (await processPackOperation("owner", "prepare", {
       idempotency_key: "first-use",

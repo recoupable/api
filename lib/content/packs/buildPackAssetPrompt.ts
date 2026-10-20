@@ -1,11 +1,13 @@
 import type { ReleasePackBrief } from "./releasePackSchema";
 import type { PackAssetKind } from "./buildReleasePackQuote";
+import { resolvePackCreativeContext } from "./resolvePackCreativeContext";
 /** Pass the approved brief to every production stage, including truthful catalog occasions. */
 export function buildPackAssetPrompt(
   brief: ReleasePackBrief,
   kind: PackAssetKind,
   ordinal: number,
 ) {
+  brief = resolvePackCreativeContext(brief);
   return `Create ${kind} concept ${ordinal + 1} for ${brief.artist_name}: ${brief.song_title} (${brief.recording_version ?? "supplied recording"}).
 Campaign occasion: ${brief.occasion}. Original release date: ${brief.original_release_date ?? "unknown"}. Campaign date: ${brief.campaign_date ?? "not supplied"}.
 Creative direction: ${brief.creative_direction ?? "Propose a deliberate abstract artwork-led direction from the supplied song context; this is a proposal, not established artist identity"}.

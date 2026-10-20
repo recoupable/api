@@ -34,6 +34,16 @@ it("discovers seven pack operations with explicit schemas through delegated OAut
       tool.name.includes("release_pack"),
     );
     expect(tools).toHaveLength(7);
+    const prepare = tools.find(tool => tool.name === "prepare_release_pack")!;
+    const creative = (prepare.inputSchema.properties?.brief as any).properties.creative_context;
+    expect(creative.properties.working_mode.enum).toEqual(["autonomous", "guided"]);
+    expect(creative.properties.selection.properties.selected_by.enum).toEqual([
+      "customer",
+      "agent",
+    ]);
+    expect((prepare.inputSchema.properties?.brief as any).required ?? []).not.toContain(
+      "creative_context",
+    );
     const upload = tools.find(tool => tool.name === "upload_release_pack_asset")!;
     expect(upload._meta?.["openai/fileParams"]).toEqual(["file"]);
     expect((upload.inputSchema.properties?.file as any).required).toEqual([
