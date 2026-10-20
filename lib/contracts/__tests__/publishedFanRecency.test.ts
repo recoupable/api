@@ -36,12 +36,23 @@ it("publishes an optional nullable comment date without changing the existing pr
   expect(fixture.artistFans).toBeDefined();
   const fan = fixture.artistFans.schema.properties.fans.items;
   expect(fan.properties.last_comment_at).toMatchObject({
-    type: "string",
-    nullable: true,
+    type: ["string", "null"],
     format: "date-time",
   });
+  expect(fan.properties.last_comment_at).not.toHaveProperty("nullable");
   expect("required" in fan ? fan.required : []).not.toContain("last_comment_at");
   expect(fan.properties.updated_at.format).toBe("date-time");
+});
+
+it("allows unknown dates through JSON Schema types without the older nullable extension", () => {
+  const field: Record<string, unknown> = {
+    ...fixture.artistFans.schema.properties.fans.items.properties.last_comment_at,
+  };
+  delete field.nullable;
+  const validate = new Ajv({ strict: false, validateFormats: false }).compile(field);
+  expect(validate(null)).toBe(true);
+  expect(validate("2026-10-01T12:00:00Z")).toBe(true);
+  expect(validate(123)).toBe(false);
 });
 
 it.each(["missing", "mismatched", "array"])(
