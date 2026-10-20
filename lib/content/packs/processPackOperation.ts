@@ -159,7 +159,12 @@ export async function processPackOperation(
         throw new Error(
           "Submission outcome is uncertain; no safe automatic retry is available. Your existing outputs and brief are retained.",
         );
-      funded = await runPackCommand(actor, "resume", saved.job.id, { asset_id: selected.id });
+      funded = await runPackCommand(actor, "resume", saved.job.id, {
+        asset_id: selected.id,
+        quote_id: input.quote_id,
+        expected_revision: input.expected_revision,
+        approved_max_usd: input.approved_max_usd,
+      });
       resumedAssetId = selected.id;
     } else {
       if (saved.job.quote.retry_asset_id !== input.asset_id)
