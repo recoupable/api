@@ -32,4 +32,17 @@ This is local synthetic acceptance, not Stripe test-mode or authenticated produc
 
 ## Candidate review
 
-The production repair belongs to Recoup MCP. Re-run this suite against its exact published candidate and record that SHA and result here before marking this acceptance complete. Do not merge this test-only branch with failing regressions, implement a competing repair, or treat another PR's approval as approval for this one.
+The independently authored acceptance commit `820df9cf16d3ab73fe55d6a530168d28e8ea4490` is reused in the repair branch (cherry-pick `e16f9df9`). On base main `c69768bd`, the repair passes all nine acceptance cases and all 488 cases across billing, credits and Stripe (105 files). The repair adds six focused cases; four were observed failing before implementation. Full ESLint passes. Exact published head and independent review belong in the PR/release receipt.
+
+## Repair behavior and remaining contract decision
+
+After authentication and finding a selected card, DELETE persists only `auto_topup_enabled: false` on the authorized account, then detaches that card. It preserves balances, amounts, thresholds and existing errors. An absent credits row needs no provisioning: the top-up reader already treats absence as disabled. A settings-write failure returns masked 500 before detachment. If Stripe then fails, DELETE returns masked 500 with top-ups left off; restoring them could re-enable unwanted automatic purchases. No-card/customer still returns 404 without changes; success remains empty 204.
+
+This is ordered failure handling across two services, not a transaction. A charge that already read enabled settings may still complete, and a concurrent explicit settings update may turn top-ups back on. This repair does not claim cancellation or serialization of those operations.
+
+Two account-wide policy options remain for #343:
+
+1. Keep selected-card removal and explicitly document that another saved card can appear on GET and be used for a later explicitly confirmed manual purchase. Automatic top-ups stay off until explicitly re-enabled.
+2. Introduce an account-wide credit-purchase disable/removal state, applied consistently to card reads, checkout and manual/automatic purchases, with an explicit re-enable journey. This needs a separate design for subscription/invoice funding and any migration; deleting all Stripe cards would affect those funding paths.
+
+The public promise of unconditional `card: null` / checkout-only behavior and its missing 404/500 schemas still need a Docs contract change after that policy decision. This scoped API repair does not close all of Mono #343. No subscription, invoice, checkout or manual-purchase implementation changes are included.
