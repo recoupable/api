@@ -31,6 +31,7 @@ export async function analyzeVideo(validated: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
+      model_name: "pegasus1.5",
       video: { type: "url", url: validated.video_url },
       prompt: validated.prompt,
       temperature: validated.temperature,
