@@ -16,7 +16,8 @@ fields are rejected before a provider request. This URL syntax check is not
 an authorization, network-destination or recording-ownership check.
 
 The parser retains full transcript, word/spacing/event entries, language and
-confidence. It requires at least one actual word with finite nonnegative start
+confidence, including null speaker IDs and null non-word timings allowed by the
+provider schema. It requires at least one actual word with finite nonnegative start
 and end times; end must not precede start. Missing word timestamps are rejected,
 never replaced with zero. Word timings are returned separately with source URL,
 pinned model and provider request ID. Timings may overlap between speakers.
@@ -59,6 +60,7 @@ renders `words` as an object despite declaring `list<TranscriptionWord>`; the
 parser rejects that object and follows the declared list contract.
 
 Primary contracts read October 20, 2026:
+- https://fal.ai/api/openapi/queue/openapi.json?endpoint_id=fal-ai/elevenlabs/speech-to-text/scribe-v2
 - https://fal.ai/models/fal-ai/elevenlabs/speech-to-text/scribe-v2/api
 - https://elevenlabs.io/docs/overview/capabilities/speech-to-text
 

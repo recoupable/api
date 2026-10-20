@@ -6,7 +6,20 @@ describe("Scribe word timing validation", () => {
   it("accepts actual zero start without fabricating timestamps", () => {
     expect(parseScribeResult(transcript)).toEqual(transcript);
   });
+  it("preserves nullable speaker IDs and null non-word timestamps from the provider schema", () => {
+    const input = {
+      ...transcript,
+      words: [
+        { ...word, speaker_id: null },
+        { type: "spacing", text: " ", start: null, end: null, speaker_id: null },
+        { type: "audio_event", text: "[music]", start: null, end: null, speaker_id: null },
+      ],
+    };
+    expect(parseScribeResult(input)).toEqual(input);
+  });
   it.each([
+    { start: null },
+    { end: null },
     { start: undefined },
     { end: undefined },
     { start: -1 },

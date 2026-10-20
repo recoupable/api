@@ -6,14 +6,14 @@ const timedWord = z.object({
   text: z.string().refine(text => text.trim().length > 0),
   start: time,
   end: time,
-  speaker_id: z.string().optional(),
+  speaker_id: z.string().nullish(),
 });
 const nonWord = z.object({
   type: z.enum(["spacing", "audio_event"]),
   text: z.string(),
-  start: time.optional(),
-  end: time.optional(),
-  speaker_id: z.string().optional(),
+  start: time.nullish(),
+  end: time.nullish(),
+  speaker_id: z.string().nullish(),
 });
 const transcriptSchema = z
   .object({
@@ -27,7 +27,7 @@ const transcriptSchema = z
       context.addIssue({ code: "custom", message: "No usable timed words", path: ["words"] });
     }
     result.words.forEach((word, index) => {
-      if (word.start !== undefined && word.end !== undefined && word.end < word.start) {
+      if (word.start != null && word.end != null && word.end < word.start) {
         context.addIssue({ code: "custom", message: "End precedes start", path: ["words", index] });
       }
     });
