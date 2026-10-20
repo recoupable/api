@@ -15,11 +15,13 @@ export async function readAgentRequestBody(
   let size = 0;
   for await (const chunk of req.iterator({ destroyOnReturn: false })) {
     size += Buffer.byteLength(chunk);
-    if (size > limit) {
-      req.resume();
-      throw new AgentRegistrationError("invalid_request", 413);
-    }
+    if (size > limit) break;
     chunks.push(Buffer.from(chunk));
+  }
+  if (size > limit) {
+    // The iterator must detach its readable listener before resume can drain the upload.
+    req.resume();
+    throw new AgentRegistrationError("invalid_request", 413);
   }
   return Buffer.concat(chunks).toString("utf8");
 }

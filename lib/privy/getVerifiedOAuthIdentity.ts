@@ -1,5 +1,7 @@
 import { z } from "zod";
+import { InvalidAuthTokenError } from "@privy-io/node";
 import privyClient from "./client";
+import { OAuthIdentityError } from "./OAuthIdentityError";
 
 const emailLink = z.object({
   type: z.literal("email"),
@@ -12,7 +14,7 @@ const emailLink = z.object({
 export async function getVerifiedOAuthIdentity(authToken: string) {
   try {
     const appId = z.string().min(1).max(200).parse(process.env.PRIVY_APP_ID);
-    if (!authToken || authToken.length > 16384) throw new Error();
+    if (!authToken || authToken.length > 16384) throw new OAuthIdentityError("invalid_token");
     const verified = await privyClient.utils().auth().verifyAuthToken(authToken);
     const subject = z.string().startsWith("did:privy:").max(300).parse(verified?.user_id);
     const account = await privyClient.users()._get(subject, { timeout: 10000, maxRetries: 1 });
@@ -27,7 +29,17 @@ export async function getVerifiedOAuthIdentity(authToken: string) {
     ];
     if (verifiedEmails.length > 20) throw new Error();
     return { appId, subject, verifiedEmails };
-  } catch {
-    throw new Error("Unable to verify OAuth identity");
+  } catch (error) {
+    if (error instanceof OAuthIdentityError) throw error;
+    // The SDK also wraps JWKS/network failures as InvalidAuthTokenError. Only
+    // its explicit credential failures warrant asking the account to sign in again.
+    const invalid =
+      error instanceof InvalidAuthTokenError &&
+      [
+        "Authentication token expired",
+        "Authentication token is invalid",
+        "Token's payload is invalid",
+      ].includes(error.message);
+    throw new OAuthIdentityError(invalid ? "invalid_token" : "unavailable");
   }
 }

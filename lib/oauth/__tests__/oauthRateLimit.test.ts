@@ -15,16 +15,19 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 afterEach(() => vi.unstubAllEnvs());
-it("uses shared and peer budgets, with stricter registration and no raw IP keys", async () => {
-  await checkOAuthRateLimit({
-    url: "/api/oauth/reg",
-    socket: { remoteAddress: "127.0.0.1" },
-  } as IncomingMessage);
-  expect(consume.mock.calls[0][1].map((b: { limit: number }) => b.limit)).toEqual([
-    1200, 120, 100, 10,
-  ]);
-  expect(JSON.stringify(consume.mock.calls)).not.toContain("127.0.0.1");
-});
+it.each(["/api/oauth/reg", "/api/oauth/agent/identity"])(
+  "uses stricter registration budgets and no raw IP keys for %s",
+  async url => {
+    await checkOAuthRateLimit({
+      url,
+      socket: { remoteAddress: "127.0.0.1" },
+    } as IncomingMessage);
+    expect(consume.mock.calls[0][1].map((b: { limit: number }) => b.limit)).toEqual([
+      1200, 120, 100, 10,
+    ]);
+    expect(JSON.stringify(consume.mock.calls)).not.toContain("127.0.0.1");
+  },
+);
 it("ignores caller-controlled forwarded IPs and fails closed without a peer", async () => {
   const request = {
     url: "/api/oauth/token",

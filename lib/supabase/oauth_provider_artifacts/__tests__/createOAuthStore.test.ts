@@ -72,3 +72,24 @@ it("scopes registration cleanup and rejects ambiguous deletion counts", async ()
     );
   }
 });
+it("preserves a lost transition and rejects ambiguous CAS results", async () => {
+  const rpc = vi.fn().mockResolvedValue({ data: false, error: null });
+  const store = createOAuthStore(rpc);
+  const record = {
+    namespace: "issuer",
+    model: "RecoupAgentRegistration",
+    idHash: "hash",
+    expectedPayload: "before",
+    payload: "after",
+  };
+  expect(await store.compareAndSwap!(record)).toBe(false);
+  expect(rpc).toHaveBeenCalledWith("oauth_store_compare_and_swap", {
+    p_namespace: "issuer",
+    p_model: "RecoupAgentRegistration",
+    p_id_hash: "hash",
+    p_expected_payload: "before",
+    p_payload: "after",
+  });
+  rpc.mockResolvedValue({ data: null, error: null });
+  await expect(store.compareAndSwap!(record)).rejects.toThrow("Invalid OAuth storage response");
+});

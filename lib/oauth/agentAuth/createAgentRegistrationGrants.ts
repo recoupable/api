@@ -50,11 +50,12 @@ export function createAgentRegistrationGrants(options: {
         adapter("RecoupGrant").find(record.id),
         provider.Client.find(policy.clientId),
       ]);
+      const current = now();
       if (
         record.status !== "approved" ||
         !record.accountId ||
         !record.accessExpiresAt ||
-        record.accessExpiresAt <= now() ||
+        record.accessExpiresAt <= current ||
         !grant ||
         grant.isExpired ||
         grant.exp !== record.accessExpiresAt ||
@@ -70,7 +71,7 @@ export function createAgentRegistrationGrants(options: {
         !(await accountExists(record.accountId))
       )
         throw new AgentRegistrationError("invalid_grant");
-      const expiresIn = Math.min(policy.accessSeconds, record.accessExpiresAt - now());
+      const expiresIn = Math.min(policy.accessSeconds, record.accessExpiresAt - current);
       const token = new provider.AccessToken({
         accountId: record.accountId,
         client,
@@ -80,7 +81,7 @@ export function createAgentRegistrationGrants(options: {
         scope: policy.scope,
         expiresWithSession: false,
       });
-      token.exp = now() + expiresIn;
+      token.exp = current + expiresIn;
       return {
         access_token: await token.save(),
         token_type: "Bearer",

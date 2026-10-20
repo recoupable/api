@@ -1,7 +1,8 @@
 import { createServer } from "node:http";
 import { createHash, randomBytes } from "node:crypto";
 import type { AddressInfo } from "node:net";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
+import { AgentRegistrationError } from "../AgentRegistrationError";
 import { fixture, identity } from "./fixture";
 import { createOAuthNodeHandler } from "../../createOAuthNodeHandler";
 import { createAgentRegistrationHandler } from "../createAgentRegistrationHandler";
@@ -26,7 +27,8 @@ async function setup() {
     config: f.config,
     service: f.service,
     resolveIdentity: async token => {
-      if (token !== "alice-session") throw new Error("invalid login");
+      if (token === "unavailable") throw new Error("private-diagnostics");
+      if (token !== "alice-session") throw new AgentRegistrationError("login_required", 401);
       return identity;
     },
   });
@@ -140,21 +142,41 @@ it("rejects unsupported identity types, caller authority, duplicate form fields,
     grant_type: "urn:workos:agent-auth:grant-type:claim",
     claim_token: `clm_${"a".repeat(43)}`,
   });
-  form.append("grant_type", "authorization_code");
-  expect((await fetch(`${f.config.issuer}/token`, { method: "POST", body: form })).status).toBe(
-    400,
-  );
+  form.append("grant_type", "urn:workos:agent-auth:grant-type:claim");
+  const duplicate = await fetch(`${f.config.issuer}/token`, { method: "POST", body: form });
+  expect(duplicate.status).toBe(400);
+  expect(await duplicate.json()).toMatchObject({ error: "invalid_request" });
   form.delete("grant_type");
   form.set("grant_type", "urn:workos:agent-auth:grant-type:claim");
-  expect(
-    (
-      await fetch(`${f.config.issuer}/token`, {
-        method: "POST",
-        headers: { DPoP: "proof" },
-        body: form,
-      })
-    ).status,
-  ).toBe(400);
+  const dpop = await fetch(`${f.config.issuer}/token`, {
+    method: "POST",
+    headers: { DPoP: "proof" },
+    body: form,
+  });
+  expect(dpop.status).toBe(400);
+  expect(await dpop.json()).toMatchObject({ error: "invalid_request" });
+});
+
+it("reports identity infrastructure failure as temporary and logs no credential or diagnostic", async () => {
+  const f = await setup();
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    const response = await f.json(
+      "/agent/identity/claim",
+      {
+        claim_attempt_token: `cla_${"a".repeat(43)}`,
+      },
+      { Origin: f.config.consentOrigin, Authorization: "Bearer unavailable" },
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "temporarily_unavailable" });
+    expect(log).toHaveBeenCalledWith("Agent registration unavailable", {
+      event: "agent_registration_unavailable",
+    });
+    expect(JSON.stringify(log.mock.calls)).not.toContain("private-diagnostics");
+  } finally {
+    log.mockRestore();
+  }
 });
 
 it("preserves ordinary OAuth parsing and registration while the extension is mounted", async () => {

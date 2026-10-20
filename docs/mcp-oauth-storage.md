@@ -22,15 +22,19 @@ pnpm typecheck:mcp-oauth
 pnpm test:mcp-oauth
 ```
 
-The default suite uses in-memory provider storage for HTTP tests and skips the PostgreSQL-only concurrency test. CI runs this default suite. To exercise the same HTTP flows through encrypted PostgreSQL storage, provide the owning database checkout's migration:
+The default suite uses in-memory provider storage for HTTP tests and skips PostgreSQL-only cases. CI runs this default suite. To exercise the same HTTP flows and the two-instance agent registration case through encrypted PostgreSQL storage, provide these migrations from the owning database checkout (including database PR #118):
 
 ```sh
 PG_BINDIR=/path/to/postgresql/bin \
   scripts/mcp-oauth/testPostgres.sh \
-  /path/to/database/supabase/migrations/20261005170000_oauth_provider_store.sql
+  /path/to/database/supabase/migrations/20261005170000_oauth_provider_store.sql \
+  /path/to/database/supabase/migrations/20261006150000_oauth_connected_apps.sql \
+  /path/to/database/supabase/migrations/20261006170000_oauth_grant_binding_integrity.sql \
+  /path/to/database/supabase/migrations/20261008010000_oauth_persistent_connections.sql \
+  /path/to/database/supabase/migrations/20261020040000_oauth_agent_registration_cas.sql
 ```
 
-Run with Node 22 on PATH, or set `OAUTH_TEST_NODE` to its executable. The script creates a disposable Unix-socket cluster with no TCP listener, applies only the specified migration and test roles, runs the entire suite, then stops/removes its cluster. It never reads DATABASE_URL, contacts Supabase, or applies a migration to shared infrastructure. The psql bridge is fixture-only, not the production database client.
+Run with Node 22 on PATH, or set `OAUTH_TEST_NODE` to its executable. The script creates a disposable Unix-socket cluster with no TCP listener, applies only the specified migrations and test roles, runs the entire suite, then stops/removes its cluster. It never reads DATABASE_URL, contacts Supabase, or applies a migration to shared infrastructure. The psql bridge is fixture-only, not the production database client.
 
 Verified locally: 49 tests on Node 22 and PostgreSQL 17, including real HTTP registration/callback exchange, read/write scopes, refresh rotation and replay, grant revocation, persistence across adapter recreation, and eight concurrent redemption attempts with one winner. This is not a full Supabase migration-history or PostgREST deployment test. The named-client tests still use synthetic clients and synthetic consent.
 

@@ -3,6 +3,8 @@ import { decodeJwt, importJWK, SignJWT, type JWK } from "jose";
 import { fixture, identity } from "./fixture";
 import { createOAuthConnections } from "../../createOAuthConnections";
 import { resolveOAuthAccess } from "../../resolveOAuthAccess";
+import { createAgentRegistrationStore } from "../createAgentRegistrationStore";
+import { createAgentRegistrationGrants } from "../createAgentRegistrationGrants";
 
 async function start(f = fixture()) {
   const registration = await f.service.create("Alice@Example.com");
@@ -21,6 +23,57 @@ async function approve(f: Awaited<ReturnType<typeof start>>) {
 }
 
 describe("user-verified personal read-only agent registration", () => {
+  it("never serializes token expiry beyond the connection deadline when the clock advances", async () => {
+    const f = await start();
+    await approve(f);
+    const saved = await createAgentRegistrationStore(f.config, f.store).find(
+      "id",
+      f.registration.registration_id,
+    );
+    const record = saved!.record;
+    let current = record.accessExpiresAt! - 1;
+    const grants = createAgentRegistrationGrants({ ...f, now: () => current++ });
+    const result = await grants.issue(record);
+    const token = await f.provider.AccessToken.find(result.access_token);
+    expect(token!.exp).toBeLessThanOrEqual(record.accessExpiresAt!);
+    expect(result.expires_in).toBeGreaterThan(0);
+  });
+
+  it("allows four wrong codes and locks on the fifth", async () => {
+    const f = await start();
+    const wrong = f.registration.claim.user_code === "000000" ? "111111" : "000000";
+    for (let attempt = 0; attempt < 4; attempt++) {
+      await expect(
+        f.service.decide(
+          f.attempt,
+          {
+            csrf: f.consent.csrf,
+            decision: "approve",
+            user_code: wrong,
+          },
+          identity,
+        ),
+      ).rejects.toMatchObject({ error: "invalid_user_code" });
+      await expect(f.service.load(f.attempt, identity)).resolves.toHaveProperty(
+        "context",
+        "personal",
+      );
+    }
+    await expect(
+      f.service.decide(
+        f.attempt,
+        {
+          csrf: f.consent.csrf,
+          decision: "approve",
+          user_code: wrong,
+        },
+        identity,
+      ),
+    ).rejects.toMatchObject({ error: "invalid_user_code" });
+    await expect(f.service.load(f.attempt, identity)).rejects.toMatchObject({
+      error: "invalid_claim",
+    });
+  });
   it("returns only claim handles before approval and stores no raw secrets", async () => {
     const f = await start();
     expect(f.registration).toMatchObject({
