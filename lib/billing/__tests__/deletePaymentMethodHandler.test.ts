@@ -19,7 +19,7 @@ vi.mock("@/lib/stripe/findDefaultCardForCustomer", () => ({
   findDefaultCardForCustomer: vi.fn(),
 }));
 vi.mock("@/lib/stripe/detachPaymentMethod", () => ({ detachPaymentMethod: vi.fn() }));
-
+vi.mock("@/lib/supabase/credits_usage/disableAutoTopUp", () => ({ disableAutoTopUp: vi.fn() }));
 const ACCOUNT = "123e4567-e89b-12d3-a456-426614174000";
 const buildRequest = () =>
   new NextRequest(`http://localhost/api/accounts/${ACCOUNT}/payment-method`, {
