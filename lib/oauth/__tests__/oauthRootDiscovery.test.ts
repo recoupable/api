@@ -1,7 +1,10 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { GET, OPTIONS } from "../../../app/.well-known/oauth-authorization-server/route";
 
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
+});
 
 it("links the root discovery URL to the existing path-based issuer metadata", async () => {
   vi.stubEnv("OAUTH_ENABLED", "true");
@@ -18,6 +21,7 @@ it("links the root discovery URL to the existing path-based issuer metadata", as
 it("does not advertise an issuer when OAuth is disabled", async () => {
   vi.stubEnv("OAUTH_ENABLED", "false");
   expect((await GET()).status).toBe(404);
+  expect(OPTIONS().status).toBe(404);
 });
 
 it.each([
@@ -28,13 +32,16 @@ it.each([
 ])("rejects invalid configured issuer %s", async issuer => {
   vi.stubEnv("OAUTH_ENABLED", "true");
   vi.stubEnv("OAUTH_ISSUER", issuer);
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
   const response = await GET();
+  expect(log).toHaveBeenCalledWith("OAuth discovery alias unavailable:", expect.any(Error));
   expect(response.status).toBe(503);
   expect(response.headers.has("location")).toBe(false);
   expect(await response.json()).toEqual({ error: "oauth_unavailable" });
 });
 
 it("permits anonymous metadata preflight without credentials", () => {
+  vi.stubEnv("OAUTH_ENABLED", "true");
   const response = OPTIONS();
   expect(response.status).toBe(204);
   expect(response.headers.get("access-control-allow-methods")).toBe("GET, HEAD, OPTIONS");
