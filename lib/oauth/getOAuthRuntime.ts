@@ -10,6 +10,9 @@ import { loadOAuthConfig } from "./loadOAuthConfig";
 import { resolveOAuthAccount } from "./resolveOAuthAccount";
 import { resolveOAuthAccess } from "./resolveOAuthAccess";
 import { createOAuthConnections } from "./createOAuthConnections";
+import { createAgentRegistrationService } from "./agentAuth/createAgentRegistrationService";
+import { createAgentRegistrationHandler } from "./agentAuth/createAgentRegistrationHandler";
+import { resolveAgentClaimIdentity } from "./agentAuth/resolveAgentClaimIdentity";
 
 let runtime:
   | {
@@ -49,7 +52,21 @@ export function getOAuthRuntime() {
     connections,
   });
   const callback = provider.callback();
+  const agentRegistration = config.agentAuthEnabled
+    ? createAgentRegistrationHandler({
+        config,
+        service: createAgentRegistrationService({
+          config,
+          adapter,
+          store,
+          provider,
+          accountExists: async id => (await selectAccounts(id)).length === 1,
+        }),
+        resolveIdentity: resolveAgentClaimIdentity,
+      })
+    : undefined;
   const handler = createOAuthNodeHandler(config.issuer, async (req, res) => {
+    if (agentRegistration && (await agentRegistration(req, res))) return;
     const match = /^\/interaction\/([A-Za-z0-9_-]+)$/.exec(req.url?.split("?")[0] ?? "");
     if (/^\/connections(?:\/|\?|$)/.test(req.url ?? "")) await manageConnections(req, res);
     else if (match) await consent(req, res, match[1]);

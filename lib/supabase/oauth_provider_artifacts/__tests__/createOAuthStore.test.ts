@@ -58,3 +58,17 @@ it("validates stored rows and treats only null as absent", async () => {
   });
   expect(await store.find(query)).toHaveProperty("consumed", 123);
 });
+it("scopes registration cleanup and rejects ambiguous deletion counts", async () => {
+  const rpc = vi.fn().mockResolvedValue({ data: 2, error: null });
+  const store = createOAuthStore(rpc);
+  expect(await store.purgeAgentRegistrations!("issuer")).toBe(2);
+  expect(rpc).toHaveBeenCalledWith("oauth_store_purge_agent_registrations", {
+    p_namespace: "issuer",
+  });
+  for (const data of [null, false, "2", -1, 1.5]) {
+    rpc.mockResolvedValue({ data, error: null });
+    await expect(store.purgeAgentRegistrations!("issuer")).rejects.toThrow(
+      "Invalid OAuth storage response",
+    );
+  }
+});

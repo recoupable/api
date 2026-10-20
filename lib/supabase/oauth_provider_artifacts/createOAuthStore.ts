@@ -30,6 +30,23 @@ export function createOAuthStore(rpc: OAuthRpc): OAuthStore {
     p_id_hash: key.idHash,
   });
   return {
+    async purgeAgentRegistrations(namespace) {
+      const result = await call("oauth_store_purge_agent_registrations", {
+        p_namespace: namespace,
+      });
+      if (typeof result !== "number" || !Number.isSafeInteger(result) || result < 0)
+        throw new Error("Invalid OAuth storage response");
+      return result;
+    },
+    async compareAndSwap(record) {
+      const result = await call("oauth_store_compare_and_swap", {
+        ...keyArgs(record),
+        p_expected_payload: record.expectedPayload,
+        p_payload: record.payload,
+      });
+      if (typeof result !== "boolean") throw new Error("Invalid OAuth storage response");
+      return result;
+    },
     async upsert(record) {
       await call("oauth_store_upsert", {
         ...keyArgs(record),

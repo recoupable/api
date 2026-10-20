@@ -95,6 +95,9 @@ importers:
       ioredis:
         specifier: ^5.8.2
         version: 5.8.2
+      jose:
+        specifier: 6.2.12
+        version: 6.2.12
       marked:
         specifier: ^15.0.12
         version: 15.0.12

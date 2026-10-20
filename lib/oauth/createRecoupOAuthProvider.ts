@@ -6,6 +6,7 @@ import { createOAuthMetadataFetch } from "./createOAuthMetadataFetch";
 import { validateOAuthMetadataUrl } from "./validateOAuthMetadataUrl";
 import { validateOAuthClientMetadata } from "./validateOAuthClientMetadata";
 import { validateOAuthRedirectUris } from "./validateOAuthRedirectUris";
+import { agentRegistrationPolicy } from "./agentAuth/agentRegistrationPolicy";
 
 /** Real-account provider; all secrets and durable storage are supplied explicitly. */
 export function createRecoupOAuthProvider(
@@ -18,7 +19,29 @@ export function createRecoupOAuthProvider(
     adapter,
     jwks: config.jwks,
     cookies: { keys: config.cookieKeys },
-    clients: [],
+    clients: config.agentAuthEnabled
+      ? [
+          {
+            client_id: agentRegistrationPolicy.clientId,
+            client_name: agentRegistrationPolicy.clientName,
+            token_endpoint_auth_method: "none",
+            grant_types: [],
+            response_types: [],
+            redirect_uris: [],
+            scope: agentRegistrationPolicy.scope,
+          },
+        ]
+      : [],
+    discovery: config.agentAuthEnabled
+      ? {
+          agent_auth: {
+            skill: `${config.issuer}/auth.md`,
+            identity_endpoint: `${config.issuer}/agent/identity`,
+            claim_endpoint: `${config.issuer}/agent/identity/claim`,
+            identity_types_supported: ["service_auth"],
+          },
+        }
+      : {},
     // MCP desktop clients may omit application_type while registering native callbacks.
     clientDefaults: { application_type: "native" },
     extraClientMetadata: {
@@ -100,6 +123,21 @@ export function createRecoupOAuthProvider(
     findAccount: async (_ctx, id) =>
       (await accountExists(id)) ? { accountId: id, claims: async () => ({ sub: id }) } : undefined,
   });
+  if (config.agentAuthEnabled) {
+    // These profile grants are handled by our Node dispatcher at the same token endpoint.
+    // Do not advertise provider-assertion trust or event endpoints that are not implemented.
+    provider.use(async (ctx, next) => {
+      await next();
+      if (ctx.oidc.route === "discovery" && ctx.body && typeof ctx.body === "object") {
+        const body = ctx.body as { grant_types_supported?: string[] };
+        body.grant_types_supported = [
+          ...(body.grant_types_supported ?? []),
+          agentRegistrationPolicy.claimGrant,
+          agentRegistrationPolicy.assertionGrant,
+        ];
+      }
+    });
+  }
   provider.proxy = true;
   return provider;
 }
