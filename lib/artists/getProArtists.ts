@@ -22,7 +22,7 @@ export async function getProArtists(): Promise<string[]> {
   const accountIds = Array.from(new Set([...enterpriseIds, ...subscriberIds]));
   if (accountIds.length === 0) return [];
 
-  const artistIdRows = await selectAccountArtistIds(accountIds);
+  const artistIdRows = (await selectAccountArtistIds({ accountIds })) ?? [];
 
   return Array.from(
     new Set(artistIdRows.map(row => row.artist_id).filter((id): id is string => Boolean(id))),

@@ -1,4 +1,4 @@
-import { selectArtistOwnerLink } from "@/lib/supabase/account_artist_ids/selectArtistOwnerLink";
+import { selectAccountArtistIds } from "@/lib/supabase/account_artist_ids/selectAccountArtistIds";
 import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds";
 
 /**
@@ -12,7 +12,9 @@ import { selectArtistOrganizationIds } from "@/lib/supabase/artist_organization_
  * @returns true when the account is an artist.
  */
 export async function isArtistAccount(accountId: string): Promise<boolean> {
-  if (await selectArtistOwnerLink(accountId)) return true;
+  const owners = await selectAccountArtistIds({ artistIds: [accountId] });
+  if (!owners) throw new Error("Failed to fetch account_artist_ids");
+  if (owners.length > 0) return true;
 
   const organizations = await selectArtistOrganizationIds(accountId);
   if (!organizations) throw new Error("Failed to fetch artist_organization_ids");
