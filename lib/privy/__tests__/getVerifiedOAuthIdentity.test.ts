@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { getVerifiedOAuthIdentity } from "../getVerifiedOAuthIdentity";
+import { InvalidAuthTokenError } from "@privy-io/node";
 const { verify, get } = vi.hoisted(() => ({ verify: vi.fn(), get: vi.fn() }));
 vi.mock("../client", () => ({
   default: {
@@ -55,4 +56,19 @@ it("rejects a mismatched subject and never exposes backend details", async () =>
 it("allows an established mapping to resolve without any current verified email", async () => {
   get.mockResolvedValue({ id: "did:privy:subject", linked_accounts: [] });
   expect((await getVerifiedOAuthIdentity("token")).verifiedEmails).toEqual([]);
+});
+it("distinguishes known invalid credentials from unavailable identity infrastructure", async () => {
+  verify.mockRejectedValue(new InvalidAuthTokenError("Authentication token expired"));
+  await expect(getVerifiedOAuthIdentity("expired")).rejects.toMatchObject({
+    reason: "invalid_token",
+    message: "Unable to verify OAuth identity",
+  });
+  verify.mockResolvedValue({ user_id: "did:privy:subject" });
+  get.mockRejectedValue(new Error("private infrastructure details"));
+  await expect(getVerifiedOAuthIdentity("valid")).rejects.toMatchObject({
+    reason: "unavailable",
+    message: "Unable to verify OAuth identity",
+  });
+  verify.mockRejectedValue(new InvalidAuthTokenError("Failed to verify authentication token"));
+  await expect(getVerifiedOAuthIdentity("unknown")).rejects.toHaveProperty("reason", "unavailable");
 });
