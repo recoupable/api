@@ -177,7 +177,10 @@ describe("card removal acceptance with synthetic providers", () => {
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({ error: "Internal server error" });
     expect(await savedCard()).toMatchObject({ card: { last4: "4242" } });
+    expect(await settings()).toMatchObject({ enabled: false });
+    await expect(maybeAutoTopUp({ accountId: ACCOUNT })).resolves.toEqual({ kind: "skipped" });
     expect(boundary.stripe.paymentIntents.create).not.toHaveBeenCalled();
+    expect(boundary.email.send).not.toHaveBeenCalled();
   });
 
   it("does not claim successful removal when disabling automatic purchases cannot be saved", async () => {
@@ -188,6 +191,9 @@ describe("card removal acceptance with synthetic providers", () => {
 
     expect(response.status).toBe(500);
     await expect(response.json()).resolves.toEqual({ error: "Internal server error" });
+    expect(await settings()).toMatchObject({ enabled: true });
+    expect(await savedCard()).toMatchObject({ card: { last4: "4242" } });
+    expect(boundary.stripe.paymentMethods.detach).not.toHaveBeenCalled();
     expect(boundary.stripe.paymentIntents.create).not.toHaveBeenCalled();
   });
 

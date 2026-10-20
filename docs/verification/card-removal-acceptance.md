@@ -32,4 +32,12 @@ This is local synthetic acceptance, not Stripe test-mode or authenticated produc
 
 ## Candidate review
 
-The production repair belongs to Recoup MCP. Re-run this suite against its exact published candidate and record that SHA and result here before marking this acceptance complete. Do not merge this test-only branch with failing regressions, implement a competing repair, or treat another PR's approval as approval for this one.
+The production repair is [API #1054](https://github.com/recoupable/api/pull/1054), published head `bb7a492e5eec59ca54af033ea1f85e03e250edd1`, based on `c69768bda5b5f3e61483807f997c63a21f376040`. Its copied nine-case acceptance suite and provider fixture are byte-identical to the original test-only commit `820df9cf16d3ab73fe55d6a530168d28e8ea4490`.
+
+Independent execution in a separate checkout of that exact candidate passes all 15 focused cases: the nine independent cases plus the six persistence/error-boundary cases added by the repair owner. Separate Standards and Spec source reviews found no actionable issue in the scoped repair.
+
+This branch also strengthens the existing independent failure cases with public readbacks. If Stripe detachment fails, the card is still visible, settings report disabled and a subsequent automatic attempt skips without sending an email. If disabling cannot be saved, settings remain enabled, the selected card is still visible and no detachment occurred. Applying only these additional test assertions over the same production candidate again passes all 15 cases. This is a test-only overlay; the published candidate's production source was unchanged.
+
+Scoped acceptance is **PASS**. The observed release checkpoint still has GitHub's `test` job in progress; lint, format, compatibility, Vercel and CodeRabbit pass, and Cubic is neutral. Exact-head checks and explicit release approval remain separate gates. No production billing operation or release was performed by this review.
+
+API #1054 contains the actual repair and the adopted tests. Keep this test-only PR as the independent regression/review record; do not merge it separately into main or treat another PR's approval as approval for it. The account-wide card-removal contract decision remains outside this scoped acceptance.
