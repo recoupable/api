@@ -6,6 +6,8 @@ import { createOAuthMetadataFetch } from "./createOAuthMetadataFetch";
 import { validateOAuthMetadataUrl } from "./validateOAuthMetadataUrl";
 import { validateOAuthClientMetadata } from "./validateOAuthClientMetadata";
 import { validateOAuthRedirectUris } from "./validateOAuthRedirectUris";
+import { getAgentRegistrationProviderOptions } from "./agentAuth/getAgentRegistrationProviderOptions";
+import { configureAgentRegistrationDiscovery } from "./agentAuth/configureAgentRegistrationDiscovery";
 
 /** Real-account provider; all secrets and durable storage are supplied explicitly. */
 export function createRecoupOAuthProvider(
@@ -18,7 +20,7 @@ export function createRecoupOAuthProvider(
     adapter,
     jwks: config.jwks,
     cookies: { keys: config.cookieKeys },
-    clients: [],
+    ...getAgentRegistrationProviderOptions(config),
     // MCP desktop clients may omit application_type while registering native callbacks.
     clientDefaults: { application_type: "native" },
     extraClientMetadata: {
@@ -100,6 +102,7 @@ export function createRecoupOAuthProvider(
     findAccount: async (_ctx, id) =>
       (await accountExists(id)) ? { accountId: id, claims: async () => ({ sub: id }) } : undefined,
   });
+  configureAgentRegistrationDiscovery(provider, config);
   provider.proxy = true;
   return provider;
 }

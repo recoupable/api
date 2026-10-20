@@ -1,6 +1,10 @@
 export type OAuthStoredRecord = { id_hash: string; payload: string; consumed: number | null };
 export type OAuthRecordKey = { namespace: string; model: string; idHash: string };
 export interface OAuthStore {
+  purgeAgentRegistrations?(namespace: string): Promise<number>;
+  compareAndSwap?(
+    record: OAuthRecordKey & { expectedPayload: string; payload: string },
+  ): Promise<boolean>;
   upsert(
     record: OAuthRecordKey & {
       payload: string;
