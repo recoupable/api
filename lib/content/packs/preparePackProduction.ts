@@ -6,6 +6,7 @@ import { withPackMediaRuntime } from "./withPackMediaRuntime";
 import { callFlamingoGenerate } from "@/lib/flamingo/callFlamingoGenerate";
 import { flamingoGenerateBodySchema } from "@/lib/flamingo/flamingoGenerateBodySchema";
 import { runPackCommand } from "@/lib/supabase/release_pack_jobs/runPackCommand";
+import { resolvePackCreativeContext } from "./resolvePackCreativeContext";
 import { createSignedFileUrlByKey } from "@/lib/supabase/storage/createSignedFileUrlByKey";
 import type { PackActor, PackJob } from "./packTypes";
 const contextSchema = z.object({
@@ -20,6 +21,7 @@ const contextSchema = z.object({
 });
 /** Import the exact source, listen once, and persist a labeled excerpt proposal before paid visual calls. */
 export async function preparePackProduction(actor: PackActor, job: PackJob): Promise<PackJob> {
+  job = { ...job, brief: resolvePackCreativeContext(job.brief) };
   let context = contextSchema.safeParse(job.production_context);
   if (!context.success) {
     if ((job.production_context as { state?: string } | undefined)?.state === "analyzing")

@@ -16,6 +16,7 @@ import {
 import { buildReleasePackQuote } from "./buildReleasePackQuote";
 import { getPackBriefReadiness } from "./getPackBriefReadiness";
 import { loadPackContextBrief } from "./loadPackContextBrief";
+import { resolvePackCreativeContext } from "./resolvePackCreativeContext";
 import { readPackSnapshot } from "./readPackSnapshot";
 import { assertPackExecutionReady } from "./assertPackExecutionReady";
 import { uploadPackAsset } from "./uploadPackAsset";
@@ -97,7 +98,8 @@ export async function processPackOperation(
       ? full.assets.filter(a => a.kind === selected.kind && a.ordinal === selected.ordinal)
       : full.assets;
     const sources =
-      saved.job.quote?.sources ?? (await importPackSources(saved.job.owner_id, saved.job.brief));
+      saved.job.quote?.sources ??
+      (await importPackSources(saved.job.owner_id, resolvePackCreativeContext(saved.job.brief)));
     const quote: PackQuote = {
       sources,
       ...full,
@@ -139,6 +141,8 @@ export async function processPackOperation(
       }),
     );
   }
+  const readiness = getPackBriefReadiness(saved.job.brief);
+  if (!readiness.ready) throw new Error(`Pack brief is not ready: ${readiness.next_action}`);
   assertPackExecutionReady();
   if (!saved.job.quote) throw new Error("Get a complete quote before approving generation");
   if (saved.job.quote.id !== input.quote_id || saved.job.revision !== input.expected_revision)
