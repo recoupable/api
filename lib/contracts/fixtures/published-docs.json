@@ -115,13 +115,13 @@
     }
   ],
   "sourceHashes": {
-    "content/docs/source/api-reference/openapi/accounts.json": "0803ba921d739f023353e7ec6807ff407542483a679ee1cf5226539637f424d7",
-    "content/docs/source/api-reference/openapi/content.json": "65a70807962d7bf2862531c165436f047952ea8229fe3527e218a0d4bd9c154e",
-    "content/docs/source/api-reference/openapi/research.json": "e41af080333df4740bf2a217fc40c588b95ae7cf0d73728a0caaff7367f25547",
-    "content/docs/source/api-reference/openapi/releases.json": "026d07948366d6498489d93fb8c809e919403d6154bd90d85aa0151d89150f3c",
-    "content/docs/source/api-reference/openapi/social.json": "05ce4cf07816342e391b5c052e6bc9c309c449dfef94d9453d5025bae5d12177",
-    "content/docs/source/api-reference/openapi/context.json": "eb0ceb56fe4594115dfc9997ffe17558257db1f1afea67fb92cb5592ff00056a",
-    "content/docs/source/api-reference/openapi/projects.json": "ccf2eea18ad384efefad04b170cfbdcbec84dc9cf29e9660064ba89cef219fc0",
+    "content/docs/source/api-reference/openapi/accounts.json": "53aca32321d20281e3ee5982aeca4ff86fe3ee06c553ac3974e77a9f1ec8787b",
+    "content/docs/source/api-reference/openapi/content.json": "321e7572ea3e47dd668c1fe2ce6962ea47affce0f8d0eaf73ab055126c34307c",
+    "content/docs/source/api-reference/openapi/research.json": "3fcfacd89b9f4406d1df03dafae6f2cc798c00c4d72a031511ec8881c55d3107",
+    "content/docs/source/api-reference/openapi/releases.json": "48dba1c1bbf16b8d86acf89b064db2430db3a0783226ff2f1e5ea1e8cc483594",
+    "content/docs/source/api-reference/openapi/social.json": "41b9b89074e0ee0258f6a88e276e71e478c4a675512393cc4cd8b77fb9606398",
+    "content/docs/source/api-reference/openapi/context.json": "8a95843d8146f9ce1efa9ae17baee1564bdf7188ad6dd9d1ae5e353ad53ea8e9",
+    "content/docs/source/api-reference/openapi/projects.json": "b059cf8baa83a7f73a3c15db19f54fa56e46a3840e91bd42979b83550f543ace",
     "content/docs/source/api-reference/sites/overview.mdx": "2ed1d428d0ec8006530e8cd2201de5ce151c0d3618ea60850730779a11d73658"
   },
   "examples": {
