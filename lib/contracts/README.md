@@ -42,3 +42,23 @@ Authentication, account/repository lookup and file reads are mocked. These check
 do not write GitHub files or verify hosted authorization, sandbox concurrency or
 client adoption. The examples and resolved schemas live in `guardedGitFiles` in
 the same coordinated fixture, separate from the API-owned error-envelope export.
+
+`buildContextOperationCatalog` exports the current request schemas and separates
+delegated tool names from standard-only evidence tools. The Context fixture checks
+both maps and the evidence receipt/page schemas. Generate the four exports with:
+
+```sh
+RECOUP_CONTEXT_SCHEMA_OUTPUT=/tmp/context-requests.json \
+RECOUP_CONTEXT_MCP_OUTPUT=/tmp/context-mcp.json \
+RECOUP_CONTEXT_STANDARD_MCP_OUTPUT=/tmp/context-standard-mcp.json \
+RECOUP_CONTEXT_EVIDENCE_OUTPUT=/tmp/context-evidence.json \
+pnpm exec vitest run lib/contracts/__tests__/contextContract.test.ts
+```
+
+Then update Marketing's canonical Context specification and
+regenerate both fixture copies. Exported source contracts do not prove that the
+required database release or any customer workflow is live.
+
+The Context fixture's `evidenceResponseReferences` point to local definitions under `evidenceSchemas`.
+`evidenceResponseReferenceSource` separately records the canonical Marketing
+document and its OpenAPI pointers; `sourceHash` binds that document's exact bytes.

@@ -190,3 +190,21 @@ it("callers cannot enable receipt expansion through an input flag", async () => 
   );
   expect(response.status).toBe(400);
 });
+
+it.each([
+  ["Synthetic private source/credential detail", "dependency_or_access"],
+  ["Material evidence owner changed", "owner_changed"],
+  ["Evidence receipt scope mismatch", "evidence_receipt_unverified"],
+])("MCP diagnostics expose only a safe category for %s", async (message, reason) => {
+  const diagnostic = vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.mocked(processContextOperation).mockRejectedValueOnce(new Error(message));
+  const registerTool = vi.fn();
+  registerContextTool({ registerTool } as never);
+  const result = await registerTool.mock.calls[0][2](
+    { action: "read", request_id: "11111111-1111-4111-8111-111111111111" },
+    {},
+  );
+  expect(result.isError).toBe(true);
+  expect(JSON.stringify(result)).not.toContain(message);
+  expect(diagnostic.mock.calls).toEqual([["[context] MCP operation failed", { reason }]]);
+});
