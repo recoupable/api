@@ -2,6 +2,7 @@ import { z } from "zod";
 import { lookupMlcRecording } from "../providers/lookupMlcRecording";
 import { lookupMlcWork } from "../providers/lookupMlcWork";
 import { searchMlcWorks, mlcWorkSearchSchema } from "../providers/searchMlcWorks";
+import { projectRegistryEvidence } from "./projectRegistryEvidence";
 import { runContextEnrichment } from "./runContextEnrichment";
 const base = { subjectId: z.uuid(), collectionVersion: z.string().min(1).max(100) };
 const schema = z.discriminatedUnion("operation", [
@@ -62,7 +63,7 @@ export async function collectContextMlc(
     owner,
     requestId,
     {
-      key: `mlc-${args.operation}-v1`,
+      key: `mlc-${args.operation}-v2`,
       topic,
       subjectId: args.subjectId,
       provider: "mlc",
@@ -87,7 +88,16 @@ export async function collectContextMlc(
                   deps.fetcher,
                 );
         return {
-          content: { ...result, identityConfirmed: false, ownershipVerified: false },
+          content: {
+            ...result,
+            identityConfirmed: false,
+            ownershipVerified: false,
+            projection: projectRegistryEvidence({
+              provider: "mlc",
+              operation: args.operation,
+              payload: result,
+            }),
+          },
           coverage: result.status === "not_found" ? "unknown" : "partial",
           trace: result.trace,
           costUsd: null,
