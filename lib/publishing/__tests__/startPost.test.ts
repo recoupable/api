@@ -35,6 +35,7 @@ describe("startPost", () => {
     });
     expect(insertScheduledPost).toHaveBeenCalledWith({
       account_id: "acct",
+      artist_account_id: null,
       platform: "x",
       sub_account_id: null,
       video_url: "https://v",

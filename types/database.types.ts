@@ -1,11 +1,10 @@
-import type { CatalogStreamTables, CatalogStreamFunctions } from "./catalogStreams";
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-type BaseDatabase = {
+export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)";
+    PostgrestVersion: "12.2.3";
   };
   public: {
     Tables: {
@@ -79,6 +78,39 @@ type BaseDatabase = {
           },
           {
             foreignKeyName: "account_artist_ids_artist_id_fkey";
+            columns: ["artist_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      account_artist_profile_preferences: {
+        Row: {
+          account_id: string;
+          artist_id: string;
+          created_at: string;
+        };
+        Insert: {
+          account_id: string;
+          artist_id: string;
+          created_at?: string;
+        };
+        Update: {
+          account_id?: string;
+          artist_id?: string;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "account_artist_profile_preferences_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "account_artist_profile_preferences_artist_id_fkey";
             columns: ["artist_id"];
             isOneToOne: false;
             referencedRelation: "accounts";
@@ -991,6 +1023,150 @@ type BaseDatabase = {
           },
         ];
       };
+      catalog_stream_observations: {
+        Row: {
+          catalog_id: string;
+          date: string;
+          isrc: string;
+          provider_recording_id: string;
+          retrieved_at: string;
+          run_id: string;
+          source_hash: string;
+          streams: number | null;
+        };
+        Insert: {
+          catalog_id: string;
+          date: string;
+          isrc: string;
+          provider_recording_id: string;
+          retrieved_at: string;
+          run_id: string;
+          source_hash: string;
+          streams?: number | null;
+        };
+        Update: {
+          catalog_id?: string;
+          date?: string;
+          isrc?: string;
+          provider_recording_id?: string;
+          retrieved_at?: string;
+          run_id?: string;
+          source_hash?: string;
+          streams?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_stream_observations_catalog_id_fkey";
+            columns: ["catalog_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_stream_tracking";
+            referencedColumns: ["catalog_id"];
+          },
+          {
+            foreignKeyName: "catalog_stream_observations_isrc_fkey";
+            columns: ["isrc"];
+            isOneToOne: false;
+            referencedRelation: "songs";
+            referencedColumns: ["isrc"];
+          },
+          {
+            foreignKeyName: "catalog_stream_observations_run_id_fkey";
+            columns: ["run_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_stream_runs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      catalog_stream_runs: {
+        Row: {
+          catalog_id: string;
+          coverage: Json;
+          created_at: string;
+          error: string | null;
+          finished_at: string | null;
+          id: string;
+          revision: string;
+          scheduled_day: string;
+          since: string;
+          status: string;
+          until: string;
+        };
+        Insert: {
+          catalog_id: string;
+          coverage?: Json;
+          created_at?: string;
+          error?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          revision: string;
+          scheduled_day: string;
+          since: string;
+          status?: string;
+          until: string;
+        };
+        Update: {
+          catalog_id?: string;
+          coverage?: Json;
+          created_at?: string;
+          error?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          revision?: string;
+          scheduled_day?: string;
+          since?: string;
+          status?: string;
+          until?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_stream_runs_catalog_id_fkey";
+            columns: ["catalog_id"];
+            isOneToOne: false;
+            referencedRelation: "catalog_stream_tracking";
+            referencedColumns: ["catalog_id"];
+          },
+        ];
+      };
+      catalog_stream_tracking: {
+        Row: {
+          catalog_id: string;
+          enabled: boolean;
+          owner_id: string;
+          revision: string;
+          updated_at: string;
+        };
+        Insert: {
+          catalog_id: string;
+          enabled?: boolean;
+          owner_id: string;
+          revision?: string;
+          updated_at?: string;
+        };
+        Update: {
+          catalog_id?: string;
+          enabled?: boolean;
+          owner_id?: string;
+          revision?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "catalog_stream_tracking_catalog_id_fkey";
+            columns: ["catalog_id"];
+            isOneToOne: true;
+            referencedRelation: "catalogs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "catalog_stream_tracking_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       catalog_valuations: {
         Row: {
           catalog_id: string;
@@ -1188,6 +1364,983 @@ type BaseDatabase = {
           enable_team_accounts?: boolean;
         };
         Relationships: [];
+      };
+      context_attempts: {
+        Row: {
+          attempt: number;
+          error: string | null;
+          finished_at: string | null;
+          id: string;
+          input: Json | null;
+          model: string | null;
+          module: string;
+          owner_id: string;
+          provider: string | null;
+          provider_cost_micros: number | null;
+          provider_cost_status: string;
+          provider_request_id: string | null;
+          recipe_version: string;
+          request_id: string;
+          schema_version: string;
+          settlement_reference: string | null;
+          started_at: string | null;
+          status: string;
+          trace_storage_path: string | null;
+        };
+        Insert: {
+          attempt: number;
+          error?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          input?: Json | null;
+          model?: string | null;
+          module: string;
+          owner_id: string;
+          provider?: string | null;
+          provider_cost_micros?: number | null;
+          provider_cost_status?: string;
+          provider_request_id?: string | null;
+          recipe_version: string;
+          request_id: string;
+          schema_version: string;
+          settlement_reference?: string | null;
+          started_at?: string | null;
+          status: string;
+          trace_storage_path?: string | null;
+        };
+        Update: {
+          attempt?: number;
+          error?: string | null;
+          finished_at?: string | null;
+          id?: string;
+          input?: Json | null;
+          model?: string | null;
+          module?: string;
+          owner_id?: string;
+          provider?: string | null;
+          provider_cost_micros?: number | null;
+          provider_cost_status?: string;
+          provider_request_id?: string | null;
+          recipe_version?: string;
+          request_id?: string;
+          schema_version?: string;
+          settlement_reference?: string | null;
+          started_at?: string | null;
+          status?: string;
+          trace_storage_path?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_attempts_request_id_owner_id_fkey";
+            columns: ["request_id", "owner_id"];
+            isOneToOne: false;
+            referencedRelation: "context_requests";
+            referencedColumns: ["id", "owner_id"];
+          },
+        ];
+      };
+      context_briefs: {
+        Row: {
+          created_at: string;
+          id: string;
+          idempotency_key: string;
+          owner_id: string;
+          purpose: string;
+          request_ids: string[];
+          snapshot: Json;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          idempotency_key: string;
+          owner_id: string;
+          purpose: string;
+          request_ids: string[];
+          snapshot: Json;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          idempotency_key?: string;
+          owner_id?: string;
+          purpose?: string;
+          request_ids?: string[];
+          snapshot?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_briefs_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      context_documents: {
+        Row: {
+          current_result_id: string | null;
+          id: string;
+          owner_id: string;
+          revision: number;
+          subject_id: string;
+          topic: string;
+          updated_at: string;
+        };
+        Insert: {
+          current_result_id?: string | null;
+          id?: string;
+          owner_id: string;
+          revision?: number;
+          subject_id: string;
+          topic: string;
+          updated_at?: string;
+        };
+        Update: {
+          current_result_id?: string | null;
+          id?: string;
+          owner_id?: string;
+          revision?: number;
+          subject_id?: string;
+          topic?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_documents_current_result_id_owner_id_subject_id_to_fkey";
+            columns: ["current_result_id", "owner_id", "subject_id", "topic"];
+            isOneToOne: false;
+            referencedRelation: "context_results";
+            referencedColumns: ["id", "owner_id", "subject_id", "topic"];
+          },
+          {
+            foreignKeyName: "context_documents_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_documents_subject_id_fkey";
+            columns: ["subject_id"];
+            isOneToOne: false;
+            referencedRelation: "context_subjects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      context_execution_node_claims: {
+        Row: {
+          claimed_at: string;
+          execution_id: string;
+          id: string;
+          node_key: string;
+          owner_id: string;
+        };
+        Insert: {
+          claimed_at?: string;
+          execution_id: string;
+          id?: string;
+          node_key: string;
+          owner_id: string;
+        };
+        Update: {
+          claimed_at?: string;
+          execution_id?: string;
+          id?: string;
+          node_key?: string;
+          owner_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_execution_node_claims_execution_id_owner_id_fkey";
+            columns: ["execution_id", "owner_id"];
+            isOneToOne: false;
+            referencedRelation: "context_executions";
+            referencedColumns: ["id", "owner_id"];
+          },
+        ];
+      };
+      context_execution_outcomes: {
+        Row: {
+          execution_id: string;
+          node_key: string;
+          outcome: Json;
+          owner_id: string;
+          recorded_at: string;
+        };
+        Insert: {
+          execution_id: string;
+          node_key: string;
+          outcome: Json;
+          owner_id: string;
+          recorded_at?: string;
+        };
+        Update: {
+          execution_id?: string;
+          node_key?: string;
+          outcome?: Json;
+          owner_id?: string;
+          recorded_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_execution_outcomes_execution_id_owner_id_fkey";
+            columns: ["execution_id", "owner_id"];
+            isOneToOne: false;
+            referencedRelation: "context_executions";
+            referencedColumns: ["id", "owner_id"];
+          },
+        ];
+      };
+      context_executions: {
+        Row: {
+          created_at: string;
+          id: string;
+          owner_id: string;
+          plan: Json;
+          policy_version: string;
+          request_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id: string;
+          owner_id: string;
+          plan: Json;
+          policy_version: string;
+          request_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          owner_id?: string;
+          plan?: Json;
+          policy_version?: string;
+          request_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_executions_request_id_owner_id_fkey";
+            columns: ["request_id", "owner_id"];
+            isOneToOne: false;
+            referencedRelation: "context_requests";
+            referencedColumns: ["id", "owner_id"];
+          },
+        ];
+      };
+      context_guest_workspaces: {
+        Row: {
+          claimed_by: string | null;
+          claimed_owner: string | null;
+          created_at: string;
+          error: string | null;
+          expires_at: string;
+          id: string;
+          input: Json;
+          input_fingerprint: string;
+          lease_expires_at: string | null;
+          payload: Json | null;
+          request_id: string | null;
+          status: string;
+          token_hash: string;
+          worker_token: string | null;
+        };
+        Insert: {
+          claimed_by?: string | null;
+          claimed_owner?: string | null;
+          created_at?: string;
+          error?: string | null;
+          expires_at?: string;
+          id?: string;
+          input: Json;
+          input_fingerprint: string;
+          lease_expires_at?: string | null;
+          payload?: Json | null;
+          request_id?: string | null;
+          status?: string;
+          token_hash: string;
+          worker_token?: string | null;
+        };
+        Update: {
+          claimed_by?: string | null;
+          claimed_owner?: string | null;
+          created_at?: string;
+          error?: string | null;
+          expires_at?: string;
+          id?: string;
+          input?: Json;
+          input_fingerprint?: string;
+          lease_expires_at?: string | null;
+          payload?: Json | null;
+          request_id?: string | null;
+          status?: string;
+          token_hash?: string;
+          worker_token?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_guest_workspaces_claimed_by_fkey";
+            columns: ["claimed_by"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_guest_workspaces_claimed_owner_fkey";
+            columns: ["claimed_owner"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_guest_workspaces_request_id_fkey";
+            columns: ["request_id"];
+            isOneToOne: false;
+            referencedRelation: "context_requests";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      context_release_case_reviews: {
+        Row: {
+          actor_id: string;
+          created_at: string;
+          decision: string;
+          fingerprint: string;
+          id: string;
+          idempotency_key: string;
+          note: string;
+          owner_id: string;
+          policy_version: string;
+          request_id: string;
+          snapshot: Json;
+        };
+        Insert: {
+          actor_id: string;
+          created_at?: string;
+          decision: string;
+          fingerprint: string;
+          id?: string;
+          idempotency_key: string;
+          note: string;
+          owner_id: string;
+          policy_version?: string;
+          request_id: string;
+          snapshot: Json;
+        };
+        Update: {
+          actor_id?: string;
+          created_at?: string;
+          decision?: string;
+          fingerprint?: string;
+          id?: string;
+          idempotency_key?: string;
+          note?: string;
+          owner_id?: string;
+          policy_version?: string;
+          request_id?: string;
+          snapshot?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_release_case_reviews_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_release_case_reviews_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_release_case_reviews_request_id_owner_id_fkey";
+            columns: ["request_id", "owner_id"];
+            isOneToOne: false;
+            referencedRelation: "context_requests";
+            referencedColumns: ["id", "owner_id"];
+          },
+        ];
+      };
+      context_release_corrections: {
+        Row: {
+          canonical_subject_id: string;
+          created_at: string;
+          legacy_subject_id: string;
+          owner_id: string;
+          request_id: string;
+          source_result_id: string;
+        };
+        Insert: {
+          canonical_subject_id: string;
+          created_at?: string;
+          legacy_subject_id: string;
+          owner_id: string;
+          request_id: string;
+          source_result_id: string;
+        };
+        Update: {
+          canonical_subject_id?: string;
+          created_at?: string;
+          legacy_subject_id?: string;
+          owner_id?: string;
+          request_id?: string;
+          source_result_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_release_corrections_canonical_subject_id_fkey";
+            columns: ["canonical_subject_id"];
+            isOneToOne: false;
+            referencedRelation: "context_subjects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_release_corrections_legacy_subject_id_fkey";
+            columns: ["legacy_subject_id"];
+            isOneToOne: false;
+            referencedRelation: "context_subjects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_release_corrections_request_id_owner_id_fkey";
+            columns: ["request_id", "owner_id"];
+            isOneToOne: false;
+            referencedRelation: "context_requests";
+            referencedColumns: ["id", "owner_id"];
+          },
+          {
+            foreignKeyName: "context_release_corrections_source_result_id_fkey";
+            columns: ["source_result_id"];
+            isOneToOne: false;
+            referencedRelation: "context_results";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      context_release_track_slots: {
+        Row: {
+          disc_number: number | null;
+          owner_id: string;
+          release_subject_id: string;
+          slot_index: number;
+          source_result_id: string;
+          source_topic: string;
+          track_number: number | null;
+          track_resource_id: string;
+        };
+        Insert: {
+          disc_number?: number | null;
+          owner_id: string;
+          release_subject_id: string;
+          slot_index: number;
+          source_result_id: string;
+          source_topic?: string;
+          track_number?: number | null;
+          track_resource_id: string;
+        };
+        Update: {
+          disc_number?: number | null;
+          owner_id?: string;
+          release_subject_id?: string;
+          slot_index?: number;
+          source_result_id?: string;
+          source_topic?: string;
+          track_number?: number | null;
+          track_resource_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_release_track_slots_release_subject_id_fkey";
+            columns: ["release_subject_id"];
+            isOneToOne: false;
+            referencedRelation: "context_subjects";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_release_track_slots_source_result_id_owner_id_rele_fkey";
+            columns: ["source_result_id", "owner_id", "release_subject_id", "source_topic"];
+            isOneToOne: false;
+            referencedRelation: "context_results";
+            referencedColumns: ["id", "owner_id", "subject_id", "topic"];
+          },
+          {
+            foreignKeyName: "context_release_track_slots_track_resource_id_fkey";
+            columns: ["track_resource_id"];
+            isOneToOne: false;
+            referencedRelation: "context_resources";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      context_request_catalog_members: {
+        Row: {
+          catalog_id: string;
+          catalog_subject_id: string;
+          observed_at: string;
+          owner_id: string;
+          recording_subject_id: string;
+          request_id: string;
+          song_isrc: string;
+        };
+        Insert: {
+          catalog_id: string;
+          catalog_subject_id: string;
+          observed_at?: string;
+          owner_id: string;
+          recording_subject_id: string;
+          request_id: string;
+          song_isrc: string;
+        };
+        Update: {
+          catalog_id?: string;
+          catalog_subject_id?: string;
+          observed_at?: string;
+          owner_id?: string;
+          recording_subject_id?: string;
+          request_id?: string;
+          song_isrc?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_request_catalog_membe_catalog_subject_id_catalog_i_fkey";
+            columns: ["catalog_subject_id", "catalog_id"];
+            isOneToOne: false;
+            referencedRelation: "context_subjects";
+            referencedColumns: ["id", "catalog_id"];
+          },
+          {
+            foreignKeyName: "context_request_catalog_membe_recording_subject_id_song_is_fkey";
+            columns: ["recording_subject_id", "song_isrc"];
+            isOneToOne: false;
+            referencedRelation: "context_subjects";
+            referencedColumns: ["id", "song_isrc"];
+          },
+          {
+            foreignKeyName: "context_request_catalog_members_catalog_id_fkey";
+            columns: ["catalog_id"];
+            isOneToOne: false;
+            referencedRelation: "catalogs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_request_catalog_members_request_id_owner_id_fkey";
+            columns: ["request_id", "owner_id"];
+            isOneToOne: false;
+            referencedRelation: "context_requests";
+            referencedColumns: ["id", "owner_id"];
+          },
+          {
+            foreignKeyName: "context_request_catalog_members_song_isrc_fkey";
+            columns: ["song_isrc"];
+            isOneToOne: false;
+            referencedRelation: "songs";
+            referencedColumns: ["isrc"];
+          },
+        ];
+      };
+      context_requests: {
+        Row: {
+          claim_token: string | null;
+          created_at: string;
+          created_by: string;
+          error: string | null;
+          id: string;
+          idempotency_key: string;
+          input: Json;
+          input_fingerprint: string;
+          lease_expires_at: string | null;
+          output: Json | null;
+          owner_id: string;
+          resource_id: string;
+          revision: number;
+          status: string;
+          updated_at: string;
+          workflow_id: string | null;
+        };
+        Insert: {
+          claim_token?: string | null;
+          created_at?: string;
+          created_by: string;
+          error?: string | null;
+          id?: string;
+          idempotency_key: string;
+          input: Json;
+          input_fingerprint: string;
+          lease_expires_at?: string | null;
+          output?: Json | null;
+          owner_id: string;
+          resource_id: string;
+          revision?: number;
+          status?: string;
+          updated_at?: string;
+          workflow_id?: string | null;
+        };
+        Update: {
+          claim_token?: string | null;
+          created_at?: string;
+          created_by?: string;
+          error?: string | null;
+          id?: string;
+          idempotency_key?: string;
+          input?: Json;
+          input_fingerprint?: string;
+          lease_expires_at?: string | null;
+          output?: Json | null;
+          owner_id?: string;
+          resource_id?: string;
+          revision?: number;
+          status?: string;
+          updated_at?: string;
+          workflow_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_requests_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_requests_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_requests_resource_id_fkey";
+            columns: ["resource_id"];
+            isOneToOne: false;
+            referencedRelation: "context_resources";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      context_resource_links: {
+        Row: {
+          created_at: string;
+          credit_order: number | null;
+          credit_role: string | null;
+          evidence: Json;
+          id: string;
+          relation: string;
+          resource_id: string;
+          status: string;
+          subject_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          credit_order?: number | null;
+          credit_role?: string | null;
+          evidence?: Json;
+          id?: string;
+          relation: string;
+          resource_id: string;
+          status: string;
+          subject_id: string;
+        };
+        Update: {
+          created_at?: string;
+          credit_order?: number | null;
+          credit_role?: string | null;
+          evidence?: Json;
+          id?: string;
+          relation?: string;
+          resource_id?: string;
+          status?: string;
+          subject_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_resource_links_resource_id_fkey";
+            columns: ["resource_id"];
+            isOneToOne: false;
+            referencedRelation: "context_resources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_resource_links_subject_id_fkey";
+            columns: ["subject_id"];
+            isOneToOne: false;
+            referencedRelation: "context_subjects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      context_resources: {
+        Row: {
+          canonical_url: string;
+          created_at: string;
+          id: string;
+          provider: string;
+          provider_id: string;
+          resource_kind: string;
+        };
+        Insert: {
+          canonical_url: string;
+          created_at?: string;
+          id?: string;
+          provider: string;
+          provider_id: string;
+          resource_kind: string;
+        };
+        Update: {
+          canonical_url?: string;
+          created_at?: string;
+          id?: string;
+          provider?: string;
+          provider_id?: string;
+          resource_kind?: string;
+        };
+        Relationships: [];
+      };
+      context_result_sources: {
+        Row: {
+          owner_id: string;
+          result_id: string;
+          source_version_id: string;
+        };
+        Insert: {
+          owner_id: string;
+          result_id: string;
+          source_version_id: string;
+        };
+        Update: {
+          owner_id?: string;
+          result_id?: string;
+          source_version_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_result_sources_result_id_owner_id_fkey";
+            columns: ["result_id", "owner_id"];
+            isOneToOne: false;
+            referencedRelation: "context_results";
+            referencedColumns: ["id", "owner_id"];
+          },
+          {
+            foreignKeyName: "context_result_sources_source_version_id_owner_id_fkey";
+            columns: ["source_version_id", "owner_id"];
+            isOneToOne: false;
+            referencedRelation: "context_source_versions";
+            referencedColumns: ["id", "owner_id"];
+          },
+        ];
+      };
+      context_results: {
+        Row: {
+          attempt_id: string;
+          coverage: Json;
+          created_at: string;
+          evidence_kind: string;
+          id: string;
+          normalized_response: Json | null;
+          owner_id: string;
+          raw_response: Json | null;
+          reuse_key: string;
+          status: string;
+          subject_id: string;
+          topic: string;
+          validation: Json;
+        };
+        Insert: {
+          attempt_id: string;
+          coverage: Json;
+          created_at?: string;
+          evidence_kind: string;
+          id?: string;
+          normalized_response?: Json | null;
+          owner_id: string;
+          raw_response?: Json | null;
+          reuse_key: string;
+          status: string;
+          subject_id: string;
+          topic: string;
+          validation?: Json;
+        };
+        Update: {
+          attempt_id?: string;
+          coverage?: Json;
+          created_at?: string;
+          evidence_kind?: string;
+          id?: string;
+          normalized_response?: Json | null;
+          owner_id?: string;
+          raw_response?: Json | null;
+          reuse_key?: string;
+          status?: string;
+          subject_id?: string;
+          topic?: string;
+          validation?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_results_attempt_id_owner_id_fkey";
+            columns: ["attempt_id", "owner_id"];
+            isOneToOne: false;
+            referencedRelation: "context_attempts";
+            referencedColumns: ["id", "owner_id"];
+          },
+          {
+            foreignKeyName: "context_results_subject_id_fkey";
+            columns: ["subject_id"];
+            isOneToOne: false;
+            referencedRelation: "context_subjects";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      context_source_versions: {
+        Row: {
+          content: Json | null;
+          date_precision: string;
+          event_at: string | null;
+          fingerprint: string;
+          id: string;
+          media_manifest: Json;
+          owner_id: string;
+          published_at: string | null;
+          removed_at: string | null;
+          retrieved_at: string;
+          source_id: string;
+          storage_path: string | null;
+        };
+        Insert: {
+          content?: Json | null;
+          date_precision?: string;
+          event_at?: string | null;
+          fingerprint: string;
+          id?: string;
+          media_manifest?: Json;
+          owner_id: string;
+          published_at?: string | null;
+          removed_at?: string | null;
+          retrieved_at?: string;
+          source_id: string;
+          storage_path?: string | null;
+        };
+        Update: {
+          content?: Json | null;
+          date_precision?: string;
+          event_at?: string | null;
+          fingerprint?: string;
+          id?: string;
+          media_manifest?: Json;
+          owner_id?: string;
+          published_at?: string | null;
+          removed_at?: string | null;
+          retrieved_at?: string;
+          source_id?: string;
+          storage_path?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_source_versions_source_id_owner_id_fkey";
+            columns: ["source_id", "owner_id"];
+            isOneToOne: false;
+            referencedRelation: "context_sources";
+            referencedColumns: ["id", "owner_id"];
+          },
+        ];
+      };
+      context_sources: {
+        Row: {
+          created_at: string;
+          id: string;
+          kind: string;
+          owner_id: string;
+          source_url: string | null;
+          withdrawn_at: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          kind: string;
+          owner_id: string;
+          source_url?: string | null;
+          withdrawn_at?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          owner_id?: string;
+          source_url?: string | null;
+          withdrawn_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_sources_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      context_subjects: {
+        Row: {
+          artist_id: string | null;
+          catalog_id: string | null;
+          created_at: string;
+          id: string;
+          kind: string;
+          resource_id: string | null;
+          song_isrc: string | null;
+        };
+        Insert: {
+          artist_id?: string | null;
+          catalog_id?: string | null;
+          created_at?: string;
+          id?: string;
+          kind: string;
+          resource_id?: string | null;
+          song_isrc?: string | null;
+        };
+        Update: {
+          artist_id?: string | null;
+          catalog_id?: string | null;
+          created_at?: string;
+          id?: string;
+          kind?: string;
+          resource_id?: string | null;
+          song_isrc?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "context_subjects_artist_id_fkey";
+            columns: ["artist_id"];
+            isOneToOne: true;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_subjects_catalog_id_fkey";
+            columns: ["catalog_id"];
+            isOneToOne: false;
+            referencedRelation: "catalogs";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_subjects_resource_id_fkey";
+            columns: ["resource_id"];
+            isOneToOne: true;
+            referencedRelation: "context_resources";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "context_subjects_song_isrc_fkey";
+            columns: ["song_isrc"];
+            isOneToOne: true;
+            referencedRelation: "songs";
+            referencedColumns: ["isrc"];
+          },
+        ];
       };
       cookie_players: {
         Row: {
@@ -2252,6 +3405,116 @@ type BaseDatabase = {
         };
         Relationships: [];
       };
+      oauth_account_identities: {
+        Row: {
+          account_id: string | null;
+          created_at: string;
+          provider_app_id: string;
+          provider_subject: string;
+        };
+        Insert: {
+          account_id?: string | null;
+          created_at?: string;
+          provider_app_id: string;
+          provider_subject: string;
+        };
+        Update: {
+          account_id?: string | null;
+          created_at?: string;
+          provider_app_id?: string;
+          provider_subject?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "oauth_account_identities_account_id_fkey";
+            columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      oauth_provider_artifacts: {
+        Row: {
+          account_hash: string | null;
+          consumed_at: string | null;
+          created_at: string;
+          expires_at: string | null;
+          grant_hash: string | null;
+          id_hash: string;
+          model: string;
+          namespace: string;
+          payload: string;
+          uid_hash: string | null;
+          user_code_hash: string | null;
+        };
+        Insert: {
+          account_hash?: string | null;
+          consumed_at?: string | null;
+          created_at?: string;
+          expires_at?: string | null;
+          grant_hash?: string | null;
+          id_hash: string;
+          model: string;
+          namespace: string;
+          payload: string;
+          uid_hash?: string | null;
+          user_code_hash?: string | null;
+        };
+        Update: {
+          account_hash?: string | null;
+          consumed_at?: string | null;
+          created_at?: string;
+          expires_at?: string | null;
+          grant_hash?: string | null;
+          id_hash?: string;
+          model?: string;
+          namespace?: string;
+          payload?: string;
+          uid_hash?: string | null;
+          user_code_hash?: string | null;
+        };
+        Relationships: [];
+      };
+      oauth_rate_limits: {
+        Row: {
+          count: number;
+          expires_at: string;
+          key_hash: string;
+          namespace: string;
+        };
+        Insert: {
+          count: number;
+          expires_at: string;
+          key_hash: string;
+          namespace: string;
+        };
+        Update: {
+          count?: number;
+          expires_at?: string;
+          key_hash?: string;
+          namespace?: string;
+        };
+        Relationships: [];
+      };
+      oauth_revoked_grants: {
+        Row: {
+          grant_hash: string;
+          namespace: string;
+          revoked_at: string;
+        };
+        Insert: {
+          grant_hash: string;
+          namespace: string;
+          revoked_at?: string;
+        };
+        Update: {
+          grant_hash?: string;
+          namespace?: string;
+          revoked_at?: string;
+        };
+        Relationships: [];
+      };
       order_items: {
         Row: {
           created_at: string;
@@ -2366,6 +3629,54 @@ type BaseDatabase = {
           },
         ];
       };
+      organization_professionals: {
+        Row: {
+          confirmation_basis: string;
+          confirmed_by: string;
+          created_at: string;
+          id: string;
+          name: string;
+          organization_id: string;
+          roles: string[];
+          updated_at: string;
+        };
+        Insert: {
+          confirmation_basis?: string;
+          confirmed_by: string;
+          created_at?: string;
+          id?: string;
+          name: string;
+          organization_id: string;
+          roles: string[];
+          updated_at?: string;
+        };
+        Update: {
+          confirmation_basis?: string;
+          confirmed_by?: string;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          organization_id?: string;
+          roles?: string[];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "organization_professionals_confirmed_by_fkey";
+            columns: ["confirmed_by"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "organization_professionals_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       plans: {
         Row: {
           name: string;
@@ -2440,6 +3751,206 @@ type BaseDatabase = {
             columns: ["catalog"];
             isOneToOne: false;
             referencedRelation: "catalogs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      player_fan_contacts: {
+        Row: {
+          display_name: string | null;
+          email: string | null;
+          first_connected_at: string;
+          id: string;
+          last_connected_at: string;
+          owner_id: string;
+          provider: string;
+          provider_id: string;
+        };
+        Insert: {
+          display_name?: string | null;
+          email?: string | null;
+          first_connected_at?: string;
+          id?: string;
+          last_connected_at?: string;
+          owner_id: string;
+          provider: string;
+          provider_id: string;
+        };
+        Update: {
+          display_name?: string | null;
+          email?: string | null;
+          first_connected_at?: string;
+          id?: string;
+          last_connected_at?: string;
+          owner_id?: string;
+          provider?: string;
+          provider_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "player_fan_contacts_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      player_fans: {
+        Row: {
+          artist_id: string;
+          contact_id: string;
+          display_name: string | null;
+          email: string | null;
+          first_connected_at: string;
+          id: string;
+          last_connected_at: string;
+          owner_id: string;
+          provider: string;
+          provider_id: string;
+        };
+        Insert: {
+          artist_id: string;
+          contact_id: string;
+          display_name?: string | null;
+          email?: string | null;
+          first_connected_at?: string;
+          id?: string;
+          last_connected_at?: string;
+          owner_id: string;
+          provider: string;
+          provider_id: string;
+        };
+        Update: {
+          artist_id?: string;
+          contact_id?: string;
+          display_name?: string | null;
+          email?: string | null;
+          first_connected_at?: string;
+          id?: string;
+          last_connected_at?: string;
+          owner_id?: string;
+          provider?: string;
+          provider_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "player_fans_artist_id_fkey";
+            columns: ["artist_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "player_fans_contact_identity_fkey";
+            columns: ["contact_id", "owner_id", "provider", "provider_id"];
+            isOneToOne: false;
+            referencedRelation: "player_fan_contacts";
+            referencedColumns: ["id", "owner_id", "provider", "provider_id"];
+          },
+          {
+            foreignKeyName: "player_fans_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      player_listening_events: {
+        Row: {
+          event: string;
+          id: string;
+          listened_ms: number;
+          position_ms: number;
+          received_at: string;
+          session_id: string;
+          track_id: string | null;
+        };
+        Insert: {
+          event: string;
+          id: string;
+          listened_ms?: number;
+          position_ms?: number;
+          received_at?: string;
+          session_id: string;
+          track_id?: string | null;
+        };
+        Update: {
+          event?: string;
+          id?: string;
+          listened_ms?: number;
+          position_ms?: number;
+          received_at?: string;
+          session_id?: string;
+          track_id?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "player_listening_events_session_id_fkey";
+            columns: ["session_id"];
+            isOneToOne: false;
+            referencedRelation: "player_sessions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      player_sessions: {
+        Row: {
+          acquisition: Json;
+          connected_at: string | null;
+          created_at: string;
+          expires_at: string;
+          fan_id: string | null;
+          id: string;
+          last_event_at: string;
+          player_id: string;
+          provider: string;
+          reported_listening_ms: number;
+          revision: number;
+          scopes: string[];
+        };
+        Insert: {
+          acquisition?: Json;
+          connected_at?: string | null;
+          created_at?: string;
+          expires_at: string;
+          fan_id?: string | null;
+          id: string;
+          last_event_at?: string;
+          player_id: string;
+          provider: string;
+          reported_listening_ms?: number;
+          revision: number;
+          scopes?: string[];
+        };
+        Update: {
+          acquisition?: Json;
+          connected_at?: string | null;
+          created_at?: string;
+          expires_at?: string;
+          fan_id?: string | null;
+          id?: string;
+          last_event_at?: string;
+          player_id?: string;
+          provider?: string;
+          reported_listening_ms?: number;
+          revision?: number;
+          scopes?: string[];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "player_sessions_fan_id_fkey";
+            columns: ["fan_id"];
+            isOneToOne: false;
+            referencedRelation: "player_fans";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "player_sessions_player_id_fkey";
+            columns: ["player_id"];
+            isOneToOne: false;
+            referencedRelation: "release_players";
             referencedColumns: ["id"];
           },
         ];
@@ -2548,6 +4059,48 @@ type BaseDatabase = {
           timestamp?: number | null;
         };
         Relationships: [];
+      };
+      professional_roster_requests: {
+        Row: {
+          actor_id: string;
+          created_at: string;
+          input: Json;
+          organization_id: string;
+          request_key: string;
+          result: Json;
+        };
+        Insert: {
+          actor_id: string;
+          created_at?: string;
+          input: Json;
+          organization_id: string;
+          request_key: string;
+          result: Json;
+        };
+        Update: {
+          actor_id?: string;
+          created_at?: string;
+          input?: Json;
+          organization_id?: string;
+          request_key?: string;
+          result?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "professional_roster_requests_actor_id_fkey";
+            columns: ["actor_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "professional_roster_requests_organization_id_fkey";
+            columns: ["organization_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       project_collaborators: {
         Row: {
@@ -2721,6 +4274,82 @@ type BaseDatabase = {
             foreignKeyName: "pulse_accounts_account_id_fkey";
             columns: ["account_id"];
             isOneToOne: true;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      release_players: {
+        Row: {
+          allowed_origins: string[];
+          apple_url: string | null;
+          artist_id: string;
+          artwork: string | null;
+          audio_url: string | null;
+          created_at: string;
+          created_by: string;
+          enabled: boolean;
+          free_playback: string;
+          id: string;
+          name: string;
+          owner_id: string;
+          revision: number;
+          spotify_url: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          allowed_origins?: string[];
+          apple_url?: string | null;
+          artist_id: string;
+          artwork?: string | null;
+          audio_url?: string | null;
+          created_at?: string;
+          created_by: string;
+          enabled?: boolean;
+          free_playback?: string;
+          id?: string;
+          name: string;
+          owner_id: string;
+          revision?: number;
+          spotify_url?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          allowed_origins?: string[];
+          apple_url?: string | null;
+          artist_id?: string;
+          artwork?: string | null;
+          audio_url?: string | null;
+          created_at?: string;
+          created_by?: string;
+          enabled?: boolean;
+          free_playback?: string;
+          id?: string;
+          name?: string;
+          owner_id?: string;
+          revision?: number;
+          spotify_url?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "release_players_artist_id_fkey";
+            columns: ["artist_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "release_players_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "release_players_owner_id_fkey";
+            columns: ["owner_id"];
+            isOneToOne: false;
             referencedRelation: "accounts";
             referencedColumns: ["id"];
           },
@@ -3045,6 +4674,7 @@ type BaseDatabase = {
       scheduled_posts: {
         Row: {
           account_id: string;
+          artist_account_id: string | null;
           cover_url: string | null;
           created_at: string;
           created_by_account_id: string | null;
@@ -3066,6 +4696,7 @@ type BaseDatabase = {
         };
         Insert: {
           account_id: string;
+          artist_account_id?: string | null;
           cover_url?: string | null;
           created_at?: string;
           created_by_account_id?: string | null;
@@ -3087,6 +4718,7 @@ type BaseDatabase = {
         };
         Update: {
           account_id?: string;
+          artist_account_id?: string | null;
           cover_url?: string | null;
           created_at?: string;
           created_by_account_id?: string | null;
@@ -3110,6 +4742,13 @@ type BaseDatabase = {
           {
             foreignKeyName: "scheduled_posts_account_id_fkey";
             columns: ["account_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "scheduled_posts_artist_account_id_fkey";
+            columns: ["artist_account_id"];
             isOneToOne: false;
             referencedRelation: "accounts";
             referencedColumns: ["id"];
@@ -3279,6 +4918,368 @@ type BaseDatabase = {
           {
             foreignKeyName: "sessions_artist_id_fkey";
             columns: ["artist_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      site_activity_events: {
+        Row: {
+          created_at: string;
+          event: string;
+          id: string;
+          site_id: string;
+          visit_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          event: string;
+          id: string;
+          site_id: string;
+          visit_id: string;
+        };
+        Update: {
+          created_at?: string;
+          event?: string;
+          id?: string;
+          site_id?: string;
+          visit_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "site_activity_events_site_id_fkey";
+            columns: ["site_id"];
+            isOneToOne: false;
+            referencedRelation: "sites";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      site_fan_configs: {
+        Row: {
+          enabled: boolean;
+          marketing_text: string;
+          return_url: string;
+          revision: number;
+          site_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          enabled?: boolean;
+          marketing_text: string;
+          return_url: string;
+          revision?: number;
+          site_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          enabled?: boolean;
+          marketing_text?: string;
+          return_url?: string;
+          revision?: number;
+          site_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "site_fan_configs_site_id_fkey";
+            columns: ["site_id"];
+            isOneToOne: true;
+            referencedRelation: "sites";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      site_fan_connections: {
+        Row: {
+          connected_at: string;
+          fan_id: string;
+          id: string;
+          state_hash: string;
+        };
+        Insert: {
+          connected_at?: string;
+          fan_id: string;
+          id?: string;
+          state_hash: string;
+        };
+        Update: {
+          connected_at?: string;
+          fan_id?: string;
+          id?: string;
+          state_hash?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "site_fan_connections_fan_id_fkey";
+            columns: ["fan_id"];
+            isOneToOne: false;
+            referencedRelation: "site_fans";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      site_fan_marketing_consents: {
+        Row: {
+          accepted_at: string;
+          config_revision: number;
+          connection_id: string;
+          consent_text: string;
+        };
+        Insert: {
+          accepted_at?: string;
+          config_revision: number;
+          connection_id: string;
+          consent_text: string;
+        };
+        Update: {
+          accepted_at?: string;
+          config_revision?: number;
+          connection_id?: string;
+          consent_text?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "site_fan_marketing_consents_connection_id_fkey";
+            columns: ["connection_id"];
+            isOneToOne: true;
+            referencedRelation: "site_fan_connections";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      site_fan_oauth_sessions: {
+        Row: {
+          accepted_at: string;
+          browser_hash: string;
+          config_revision: number;
+          consumed_at: string | null;
+          expires_at: string;
+          marketing_text: string;
+          return_url: string;
+          scopes: string[];
+          site_id: string;
+          state_hash: string;
+          verifier: string;
+        };
+        Insert: {
+          accepted_at?: string;
+          browser_hash: string;
+          config_revision: number;
+          consumed_at?: string | null;
+          expires_at: string;
+          marketing_text: string;
+          return_url: string;
+          scopes: string[];
+          site_id: string;
+          state_hash: string;
+          verifier: string;
+        };
+        Update: {
+          accepted_at?: string;
+          browser_hash?: string;
+          config_revision?: number;
+          consumed_at?: string | null;
+          expires_at?: string;
+          marketing_text?: string;
+          return_url?: string;
+          scopes?: string[];
+          site_id?: string;
+          state_hash?: string;
+          verifier?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "site_fan_oauth_sessions_site_id_fkey";
+            columns: ["site_id"];
+            isOneToOne: false;
+            referencedRelation: "sites";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      site_fan_permissions: {
+        Row: {
+          connection_id: string;
+          granted_at: string;
+          scopes: string[];
+        };
+        Insert: {
+          connection_id: string;
+          granted_at?: string;
+          scopes: string[];
+        };
+        Update: {
+          connection_id?: string;
+          granted_at?: string;
+          scopes?: string[];
+        };
+        Relationships: [
+          {
+            foreignKeyName: "site_fan_permissions_connection_id_fkey";
+            columns: ["connection_id"];
+            isOneToOne: true;
+            referencedRelation: "site_fan_connections";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      site_fans: {
+        Row: {
+          display_name: string | null;
+          email: string | null;
+          first_connected_at: string;
+          id: string;
+          last_connected_at: string;
+          site_id: string;
+          spotify_id: string;
+        };
+        Insert: {
+          display_name?: string | null;
+          email?: string | null;
+          first_connected_at?: string;
+          id?: string;
+          last_connected_at?: string;
+          site_id: string;
+          spotify_id: string;
+        };
+        Update: {
+          display_name?: string | null;
+          email?: string | null;
+          first_connected_at?: string;
+          id?: string;
+          last_connected_at?: string;
+          site_id?: string;
+          spotify_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "site_fans_site_id_fkey";
+            columns: ["site_id"];
+            isOneToOne: false;
+            referencedRelation: "sites";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      site_request_windows: {
+        Row: {
+          key: string;
+          requests: number;
+          window_start: string;
+        };
+        Insert: {
+          key: string;
+          requests: number;
+          window_start: string;
+        };
+        Update: {
+          key?: string;
+          requests?: number;
+          window_start?: string;
+        };
+        Relationships: [];
+      };
+      site_signups: {
+        Row: {
+          consent_text: string;
+          created_at: string;
+          email: string;
+          id: string;
+          site_id: string;
+        };
+        Insert: {
+          consent_text: string;
+          created_at?: string;
+          email: string;
+          id?: string;
+          site_id: string;
+        };
+        Update: {
+          consent_text?: string;
+          created_at?: string;
+          email?: string;
+          id?: string;
+          site_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "site_signups_site_id_fkey";
+            columns: ["site_id"];
+            isOneToOne: false;
+            referencedRelation: "sites";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      sites: {
+        Row: {
+          artist_id: string | null;
+          assets: Json;
+          brief: string;
+          created_at: string;
+          created_by: string;
+          draft: Json | null;
+          id: string;
+          name: string;
+          owner_id: string;
+          published: Json | null;
+          published_at: string | null;
+          release_url: string;
+          revision: number;
+          updated_at: string;
+        };
+        Insert: {
+          artist_id?: string | null;
+          assets?: Json;
+          brief?: string;
+          created_at?: string;
+          created_by: string;
+          draft?: Json | null;
+          id?: string;
+          name: string;
+          owner_id: string;
+          published?: Json | null;
+          published_at?: string | null;
+          release_url?: string;
+          revision?: number;
+          updated_at?: string;
+        };
+        Update: {
+          artist_id?: string | null;
+          assets?: Json;
+          brief?: string;
+          created_at?: string;
+          created_by?: string;
+          draft?: Json | null;
+          id?: string;
+          name?: string;
+          owner_id?: string;
+          published?: Json | null;
+          published_at?: string | null;
+          release_url?: string;
+          revision?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "sites_artist_id_fkey";
+            columns: ["artist_id"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "sites_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "sites_owner_id_fkey";
+            columns: ["owner_id"];
             isOneToOne: false;
             referencedRelation: "accounts";
             referencedColumns: ["id"];
@@ -4215,30 +6216,15 @@ type BaseDatabase = {
       [_ in never]: never;
     };
     Functions: {
-      confirm_professional_roster: {
-        Args: { p_actor: string; p_org: string; p_key: string; p_input: Json };
-        Returns: Json;
-      };
-      list_professional_roster: {
-        Args: { p_actor: string; p_org: string; p_after?: string };
-        Returns: Json;
-      };
-
-      create_artist_with_roster: {
-        Args: { p_account_id: string; p_organization_id: string | null; p_name: string };
-        Returns: Json;
-      };
-
-      onboard_spotify_artist: {
+      accept_context_result: {
         Args: {
-          p_account_id: string;
-          p_organization_id: string | null;
-          p_name: string;
-          p_spotify_artist_id: string;
+          p_document: string;
+          p_owner: string;
+          p_result: string;
+          p_revision: number;
         };
-        Returns: { artist_id: string; created: boolean }[];
+        Returns: boolean;
       };
-
       accept_invitation: {
         Args: { token: string; user_id: string };
         Returns: string;
@@ -4250,8 +6236,64 @@ type BaseDatabase = {
         };
         Returns: Database["public"]["Tables"]["invitations"]["Row"][];
       };
+      adopt_context_guest: {
+        Args: { p_actor: string; p_hash: string; p_owner: string };
+        Returns: Json;
+      };
+      authorize_context_case_actor: {
+        Args: { p_actor: string; p_owner: string };
+        Returns: undefined;
+      };
       can_action_account_member: {
         Args: { target_team_account_id: string; target_user_id: string };
+        Returns: boolean;
+      };
+      claim_catalog_stream_run: {
+        Args: { p_catalog_id: string; p_day: string };
+        Returns: {
+          catalog_id: string;
+          coverage: Json;
+          created_at: string;
+          error: string | null;
+          finished_at: string | null;
+          id: string;
+          revision: string;
+          scheduled_day: string;
+          since: string;
+          status: string;
+          until: string;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "catalog_stream_runs";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      claim_context_enrichment: {
+        Args: { p_module: Json; p_owner: string; p_request: string };
+        Returns: Json;
+      };
+      claim_context_execution_node: {
+        Args: { p_execution: string; p_node_key: string; p_owner: string };
+        Returns: Json;
+      };
+      claim_context_guest_worker: {
+        Args: { p_id: string; p_token: string };
+        Returns: Json;
+      };
+      claim_context_release_track_isrcs: {
+        Args: {
+          p_fingerprint: string;
+          p_owner: string;
+          p_release_result: string;
+          p_request: string;
+          p_subject: string;
+        };
+        Returns: Json;
+      };
+      claim_context_request: {
+        Args: { p_owner: string; p_request: string; p_token: string };
         Returns: boolean;
       };
       claim_songstats_backfill_rows: {
@@ -4270,6 +6312,81 @@ type BaseDatabase = {
           isOneToOne: false;
           isSetofReturn: true;
         };
+      };
+      cleanup_site_transient_data: { Args: never; Returns: undefined };
+      commit_catalog_stream_track: {
+        Args: { p_isrc: string; p_result: Json; p_run_id: string };
+        Returns: boolean;
+      };
+      commit_spotify_context: {
+        Args: {
+          p_owner: string;
+          p_payload: Json;
+          p_request: string;
+          p_token: string;
+        };
+        Returns: Json;
+      };
+      complete_context_enrichment: {
+        Args: {
+          p_attempt: string;
+          p_owner: string;
+          p_request: string;
+          p_result: Json;
+        };
+        Returns: Json;
+      };
+      complete_context_guest: {
+        Args: { p_id: string; p_payload: Json; p_token: string };
+        Returns: Json;
+      };
+      complete_context_release_track_isrcs: {
+        Args: {
+          p_attempt: string;
+          p_owner: string;
+          p_payload: Json;
+          p_release_result: string;
+          p_request: string;
+          p_subject: string;
+        };
+        Returns: Json;
+      };
+      complete_site_fan_connection: {
+        Args: {
+          p_display_name: string;
+          p_email: string;
+          p_scopes: string[];
+          p_spotify_id: string;
+          p_state_hash: string;
+        };
+        Returns: string;
+      };
+      confirm_professional_roster: {
+        Args: { p_actor: string; p_input: Json; p_key: string; p_org: string };
+        Returns: Json;
+      };
+      connect_player_fan: {
+        Args: {
+          p_display_name: string;
+          p_email: string;
+          p_revision: number;
+          p_scopes: string[];
+          p_session: string;
+          p_spotify_id: string;
+        };
+        Returns: string;
+      };
+      consume_oauth_rate_limit: {
+        Args: { p_keys: string[]; p_limits: number[]; p_namespace: string };
+        Returns: number;
+      };
+      context_guest_worker_scope: {
+        Args: { p_id: string; p_token: string };
+        Returns: Json;
+      };
+      correct_context_spotify_release: {
+        Args: { p_owner: string; p_request: string; p_subject: string };
+        Returns: Json;
       };
       count_reports_by_day: {
         Args: { end_date: string; start_date: string };
@@ -4291,6 +6408,94 @@ type BaseDatabase = {
           count: number;
           date_key: string;
         }[];
+      };
+      create_artist_with_roster: {
+        Args: {
+          p_account_id: string;
+          p_name: string;
+          p_organization_id: string;
+        };
+        Returns: Json;
+      };
+      create_catalog_context_request: {
+        Args: {
+          p_actor: string;
+          p_catalog: string;
+          p_key: string;
+          p_owner: string;
+        };
+        Returns: Json;
+      };
+      create_context_artist_request: {
+        Args: {
+          p_actor: string;
+          p_artist: string;
+          p_key: string;
+          p_owner: string;
+        };
+        Returns: Json;
+      };
+      create_context_campaign_brief_request: {
+        Args: { p_actor: string; p_brief: Json; p_key: string; p_owner: string };
+        Returns: Json;
+      };
+      create_context_company_name_request: {
+        Args: {
+          p_actor: string;
+          p_key: string;
+          p_name: string;
+          p_owner: string;
+        };
+        Returns: Json;
+      };
+      create_context_execution: {
+        Args: {
+          p_execution: string;
+          p_owner: string;
+          p_plan: Json;
+          p_policy_version: string;
+          p_request: string;
+        };
+        Returns: Json;
+      };
+      create_context_release_request: {
+        Args: {
+          p_actor: string;
+          p_album: string;
+          p_key: string;
+          p_owner: string;
+        };
+        Returns: Json;
+      };
+      create_context_request: {
+        Args: {
+          p_actor: string;
+          p_fingerprint: string;
+          p_input: Json;
+          p_key: string;
+          p_owner: string;
+          p_track: string;
+        };
+        Returns: Json;
+      };
+      create_context_songwriter_name_request: {
+        Args: {
+          p_actor: string;
+          p_key: string;
+          p_name: string;
+          p_owner: string;
+        };
+        Returns: Json;
+      };
+      create_context_supporting_text_request: {
+        Args: {
+          p_actor: string;
+          p_key: string;
+          p_owner: string;
+          p_text: string;
+          p_title: string;
+        };
+        Returns: Json;
       };
       create_invitation: {
         Args: { account_id: string; email: string; role: string };
@@ -4325,7 +6530,34 @@ type BaseDatabase = {
         };
         Returns: undefined;
       };
+      expand_context_catalog_members: {
+        Args: {
+          p_after_isrc?: string;
+          p_limit?: number;
+          p_owner: string;
+          p_request: string;
+          p_subject: string;
+        };
+        Returns: Json;
+      };
       extract_domain: { Args: { email: string }; Returns: string };
+      fail_context_enrichment: {
+        Args: { p_attempt: string; p_owner: string };
+        Returns: boolean;
+      };
+      fail_context_guest: {
+        Args: { p_id: string; p_token: string };
+        Returns: boolean;
+      };
+      fail_context_request: {
+        Args: {
+          p_error: string;
+          p_owner: string;
+          p_request: string;
+          p_token: string;
+        };
+        Returns: boolean;
+      };
       get_account_invitations: {
         Args: { account_slug: string };
         Returns: {
@@ -4493,6 +6725,305 @@ type BaseDatabase = {
         Args: { account_id: string; user_id: string };
         Returns: boolean;
       };
+      list_context_artist_request_target: {
+        Args: { p_owner: string; p_request: string };
+        Returns: Json;
+      };
+      list_context_campaign_request_target: {
+        Args: { p_owner: string; p_request: string };
+        Returns: Json;
+      };
+      list_context_catalog_member_targets: {
+        Args: {
+          p_after_isrc?: string;
+          p_limit?: number;
+          p_owner: string;
+          p_request: string;
+          p_subject: string;
+        };
+        Returns: Json;
+      };
+      list_context_catalog_members: {
+        Args: {
+          p_after_isrc?: string;
+          p_limit?: number;
+          p_owner: string;
+          p_request: string;
+          p_subject: string;
+        };
+        Returns: Json;
+      };
+      list_context_company_request_target: {
+        Args: { p_owner: string; p_request: string };
+        Returns: Json;
+      };
+      list_context_material_request_target: {
+        Args: { p_owner: string; p_request: string };
+        Returns: Json;
+      };
+      list_context_release_cases: {
+        Args: { p_actor: string; p_after?: string; p_owner: string };
+        Returns: Json;
+      };
+      list_context_release_request_target: {
+        Args: { p_owner: string; p_request: string };
+        Returns: Json;
+      };
+      list_context_release_track_slots: {
+        Args: {
+          p_after_slot?: number;
+          p_limit?: number;
+          p_owner: string;
+          p_request: string;
+          p_subject: string;
+        };
+        Returns: Json;
+      };
+      list_context_request_executions: {
+        Args: { p_owner: string; p_request: string };
+        Returns: Json;
+      };
+      list_context_request_targets: {
+        Args: { p_owner: string; p_request: string };
+        Returns: Json;
+      };
+      list_context_songwriter_request_target: {
+        Args: { p_owner: string; p_request: string };
+        Returns: Json;
+      };
+      list_professional_roster: {
+        Args: { p_actor: string; p_after?: string; p_org: string };
+        Returns: Json;
+      };
+      oauth_store_consume: {
+        Args: { p_id_hash: string; p_model: string; p_namespace: string };
+        Returns: boolean;
+      };
+      oauth_store_destroy: {
+        Args: { p_id_hash: string; p_model: string; p_namespace: string };
+        Returns: undefined;
+      };
+      oauth_store_find: {
+        Args: {
+          p_hash: string;
+          p_index: string;
+          p_model: string;
+          p_namespace: string;
+        };
+        Returns: Json;
+      };
+      oauth_store_list_connections: {
+        Args: { p_account_hash: string; p_namespace: string };
+        Returns: Json;
+      };
+      oauth_store_revoke_grant: {
+        Args: { p_grant_hash: string; p_namespace: string };
+        Returns: undefined;
+      };
+      oauth_store_upsert: {
+        Args: {
+          p_account_hash?: string;
+          p_expires_in: number;
+          p_grant_hash: string;
+          p_id_hash: string;
+          p_model: string;
+          p_namespace: string;
+          p_payload: string;
+          p_uid_hash: string;
+          p_user_code_hash: string;
+        };
+        Returns: undefined;
+      };
+      onboard_spotify_artist: {
+        Args: {
+          p_account_id: string;
+          p_name: string;
+          p_organization_id: string;
+          p_spotify_artist_id: string;
+        };
+        Returns: {
+          artist_id: string;
+          created: boolean;
+        }[];
+      };
+      purge_expired_context_guests: { Args: never; Returns: number };
+      read_catalog_stream_days: {
+        Args: {
+          p_catalog_id: string;
+          p_isrc: string;
+          p_since: string;
+          p_until: string;
+        };
+        Returns: {
+          catalog_id: string;
+          date: string;
+          isrc: string;
+          provider_recording_id: string;
+          retrieved_at: string;
+          run_id: string;
+          source_hash: string;
+          streams: number | null;
+        }[];
+        SetofOptions: {
+          from: "*";
+          to: "catalog_stream_observations";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      read_context_brief: {
+        Args: { p_brief: string; p_owner: string };
+        Returns: Json;
+      };
+      read_context_documents: {
+        Args: { p_owner: string; p_request: string };
+        Returns: Json;
+      };
+      read_context_execution: {
+        Args: { p_execution: string; p_owner: string };
+        Returns: Json;
+      };
+      read_context_guest: { Args: { p_hash: string }; Returns: Json };
+      read_context_release_case: {
+        Args: { p_actor: string; p_owner: string; p_request: string };
+        Returns: Json;
+      };
+      read_context_release_case_review: {
+        Args: { p_actor: string; p_owner: string; p_review: string };
+        Returns: Json;
+      };
+      read_context_request: {
+        Args: { p_owner: string; p_request: string };
+        Returns: Json;
+      };
+      read_player_report: {
+        Args: { p_offset?: number; p_owner: string; p_player: string };
+        Returns: Json;
+      };
+      record_credit_charge_once: {
+        Args: {
+          p_account_id: string;
+          p_amount: number;
+          p_event: Json;
+          p_operation_key: string;
+        };
+        Returns: Json;
+      };
+      record_player_listening: {
+        Args: {
+          p_event: string;
+          p_id: string;
+          p_listened: number;
+          p_position: number;
+          p_provider: string;
+          p_revision: number;
+          p_session: string;
+          p_track: string;
+        };
+        Returns: boolean;
+      };
+      resolve_context_artist: {
+        Args: { p_owner: string; p_request: string; p_subject: string };
+        Returns: Json;
+      };
+      resolve_context_catalog: {
+        Args: { p_owner: string; p_request: string; p_subject: string };
+        Returns: Json;
+      };
+      resolve_context_catalog_member_recording: {
+        Args: { p_owner: string; p_recording: string; p_request: string };
+        Returns: Json;
+      };
+      resolve_context_recording_isrc: {
+        Args: { p_owner: string; p_request: string; p_subject: string };
+        Returns: Json;
+      };
+      resolve_context_songstats_lookup: {
+        Args: {
+          p_identifier: string;
+          p_kind: string;
+          p_owner: string;
+          p_request: string;
+          p_subject: string;
+        };
+        Returns: Json;
+      };
+      resolve_context_spotify_release: {
+        Args: { p_owner: string; p_request: string; p_subject: string };
+        Returns: Json;
+      };
+      resolve_oauth_account: {
+        Args: {
+          p_app_id: string;
+          p_subject: string;
+          p_verified_emails: string[];
+        };
+        Returns: string;
+      };
+      review_context_release_case: {
+        Args: {
+          p_actor: string;
+          p_decision: string;
+          p_fingerprint: string;
+          p_key: string;
+          p_note: string;
+          p_owner: string;
+          p_request: string;
+        };
+        Returns: Json;
+      };
+      review_context_release_track_identities: {
+        Args: { p_owner: string; p_request: string; p_subject: string };
+        Returns: Json;
+      };
+      save_context_brief: {
+        Args: { p_key: string; p_owner: string; p_snapshot: Json };
+        Returns: Json;
+      };
+      save_context_execution_outcome: {
+        Args: {
+          p_execution: string;
+          p_node_key: string;
+          p_outcome: Json;
+          p_owner: string;
+        };
+        Returns: Json;
+      };
+      save_context_metadata: {
+        Args: {
+          p_captured?: string;
+          p_content: Json;
+          p_owner: string;
+          p_request: string;
+          p_subject: string;
+          p_topic: string;
+          p_url: string;
+        };
+        Returns: string;
+      };
+      save_context_spotify_release_track_slots: {
+        Args: {
+          p_owner: string;
+          p_request: string;
+          p_result: string;
+          p_subject: string;
+        };
+        Returns: Json;
+      };
+      site_activity_summary: { Args: { p_site_id: string }; Returns: Json };
+      start_context_guest: {
+        Args: {
+          p_daily_limit: number;
+          p_fingerprint: string;
+          p_hash: string;
+          p_input: Json;
+        };
+        Returns: Json;
+      };
+      take_site_request: {
+        Args: { p_key: string; p_limit: number };
+        Returns: boolean;
+      };
       team_account_workspace: {
         Args: { account_slug: string };
         Returns: {
@@ -4578,6 +7109,10 @@ type BaseDatabase = {
           isOneToOne: true;
           isSetofReturn: false;
         };
+      };
+      withdraw_context_source: {
+        Args: { p_owner: string; p_source: string };
+        Returns: boolean;
       };
     };
     Enums: {
@@ -4762,10 +7297,3 @@ export const Constants = {
     },
   },
 } as const;
-
-export type Database = Omit<BaseDatabase, "public"> & {
-  public: Omit<BaseDatabase["public"], "Tables" | "Functions"> & {
-    Tables: BaseDatabase["public"]["Tables"] & CatalogStreamTables;
-    Functions: BaseDatabase["public"]["Functions"] & CatalogStreamFunctions;
-  };
-};
