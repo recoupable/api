@@ -7,6 +7,9 @@ import { startPost } from "../startPost";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({ getCorsHeaders: vi.fn(() => ({})) }));
 vi.mock("../validateCreatePostBody", () => ({ validateCreatePostBody: vi.fn() }));
+vi.mock("../validatePostAccounts", () => ({
+  validatePostAccounts: vi.fn().mockResolvedValue(null),
+}));
 vi.mock("../findConnectedAccountId", () => ({ findConnectedAccountId: vi.fn() }));
 vi.mock("../startPost", () => ({ startPost: vi.fn() }));
 vi.mock("../ensurePostCredits", () => ({ ensurePostCredits: vi.fn(async () => null) }));

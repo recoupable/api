@@ -5,6 +5,7 @@ import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateCreatePostBody } from "@/lib/publishing/validateCreatePostBody";
 import { findConnectedAccountId } from "@/lib/publishing/findConnectedAccountId";
 import { ensurePostCredits } from "@/lib/publishing/ensurePostCredits";
+import { validatePostAccounts } from "@/lib/publishing/validatePostAccounts";
 import { startPost } from "@/lib/publishing/startPost";
 
 /**
@@ -23,8 +24,11 @@ export async function createPostHandler(request: NextRequest): Promise<NextRespo
   if (validated instanceof NextResponse) return validated;
 
   try {
+    const invalidAccounts = await validatePostAccounts(validated);
+    if (invalidAccounts) return invalidAccounts;
+
     const connectedAccountId = await findConnectedAccountId(
-      validated.accountId,
+      validated.artist_account_id ?? validated.accountId,
       validated.platform,
     );
     if (!connectedAccountId) {

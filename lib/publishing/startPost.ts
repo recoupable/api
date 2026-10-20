@@ -23,6 +23,7 @@ export async function startPost(
 ): Promise<Tables<"scheduled_posts">> {
   const row = await insertScheduledPost({
     account_id: validated.accountId,
+    artist_account_id: validated.artist_account_id ?? null,
     platform: validated.platform,
     sub_account_id: validated.sub_account_id ?? null,
     video_url: validated.video_url,

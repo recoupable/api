@@ -26,6 +26,7 @@ export async function getPostsHandler(request: NextRequest): Promise<NextRespons
   try {
     const rows = await selectScheduledPosts({
       accountId: authResult.accountId,
+      artistAccountId: validated.artist_account_id,
       status: validated.status,
       platform: validated.platform,
       limit: validated.limit,

@@ -4,6 +4,7 @@ import { Tables } from "@/types/database.types";
 export type SelectScheduledPostsParams = {
   id?: string;
   accountId?: string;
+  artistAccountId?: string;
   status?: string;
   platform?: string;
   limit?: number;
@@ -29,6 +30,7 @@ export async function selectScheduledPosts(
 
   if (params.id) query = query.eq("id", params.id);
   if (params.accountId) query = query.eq("account_id", params.accountId);
+  if (params.artistAccountId) query = query.eq("artist_account_id", params.artistAccountId);
   if (params.status) query = query.eq("status", params.status);
   if (params.platform) query = query.eq("platform", params.platform);
   if (params.limit) {

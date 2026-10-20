@@ -12,7 +12,8 @@ import type { PublishResult } from "@/lib/publishing/publish/types";
  * failure is recorded once and the caller decides whether to post again.
  *
  * The connection is resolved here, not at create time, so a post always uses
- * the account's connection as it is when publishing.
+ * the connection as it is when publishing: the artist's when the post names
+ * one, else the account's own.
  *
  * @param postId - The post id.
  * @returns The live URL and text check.
@@ -22,13 +23,11 @@ export async function publishPostStep(postId: string): Promise<PublishResult> {
   const [post] = await selectScheduledPosts({ id: postId });
   if (!post) throw new Error(`Post ${postId} not found`);
 
-  const connectedAccountId = await findConnectedAccountId(
-    post.account_id,
-    post.platform as PostPlatform,
-  );
+  const owner = post.artist_account_id ?? post.account_id;
+  const connectedAccountId = await findConnectedAccountId(owner, post.platform as PostPlatform);
   if (!connectedAccountId) throw new Error(`${post.platform} is not connected for this account`);
 
-  return publishToPlatform({ target: { accountId: post.account_id, connectedAccountId }, post });
+  return publishToPlatform({ target: { accountId: owner, connectedAccountId }, post });
 }
 
 publishPostStep.maxRetries = 0;
