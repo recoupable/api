@@ -18,9 +18,11 @@ export type { FlamingoGenerateResult };
  */
 export async function callFlamingoGenerate(
   params: FlamingoGenerateBody,
+  options?: { signal?: AbortSignal },
 ): Promise<FlamingoGenerateResult> {
   const response = await fetch(FLAMINGO_GENERATE_URL, {
     method: "POST",
+    ...(options?.signal ? { signal: options.signal } : {}),
     headers: {
       "Content-Type": "application/json",
       ...getModalProxyAuthHeaders(),
