@@ -30,6 +30,7 @@ export async function sendEmailHandler(request: NextRequest): Promise<NextRespon
       headers = {},
       chat_id,
       accountId,
+      idempotency_key,
     } = validated.data;
     const result = await processAndSendEmail({
       to,
@@ -39,6 +40,7 @@ export async function sendEmailHandler(request: NextRequest): Promise<NextRespon
       html,
       headers,
       room_id: chat_id,
+      idempotencyKey: idempotency_key,
     });
 
     if (result.success === false) {
