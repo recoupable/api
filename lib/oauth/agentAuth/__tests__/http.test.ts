@@ -48,6 +48,79 @@ async function setup() {
   return { ...f, json };
 }
 
+it("classifies malformed, reused, and racing consent tickets as client errors", async () => {
+  const f = await setup();
+  const registration = await f.service.create("alice@example.com");
+  const attempt = new URL(registration.claim.verification_uri).searchParams.get(
+    "claim_attempt_token",
+  )!;
+  const consent = await f.service.load(attempt, identity);
+  const headers = { Origin: f.config.consentOrigin, Authorization: "Bearer alice-session" };
+  const complete = (csrf: string) =>
+    f.json(
+      "/agent/identity/claim/complete",
+      {
+        claim_attempt_token: attempt,
+        csrf,
+        decision: "approve",
+        user_code: registration.claim.user_code,
+      },
+      headers,
+    );
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  const consume = vi.spyOn(f.store, "consume");
+  try {
+    for (const csrf of ["malformed", "a".repeat(43)]) {
+      const response = await complete(csrf);
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ error: "invalid_request" });
+    }
+    // Simulate another request winning the ticket's atomic consume after this read.
+    consume.mockResolvedValueOnce(false);
+    const raced = await complete(consent.csrf);
+    expect(raced.status).toBe(400);
+    expect(await raced.json()).toEqual({ error: "invalid_request" });
+    // The registration remains pending, but its ticket has already been consumed.
+    await f.adapter("RecoupInteraction").consume(consent.csrf);
+    const reused = await complete(consent.csrf);
+    expect(reused.status).toBe(400);
+    expect(await reused.json()).toEqual({ error: "invalid_request" });
+    expect(log).not.toHaveBeenCalled();
+  } finally {
+    consume.mockRestore();
+    log.mockRestore();
+  }
+});
+
+it("keeps ticket storage failures retryable instead of classifying them as bad consent", async () => {
+  const f = await setup();
+  const registration = await f.service.create("alice@example.com");
+  const attempt = new URL(registration.claim.verification_uri).searchParams.get(
+    "claim_attempt_token",
+  )!;
+  const consent = await f.service.load(attempt, identity);
+  const consume = vi.spyOn(f.store, "consume").mockRejectedValueOnce(new Error("private failure"));
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    const response = await f.json(
+      "/agent/identity/claim/complete",
+      {
+        claim_attempt_token: attempt,
+        csrf: consent.csrf,
+        decision: "approve",
+        user_code: registration.claim.user_code,
+      },
+      { Origin: f.config.consentOrigin, Authorization: "Bearer alice-session" },
+    );
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({ error: "temporarily_unavailable" });
+    expect(JSON.stringify(log.mock.calls)).not.toContain("private failure");
+  } finally {
+    consume.mockRestore();
+    log.mockRestore();
+  }
+});
+
 it("serves a complete registration through the standard token endpoint with real provider tokens", async () => {
   const f = await setup();
   const discovery = await fetch(`${f.config.issuer}/.well-known/openid-configuration`).then(r =>

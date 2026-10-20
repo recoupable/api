@@ -1,4 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
+import { errors } from "oidc-provider";
 import { z } from "zod";
 import type { AgentClaimIdentity, AgentRegistration } from "./AgentRegistration";
 import { AgentRegistrationError } from "./AgentRegistrationError";
@@ -46,7 +47,16 @@ export async function decideAgentClaim(
         throw new AgentRegistrationError("invalid_user_code");
       }
     }
-    await tickets.consume(decision.csrf, binding(record, identity));
+    try {
+      await tickets.consume(decision.csrf, binding(record, identity));
+    } catch (error) {
+      if (
+        error instanceof errors.InvalidGrant ||
+        (error instanceof Error && error.message === "Invalid OAuth approval")
+      )
+        throw new AgentRegistrationError("invalid_request");
+      throw error;
+    }
     // The registration lock, not the browser ticket, decides which account can bind it.
     const approved = decision.decision === "approve";
     const next: AgentRegistration = {

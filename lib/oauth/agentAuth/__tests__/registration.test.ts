@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { decodeJwt, importJWK, SignJWT, type JWK } from "jose";
 import { fixture, identity } from "./fixture";
 import { createOAuthConnections } from "../../createOAuthConnections";
@@ -23,6 +23,28 @@ async function approve(f: Awaited<ReturnType<typeof start>>) {
 }
 
 describe("user-verified personal read-only agent registration", () => {
+  it("revokes partial approval so polling terminates instead of remaining pending", async () => {
+    const f = await start();
+    const upsert = f.store.upsert.bind(f.store);
+    const save = vi.spyOn(f.store, "upsert").mockImplementation(async row => {
+      if (row.model === "RecoupGrant") throw new Error("injected database failure");
+      await upsert(row);
+    });
+    try {
+      await expect(approve(f)).rejects.toThrow("OAuth storage unavailable");
+      await expect(f.service.poll(f.registration.claim_token, {})).rejects.toMatchObject({
+        error: "expired_token",
+      });
+      expect(
+        [...f.records.values()].filter(row =>
+          ["Grant", "RecoupGrant", "RecoupAgentRegistration", "AccessToken"].includes(row.model),
+        ),
+      ).toHaveLength(0);
+    } finally {
+      save.mockRestore();
+    }
+  });
+
   it("never serializes token expiry beyond the connection deadline when the clock advances", async () => {
     const f = await start();
     await approve(f);
