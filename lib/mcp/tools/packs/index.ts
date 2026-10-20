@@ -9,7 +9,7 @@ import {
   packOperationSchemas,
   type PackOperation,
 } from "@/lib/content/packs/processPackOperation";
-const tools: Record<PackOperation, [string, string]> = {
+export const releasePackToolManifest: Record<PackOperation, [string, string]> = {
   prepare: [
     "prepare_release_pack",
     "Save or revise the compact campaign brief inline. Ask once for essential missing inputs. No existing artist, roster or repository is required. Does not generate or spend.",
@@ -41,8 +41,8 @@ const tools: Record<PackOperation, [string, string]> = {
 };
 /** Native OAuth and API-key MCP both reuse the same domain operations as REST. */
 export function registerAllPackTools(server: McpServer) {
-  for (const operation of Object.keys(tools) as PackOperation[]) {
-    const [name, description] = tools[operation];
+  for (const operation of Object.keys(releasePackToolManifest) as PackOperation[]) {
+    const [name, description] = releasePackToolManifest[operation];
     server.registerTool(
       name,
       {
