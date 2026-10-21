@@ -5,10 +5,11 @@ import {
   evidenceAttachmentListSchema,
 } from "@/lib/context/evidenceAttachmentSchemas";
 import { contextToolOperations } from "@/lib/mcp/oauth/contextToolOperations";
+import { catalogPlanningResponseSchema } from "@/lib/context/catalogPlanningResponseSchema";
 
 /** Export source contracts without presenting standard-only tools as delegated capabilities. */
 export function buildContextOperationCatalog() {
-  const undocumentedActions = ["plan_catalog_members"];
+  const undocumentedActions: string[] = [];
   const jsonSchema = (schema: z.ZodType) => {
     const { $schema: _dialect, ...result } = z.toJSONSchema(schema, { io: "input" });
     return result;
@@ -32,6 +33,12 @@ export function buildContextOperationCatalog() {
       .map(jsonSchema),
     mcpOperations: names(true),
     standardMcpOperations: names(false),
+    responseSchemas: {
+      catalogPlanning: jsonSchema(catalogPlanningResponseSchema),
+    },
+    responseReferences: {
+      plan_catalog_members: "#/responseSchemas/catalogPlanning",
+    },
     evidenceSchemas: {
       receipt: jsonSchema(evidenceAttachmentReceiptSchema),
       page: jsonSchema(evidenceAttachmentListSchema),

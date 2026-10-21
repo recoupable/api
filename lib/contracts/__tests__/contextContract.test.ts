@@ -10,13 +10,15 @@ import { buildContextOperationCatalog } from "../buildContextOperationCatalog";
 
 vi.mock("@/lib/context/authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));
 
-// Provider-bound planning remains a documented gap until its public module contract is stable.
+// Public input aliases preserve the existing internal planner identities.
 const {
   undocumentedActions,
   requestSchemas: schemas,
   mcpOperations,
   standardMcpOperations,
   evidenceSchemas,
+  responseSchemas,
+  responseReferences,
 } = buildContextOperationCatalog();
 
 // Optional provider-free export used to refresh the maintained OpenAPI request union.
@@ -83,7 +85,7 @@ describe("published Context request catalog", () => {
     expect(rpc).not.toHaveBeenCalled();
     expect(dispatch).not.toHaveBeenCalled();
   });
-  it("matches every provider-neutral action and its actual request fields", () => {
+  it("matches every documented action and its actual request fields", () => {
     expect(withoutDescriptions(contextFixture.requestSchemas)).toEqual(
       withoutDescriptions(schemas),
     );
@@ -92,7 +94,15 @@ describe("published Context request catalog", () => {
     );
   });
 
-  it("records the provider-bound planning action still missing from the reference", () => {
+  it("has no omitted action after publishing the additive planning names", () => {
     expect(contextFixture.undocumentedActions).toEqual(undocumentedActions);
+    expect(undocumentedActions).toEqual([]);
+  });
+
+  it("binds the complete planning response and its action reference to source", () => {
+    expect(withoutDescriptions(contextFixture.responseSchemas)).toEqual(
+      withoutDescriptions(responseSchemas),
+    );
+    expect(contextFixture.responseReferences).toEqual(responseReferences);
   });
 });

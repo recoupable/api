@@ -68,6 +68,15 @@ Then update Marketing's canonical Context specification and
 regenerate both fixture copies. Exported source contracts do not prove that the
 required database release or any customer workflow is live.
 
+The planning action is included after approval of its three additive public names.
+`responseSchemas.catalogPlanning` exports its complete existing response, and
+`responseReferences.plan_catalog_members` connects the action to that schema.
+Export a self-contained planning handoff with
+`RECOUP_CONTEXT_CATALOG_PLANNING_OUTPUT=/tmp/context-planning.json pnpm exec vitest run lib/contracts/__tests__/catalogPlanningContract.test.ts`.
+The shared fixture checks request syntax, mapping, full response schema, and
+copyable populated/empty examples against real HTTP/MCP processors with synthetic
+auth/storage leaves. It does not establish live database access or provider execution.
+
 The Context fixture's `evidenceResponseReferences` point to local definitions under `evidenceSchemas`.
 `evidenceResponseReferenceSource` separately records the canonical Marketing
 document and its OpenAPI pointers; `sourceHash` binds that document's exact bytes.
