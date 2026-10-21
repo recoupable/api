@@ -77,6 +77,47 @@ The shared fixture checks request syntax, mapping, full response schema, and
 copyable populated/empty examples against real HTTP/MCP processors with synthetic
 auth/storage leaves. It does not establish live database access or provider execution.
 
+All supported actions now have an explicit success-model reference and HTTP status
+in `responseReferences` and `responseStatusCodes`. The response models describe
+current source; they are not installed as runtime validators. Persisted request
+input/output JSON and stored node/outcome metadata retain their existing flexible
+shape. Request records exclude `claim_token`. Unavailable brief/review payloads
+remain null; release cases expose metadata review only and unsupported rights or
+distribution capabilities. Verification receipts are queued-work acknowledgments,
+not completed verification or permission to collect.
+
+Export the remaining operation models and representative examples before updating
+Marketing's canonical Context specification:
+
+```sh
+RECOUP_CONTEXT_RESPONSES_OUTPUT=/tmp/context-responses.json \
+RECOUP_CONTEXT_EXAMPLES_OUTPUT=/tmp/context-operation-examples.json \
+pnpm exec vitest run lib/contracts/__tests__/contextResponseCatalog.test.ts lib/contracts/__tests__/contextOperationExamples.test.ts
+```
+
+The example exporter writes only after all 26 source examples pass schema,
+HTTP/MCP parity and mocked-dispatch checks. Published-fixture drift can still make
+that command fail after emitting the source artifact; this is intentional for
+reviewed regeneration, not a passing publication check. Generate both fixtures
+with Marketing's `scripts/build-contract-examples.py --api <api-worktree>` and
+rerun it with `--check`, then rerun the API contract tests. Every frozen operation
+example is compared to the actual processor result and its declared status.
+
+Source anchors: `processContextOperation`, `processReleaseCaseOperation`,
+`readContextRequest`, `compileContextBrief`, the catalog/execution storage adapters,
+and `planning/readReleaseTrackObservations`. The documented row and RPC projections
+are also defined in Database migrations `20260920010000_context_foundation.sql`,
+`20260920020000_context_spotify_pipeline.sql`,
+`20260923080000_context_execution_records.sql`,
+`20260924070000_context_release_track_read.sql`,
+`20260924110000_context_release_track_identity_review.sql`,
+`20260926170000_context_brief_snapshots.sql`, and
+`20261008160000_context_release_cases.sql` with its cursor correction. These are
+source definitions, not proof that a target database has those migrations applied.
+The fixtures use synthetic auth/storage and mocked dispatch, fence off native
+fetch, and restore test feature flags. No provider, customer, paid job, database
+read/write or hosted permission/retention acceptance is exercised.
+
 The Context fixture's `evidenceResponseReferences` point to local definitions under `evidenceSchemas`.
 `evidenceResponseReferenceSource` separately records the canonical Marketing
 document and its OpenAPI pointers; `sourceHash` binds that document's exact bytes.
