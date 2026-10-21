@@ -6,7 +6,7 @@ This is the current-main successor slice of retired API PR596 (`32b38fb7a8b58000
 
 | Original behavior | Current successor and decision | Focused evidence |
 | --- | --- | --- |
-| A new POST during a live run must not silently resume and discard the submitted message | Gap repaired: canonical `/api/chat` and `/api/chat/workflow` share a start gate; return409 with the GET recovery path; no workflow start, message persistence or stream reader | `chatStartRecovery.test.ts`, running and pending runs; `gateChatStreamStart.test.ts` |
+| A new POST during a live run must not silently resume and discard the submitted message | Gap repaired at canonical `/api/chat`: the handler uses a start gate; return409 with the GET recovery path; no workflow start, message persistence or stream reader | `chatStartRecovery.test.ts`, running and pending runs; `gateChatStreamStart.test.ts` |
 | Indeterminate run status or a failed/raced stale-slot clear must be retryable | Gap repaired:503 with retry guidance, preserving the slot and preventing a duplicate start | Real reconciliation path in `chatStartRecovery.test.ts`; existing reconciliation cases |
 | A terminal stale slot is cleared so the POST can start a new turn | Existing behavior retained | Real-path test verifies clear → claim → promote and exactly one new workflow/message persistence |
 | Concurrent POSTs cannot start duplicate paid runs | Existing placeholder claim before start is retained | Existing `handleChatWorkflowStream.test.ts` claim/promotion/lost-slot cases |
@@ -20,6 +20,8 @@ This is the current-main successor slice of retired API PR596 (`32b38fb7a8b58000
 | Chat-list failure must not look like a successful empty list | Null propagated by summaries and converted to500 by the list handler | Caller regression checks failure and successful empty outcomes |
 | Failed active-stream lookup must not permit sandbox hibernation | Caller defers hibernation when absence of a stream cannot be established | Caller regression for `hasActiveStreamForSession` |
 | Existing migration script must not treat lookup failure as permission to insert | Script caller stops on null; no migration is executed by verification | Mocked `migrateRoom.test.ts` failure case |
+
+Only `app/api/chat/route.ts` exports the canonical POST in the inspected baseline and candidate trees. There is no `app/api/chat/workflow/route.ts`; older route/handler comments mentioning that alias are stale source comments, not route-availability evidence. This candidate adds no legacy route or alias. The previously claimed alias coverage was unsupported and is corrected here.
 
 ## Remaining original reconnect work
 
