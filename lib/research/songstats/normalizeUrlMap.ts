@@ -1,3 +1,5 @@
+import { isResearchHttpsUrl } from "../isResearchHttpsUrl";
+import { pickResearchHttpsUrl, RESEARCH_LINK_KEYS } from "../pickResearchHttpsUrl";
 import { isRecord, type JsonRecord } from "@/lib/research/songstats/isRecord";
 import { pickString } from "@/lib/research/songstats/pickString";
 
@@ -9,7 +11,7 @@ export function normalizeUrlMap(value: unknown): JsonRecord {
 
   const visit = (current: unknown, keyHint?: string): void => {
     if (typeof current === "string") {
-      if (/^https?:\/\//i.test(current)) urls[keyHint || current] = current;
+      if (isResearchHttpsUrl(current)) urls[keyHint || current] = current;
       return;
     }
 
@@ -21,12 +23,13 @@ export function normalizeUrlMap(value: unknown): JsonRecord {
     if (!isRecord(current)) return;
 
     const platform = pickString(current, ["platform", "source", "type", "name", "domain"]);
-    const url = pickString(current, ["url", "link", "href"]);
-    if (url && /^https?:\/\//i.test(url)) {
+    const url = pickResearchHttpsUrl(current);
+    if (url) {
       urls[platform || url] = url;
     }
 
     for (const [key, child] of Object.entries(current)) {
+      if (url && (RESEARCH_LINK_KEYS as readonly string[]).includes(key)) continue;
       visit(child, key);
     }
   };
