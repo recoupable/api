@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateAdminAuth } from "@/lib/admins/validateAdminAuth";
 import { adminPeriodSchema } from "@/lib/admins/adminPeriod";
 
@@ -23,10 +23,7 @@ export async function validateGetAgentSignupsQuery(
     period: request.nextUrl.searchParams.get("period") ?? undefined,
   });
   if (!result.success) {
-    return NextResponse.json(
-      { status: "error", error: result.error.issues[0].message },
-      { status: 400, headers: getCorsHeaders() },
-    );
+    return errorResponse(result.error.issues[0].message, 400);
   }
   return result.data;
 }

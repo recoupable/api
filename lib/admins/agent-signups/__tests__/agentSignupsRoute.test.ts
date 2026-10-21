@@ -72,6 +72,9 @@ describe("agent-signup report actual GET and validation", () => {
     async period => {
       const response = await GET(request(`?period=${period}`));
       expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({ status: "error", error: expect.any(String) });
+      expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+      expect(response.headers.get("Access-Control-Allow-Headers")).toContain("Authorization");
       expect(getAgentSignups).not.toHaveBeenCalled();
     },
   );
@@ -81,6 +84,8 @@ describe("agent-signup report actual GET and validation", () => {
     const response = await GET(request());
     expect(response.status).toBe(500);
     expect(await response.json()).toEqual({ status: "error", message: "Internal server error" });
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    expect(response.headers.get("Access-Control-Allow-Headers")).toContain("Authorization");
   });
 
   it("answers preflight without authentication or data access", async () => {

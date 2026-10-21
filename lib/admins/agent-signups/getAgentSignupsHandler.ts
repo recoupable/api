@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { messageErrorResponse } from "@/lib/networking/messageErrorResponse";
 import { getCutoffMs } from "@/lib/admins/getCutoffMs";
 import { getAgentSignups } from "@/lib/supabase/account_api_keys/getAgentSignups";
 import { validateGetAgentSignupsQuery } from "./validateGetAgentSignupsQuery";
@@ -25,9 +26,6 @@ export async function getAgentSignupsHandler(request: NextRequest): Promise<Next
     );
   } catch (error) {
     console.error("[ERROR] getAgentSignupsHandler:", error);
-    return NextResponse.json(
-      { status: "error", message: "Internal server error" },
-      { status: 500, headers: getCorsHeaders() },
-    );
+    return messageErrorResponse("Internal server error", 500);
   }
 }
