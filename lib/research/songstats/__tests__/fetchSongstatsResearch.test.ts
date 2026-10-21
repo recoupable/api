@@ -266,4 +266,34 @@ describe("fetchSongstatsResearch", () => {
       scope: "total",
     });
   });
+  it("retains only credential-free HTTPS links from artist info", async () => {
+    vi.mocked(fetchSongstats).mockResolvedValue({
+      status: 200,
+      data: {
+        artist_info: {
+          links: [
+            { platform: "spotify", url: "https://open.spotify.com/artist/fixture" },
+            { platform: "legacy", url: "http://example.com/creator" },
+            { platform: "credential", url: "https://user:pass@example.com/creator" },
+            {
+              platform: "fallback",
+              url: "javascript:alert(1)",
+              href: "https://example.com/fallback",
+            },
+          ],
+        },
+      },
+    });
+    const result = await fetchSongstatsResearch("/artist/fixture/urls");
+    expect(fetchSongstats).toHaveBeenCalledExactlyOnceWith("/artists/info", {
+      songstats_artist_id: "fixture",
+    });
+    expect(result).toEqual({
+      status: 200,
+      data: {
+        spotify: "https://open.spotify.com/artist/fixture",
+        fallback: "https://example.com/fallback",
+      },
+    });
+  });
 });
