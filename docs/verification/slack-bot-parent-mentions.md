@@ -1,0 +1,11 @@
+# Human mentions beneath bot-authored Slack parents
+
+Bounded continuation of existing API409 head `980a71adff5f92bcab6cbdce893dce66e99688d0`, under Mono358. Compared with main `edff2479368b7a050ebbf0201db64c490aacb0e2`.
+
+Most original409 behavior already exists: the collector scans replies beneath human-authored parents, the reply helper filters to human mentions, responses use the parent timestamp, and scans use existing batching. The remaining reproduced defect is the ordering in `fetchBotMentions`: it rejects `bot_id` or missing `user` before recording thread parents, so human replies under a bot-authored root never reach the reply scanner.
+
+Record eligible parents (`ts` and positive `reply_count`) before filtering which top-level messages count as human mentions. Bot parents and bot replies remain excluded from reported tags. Human reply identity, prompt cleanup, cutoff checks, parent response routing and ordering stay in the existing helper. No Slack endpoint, OAuth scope, token handling, administrator permission, worker or batch setting changes.
+
+When the existing admin collector runs after a normal release, it can include human mentions beneath discovered bot-authored parents. Those newly eligible parents cause additional calls to the existing `conversations.replies` path and existing response extraction; no real Slack read was performed during development. Live quota, delivery and admin count changes are not verified. Existing history cutoffs can omit older parents, and existing reply-page limits remain; this fix does not claim complete historical coverage or close the broader original issue.
+
+Tests run the actual collector and actual reply scanner against mocked Slack leaves. Before the fix, three cases failed and one passed; afterward, all four pass. Cases cover bot parents with and without a user field, bot messages remaining absent from output, parent timestamp response lookup, reply cutoff preservation and no reply request for an empty thread. The tests use a synthetic token and restore environment state. No provider/customer/database operation, secret inspection, message publication, migration, access or deployment setting change was performed. Coordinator owns guarded merge; the original legacy PR is not mutated.
