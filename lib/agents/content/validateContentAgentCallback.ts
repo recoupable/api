@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { z } from "zod";
 
 const contentRunResultSchema = z.object({
   runId: z.string(),
   status: z.enum(["completed", "failed", "timeout"]),
   videoUrl: z.string().optional(),
+  imageUrl: z.string().optional(),
   captionText: z.string().optional(),
   error: z.string().optional(),
 });
@@ -35,17 +36,7 @@ export function validateContentAgentCallback(
 
   if (!result.success) {
     const firstError = result.error.issues[0];
-    return NextResponse.json(
-      {
-        status: "error",
-        missing_fields: firstError.path,
-        error: firstError.message,
-      },
-      {
-        status: 400,
-        headers: getCorsHeaders(),
-      },
-    );
+    return errorResponse(firstError.message, 400, { missing_fields: firstError.path });
   }
 
   return result.data;
