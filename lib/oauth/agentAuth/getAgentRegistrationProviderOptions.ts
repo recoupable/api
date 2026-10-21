@@ -21,7 +21,11 @@ export function getAgentRegistrationProviderOptions(
     ],
     discovery: {
       agent_auth: {
-        skill: `${config.issuer}/auth.md`,
+        // Production has one public discovery URL; other issuers retain their own guide.
+        skill:
+          config.issuer === "https://api.recoupable.dev/api/oauth"
+            ? "https://recoupable.dev/auth.md"
+            : `${config.issuer}/auth.md`,
         identity_endpoint: `${config.issuer}/agent/identity`,
         claim_endpoint: `${config.issuer}/agent/identity/claim`,
         identity_types_supported: ["service_auth"],
