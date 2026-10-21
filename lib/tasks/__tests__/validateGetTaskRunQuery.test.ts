@@ -55,7 +55,7 @@ describe("validateGetTaskRunQuery", () => {
 
     it("calls validateAuthContext with the request", async () => {
       vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: "acc_123",
+        accountId: "123e4567-e89b-12d3-a456-426614174000",
         orgId: null,
         authToken: "test-key",
       });
@@ -70,7 +70,7 @@ describe("validateGetTaskRunQuery", () => {
   describe("query validation", () => {
     beforeEach(() => {
       vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: "acc_123",
+        accountId: "123e4567-e89b-12d3-a456-426614174000",
         orgId: null,
         authToken: "test-key",
       });
@@ -82,7 +82,11 @@ describe("validateGetTaskRunQuery", () => {
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "list", accountId: "acc_123", limit: 20 });
+      expect(result).toEqual({
+        mode: "list",
+        accountId: "123e4567-e89b-12d3-a456-426614174000",
+        limit: 20,
+      });
     });
 
     it("returns list mode when runId is empty string", async () => {
@@ -91,7 +95,11 @@ describe("validateGetTaskRunQuery", () => {
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "list", accountId: "acc_123", limit: 20 });
+      expect(result).toEqual({
+        mode: "list",
+        accountId: "123e4567-e89b-12d3-a456-426614174000",
+        limit: 20,
+      });
     });
 
     it("returns retrieve mode with validated runId when provided", async () => {
@@ -100,7 +108,11 @@ describe("validateGetTaskRunQuery", () => {
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "retrieve", runId: "run_abc123", accountId: "acc_123" });
+      expect(result).toEqual({
+        mode: "retrieve",
+        runId: "run_abc123",
+        accountId: "123e4567-e89b-12d3-a456-426614174000",
+      });
     });
 
     it("trims whitespace from runId", async () => {
@@ -111,7 +123,11 @@ describe("validateGetTaskRunQuery", () => {
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "retrieve", runId: "run_abc123", accountId: "acc_123" });
+      expect(result).toEqual({
+        mode: "retrieve",
+        runId: "run_abc123",
+        accountId: "123e4567-e89b-12d3-a456-426614174000",
+      });
     });
 
     it("returns list mode with custom limit", async () => {
@@ -120,14 +136,61 @@ describe("validateGetTaskRunQuery", () => {
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "list", accountId: "acc_123", limit: 50 });
+      expect(result).toEqual({
+        mode: "list",
+        accountId: "123e4567-e89b-12d3-a456-426614174000",
+        limit: 50,
+      });
+    });
+  });
+
+  describe("account_id format", () => {
+    beforeEach(() => {
+      vi.mocked(validateAuthContext).mockResolvedValue({
+        accountId: "123e4567-e89b-12d3-a456-426614174000",
+        orgId: null,
+        authToken: "fixture-key",
+      });
+      vi.mocked(checkIsAdmin).mockResolvedValue(false);
+      vi.mocked(validateAccountIdOverride).mockResolvedValue({ accountId: "not-a-uuid" });
+    });
+
+    it.each(["", "runId=run_123&"])(
+      "rejects malformed IDs before access checks (%s)",
+      async prefix => {
+        const result = await validateGetTaskRunQuery(
+          createMockRequest(`http://localhost/api/tasks/runs?${prefix}account_id=not-a-uuid`),
+        );
+        expect(result).toBeInstanceOf(NextResponse);
+        expect((result as NextResponse).status).toBe(400);
+        expect(await (result as NextResponse).json()).toEqual({
+          status: "error",
+          error: "account_id must be a valid UUID",
+        });
+        expect(checkIsAdmin).not.toHaveBeenCalled();
+        expect(validateAccountIdOverride).not.toHaveBeenCalled();
+      },
+    );
+
+    it("trims a valid UUID before authorizing it", async () => {
+      vi.mocked(checkIsAdmin).mockResolvedValue(true);
+      const result = await validateGetTaskRunQuery(
+        createMockRequest(
+          "http://localhost/api/tasks/runs?account_id=%20223e4567-e89b-12d3-a456-426614174000%20",
+        ),
+      );
+      expect(result).toEqual({
+        mode: "list",
+        accountId: "223e4567-e89b-12d3-a456-426614174000",
+        limit: 20,
+      });
     });
   });
 
   describe("account_id override", () => {
     it("rejects an unauthorized override even when retrieving a run", async () => {
       vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: "acc_123",
+        accountId: "123e4567-e89b-12d3-a456-426614174000",
         orgId: null,
         authToken: "key",
       });
@@ -136,7 +199,9 @@ describe("validateGetTaskRunQuery", () => {
         NextResponse.json({ error: "denied" }, { status: 403 }),
       );
       const result = await validateGetTaskRunQuery(
-        createMockRequest("http://localhost/api/tasks/runs?runId=run_123&account_id=other"),
+        createMockRequest(
+          "http://localhost/api/tasks/runs?runId=run_123&account_id=223e4567-e89b-12d3-a456-426614174000",
+        ),
       );
       expect(result).toBeInstanceOf(NextResponse);
       expect((result as NextResponse).status).toBe(403);
@@ -144,16 +209,24 @@ describe("validateGetTaskRunQuery", () => {
 
     it("retains an authorized override when retrieving a run", async () => {
       vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: "acc_123",
+        accountId: "123e4567-e89b-12d3-a456-426614174000",
         orgId: null,
         authToken: "key",
       });
       vi.mocked(checkIsAdmin).mockResolvedValue(false);
-      vi.mocked(validateAccountIdOverride).mockResolvedValue({ accountId: "member" });
+      vi.mocked(validateAccountIdOverride).mockResolvedValue({
+        accountId: "323e4567-e89b-12d3-a456-426614174000",
+      });
       const result = await validateGetTaskRunQuery(
-        createMockRequest("http://localhost/api/tasks/runs?runId=run_123&account_id=member"),
+        createMockRequest(
+          "http://localhost/api/tasks/runs?runId=run_123&account_id=323e4567-e89b-12d3-a456-426614174000",
+        ),
       );
-      expect(result).toEqual({ mode: "retrieve", runId: "run_123", accountId: "member" });
+      expect(result).toEqual({
+        mode: "retrieve",
+        runId: "run_123",
+        accountId: "323e4567-e89b-12d3-a456-426614174000",
+      });
     });
 
     it("allows admin to query any account", async () => {
@@ -165,13 +238,17 @@ describe("validateGetTaskRunQuery", () => {
       vi.mocked(checkIsAdmin).mockResolvedValue(true);
 
       const request = createMockRequest(
-        "http://localhost:3000/api/tasks/runs?account_id=other_acc",
+        "http://localhost:3000/api/tasks/runs?account_id=223e4567-e89b-12d3-a456-426614174000",
       );
 
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "list", accountId: "other_acc", limit: 20 });
+      expect(result).toEqual({
+        mode: "list",
+        accountId: "223e4567-e89b-12d3-a456-426614174000",
+        limit: 20,
+      });
       expect(checkIsAdmin).toHaveBeenCalledWith("admin_acc");
       expect(validateAccountIdOverride).not.toHaveBeenCalled();
     });
@@ -183,19 +260,25 @@ describe("validateGetTaskRunQuery", () => {
         authToken: "api-key",
       });
       vi.mocked(checkIsAdmin).mockResolvedValue(false);
-      vi.mocked(validateAccountIdOverride).mockResolvedValue({ accountId: "member_acc" });
+      vi.mocked(validateAccountIdOverride).mockResolvedValue({
+        accountId: "323e4567-e89b-12d3-a456-426614174000",
+      });
 
       const request = createMockRequest(
-        "http://localhost:3000/api/tasks/runs?account_id=member_acc",
+        "http://localhost:3000/api/tasks/runs?account_id=323e4567-e89b-12d3-a456-426614174000",
       );
 
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "list", accountId: "member_acc", limit: 20 });
+      expect(result).toEqual({
+        mode: "list",
+        accountId: "323e4567-e89b-12d3-a456-426614174000",
+        limit: 20,
+      });
       expect(validateAccountIdOverride).toHaveBeenCalledWith({
         currentAccountId: "org_owner_acc",
-        targetAccountId: "member_acc",
+        targetAccountId: "323e4567-e89b-12d3-a456-426614174000",
       });
     });
 
@@ -214,7 +297,7 @@ describe("validateGetTaskRunQuery", () => {
       );
 
       const request = createMockRequest(
-        "http://localhost:3000/api/tasks/runs?account_id=other_acc",
+        "http://localhost:3000/api/tasks/runs?account_id=223e4567-e89b-12d3-a456-426614174000",
       );
 
       const result = await validateGetTaskRunQuery(request);
@@ -227,19 +310,27 @@ describe("validateGetTaskRunQuery", () => {
 
     it("allows self-access via validateAccountIdOverride", async () => {
       vi.mocked(validateAuthContext).mockResolvedValue({
-        accountId: "acc_123",
+        accountId: "123e4567-e89b-12d3-a456-426614174000",
         orgId: null,
         authToken: "api-key",
       });
       vi.mocked(checkIsAdmin).mockResolvedValue(false);
-      vi.mocked(validateAccountIdOverride).mockResolvedValue({ accountId: "acc_123" });
+      vi.mocked(validateAccountIdOverride).mockResolvedValue({
+        accountId: "123e4567-e89b-12d3-a456-426614174000",
+      });
 
-      const request = createMockRequest("http://localhost:3000/api/tasks/runs?account_id=acc_123");
+      const request = createMockRequest(
+        "http://localhost:3000/api/tasks/runs?account_id=123e4567-e89b-12d3-a456-426614174000",
+      );
 
       const result = await validateGetTaskRunQuery(request);
 
       expect(result).not.toBeInstanceOf(NextResponse);
-      expect(result).toEqual({ mode: "list", accountId: "acc_123", limit: 20 });
+      expect(result).toEqual({
+        mode: "list",
+        accountId: "123e4567-e89b-12d3-a456-426614174000",
+        limit: 20,
+      });
     });
   });
 });

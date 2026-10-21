@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { GET } from "@/app/api/tasks/runs/route";
 import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
+import { fetchTriggerRuns } from "@/lib/trigger/fetchTriggerRuns";
+import { checkIsAdmin } from "@/lib/admins/checkIsAdmin";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 
 vi.mock("@/lib/auth/getApiKeyAccountId", () => ({
@@ -54,21 +56,21 @@ describe("GET /api/tasks/runs account access", () => {
   });
 
   it("uses the authorized account override for run ownership", async () => {
-    const job = providerRun("member");
+    const job = providerRun("323e4567-e89b-12d3-a456-426614174000");
     vi.mocked(retrieveTaskRun).mockResolvedValue(job);
     vi.mocked(canAccessAccount).mockResolvedValue(true);
-    const response = await GET(request("&account_id=member"));
+    const response = await GET(request("&account_id=323e4567-e89b-12d3-a456-426614174000"));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ status: "success", runs: [job] });
     expect(canAccessAccount).toHaveBeenCalledExactlyOnceWith({
       currentAccountId: "owner",
-      targetAccountId: "member",
+      targetAccountId: "323e4567-e89b-12d3-a456-426614174000",
     });
   });
 
   it("rejects an unauthorized override before retrieving a run", async () => {
     vi.mocked(canAccessAccount).mockResolvedValue(false);
-    const response = await GET(request("&account_id=other"));
+    const response = await GET(request("&account_id=223e4567-e89b-12d3-a456-426614174000"));
     expect(response.status).toBe(403);
     expect(await response.json()).toEqual({
       status: "error",
@@ -76,6 +78,31 @@ describe("GET /api/tasks/runs account access", () => {
     });
     expect(retrieveTaskRun).not.toHaveBeenCalled();
   });
+
+  it.each([
+    ["x-api-key", "fixture-key", "runId=run_1&"],
+    ["x-api-key", "fixture-key", ""],
+    ["Authorization", "Bearer fixture-token", "runId=run_1&"],
+    ["Authorization", "Bearer fixture-token", ""],
+  ])(
+    "rejects malformed account overrides before task access (%s, %s, %s)",
+    async (header, value, prefix) => {
+      const response = await GET(
+        new NextRequest(`http://localhost/api/tasks/runs?${prefix}account_id=not-a-uuid`, {
+          headers: { [header]: value },
+        }),
+      );
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({
+        status: "error",
+        error: "account_id must be a valid UUID",
+      });
+      expect(checkIsAdmin).not.toHaveBeenCalled();
+      expect(canAccessAccount).not.toHaveBeenCalled();
+      expect(retrieveTaskRun).not.toHaveBeenCalled();
+      expect(fetchTriggerRuns).not.toHaveBeenCalled();
+    },
+  );
 
   it("requires credentials before retrieving a run", async () => {
     const response = await GET(request("", {}));
