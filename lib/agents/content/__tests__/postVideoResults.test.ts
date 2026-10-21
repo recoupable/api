@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { postVideoResults } from "../postVideoResults";
 
 vi.mock("../downloadVideoBuffer", () => ({
@@ -7,6 +7,8 @@ vi.mock("../downloadVideoBuffer", () => ({
 
 const { downloadVideoBuffer } = await import("../downloadVideoBuffer");
 const mockedDownload = vi.mocked(downloadVideoBuffer);
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("postVideoResults", () => {
   let thread: { post: ReturnType<typeof vi.fn> };
@@ -113,5 +115,136 @@ describe("postVideoResults", () => {
         markdown: expect.stringContaining("Video 1"),
       }),
     );
+  });
+  it.each(["image/png", "image/jpeg", "image/webp", "image/gif"])(
+    "posts an editorial image before the video using reported %s",
+    async mimeType => {
+      const imageFetch = vi
+        .spyOn(globalThis, "fetch")
+        .mockResolvedValue(
+          new Response(new Uint8Array([1, 2]), { headers: { "content-type": mimeType } }),
+        );
+      mockedDownload.mockResolvedValue(Buffer.from([3]));
+      await postVideoResults(
+        thread,
+        [
+          {
+            runId: "r1",
+            status: "completed",
+            videoUrl: "https://cdn.example.com/video.mp4",
+            imageUrl: "https://cdn.example.com/image",
+            captionText: "caption",
+          },
+        ],
+        1,
+      );
+      expect(imageFetch).toHaveBeenCalledExactlyOnceWith("https://cdn.example.com/image");
+      expect(thread.post).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({
+          markdown: "**Editorial Image**",
+          files: [
+            {
+              data: Buffer.from([1, 2]),
+              filename: `editorial.${mimeType === "image/jpeg" ? "jpg" : mimeType.split("/")[1]}`,
+              mimeType,
+            },
+          ],
+        }),
+      );
+      expect(thread.post).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({
+          markdown: "> caption",
+          files: [expect.objectContaining({ mimeType: "video/mp4" })],
+        }),
+      );
+      expect(thread.post).toHaveBeenNthCalledWith(3, "_1 run(s) failed._");
+    },
+  );
+
+  it("keeps optional image buffers aligned and posts all images before videos", async () => {
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response("jpeg", { headers: { "content-type": "image/jpeg" } }))
+      .mockResolvedValueOnce(new Response("png", { headers: { "content-type": "image/png" } }));
+    mockedDownload.mockResolvedValue(Buffer.from([1]));
+    await postVideoResults(
+      thread,
+      [
+        { runId: "r1", status: "completed", videoUrl: "https://cdn.example.com/one.mp4" },
+        {
+          runId: "r2",
+          status: "completed",
+          videoUrl: "https://cdn.example.com/two.mp4",
+          imageUrl: "https://cdn.example.com/two.jpg",
+        },
+        {
+          runId: "r3",
+          status: "completed",
+          videoUrl: "https://cdn.example.com/three.mp4",
+          imageUrl: "https://cdn.example.com/three.png",
+        },
+      ],
+      0,
+    );
+    expect(thread.post).toHaveBeenCalledTimes(5);
+    expect(thread.post).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        files: [expect.objectContaining({ filename: "two.jpg", mimeType: "image/jpeg" })],
+      }),
+    );
+    expect(thread.post).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        files: [expect.objectContaining({ filename: "three.png", mimeType: "image/png" })],
+      }),
+    );
+    expect(thread.post).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ files: [expect.objectContaining({ filename: "one.mp4" })] }),
+    );
+  });
+
+  it.each([404, 200])(
+    "falls back to the image URL on failed download or unsupported MIME, without blocking video (%i)",
+    async status => {
+      vi.spyOn(globalThis, "fetch").mockResolvedValue(
+        new Response("not an image", { status, headers: { "content-type": "text/html" } }),
+      );
+      mockedDownload.mockResolvedValue(Buffer.from([1]));
+      await postVideoResults(
+        thread,
+        [
+          {
+            runId: "r1",
+            status: "completed",
+            videoUrl: "https://cdn.example.com/video.mp4",
+            imageUrl: "https://cdn.example.com/image",
+          },
+        ],
+        0,
+      );
+      expect(thread.post).toHaveBeenNthCalledWith(
+        1,
+        "**Editorial Image:** https://cdn.example.com/image",
+      );
+      expect(thread.post).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ files: [expect.objectContaining({ mimeType: "video/mp4" })] }),
+      );
+    },
+  );
+
+  it("does not fetch any image for legacy video-only results", async () => {
+    const imageFetch = vi.spyOn(globalThis, "fetch");
+    mockedDownload.mockResolvedValue(Buffer.from([1]));
+    await postVideoResults(
+      thread,
+      [{ runId: "r1", status: "completed", videoUrl: "https://cdn.example.com/video.mp4" }],
+      0,
+    );
+    expect(imageFetch).not.toHaveBeenCalled();
+    expect(thread.post).toHaveBeenCalledTimes(1);
   });
 });

@@ -1,10 +1,12 @@
 import { downloadVideoBuffer } from "./downloadVideoBuffer";
+import { downloadMediaBuffer } from "./downloadMediaBuffer";
 import { getFilenameFromUrl } from "./getFilenameFromUrl";
 
 interface VideoResult {
   runId: string;
   status: string;
   videoUrl?: string;
+  imageUrl?: string;
   captionText?: string;
 }
 
@@ -17,7 +19,8 @@ interface Thread {
 }
 
 /**
- * Downloads completed videos in parallel and posts each to the thread.
+ * Downloads completed video results and optional editorial images in parallel.
+ * Posts editorial images before videos, preserving result order within each group.
  * Falls back to posting the URL as text if a download fails.
  *
  * @param thread - The thread to post results to
@@ -29,8 +32,33 @@ export async function postVideoResults(
   videos: VideoResult[],
   failedCount: number,
 ): Promise<void> {
-  // Download all videos in parallel
-  const buffers = await Promise.all(videos.map(v => downloadVideoBuffer(v.videoUrl!)));
+  const [buffers, images] = await Promise.all([
+    Promise.all(videos.map(v => downloadVideoBuffer(v.videoUrl!))),
+    Promise.all(videos.map(v => (v.imageUrl ? downloadMediaBuffer(v.imageUrl) : null))),
+  ]);
+
+  const supportedImages = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+  for (let i = 0; i < videos.length; i++) {
+    const imageUrl = videos[i].imageUrl;
+    if (!imageUrl) continue;
+
+    const image = images[i];
+    if (image?.mimeType && supportedImages.has(image.mimeType)) {
+      const extension = image.mimeType === "image/jpeg" ? "jpg" : image.mimeType.split("/")[1];
+      await thread.post({
+        markdown: "**Editorial Image**",
+        files: [
+          {
+            data: image.buffer,
+            filename: getFilenameFromUrl(imageUrl, `editorial.${extension}`),
+            mimeType: image.mimeType,
+          },
+        ],
+      });
+    } else {
+      await thread.post(`**Editorial Image:** ${imageUrl}`);
+    }
+  }
 
   // Post each video sequentially (Slack ordering matters)
   for (let i = 0; i < videos.length; i++) {
