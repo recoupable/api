@@ -24,6 +24,14 @@ to pin that commit. Run both Python commands with `--check`, then
 the artifact, selected schemas, operation/status identities and both fixture copies.
 The API fixture records Marketing source-file hashes rather than a circular commit pin.
 
+`publishedContentCallback.test.ts` consumes `contentCallback` from Marketing's
+Content specification. It checks explicit optional `results[].imageUrl` declaration
+and preservation, copied image/video-only examples, and the actual route, validator,
+handler and poster with synthetic bot/thread/media leaves. Tests retain image order,
+reported-MIME/link fallback, secret denial, terminal skip and no image-only posting.
+They do not exercise worker deployment, real media downloads, Slack uploads or
+end-to-end delivery. Keep receiver support separate from the polling mapper release.
+
 `publishedAgentSignupMetadata.test.ts` checks the admin metadata report's shared
 examples and resolved schemas against the real GET export, authentication selection
 and UTC calendar cutoffs with synthetic credential, membership and metadata leaves.

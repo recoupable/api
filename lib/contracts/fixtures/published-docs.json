@@ -346,7 +346,7 @@
   ],
   "sourceHashes": {
     "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
-    "content/docs/source/api-reference/openapi/content.json": "c109fc9eb3b5557c6585f32fb4771d3ebe6103ac9532c6a7a3b8f929a2603511",
+    "content/docs/source/api-reference/openapi/content.json": "294d63fe4f2d8b6bb35ee751b1910d97a9491945534408850723889e0be03eba",
     "content/docs/source/api-reference/openapi/research.json": "ba0ebf1af7bb7cb1441d47830581c318cca770164ab7362c010e03f5fa381b20",
     "content/docs/source/api-reference/openapi/releases.json": "5823be0a303d9d4e106405aa4f7bafde9847c7bb559d0c3a4782700c1098e457",
     "content/docs/source/api-reference/openapi/social.json": "49c837327886827b5bc33ae4daac76f12473ecf4a6f75cc073656e9247ba73ca",
@@ -2317,6 +2317,115 @@
         "status": "success",
         "total": 0,
         "signups": []
+      }
+    }
+  },
+  "contentCallback": {
+    "path": "/api/content-agent/callback",
+    "security": [
+      {
+        "callbackSecret": []
+      }
+    ],
+    "requestSchema": {
+      "type": "object",
+      "required": [
+        "threadId",
+        "status"
+      ],
+      "properties": {
+        "threadId": {
+          "type": "string",
+          "description": "Chat SDK thread identifier for the originating Slack thread"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "failed",
+            "timeout"
+          ],
+          "description": "Overall status of the content generation batch"
+        },
+        "results": {
+          "type": "array",
+          "description": "Per-run results",
+          "items": {
+            "type": "object",
+            "required": [
+              "runId",
+              "status"
+            ],
+            "properties": {
+              "runId": {
+                "type": "string",
+                "description": "Trigger.dev run ID"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "completed",
+                  "failed",
+                  "timeout"
+                ]
+              },
+              "videoUrl": {
+                "type": "string",
+                "description": "URL of the generated video (when completed)"
+              },
+              "captionText": {
+                "type": "string",
+                "description": "Generated caption text (when completed)"
+              },
+              "error": {
+                "type": "string",
+                "description": "Error message (when failed)"
+              },
+              "imageUrl": {
+                "type": "string",
+                "description": "Optional editorial-image string associated with this run. Used only when this result is completed and also has videoUrl; not an image-only job. Attachment uses supported reported MIME, with URL fallback on download/MIME failure. No URL syntax validation is added by this field."
+              }
+            }
+          }
+        },
+        "message": {
+          "type": "string",
+          "description": "Optional human-readable message"
+        }
+      }
+    },
+    "examples": {
+      "withEditorialImages": {
+        "threadId": "slack:C_FIXTURE:T_FIXTURE",
+        "status": "completed",
+        "results": [
+          {
+            "runId": "run-a",
+            "status": "completed",
+            "videoUrl": "https://example.invalid/video-a.mp4",
+            "imageUrl": "https://example.invalid/editorial-a",
+            "captionText": "First fixture caption"
+          },
+          {
+            "runId": "run-b",
+            "status": "completed",
+            "videoUrl": "https://example.invalid/video-b.mp4",
+            "imageUrl": "https://example.invalid/editorial-b",
+            "captionText": "Second fixture caption"
+          }
+        ]
+      },
+      "videoOnly": {
+        "threadId": "slack:C_FIXTURE:T_FIXTURE",
+        "status": "completed",
+        "results": [
+          {
+            "runId": "run-video",
+            "status": "completed",
+            "videoUrl": "https://example.invalid/video.mp4",
+            "captionText": "Fixture caption"
+          }
+        ]
       }
     }
   },
