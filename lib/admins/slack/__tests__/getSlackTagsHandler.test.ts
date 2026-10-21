@@ -53,6 +53,39 @@ describe("getSlackTagsHandler", () => {
   });
 
   describe("successful cases", () => {
+    it("filters by exact Slack user ID before calculating totals", async () => {
+      vi.mocked(validateGetSlackTagsQuery).mockResolvedValue({
+        period: "weekly",
+        tag: "U098ZY7WX",
+      });
+      vi.mocked(fetchSlackMentions).mockResolvedValue(mockTags);
+
+      const response = await getSlackTagsHandler(makeRequest("weekly"));
+
+      expect(await response.json()).toEqual({
+        status: "success",
+        total: 1,
+        total_pull_requests: 0,
+        tags_with_pull_requests: 0,
+        tags: [mockTags[1]],
+      });
+      expect(fetchSlackMentions).toHaveBeenCalledExactlyOnceWith("weekly");
+    });
+
+    it("returns zero totals when the selected user has no collected mentions", async () => {
+      vi.mocked(validateGetSlackTagsQuery).mockResolvedValue({ period: "all", tag: "UUNKNOWN" });
+      vi.mocked(fetchSlackMentions).mockResolvedValue(mockTags);
+
+      const response = await getSlackTagsHandler(makeRequest());
+
+      expect(await response.json()).toEqual({
+        status: "success",
+        total: 0,
+        total_pull_requests: 0,
+        tags_with_pull_requests: 0,
+        tags: [],
+      });
+    });
     it("returns 200 with tags and total", async () => {
       vi.mocked(validateGetSlackTagsQuery).mockResolvedValue({ period: "all" });
       vi.mocked(fetchSlackMentions).mockResolvedValue(mockTags);
