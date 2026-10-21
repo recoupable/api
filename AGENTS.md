@@ -140,6 +140,25 @@ export async function selectTableName({
 - All API routes should have JSDoc comments
 - Run `pnpm lint` before committing
 
+### SRP/DRY review checklist
+
+Apply the existing Code Principles before commit/push and when reviewing a changed
+feature. Keep the review focused on that feature and its existing consumers.
+
+- [ ] Keep one exported function per purpose-named file. Put new exported parsers,
+  mappers and type guards in files that describe their responsibility.
+- [ ] Keep re-export barrels free of domain parsing, transforms and I/O. The MCP
+  `index.ts` registration entry points documented below remain responsible for
+  assembling tool registrations.
+- [ ] Reuse the owning domain's Zod schema/validator and business functions when
+  existing API and MCP interfaces expose the same capability.
+- [ ] Check required fields, mutual exclusions, defaults and limits after each
+  interface's input adaptation. Preserve intentional transport differences, such
+  as server-supplied actions, authentication context and grant-specific tool
+  availability.
+- [ ] Reuse an existing parsing/normalization helper, or extract a shared helper
+  when the changed feature repeats the same transform.
+
 ### Terminology
 
 Use **"account"** terminology, never "entity" or "user". All entities in the system (individuals, artists, organizations) are "accounts". When referring to specific types, use the specific name:
