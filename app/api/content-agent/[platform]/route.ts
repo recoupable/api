@@ -9,6 +9,7 @@ import "@/lib/agents/content/handlers/registerHandlers";
  * Handles Slack webhooks via dynamic [platform] segment.
  */
 export const { GET, POST } = createPlatformRoutes({
+  getSlackSigningSecret: () => process.env.SLACK_CONTENT_SIGNING_SECRET,
   getBot: () => contentAgentBot!,
   isConfigured: () => contentAgentBot !== null,
 });

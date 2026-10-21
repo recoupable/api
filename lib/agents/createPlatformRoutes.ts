@@ -19,6 +19,7 @@ interface AgentBotLike {
 
 interface PlatformRouteConfig {
   getBot: () => AgentBotLike;
+  getSlackSigningSecret?: () => string | undefined;
   ensureHandlers?: () => void;
   isConfigured?: () => boolean;
 }
@@ -53,7 +54,7 @@ export function createPlatformRoutes(config: PlatformRouteConfig) {
     config.ensureHandlers?.();
 
     const bot = config.getBot();
-    const handler = bot.webhooks[platform];
+    const handler = Object.hasOwn(bot.webhooks, platform) ? bot.webhooks[platform] : undefined;
 
     if (!handler) {
       return Response.json({ error: "Unknown platform" }, { status: 404 });
@@ -79,7 +80,7 @@ export function createPlatformRoutes(config: PlatformRouteConfig) {
     const { platform } = parsed.data;
 
     if (platform === "slack") {
-      const verification = await handleUrlVerification(request);
+      const verification = await handleUrlVerification(request, config.getSlackSigningSecret?.());
       if (verification) return verification;
     }
 
@@ -90,14 +91,13 @@ export function createPlatformRoutes(config: PlatformRouteConfig) {
     config.ensureHandlers?.();
 
     const bot = config.getBot();
-    await bot.initialize();
-
-    const handler = bot.webhooks[platform];
+    const handler = Object.hasOwn(bot.webhooks, platform) ? bot.webhooks[platform] : undefined;
 
     if (!handler) {
       return Response.json({ error: "Unknown platform" }, { status: 404 });
     }
 
+    await bot.initialize();
     return handler(request, { waitUntil: p => after(() => p) });
   }
 

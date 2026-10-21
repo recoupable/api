@@ -1,0 +1,11 @@
+# Slack webhook challenge verification
+
+Bounded successor to existing API PR297, original head `8e907cead1e77a06352a8b0acc6867549ba6d297`, compared with current main `e2fb91883891cb55aaac19a70822ccf5152758c5` under Mono358.
+
+Current shared `handleUrlVerification` echoes unsigned Slack setup challenges, bypassing adapter verification. Shared POST routing initializes the bot before checking whether the requested platform has a handler. The successor verifies only this setup shortcut and moves handler resolution ahead of initialization. It does not port the old branch's WhatsApp/environment/other feature additions or revive its retired test branch.
+
+Each route supplies its existing adapter's signing secret: coding uses `SLACK_SIGNING_SECRET`, content uses `SLACK_CONTENT_SIGNING_SECRET`, and chat uses `SLACK_CHAT_SIGNING_SECRET`. Missing secrets fail closed for challenges. Secrets are read at request time; no values are captured, logged or changed. The raw request clone is used for HMAC-SHA256, with an inclusive five-minute replay window and constant-time digest comparison. Ordinary events and malformed/non-challenge bodies continue to the existing adapter without consuming the original request. Unknown platform keys, including inherited object names, return404 before initialization. This does not defer existing module imports or guarantee that bot construction itself has no startup effects.
+
+Primary contract: [Slack request verification](https://docs.slack.dev/authentication/verifying-requests-from-slack/). Verification uses the exact raw bytes, app-specific signing secret and timestamp as documented. No Slack SDK/provider migration or new public API parameters are introduced.
+
+Local tests invoke all three actual POST entrypoints with fake bots and locally signed requests, covering matching app signatures, missing/wrong signatures, altered bodies, absent secrets, stale/future/malformed timestamps, inclusive boundaries, ordinary adapter delegation and untouched bodies. Unknown platform tests include initialization that would fail if reached. Focused tests and CI establish source behavior; they do not prove live Slack app configuration, Redis startup, delivery or a customer installation. No real webhook, provider, customer, database or billing operation was performed; no deployment setting changed.

@@ -1,21 +1,37 @@
 import type { NextRequest } from "next/server";
+import { verifySlackRequestSignature } from "@/lib/slack/verifySlackRequestSignature";
 
 /**
- * Handles Slack url_verification challenge before bot initialization.
- * This avoids blocking on Redis/adapter initialization during setup.
+ * Verifies Slack setup challenges before bot initialization. Ordinary events
+ * remain with the adapter; cloning preserves their original request body.
  *
  * @param request - The incoming webhook request
- * @returns A Response with the challenge if verified, or null to continue processing
+ * @param signingSecret - The signing secret for this specific Slack app
+ * @returns Challenge, unauthorized response, or null to continue to the adapter
  */
-export async function handleUrlVerification(request: NextRequest): Promise<Response | null> {
-  const body = await request
-    .clone()
-    .json()
-    .catch(() => null);
-
-  if (body?.type === "url_verification" && typeof body?.challenge === "string") {
-    return Response.json({ challenge: body.challenge });
+export async function handleUrlVerification(
+  request: NextRequest,
+  signingSecret: string | undefined,
+): Promise<Response | null> {
+  const rawBody = await request.clone().text();
+  let body: unknown;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return null;
   }
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !("type" in body) ||
+    body.type !== "url_verification" ||
+    !("challenge" in body) ||
+    typeof body.challenge !== "string"
+  )
+    return null;
 
-  return null;
+  if (!verifySlackRequestSignature(request, rawBody, signingSecret)) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+  return Response.json({ challenge: body.challenge });
 }
