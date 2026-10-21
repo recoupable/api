@@ -66,6 +66,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
 
   // Chat + ownership
   const chats = await selectChats({ id: validated.chatId });
+  if (chats === null) return errorResponse("Failed to load chats", 500);
   const chat = chats[0];
   if (!chat || chat.session_id !== validated.sessionId) {
     return errorResponse("Chat not found", 404);

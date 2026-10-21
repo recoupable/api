@@ -115,6 +115,16 @@ beforeEach(() => {
 
 describe("handleChatWorkflowStream", () => {
   describe("short-circuit responses", () => {
+    it("returns 500 when the chat lookup fails, before claiming a run", async () => {
+      mockValidated();
+      mockSessionOwnedActive();
+      vi.mocked(selectChats).mockResolvedValue(null);
+      const response = await handleChatWorkflowStream(makeRequest());
+      expect(response.status).toBe(500);
+      expect(start).not.toHaveBeenCalled();
+      expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
+    });
+
     it("passes through the validator's response (401/400)", async () => {
       vi.mocked(validateChatWorkflow).mockResolvedValue(
         NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
