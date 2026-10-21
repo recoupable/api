@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { start, getRun } from "workflow/api";
 import { validateChatWorkflow } from "@/lib/chat/validateChatWorkflow";
-import { maybeResumeChatStream } from "@/lib/chat/maybeResumeChatStream";
+import { gateChatStreamStart } from "@/lib/chat/gateChatStreamStart";
 import { wrapWorkflowStreamWatcher } from "@/lib/chat/wrapWorkflowStreamWatcher";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
@@ -30,8 +30,8 @@ import generateUUID from "@/lib/uuid/generateUUID";
  *
  *   1. Validate auth + body (validateChatWorkflow).
  *   2. Verify session + chat ownership; ensure the session has an active sandbox.
- *   3. If a workflow is already running for this chat, resume / 409 via
- *      maybeResumeChatStream (extracted for OCP).
+ *   3. Reject an overlapping message with 409 (reconnect via GET), or 503
+ *      when stream state cannot be established; safely clear terminal slots.
  *   4. **Claim `chats.active_stream_id` BEFORE starting the workflow** using
  *      a `pending-<uuid>` placeholder CAS. Closes the race window where two
  *      concurrent requests could both call `start()` and bill the model
@@ -66,14 +66,15 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
 
   // Chat + ownership
   const chats = await selectChats({ id: validated.chatId });
+  if (chats === null) return errorResponse("Failed to load chats", 500);
   const chat = chats[0];
   if (!chat || chat.session_id !== validated.sessionId) {
     return errorResponse("Chat not found", 404);
   }
 
-  // Resume an in-flight workflow for this chat (or 409) before starting a new one.
-  const resumed = await maybeResumeChatStream(validated.chatId, chat.active_stream_id);
-  if (resumed) return resumed;
+  // POST starts a turn; reconnecting to an existing response is GET-only.
+  const gated = await gateChatStreamStart(validated.chatId, chat.active_stream_id);
+  if (gated) return gated;
 
   // Pre-claim the active_stream_id slot with a placeholder BEFORE starting
   // the workflow. This closes the race where two requests both call start()

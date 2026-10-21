@@ -1,3 +1,4 @@
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
@@ -37,6 +38,8 @@ export async function validateMarkChatReadRequest(
     selectSessions({ id: sessionId }),
     selectChats({ id: chatId }),
   ]);
+
+  if (chatRows === null) return errorResponse("Failed to load chats", 500);
 
   const session = sessionRows[0] ?? null;
   const chat = chatRows[0] ?? null;

@@ -20,7 +20,7 @@ export interface ChatSummary {
  * `isStreaming` is derived from `active_stream_id`.
  *
  * @param params - The session id to list and the account id to scope reads to.
- * @returns Chat summaries sorted by `createdAt` ascending.
+ * @returns Chat summaries sorted by `createdAt`, or null on chat read failure.
  */
 export async function getChatSummaries({
   sessionId,
@@ -28,8 +28,9 @@ export async function getChatSummaries({
 }: {
   sessionId: string;
   accountId: string;
-}): Promise<ChatSummary[]> {
+}): Promise<ChatSummary[] | null> {
   const chats = await selectChats({ sessionId });
+  if (chats === null) return null;
   if (chats.length === 0) {
     return [];
   }

@@ -2,7 +2,7 @@ import { getRun } from "workflow/api";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
 
 export type ReconcileResult =
-  | { action: "resume"; runId: string; stream: ReadableStream<unknown> }
+  | { action: "resume"; runId: string }
   | { action: "ready" }
   | { action: "conflict" };
 
@@ -13,12 +13,12 @@ const RUNNING_STATUSES = new Set(["running", "pending"]);
  * start of a new chat-workflow request.
  *
  *   - If the referenced workflow run is alive (`running` | `pending`) →
- *     `action: "resume"` with the existing readable. Caller pipes it back to
- *     the client.
+ *     `action: "resume"`. The caller rejects the new POST and directs the
+ *     client to the GET resume endpoint. No reader is opened here.
  *   - If the run is terminally done AND we win the CAS to clear the stale id
  *     → `action: "ready"`. Caller starts a fresh workflow.
  *   - **Anything else** (workflow API throws, CAS-clear loses the race, CAS
- *     reports a DB error) → `action: "conflict"`. Surfaces as 409 upstream.
+ *     reports a DB error) → `action: "conflict"`. Surfaces as retryable 503 upstream.
  *
  * Safer-than-open-agents error semantics: a transient `workflow/api` failure
  * does NOT clear the stale stream id (which previously created a window for
@@ -37,7 +37,7 @@ export async function reconcileExistingActiveStream(
     const existingRun = getRun(activeStreamId);
     status = await existingRun.status;
     if (RUNNING_STATUSES.has(status)) {
-      return { action: "resume", runId: activeStreamId, stream: existingRun.getReadable() };
+      return { action: "resume", runId: activeStreamId };
     }
   } catch (error) {
     console.error("[reconcileExistingActiveStream] getRun failed; treating as conflict:", error);
