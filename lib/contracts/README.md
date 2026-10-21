@@ -43,6 +43,15 @@ do not write GitHub files or verify hosted authorization, sandbox concurrency or
 client adoption. The examples and resolved schemas live in `guardedGitFiles` in
 the same coordinated fixture, separate from the API-owned error-envelope export.
 
+`publishedChatReadFailures.test.ts` binds the canonical chat POST/GET and six
+session-chat exports to their published 500 schemas for failed chat lookups. The
+tested failures stop before turn persistence or the corresponding chat writes.
+These assertions do not describe every possible 500 path. Compatibility cases
+retain the existing POST running/pending 200 resume behavior and GET's empty or
+terminal finish-only 200 SSE. Authentication validation, storage and workflow
+service leaves are synthetic. No real run or customer request occurs; client
+text handling, Stop/disconnect and the held submission repair remain separate.
+
 `buildContextOperationCatalog` exports the current request schemas and separates
 delegated tool names from standard-only evidence tools. The Context fixture checks
 both maps and the evidence receipt/page schemas. Generate the four exports with:

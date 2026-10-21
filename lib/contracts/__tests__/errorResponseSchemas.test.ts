@@ -25,13 +25,21 @@ describe("API-owned error response schemas", () => {
     expect(createHash("sha256").update(source).digest("hex")).toBe(fixture.apiResponseSchemaSha256);
   });
 
-  it("keeps each selected published response pinned to the producer schema", () => {
-    for (const response of fixture.responseSchemas) {
-      const expected =
-        response.specification === "projects.json" && response.status === 401
-          ? generated.AuthenticationErrorResponse
-          : generated.ErrorResponse;
-      expect(response.schema).toEqual(expected);
-    }
+  it.each([
+    { specification: "releases.json", path: "/api/artists/{id}/profile", status: 404 },
+    { specification: "projects.json", path: "/api/projects/{projectId}", status: 401 },
+    { specification: "projects.json", path: "/api/projects/{projectId}", status: 404 },
+  ])("keeps the API-owned $specification $status response pinned to its producer", target => {
+    const response = fixture.responseSchemas.find(
+      candidate =>
+        candidate.method === "GET" &&
+        candidate.specification === target.specification &&
+        candidate.path === target.path &&
+        candidate.status === target.status,
+    );
+    expect(response).toBeDefined();
+    const expected =
+      target.status === 401 ? generated.AuthenticationErrorResponse : generated.ErrorResponse;
+    expect(response!.schema).toEqual(expected);
   });
 });
