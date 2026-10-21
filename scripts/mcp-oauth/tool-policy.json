@@ -612,5 +612,73 @@
     ],
     "status": "requires OAuth execution audit before enablement",
     "authorizationWork": "Bind authenticated account and current workspace/artist access through the shared player domain. Preserve grant verification, paid publication, revision checks and private fan/history ownership. Publishing requires explicit account authorization; sign-in is not marketing consent."
+  },
+  {
+    "name": "estimate_release_pack",
+    "file": "lib/mcp/tools/packs/index.ts",
+    "scopes": [
+      "mcp:read",
+      "mcp:write"
+    ],
+    "status": "full OAuth permission; production generation feature gated",
+    "authorizationWork": "Authorize the caller-owned job and current brief revision, snapshot selected media through bounded DNS-pinned imports, and bind the complete quote to immutable source bytes. A quote does not authorize provider spending or publication."
+  },
+  {
+    "name": "export_release_pack",
+    "file": "lib/mcp/tools/packs/index.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "full OAuth permission; production generation feature gated",
+    "authorizationWork": "Recheck the connected actor and current workspace access before exporting the saved pack manifest. Refresh only owner-scoped private download links, preserve reviewed versus rejected status, and never post, schedule or permanently publish media."
+  },
+  {
+    "name": "generate_release_pack",
+    "file": "lib/mcp/tools/packs/index.ts",
+    "scopes": [
+      "mcp:read",
+      "mcp:write",
+      "mcp:spend"
+    ],
+    "status": "full OAuth permission; production generation feature gated",
+    "authorizationWork": "Resolve the connected actor and current workspace access. Require the current quote, revision and explicit complete budget ceiling; atomically hold credits before dispatch, preserve uncertain acceptance, and consume only accepted provider work without publishing."
+  },
+  {
+    "name": "get_release_pack",
+    "file": "lib/mcp/tools/packs/index.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "full OAuth permission; production generation feature gated",
+    "authorizationWork": "Resolve the connected actor and recheck current workspace membership before account-scoped job readback. Return only caller-owned private files with short-lived signed URLs; never authorize access from an opaque job id alone."
+  },
+  {
+    "name": "prepare_release_pack",
+    "file": "lib/mcp/tools/packs/index.ts",
+    "scopes": [
+      "mcp:write"
+    ],
+    "status": "full OAuth permission; production generation feature gated",
+    "authorizationWork": "Resolve the connected actor, authorize the selected personal or organization workspace, and enforce current revision and idempotency in the service-only pack transaction. Save the inline brief without creating an artist, spending credits or publishing."
+  },
+  {
+    "name": "retry_release_pack",
+    "file": "lib/mcp/tools/packs/index.ts",
+    "scopes": [
+      "mcp:read",
+      "mcp:write",
+      "mcp:spend"
+    ],
+    "status": "full OAuth permission; production generation feature gated",
+    "authorizationWork": "Authorize the current job and asset, bind resume to the current quote, revision and remaining spending ceiling under the transaction lock. Resume persisted provider ids without resubmission; confirmed failed paid attempts require a fresh targeted quote and approval."
+  },
+  {
+    "name": "upload_release_pack_asset",
+    "file": "lib/mcp/tools/packs/index.ts",
+    "scopes": [
+      "mcp:write"
+    ],
+    "status": "full OAuth permission; production generation feature gated",
+    "authorizationWork": "Import only explicitly selected attachment bytes or signed download URLs into the authorized private workspace. Enforce DNS, redirects, byte and MIME bounds; bind signed upload finalization to the owner and never export account OAuth credentials or read unrelated files."
   }
 ]

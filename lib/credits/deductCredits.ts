@@ -1,5 +1,4 @@
-import { selectCreditsUsage } from "@/lib/supabase/credits_usage/selectCreditsUsage";
-import { updateCreditsUsage } from "@/lib/supabase/credits_usage/updateCreditsUsage";
+import { adjustCreditBalanceAtomic } from "@/lib/supabase/credits_usage/adjustCreditBalanceAtomic";
 
 interface DeductCreditsParams {
   accountId: string;
@@ -25,32 +24,8 @@ export const deductCredits = async ({
   accountId,
   creditsToDeduct,
 }: DeductCreditsParams): Promise<DeductCreditsResult> => {
-  const response = await selectCreditsUsage({ account_id: accountId });
-
-  if (!response || response.length === 0) {
-    throw new Error("No credits usage found for this account");
-  }
-
-  const currentCredits = response[0];
-  const currentBalance = currentCredits.remaining_credits;
-
-  if (currentBalance < creditsToDeduct) {
-    throw new Error(
-      `Insufficient credits. Required: ${creditsToDeduct}, Available: ${currentBalance}`,
-    );
-  }
-
-  const newBalance = currentBalance - creditsToDeduct;
-
-  await updateCreditsUsage({
-    account_id: accountId,
-    updates: {
-      remaining_credits: newBalance,
-    },
-  });
-
-  return {
-    success: true,
-    newBalance,
-  };
+  if (!Number.isSafeInteger(creditsToDeduct) || creditsToDeduct < 0)
+    throw new Error("creditsToDeduct must be a non-negative integer");
+  const row = await adjustCreditBalanceAtomic(accountId, -creditsToDeduct);
+  return { success: true, newBalance: row.remaining_credits };
 };

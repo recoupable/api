@@ -17,7 +17,7 @@ function files(directory: string): string[] {
 }
 
 describe("MCP OAuth tool authorization inventory", () => {
-  it("requires an explicit launch policy for every registered tool, including dynamic site tools", () => {
+  it("requires an explicit launch policy for every registered tool, including explicitly classified dynamic manifests", () => {
     const discovered: Array<{ name: string; file: string }> = [];
     for (const path of files(resolve(root, "lib/mcp/tools"))) {
       const source = ts.createSourceFile(
@@ -27,11 +27,17 @@ describe("MCP OAuth tool authorization inventory", () => {
         true,
       );
       assertDirectRegistrations(source);
-      const siteNames: string[] = [];
+      const registrationFile = relative(root, path);
+      const dynamicManifest = {
+        "lib/mcp/tools/sites/index.ts": "operations",
+        "lib/mcp/tools/packs/index.ts": "releasePackToolManifest",
+      }[registrationFile];
+      const manifestNames: string[] = [];
       const collect = (node: ts.Node) => {
         if (
           ts.isVariableDeclaration(node) &&
-          node.name.getText(source) === "operations" &&
+          dynamicManifest &&
+          node.name.getText(source) === dynamicManifest &&
           node.initializer &&
           ts.isObjectLiteralExpression(node.initializer)
         ) {
@@ -41,8 +47,8 @@ describe("MCP OAuth tool authorization inventory", () => {
               !ts.isArrayLiteralExpression(property.initializer) ||
               !ts.isStringLiteral(property.initializer.elements[0])
             )
-              throw new Error("Review the new site registration pattern");
-            siteNames.push(property.initializer.elements[0].text);
+              throw new Error(`Review the new manifest registration pattern: ${registrationFile}`);
+            manifestNames.push(property.initializer.elements[0].text);
           }
         }
         ts.forEachChild(node, collect);
@@ -57,9 +63,8 @@ describe("MCP OAuth tool authorization inventory", () => {
           const name = node.arguments[0];
           const names = ts.isStringLiteral(name)
             ? [name.text]
-            : relative(root, path) === "lib/mcp/tools/sites/index.ts" &&
-                name.getText(source) === "name"
-              ? siteNames
+            : dynamicManifest && name.getText(source) === "name"
+              ? manifestNames
               : [];
           if (!names.length)
             throw new Error(`Unclassified dynamic tool registration: ${relative(root, path)}`);
