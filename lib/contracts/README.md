@@ -156,3 +156,14 @@ error through the real HTTP adapter. Authentication and processSiteOperation are
 mocked: no lifecycle implementation, workspace/subscription lookup, production
 workflow, provider, publish, unpublish or delete operation runs. Static source
 accounting and schema examples do not prove paid eligibility or hosted behavior.
+
+`publishedAdminCodingSlack.test.ts` compares the documented author filter and
+distinct-author options response with the actual admin GET exports, query and
+authentication code. The fixture producer freezes both operations' request
+declarations, examples and resolved response schemas. Slack collection and
+credential/admin lookup leaves are mocked, with unexpected network/database
+calls fenced off. Checks cover filtered totals, trimmed/unknown/omitted IDs,
+first-profile deduplication, empty options, both 401 envelopes, 403, query 400
+and masked collection 500 responses. This does not run a real Slack collector,
+verify admin access, establish history completeness/latency/quotas or introduce
+an automatic caller, UI, poller, scheduled action or Slack send.

@@ -345,7 +345,7 @@
     }
   ],
   "sourceHashes": {
-    "content/docs/source/api-reference/openapi/accounts.json": "2d107a6832ac1732233580675b67a24af7d914bb2417dbaa9377e26677695341",
+    "content/docs/source/api-reference/openapi/accounts.json": "2dd43f5daf898995fe2072a720474b4a8d898dd2fcf35a92a6e3cb3b0cffefb0",
     "content/docs/source/api-reference/openapi/content.json": "c109fc9eb3b5557c6585f32fb4771d3ebe6103ac9532c6a7a3b8f929a2603511",
     "content/docs/source/api-reference/openapi/research.json": "ba0ebf1af7bb7cb1441d47830581c318cca770164ab7362c010e03f5fa381b20",
     "content/docs/source/api-reference/openapi/releases.json": "5823be0a303d9d4e106405aa4f7bafde9847c7bb559d0c3a4782700c1098e457",
@@ -1675,6 +1675,432 @@
       "GET /api/sites/spotify/callback"
     ],
     "preflightExcluded": true
+  },
+  "adminCodingSlack": {
+    "mentions": {
+      "path": "/api/admins/coding/slack",
+      "security": [
+        {
+          "apiKeyAuth": []
+        },
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "period",
+          "in": "query",
+          "description": "Time period to filter tags. One of: all (no date filter), daily (last 24 hours), weekly (last 7 days), monthly (last 30 days). Defaults to all.",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all",
+              "daily",
+              "weekly",
+              "monthly"
+            ],
+            "default": "all"
+          }
+        },
+        {
+          "name": "tag",
+          "in": "query",
+          "description": "Optional exact, case-sensitive Slack author ID. Leading/trailing whitespace is trimmed; blank values are rejected. This filters already collected mentions before the totals are computed and does not change access or collection work.",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "example": "U2"
+        }
+      ],
+      "schemas": {
+        "200": {
+          "type": "object",
+          "required": [
+            "status",
+            "total",
+            "total_pull_requests",
+            "tags_with_pull_requests",
+            "tags"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "success"
+              ],
+              "description": "Status of the request"
+            },
+            "total": {
+              "type": "integer",
+              "description": "Number of collected Coding Agent mentions after the requested period and optional author filter.",
+              "example": 134
+            },
+            "total_pull_requests": {
+              "type": "integer",
+              "description": "Number of pull request links across the filtered collected mentions.",
+              "example": 121
+            },
+            "tags_with_pull_requests": {
+              "type": "integer",
+              "description": "Number of filtered collected mentions with at least one pull request link.",
+              "example": 84
+            },
+            "tags": {
+              "type": "array",
+              "description": "List of Slack tag events",
+              "items": {
+                "type": "object",
+                "required": [
+                  "user_id",
+                  "user_name",
+                  "prompt",
+                  "timestamp",
+                  "channel_id",
+                  "channel_name"
+                ],
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "description": "Slack ID of the person who tagged the agent",
+                    "example": "U012AB3CD"
+                  },
+                  "user_name": {
+                    "type": "string",
+                    "description": "Display name of the person who tagged the agent",
+                    "example": "Jane Smith"
+                  },
+                  "user_avatar": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "URL of the Slack avatar",
+                    "example": "https://avatars.slack-edge.com/..."
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "The text of the message sent to the agent",
+                    "example": "add dark mode support to the settings page"
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 timestamp of the tag event",
+                    "example": "2024-01-15T10:30:00.000Z"
+                  },
+                  "channel_id": {
+                    "type": "string",
+                    "description": "Slack channel ID where the tag occurred",
+                    "example": "C012AB3CD"
+                  },
+                  "channel_name": {
+                    "type": "string",
+                    "description": "Human-readable name of the Slack channel",
+                    "example": "dev-team"
+                  },
+                  "pull_requests": {
+                    "type": "array",
+                    "description": "GitHub pull request URLs opened by the Coding Agent in response to this prompt, parsed from bot replies in the Slack thread",
+                    "items": {
+                      "type": "string",
+                      "format": "uri",
+                      "example": "https://github.com/recoupable/api/pull/42"
+                    },
+                    "example": [
+                      "https://github.com/recoupable/api/pull/42"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "401": {
+          "description": "Missing or simultaneous authentication mechanisms return status/error. An invalid API key or Bearer credential returns status/message. Supply exactly one mechanism and authenticate a Recoup admin account.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "status",
+                "error"
+              ],
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "error"
+                  ]
+                },
+                "error": {
+                  "type": "string",
+                  "description": "The first invalid query field or authentication-mechanism error."
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "status",
+                "message"
+              ],
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "error"
+                  ],
+                  "description": "Status of the request"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Error message describing what went wrong"
+                }
+              }
+            }
+          ]
+        },
+        "403": {
+          "type": "object",
+          "required": [
+            "status",
+            "message"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ],
+              "description": "Status of the request"
+            },
+            "message": {
+              "type": "string",
+              "description": "Error message describing what went wrong"
+            }
+          }
+        },
+        "500": {
+          "type": "object",
+          "required": [
+            "status",
+            "message"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ],
+              "description": "Status of the request"
+            },
+            "message": {
+              "type": "string",
+              "description": "Error message describing what went wrong"
+            }
+          }
+        },
+        "400": {
+          "type": "object",
+          "required": [
+            "status",
+            "error"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ]
+            },
+            "error": {
+              "type": "string",
+              "description": "The first invalid query field or authentication-mechanism error."
+            }
+          }
+        }
+      },
+      "examples": {}
+    },
+    "options": {
+      "path": "/api/admins/coding-agent/slack-tags",
+      "security": [
+        {
+          "apiKeyAuth": []
+        },
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [],
+      "schemas": {
+        "200": {
+          "type": "object",
+          "required": [
+            "status",
+            "total",
+            "tags"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "success"
+              ]
+            },
+            "total": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of distinct author IDs in the collected data."
+            },
+            "tags": {
+              "type": "array",
+              "description": "Distinct authors, deduplicated by ID and sorted by display name with the server localeCompare order. The first collected profile is retained; equal names do not merge distinct IDs.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "name",
+                  "avatar"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Slack author ID; use it as the analytics tag filter."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Display name from the first collected profile."
+                  },
+                  "avatar": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Avatar URL from the first collected profile, or null."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "401": {
+          "description": "Missing or simultaneous authentication mechanisms return status/error. An invalid API key or Bearer credential returns status/message. Supply exactly one mechanism and authenticate a Recoup admin account.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "status",
+                "error"
+              ],
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "error"
+                  ]
+                },
+                "error": {
+                  "type": "string",
+                  "description": "The first invalid query field or authentication-mechanism error."
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "status",
+                "message"
+              ],
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "error"
+                  ],
+                  "description": "Status of the request"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Error message describing what went wrong"
+                }
+              }
+            }
+          ]
+        },
+        "403": {
+          "type": "object",
+          "required": [
+            "status",
+            "message"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ],
+              "description": "Status of the request"
+            },
+            "message": {
+              "type": "string",
+              "description": "Error message describing what went wrong"
+            }
+          }
+        },
+        "500": {
+          "type": "object",
+          "required": [
+            "status",
+            "message"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ],
+              "description": "Status of the request"
+            },
+            "message": {
+              "type": "string",
+              "description": "Error message describing what went wrong"
+            }
+          }
+        }
+      },
+      "examples": {
+        "collectedAuthors": {
+          "status": "success",
+          "total": 2,
+          "tags": [
+            {
+              "id": "U1",
+              "name": "Alice",
+              "avatar": null
+            },
+            {
+              "id": "U2",
+              "name": "Bob",
+              "avatar": null
+            }
+          ]
+        },
+        "noAuthors": {
+          "status": "success",
+          "total": 0,
+          "tags": []
+        }
+      }
+    },
+    "queryExample": {
+      "period": "all",
+      "tag": "U2"
+    }
   },
   "headlessChat": {
     "requestSchema": {
