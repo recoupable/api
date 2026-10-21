@@ -17,11 +17,10 @@ export type BuildGetArtistsParamsResult =
 /**
  * Builds the parameters for getArtists based on auth context.
  *
- * For personal keys: Returns the key owner's accountId
- * For org keys: Returns the key owner's accountId (can override with targetAccountId)
- * For Recoup admin key: Returns the key owner's accountId (can override with targetAccountId)
- *
- * If targetAccountId is provided, validates access and returns that account.
+ * Defaults to the authenticated accountId. If targetAccountId is provided,
+ * validates the override with canAccessAccount before using that account.
+ * Omitting orgIdFilter selects personal artists; a supplied value filters
+ * artists to that organization for the resolved account.
  *
  * @param input - The auth context and optional filters
  * @returns The params for getArtists or an error
