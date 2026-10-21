@@ -30,6 +30,15 @@ describe("validateGetSlackTagsQuery", () => {
   });
 
   describe("successful cases", () => {
+    it("retains the selected Slack user ID alongside the period", async () => {
+      vi.mocked(validateAdminAuth).mockResolvedValue(mockAuth);
+
+      const result = await validateGetSlackTagsQuery(
+        new NextRequest("https://example.com/api/admins/coding/slack?period=weekly&tag=U012AB3CD"),
+      );
+
+      expect(result).toEqual({ period: "weekly", tag: "U012AB3CD" });
+    });
     it("returns all period by default", async () => {
       vi.mocked(validateAdminAuth).mockResolvedValue(mockAuth);
 
@@ -64,6 +73,16 @@ describe("validateGetSlackTagsQuery", () => {
   });
 
   describe("error cases", () => {
+    it("rejects a blank tag", async () => {
+      vi.mocked(validateAdminAuth).mockResolvedValue(mockAuth);
+
+      const result = await validateGetSlackTagsQuery(
+        new NextRequest("https://example.com/api/admins/coding/slack?tag=%20%20"),
+      );
+
+      expect(result).toBeInstanceOf(NextResponse);
+      expect((result as NextResponse).status).toBe(400);
+    });
     it("returns auth error when validateAdminAuth returns NextResponse", async () => {
       const errorResponse = NextResponse.json(
         { status: "error", message: "Unauthorized" },

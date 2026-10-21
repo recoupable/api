@@ -8,12 +8,13 @@ import { getSlackTagsHandler } from "@/lib/admins/slack/getSlackTagsHandler";
  * Returns Slack tagging analytics for the Recoup Coding Agent bot.
  * Pulls directly from the Slack API as the source of truth.
  * Supports period filtering: all (default), daily, weekly, monthly.
+ * Optional `tag` filters by exact Slack user ID, after trimming whitespace.
  * Requires admin authentication.
  *
- * @param request - The incoming request; `period` is read from the query string
+ * @param request - The incoming request; `period` and `tag` are read from the query string
  *   and admin auth from the `x-api-key` / `Authorization: Bearer` header.
  * @returns A 200 NextResponse with the tagging analytics payload, 400 on invalid
- *   `period`, or 401/403 for non-admin callers.
+ *   `period` or empty `tag`, or 401/403 for non-admin callers.
  */
 export async function GET(request: NextRequest): Promise<NextResponse> {
   return getSlackTagsHandler(request);
