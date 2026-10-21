@@ -115,14 +115,15 @@
     }
   ],
   "sourceHashes": {
-    "content/docs/source/api-reference/openapi/accounts.json": "b9f420adfb8b7297632d53ced154e7040b59914a73fc43f12fa21b259cf0eefa",
+    "content/docs/source/api-reference/openapi/accounts.json": "7f0fb6a7daebc77d3da937e37a86c371fd1b15d2c068c662a9d221691e35e12d",
     "content/docs/source/api-reference/openapi/content.json": "b3d64cd721fc9f5ce0636258a81f5508c8b35cab43eb3a157d4241af39c9f60e",
-    "content/docs/source/api-reference/openapi/research.json": "3fcfacd89b9f4406d1df03dafae6f2cc798c00c4d72a031511ec8881c55d3107",
-    "content/docs/source/api-reference/openapi/releases.json": "994d992c1a4df51ee3683a20bda88f442fa617de883aa8cf4eaa26dc7fe34cb0",
-    "content/docs/source/api-reference/openapi/social.json": "41b9b89074e0ee0258f6a88e276e71e478c4a675512393cc4cd8b77fb9606398",
+    "content/docs/source/api-reference/openapi/research.json": "d5ab0abefd13b16a1337b9a4cc9c461f3cd4e96feff3d89e717f527e8d5dedc8",
+    "content/docs/source/api-reference/openapi/releases.json": "0a9c0bb646e67595d592b31f8dac055078fcd01f8fbffee495f9af8c234a337b",
+    "content/docs/source/api-reference/openapi/social.json": "49c837327886827b5bc33ae4daac76f12473ecf4a6f75cc073656e9247ba73ca",
     "content/docs/source/api-reference/openapi/context.json": "8a95843d8146f9ce1efa9ae17baee1564bdf7188ad6dd9d1ae5e353ad53ea8e9",
     "content/docs/source/api-reference/openapi/projects.json": "b059cf8baa83a7f73a3c15db19f54fa56e46a3840e91bd42979b83550f543ace",
-    "content/docs/source/api-reference/sites/overview.mdx": "2ed1d428d0ec8006530e8cd2201de5ce151c0d3618ea60850730779a11d73658"
+    "content/docs/source/api-reference/sites/overview.mdx": "b3ff0526f1e7aee0a5bfc3e96539f8b329c3339c729c1e6c9bf9d7ff8440276f",
+    "content/docs/source/credits.mdx": "cfb803d4f9c4bb66ae015496f1d89de2b7c856c7949b89536945b7384bfe22c6"
   },
   "examples": {
     "image": {
@@ -634,6 +635,1038 @@
         "page": 1,
         "limit": 20,
         "total_pages": 1
+      }
+    }
+  },
+  "storedComments": {
+    "method": "GET",
+    "path": "/api/comments",
+    "security": [
+      {
+        "apiKeyAuth": []
+      },
+      {
+        "bearerAuth": []
+      }
+    ],
+    "parameters": [
+      {
+        "name": "artist_account_id",
+        "in": "query",
+        "description": "Required target creator account UUID, using the retained artist wire name. It never overrides the authenticated caller.",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "example": "11111111-1111-4111-8111-111111111111"
+      },
+      {
+        "name": "post_id",
+        "in": "query",
+        "description": "Optional stored posts.id UUID. Narrows the authorized linked-post set; an unrelated stored post returns an empty page. This is not a post URL.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "example": "22222222-2222-4222-8222-222222222222"
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "description": "Positive integer page, default 1 for omitted or empty values. page \u00d7 effective_limit must not exceed 2147483647.",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        },
+        "example": 1
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "description": "Positive requested page size, default 10 for omitted or empty values. Values above 100 are accepted and clamped to 100; the response reports the effective size.",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10
+        },
+        "example": 10
+      }
+    ],
+    "schemas": {
+      "200": {
+        "type": "object",
+        "required": [
+          "status",
+          "comments",
+          "pagination"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success"
+            ],
+            "description": "Status of the request"
+          },
+          "comments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "UUID of the comment"
+                },
+                "post_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Stored post UUID when present. Saved nullable row shape is retained; ownership is still enforced through the linked post join."
+                },
+                "social_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Stored commenter social UUID, or null when absent. This is not the creator ownership filter."
+                },
+                "comment": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Saved comment text, or null when unavailable; no text is synthesized."
+                },
+                "commented_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Timestamp with timezone of when the comment was made"
+                }
+              },
+              "required": [
+                "id",
+                "post_id",
+                "social_id",
+                "comment",
+                "commented_at"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Saved comments within the authorized creator\u2019s linked-post set and optional post UUID filter."
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "total_count": {
+                "type": "integer",
+                "description": "Exact total within the same authorized linked-post and optional post filter.",
+                "minimum": 0
+              },
+              "page": {
+                "type": "integer",
+                "description": "Current page number",
+                "minimum": 1
+              },
+              "limit": {
+                "type": "integer",
+                "description": "Effective page size after clamping to 100.",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "total_pages": {
+                "type": "integer",
+                "description": "Ceiling of total_count/effective limit; zero when total_count is zero.",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total_count",
+              "page",
+              "limit",
+              "total_pages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "status": "success",
+          "comments": [
+            {
+              "id": "33333333-3333-4333-8333-333333333333",
+              "post_id": "22222222-2222-4222-8222-222222222222",
+              "social_id": "44444444-4444-4444-8444-444444444444",
+              "comment": "Saved fixture comment",
+              "commented_at": "2026-10-10T12:00:00Z"
+            },
+            {
+              "id": "55555555-5555-4555-8555-555555555555",
+              "post_id": "22222222-2222-4222-8222-222222222222",
+              "social_id": null,
+              "comment": null,
+              "commented_at": "2026-10-09T12:00:00Z"
+            }
+          ],
+          "pagination": {
+            "total_count": 2,
+            "page": 1,
+            "limit": 10,
+            "total_pages": 1
+          }
+        }
+      },
+      "400": {
+        "type": "object",
+        "required": [
+          "status",
+          "error",
+          "missing_fields"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Validation path, possibly empty for unknown query keys."
+          }
+        }
+      },
+      "401": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "description": "Human-readable error message or documented error code.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "description": "Human-readable authentication error message.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      },
+      "403": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "500": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      }
+    },
+    "headers": {
+      "200": {
+        "Cache-Control": {
+          "description": "All GET success and error responses disable shared caching.",
+          "schema": {
+            "type": "string",
+            "const": "private, no-store"
+          },
+          "example": "private, no-store"
+        }
+      },
+      "400": {
+        "Cache-Control": {
+          "description": "All GET success and error responses disable shared caching.",
+          "schema": {
+            "type": "string",
+            "const": "private, no-store"
+          },
+          "example": "private, no-store"
+        }
+      },
+      "401": {
+        "Cache-Control": {
+          "description": "All GET success and error responses disable shared caching.",
+          "schema": {
+            "type": "string",
+            "const": "private, no-store"
+          },
+          "example": "private, no-store"
+        }
+      },
+      "403": {
+        "Cache-Control": {
+          "description": "All GET success and error responses disable shared caching.",
+          "schema": {
+            "type": "string",
+            "const": "private, no-store"
+          },
+          "example": "private, no-store"
+        }
+      },
+      "500": {
+        "Cache-Control": {
+          "description": "All GET success and error responses disable shared caching.",
+          "schema": {
+            "type": "string",
+            "const": "private, no-store"
+          },
+          "example": "private, no-store"
+        }
+      }
+    },
+    "queryExample": {
+      "artist_account_id": "11111111-1111-4111-8111-111111111111",
+      "post_id": "22222222-2222-4222-8222-222222222222",
+      "page": 1,
+      "limit": 10
+    },
+    "example": {
+      "status": "success",
+      "comments": [
+        {
+          "id": "33333333-3333-4333-8333-333333333333",
+          "post_id": "22222222-2222-4222-8222-222222222222",
+          "social_id": "44444444-4444-4444-8444-444444444444",
+          "comment": "Saved fixture comment",
+          "commented_at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "id": "55555555-5555-4555-8555-555555555555",
+          "post_id": "22222222-2222-4222-8222-222222222222",
+          "social_id": null,
+          "comment": null,
+          "commented_at": "2026-10-09T12:00:00Z"
+        }
+      ],
+      "pagination": {
+        "total_count": 2,
+        "page": 1,
+        "limit": 10,
+        "total_pages": 1
+      }
+    }
+  },
+  "planBalances": {
+    "credits": {
+      "schema": {
+        "type": "object",
+        "required": [
+          "account_id",
+          "remaining_credits",
+          "total_credits",
+          "used_credits",
+          "is_pro",
+          "timestamp",
+          "plan",
+          "task_limit",
+          "min_cadence_minutes"
+        ],
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The unique identifier of the account this balance belongs to.",
+            "example": "11111111-1111-4111-8111-111111111111"
+          },
+          "remaining_credits": {
+            "type": "integer",
+            "description": "Balance in integer micro-dollars. Can exceed the plan allowance after a top-up or be negative. This is a balance, not a lifetime-spend total.",
+            "example": 292450000
+          },
+          "total_credits": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Monthly refill floor in integer micro-dollars: Free 3,330,000; Starter 20,000,000; Pro 300,000,000. Top-ups can put remaining credits above this floor.",
+            "example": 300000000
+          },
+          "used_credits": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "max(0, total_credits - remaining_credits). A balance-derived display, not lifetime or period ledger spend.",
+            "example": 7550000
+          },
+          "is_pro": {
+            "type": "boolean",
+            "description": "True when the account is on a pro plan, directly via an account subscription or via an organization subscription.",
+            "example": true
+          },
+          "timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "ISO 8601 timestamp from the balance record; null when unavailable.",
+            "example": "2026-10-01T12:00:00Z"
+          },
+          "plan": {
+            "type": "string",
+            "enum": [
+              "free",
+              "starter",
+              "pro"
+            ],
+            "example": "pro"
+          },
+          "task_limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Enabled scheduled-task limit; null means unlimited.",
+            "example": null
+          },
+          "min_cadence_minutes": {
+            "type": "integer",
+            "description": "Minimum allowed cadence: Free 10080, Starter 1440, Pro 60.",
+            "example": 60
+          }
+        },
+        "example": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": 292450000,
+          "total_credits": 300000000,
+          "used_credits": 7550000,
+          "is_pro": true,
+          "plan": "pro",
+          "task_limit": null,
+          "min_cadence_minutes": 60,
+          "timestamp": "2026-10-01T12:00:00Z"
+        },
+        "description": "Current plan-derived allowance and balance in integer micro-dollars. Extra credits can exceed the allowance; used_credits is max(0, total_credits - remaining_credits), not ledger spend. The response preserves the signed balance. Null task_limit means unlimited."
+      },
+      "examples": {
+        "free": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": 3330000,
+          "total_credits": 3330000,
+          "used_credits": 0,
+          "is_pro": false,
+          "plan": "free",
+          "task_limit": 1,
+          "min_cadence_minutes": 10080,
+          "timestamp": null
+        },
+        "starter": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": 15000000,
+          "total_credits": 20000000,
+          "used_credits": 5000000,
+          "is_pro": false,
+          "plan": "starter",
+          "task_limit": 3,
+          "min_cadence_minutes": 1440,
+          "timestamp": "2026-10-01T12:00:00Z"
+        },
+        "directPro": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": 292450000,
+          "total_credits": 300000000,
+          "used_credits": 7550000,
+          "is_pro": true,
+          "plan": "pro",
+          "task_limit": null,
+          "min_cadence_minutes": 60,
+          "timestamp": "2026-10-01T12:00:00Z"
+        },
+        "organizationPro": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": 292450000,
+          "total_credits": 300000000,
+          "used_credits": 7550000,
+          "is_pro": true,
+          "plan": "pro",
+          "task_limit": null,
+          "min_cadence_minutes": 60,
+          "timestamp": "2026-10-01T12:00:00Z"
+        },
+        "aboveAllotment": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": 325000000,
+          "total_credits": 300000000,
+          "used_credits": 0,
+          "is_pro": true,
+          "plan": "pro",
+          "task_limit": null,
+          "min_cadence_minutes": 60,
+          "timestamp": "2026-10-01T12:00:00Z"
+        },
+        "negativeBalance": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": -1000,
+          "total_credits": 3330000,
+          "used_credits": 3331000,
+          "is_pro": false,
+          "plan": "free",
+          "task_limit": 1,
+          "min_cadence_minutes": 10080,
+          "timestamp": "2026-10-01T12:00:00Z"
+        }
+      }
+    },
+    "subscription": {
+      "schema": {
+        "type": "object",
+        "required": [
+          "isPro",
+          "status",
+          "plan",
+          "source",
+          "name",
+          "amountCents",
+          "currency",
+          "interval",
+          "collectionMethod",
+          "currentPeriodEnd"
+        ],
+        "properties": {
+          "isPro": {
+            "type": "boolean",
+            "description": "True only for effective Pro entitlement. A paid Starter account returns false. Use plan for paid-plan decisions."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "trialing",
+              "canceled",
+              "past_due",
+              "none"
+            ],
+            "description": "Current entitlement view. Resolving to Free returns none and null billing fields, including for an inactive subscription; this is not subscription lifecycle history.",
+            "example": "active"
+          },
+          "plan": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plan identifier (e.g. `pro`). Null when no subscription currently confers a paid plan.",
+            "example": "pro",
+            "enum": [
+              "starter",
+              "pro",
+              null
+            ]
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "account",
+              "organization",
+              null
+            ],
+            "description": "Origin of the subscription. `account` for direct, `organization` when covered by an organization. Null when no subscription currently confers a paid plan.",
+            "example": "account"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display name of the plan's Stripe price (nickname) or product. Null when no subscription exists.",
+            "example": "Pro"
+          },
+          "amountCents": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Recurring amount in the smallest currency unit (cents for USD). Null when no subscription exists.",
+            "example": 9900
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO 4217 currency code, lowercase.",
+            "example": "usd"
+          },
+          "interval": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year",
+              null
+            ],
+            "description": "Billing interval of the recurring price.",
+            "example": "month"
+          },
+          "collectionMethod": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "charge_automatically",
+              "send_invoice",
+              null
+            ],
+            "description": "`charge_automatically` bills the card on file at renewal; `send_invoice` emails an invoice that is paid manually (enterprise plans). A saved card is never charged for a `send_invoice` plan.",
+            "example": "charge_automatically"
+          },
+          "currentPeriodEnd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "End of the current billing period: the renewal date, or the next invoice date for invoiced plans.",
+            "example": "2026-10-04T00:00:00Z"
+          }
+        },
+        "description": "Effective subscription details. When status is none, plan, source, name, amountCents, currency, interval, collectionMethod and currentPeriodEnd are all null."
+      },
+      "examples": {
+        "free": {
+          "isPro": false,
+          "status": "none",
+          "plan": null,
+          "source": null,
+          "name": null,
+          "amountCents": null,
+          "currency": null,
+          "interval": null,
+          "collectionMethod": null,
+          "currentPeriodEnd": null
+        },
+        "starter": {
+          "isPro": false,
+          "status": "active",
+          "plan": "starter",
+          "source": "account",
+          "name": null,
+          "amountCents": null,
+          "currency": null,
+          "interval": null,
+          "collectionMethod": null,
+          "currentPeriodEnd": null
+        },
+        "directPro": {
+          "isPro": true,
+          "status": "active",
+          "plan": "pro",
+          "source": "account",
+          "name": null,
+          "amountCents": null,
+          "currency": null,
+          "interval": null,
+          "collectionMethod": null,
+          "currentPeriodEnd": null
+        },
+        "organizationPro": {
+          "isPro": true,
+          "status": "active",
+          "plan": "pro",
+          "source": "organization",
+          "name": null,
+          "amountCents": null,
+          "currency": null,
+          "interval": null,
+          "collectionMethod": null,
+          "currentPeriodEnd": null
+        },
+        "inactive": {
+          "isPro": false,
+          "status": "none",
+          "plan": null,
+          "source": null,
+          "name": null,
+          "amountCents": null,
+          "currency": null,
+          "interval": null,
+          "collectionMethod": null,
+          "currentPeriodEnd": null
+        }
+      }
+    },
+    "guideCreditExample": {
+      "account_id": "11111111-1111-4111-8111-111111111111",
+      "remaining_credits": 292450000,
+      "total_credits": 300000000,
+      "used_credits": 7550000,
+      "is_pro": true,
+      "plan": "pro",
+      "task_limit": null,
+      "min_cadence_minutes": 60,
+      "timestamp": "2026-10-01T12:00:00Z"
+    }
+  },
+  "siteLifecycle": {
+    "examples": {
+      "generation": {
+        "action": "generation",
+        "token": "TOKEN_FROM_GENERATION"
+      },
+      "publishSaved": {
+        "action": "publish",
+        "revision": 3
+      },
+      "publishPreview": {
+        "action": "publish",
+        "revision": 3,
+        "generationToken": "TOKEN_FROM_GENERATION"
+      },
+      "unpublish": {
+        "action": "unpublish",
+        "revision": 3
+      },
+      "delete": {
+        "action": "delete",
+        "revision": 3,
+        "generationToken": "TOKEN_FROM_GENERATION"
+      }
+    },
+    "upgrade": {
+      "status": 402,
+      "body": {
+        "error": "An active paid Recoup subscription is required to publish a site. Subscribe in this site\u2019s workspace, then publish again."
+      }
+    },
+    "documentedOperations": [
+      "GET /api/sites",
+      "GET /api/sites/apple/config",
+      "GET /api/sites/public/{id}",
+      "GET /api/sites/public/{id}/spotify",
+      "GET /api/sites/spotify/callback",
+      "GET /api/sites/{id}",
+      "GET /api/sites/{id}/activity",
+      "GET /api/sites/{id}/fan-connection",
+      "GET /api/sites/{id}/fans",
+      "GET /api/sites/{id}/signups",
+      "PATCH /api/sites/{id}",
+      "POST /api/sites",
+      "POST /api/sites/assets",
+      "POST /api/sites/public/{id}/activity",
+      "POST /api/sites/public/{id}/signup",
+      "POST /api/sites/public/{id}/spotify",
+      "PUT /api/sites/{id}/fan-connection"
+    ],
+    "callbackOperations": [
+      "GET /api/sites/spotify/callback"
+    ],
+    "preflightExcluded": true
+  },
+  "headlessChat": {
+    "requestSchema": {
+      "type": "object",
+      "description": "Request body for chat generation. Exactly one of 'prompt' or 'messages' must be provided.",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Single text prompt for the assistant. Required if 'messages' is not provided.",
+          "minLength": 1
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "role",
+              "parts"
+            ],
+            "description": "AI SDK UIMessage. Parts are structurally validated before provisioning for headless runs. Legacy content-only messages are rejected.",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "assistant",
+                  "system"
+                ]
+              },
+              "metadata": {},
+              "parts": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "type"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "description": "SDK discriminated parts: text (text), file (mediaType and url), reasoning, supported tool and data-* parts. Each must satisfy the installed AI SDK schema; a type field alone is insufficient.",
+                "example": [
+                  {
+                    "type": "text",
+                    "text": "Summarize my next release."
+                  }
+                ]
+              }
+            }
+          },
+          "description": "Array of UIMessage objects for context. Required if 'prompt' is not provided.",
+          "minItems": 1
+        },
+        "artistId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The unique identifier of the artist (optional)"
+        },
+        "model": {
+          "type": "string",
+          "description": "The AI model to use for text generation (optional)",
+          "example": "openai/gpt-5-mini"
+        },
+        "trigger_run_id": {
+          "type": "string",
+          "description": "Optional. When the run is kicked off by a Trigger.dev scheduled task, the Trigger run id (`run_...`). The started workflow's `{ sessionId, chatId, workflowRunId }` are written to that Trigger run's metadata so the scheduled run can be traced to the chat that did the work.",
+          "example": "run_06g3i0e3logru439uh9e1m8801"
+        }
+      },
+      "example": {
+        "messages": [
+          {
+            "id": "user-1",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "Summarize my next release."
+              }
+            ]
+          }
+        ]
+      },
+      "examples": [
+        {
+          "messages": [
+            {
+              "id": "user-inline-file",
+              "role": "user",
+              "parts": [
+                {
+                  "type": "text",
+                  "text": "Summarize this attached note."
+                },
+                {
+                  "type": "file",
+                  "mediaType": "text/plain",
+                  "url": "data:text/plain;base64,U3ludGhldGljIHJlbGVhc2Ugbm90ZS4="
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "requestExamples": [
+      {
+        "messages": [
+          {
+            "id": "user-1",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "Summarize my next release."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "id": "user-inline-file",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "Summarize this attached note."
+              },
+              {
+                "type": "file",
+                "mediaType": "text/plain",
+                "url": "data:text/plain;base64,U3ludGhldGljIHJlbGVhc2Ugbm90ZS4="
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "errorSchema": {
+      "type": "object",
+      "required": [
+        "status",
+        "error"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "error"
+          ],
+          "description": "Status of the request"
+        },
+        "error": {
+          "type": "string",
+          "description": "Validation error describing why the headless request was rejected."
+        },
+        "missing_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional validation path when available; a general request error can omit it."
+        }
+      }
+    },
+    "statusSchema": {
+      "type": "object",
+      "required": [
+        "runId",
+        "status"
+      ],
+      "description": "Point-in-time status of an asynchronous chat-generation run.",
+      "properties": {
+        "runId": {
+          "type": "string",
+          "description": "The durable workflow run id.",
+          "example": "wrun_01KVWZNM82NA7XKNEWWHG8VPHJ"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "running",
+            "completed",
+            "failed",
+            "cancelled"
+          ],
+          "description": "Lifecycle state of the run. Read the produced content via the chat (`chatId` from the start response)."
+        },
+        "createdAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "When the workflow run was created; null if unavailable, including for terminal runs.",
+          "example": "2026-08-25T19:33:56.000Z"
+        },
+        "startedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "When execution started; null while unavailable or if its timing getter fails, including for terminal runs.",
+          "example": "2026-08-25T19:34:16.386Z"
+        },
+        "completedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "When the run reached a terminal state; null while unavailable or if its timing getter fails, including for terminal runs.",
+          "example": "2026-08-25T20:15:55.000Z"
+        },
+        "durationMs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "completedAt minus startedAt in milliseconds; null if either timestamp is unavailable, including for terminal runs.",
+          "example": 2498614
+        }
       }
     }
   }
