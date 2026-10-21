@@ -12,6 +12,10 @@ import type { ContextBriefDocument } from "./selectContextDocuments";
 import { compileContextBrief } from "./compileContextBrief";
 import type { ContextRequestRecord } from "./runContextRequest";
 import { readContextRequest } from "./readContextRequest";
+import {
+  catalogPlanningModuleMap,
+  normalizeCatalogPlanningModule,
+} from "./normalizeCatalogPlanningModule";
 
 const briefFields = {
   request_id: z.uuid(),
@@ -97,7 +101,11 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     organization_id: z.string().uuid().optional(),
     after_isrc: z.string().min(1).max(100).optional(),
     limit: z.number().int().min(1).max(100).default(100),
-    module: z.enum(["musicbrainz", "mlc_recording", "songstats"]),
+    module: z
+      .enum(Object.keys(catalogPlanningModuleMap) as (keyof typeof catalogPlanningModuleMap)[])
+      .describe(
+        "Use recording_candidates for unconfirmed recording matches, recording_work_candidates for candidate linked works (not ownership), or platform_metadata for available platform track information (not growth metrics). Legacy musicbrainz, mlc_recording and songstats remain accepted. Planning only; returned module IDs retain legacy values and collection is not permitted.",
+      ),
   }),
   z.strictObject({
     action: z.literal("read_execution"),
@@ -330,7 +338,10 @@ export async function processContextOperation(
         availableFields: ["isrc" as const],
         reusableModules: [],
       })),
-      requested: page.members.map(member => ({ subjectId: member.subjectId, module: args.module })),
+      requested: page.members.map(member => ({
+        subjectId: member.subjectId,
+        module: normalizeCatalogPlanningModule(args.module),
+      })),
       permittedModules: [],
     });
     return { page, plan, collectionPermitted: false };

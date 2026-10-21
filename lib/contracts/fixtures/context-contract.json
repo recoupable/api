@@ -1,6 +1,6 @@
 {
   "evidence": "Provider-free request syntax and static contract claims only. URLs are placeholders; no provider, payment or customer workflow is exercised.",
-  "sourceHash": "8a95843d8146f9ce1efa9ae17baee1564bdf7188ad6dd9d1ae5e353ad53ea8e9",
+  "sourceHash": "88974fecc88b833fbe0576e575f4d39bd920746661f56ebd956bd29b5af34ece",
   "requestSchemas": [
     {
       "type": "object",
@@ -643,6 +643,64 @@
       "properties": {
         "action": {
           "type": "string",
+          "const": "plan_catalog_members"
+        },
+        "request_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "description": "Existing catalog Context request UUID, returned by ingest_catalog or read. This is not an account or catalog UUID."
+        },
+        "subject_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "description": "Catalog Context subject UUID from that request. This is distinct from the catalog record ID and each member recording subject ID."
+        },
+        "organization_id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "description": "Optional organization workspace. Current membership and ownership are checked; omitting it uses personal scope."
+        },
+        "after_isrc": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100,
+          "description": "For the next page, pass page.nextCursor while page.hasMore is true. Omit on the first page."
+        },
+        "limit": {
+          "default": 100,
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "module": {
+          "description": "Plan a lookup using recording_candidates (unconfirmed recording matches), recording_work_candidates (candidate linked works, without ownership verification), or platform_metadata (available platform track information, not growth metrics). The other three values are legacy compatibility identifiers. Returned module values and node keys retain those identifiers. This action does not perform a lookup or permit collection.",
+          "type": "string",
+          "enum": [
+            "recording_candidates",
+            "recording_work_candidates",
+            "platform_metadata",
+            "musicbrainz",
+            "mlc_recording",
+            "songstats"
+          ]
+        }
+      },
+      "required": [
+        "action",
+        "request_id",
+        "subject_id",
+        "module"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
           "const": "read_execution"
         },
         "execution_id": {
@@ -1084,9 +1142,7 @@
       "additionalProperties": false
     }
   ],
-  "undocumentedActions": [
-    "plan_catalog_members"
-  ],
+  "undocumentedActions": [],
   "mcpOperations": {
     "list_release_cases": {
       "name": "list_music_release_cases",
@@ -1143,6 +1199,10 @@
     "expand_catalog_members": {
       "name": "expand_music_context_catalog",
       "readOnly": false
+    },
+    "plan_catalog_members": {
+      "name": "plan_music_catalog_research",
+      "readOnly": true
     },
     "read_execution": {
       "name": "read_music_context_execution",
@@ -1477,6 +1537,366 @@
         "has_more"
       ],
       "additionalProperties": false
+    }
+  },
+  "responseSchemas": {
+    "catalogPlanning": {
+      "type": "object",
+      "properties": {
+        "page": {
+          "type": "object",
+          "properties": {
+            "catalogId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "description": "Underlying catalog record ID; distinct from the Context catalog subject."
+            },
+            "catalogSubjectId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "members": {
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "subjectId": {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  "kind": {
+                    "type": "string",
+                    "const": "recording"
+                  },
+                  "identityConfirmed": {
+                    "type": "boolean",
+                    "const": true,
+                    "description": "Saved ISRC-backed planning target; not confirmation of an external match, rights or ownership."
+                  },
+                  "availableFields": {
+                    "type": "array",
+                    "prefixItems": [
+                      {
+                        "type": "string",
+                        "const": "isrc"
+                      }
+                    ]
+                  },
+                  "reusableModules": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Saved target metadata; this planning action still supplies an empty permitted-module list."
+                  },
+                  "isrc": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 100
+                  }
+                },
+                "required": [
+                  "subjectId",
+                  "kind",
+                  "identityConfirmed",
+                  "availableFields",
+                  "reusableModules",
+                  "isrc"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "nextCursor": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 100
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "hasMore": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "catalogId",
+            "catalogSubjectId",
+            "members",
+            "nextCursor",
+            "hasMore"
+          ],
+          "additionalProperties": false
+        },
+        "plan": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "description": "Stable {subjectId}:{legacy_module} key; public input aliases do not change it."
+              },
+              "entry": {
+                "type": "string",
+                "const": "catalog"
+              },
+              "subjectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "targetKind": {
+                "type": "string",
+                "const": "recording"
+              },
+              "module": {
+                "type": "string",
+                "enum": [
+                  "musicbrainz",
+                  "mlc_recording",
+                  "songstats"
+                ],
+                "description": "Unchanged stored compatibility identifier, including when the request uses a preferred public name."
+              },
+              "executor": {
+                "type": "string",
+                "enum": [
+                  "collectContextMusicBrainz",
+                  "collectContextMlc:recording",
+                  "collectContextSongstats"
+                ],
+                "description": "Planned internal identifier; it does not authorize or dispatch a call."
+              },
+              "state": {
+                "type": "string",
+                "const": "blocked"
+              },
+              "reasons": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "dependsOn": {
+                "maxItems": 0,
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "scope": {
+                "type": "string",
+                "const": "workspace_private"
+              },
+              "executionStarted": {
+                "type": "boolean",
+                "const": false
+              }
+            },
+            "required": [
+              "key",
+              "entry",
+              "subjectId",
+              "targetKind",
+              "module",
+              "executor",
+              "state",
+              "reasons",
+              "dependsOn",
+              "scope",
+              "executionStarted"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "collectionPermitted": {
+          "type": "boolean",
+          "const": false
+        }
+      },
+      "required": [
+        "page",
+        "plan",
+        "collectionPermitted"
+      ],
+      "additionalProperties": false,
+      "description": "Complete result for plan_catalog_members only. Reads current expanded members and plans a lookup; never performs collection. Other Context actions retain their separate results."
+    }
+  },
+  "responseReferences": {
+    "plan_catalog_members": "#/responseSchemas/catalogPlanning"
+  },
+  "catalogPlanning": {
+    "responseReferenceSource": {
+      "repository": "recoupable/marketing",
+      "path": "content/docs/source/api-reference/openapi/context.json",
+      "reference": "#/components/schemas/ContextCatalogPlanningResponse"
+    },
+    "requestExamples": [
+      {
+        "action": "plan_catalog_members",
+        "request_id": "00000000-0000-4000-8000-000000000003",
+        "subject_id": "00000000-0000-4000-8000-000000000004",
+        "organization_id": "00000000-0000-4000-8000-000000000002",
+        "after_isrc": "AAA000000000",
+        "limit": 20,
+        "module": "recording_candidates"
+      },
+      {
+        "action": "plan_catalog_members",
+        "request_id": "00000000-0000-4000-8000-000000000003",
+        "subject_id": "00000000-0000-4000-8000-000000000004",
+        "organization_id": "00000000-0000-4000-8000-000000000002",
+        "after_isrc": "AAA000000000",
+        "limit": 20,
+        "module": "recording_work_candidates"
+      },
+      {
+        "action": "plan_catalog_members",
+        "request_id": "00000000-0000-4000-8000-000000000003",
+        "subject_id": "00000000-0000-4000-8000-000000000004",
+        "organization_id": "00000000-0000-4000-8000-000000000002",
+        "after_isrc": "AAA000000000",
+        "limit": 20,
+        "module": "platform_metadata"
+      }
+    ],
+    "responseExamples": {
+      "catalogPlanRecording": {
+        "page": {
+          "catalogId": "00000000-0000-4000-8000-000000000006",
+          "catalogSubjectId": "00000000-0000-4000-8000-000000000004",
+          "members": [
+            {
+              "subjectId": "00000000-0000-4000-8000-000000000005",
+              "kind": "recording",
+              "identityConfirmed": true,
+              "availableFields": [
+                "isrc"
+              ],
+              "reusableModules": [],
+              "isrc": "AAA000000001"
+            }
+          ],
+          "nextCursor": "AAA000000001",
+          "hasMore": true
+        },
+        "plan": [
+          {
+            "key": "00000000-0000-4000-8000-000000000005:musicbrainz",
+            "entry": "catalog",
+            "subjectId": "00000000-0000-4000-8000-000000000005",
+            "targetKind": "recording",
+            "module": "musicbrainz",
+            "executor": "collectContextMusicBrainz",
+            "state": "blocked",
+            "reasons": [
+              "Server collection policy has not permitted this module"
+            ],
+            "dependsOn": [],
+            "scope": "workspace_private",
+            "executionStarted": false
+          }
+        ],
+        "collectionPermitted": false
+      },
+      "catalogPlanWork": {
+        "page": {
+          "catalogId": "00000000-0000-4000-8000-000000000006",
+          "catalogSubjectId": "00000000-0000-4000-8000-000000000004",
+          "members": [
+            {
+              "subjectId": "00000000-0000-4000-8000-000000000005",
+              "kind": "recording",
+              "identityConfirmed": true,
+              "availableFields": [
+                "isrc"
+              ],
+              "reusableModules": [],
+              "isrc": "AAA000000001"
+            }
+          ],
+          "nextCursor": "AAA000000001",
+          "hasMore": true
+        },
+        "plan": [
+          {
+            "key": "00000000-0000-4000-8000-000000000005:mlc_recording",
+            "entry": "catalog",
+            "subjectId": "00000000-0000-4000-8000-000000000005",
+            "targetKind": "recording",
+            "module": "mlc_recording",
+            "executor": "collectContextMlc:recording",
+            "state": "blocked",
+            "reasons": [
+              "Server collection policy has not permitted this module"
+            ],
+            "dependsOn": [],
+            "scope": "workspace_private",
+            "executionStarted": false
+          }
+        ],
+        "collectionPermitted": false
+      },
+      "catalogPlanPlatform": {
+        "page": {
+          "catalogId": "00000000-0000-4000-8000-000000000006",
+          "catalogSubjectId": "00000000-0000-4000-8000-000000000004",
+          "members": [
+            {
+              "subjectId": "00000000-0000-4000-8000-000000000005",
+              "kind": "recording",
+              "identityConfirmed": true,
+              "availableFields": [
+                "isrc"
+              ],
+              "reusableModules": [],
+              "isrc": "AAA000000001"
+            }
+          ],
+          "nextCursor": "AAA000000001",
+          "hasMore": true
+        },
+        "plan": [
+          {
+            "key": "00000000-0000-4000-8000-000000000005:songstats",
+            "entry": "catalog",
+            "subjectId": "00000000-0000-4000-8000-000000000005",
+            "targetKind": "recording",
+            "module": "songstats",
+            "executor": "collectContextSongstats",
+            "state": "blocked",
+            "reasons": [
+              "Server collection policy has not permitted this module"
+            ],
+            "dependsOn": [],
+            "scope": "workspace_private",
+            "executionStarted": false
+          }
+        ],
+        "collectionPermitted": false
+      },
+      "catalogPlanEmpty": {
+        "page": {
+          "catalogId": "00000000-0000-4000-8000-000000000006",
+          "catalogSubjectId": "00000000-0000-4000-8000-000000000004",
+          "members": [],
+          "nextCursor": null,
+          "hasMore": false
+        },
+        "plan": [],
+        "collectionPermitted": false
+      }
     }
   }
 }

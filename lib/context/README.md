@@ -146,10 +146,16 @@ request's capped subject list, which remains unchanged. Automatic member plannin
 provider collection are still unconnected.
 
 Authenticated `action: plan_catalog_members` takes the same request, catalog subject,
-optional cursor and page limit, plus one module (`musicbrainz`, `mlc_recording`, or
-`songstats`). It returns only expanded recordings still present in the selected
+optional cursor and page limit, plus one module: `recording_candidates` for unconfirmed
+recording matches, `recording_work_candidates` for candidate linked works (not ownership),
+or `platform_metadata` for available platform track information (not growth metrics).
+The existing names `musicbrainz`, `mlc_recording`, and `songstats` remain accepted.
+Inputs normalize before planning; returned modules, executors, and node keys retain
+their existing identities. No migration or removal date is introduced.
+It returns only expanded recordings still present in the selected
 workspace's catalog and a review-only plan for that page. Every new collection node
-remains blocked until a server spending policy permits it. Removed catalog members
+remains blocked and the response retains `collectionPermitted: false`. This action
+never connects a collector, claims an execution, or grants spending permission. Removed catalog members
 and members not yet expanded are not offered as current planning targets.
 The server also has a read-only resolver for one expanded recording's ISRC. It
 rechecks current membership and access, but the existing enrichment claim still
