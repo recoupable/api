@@ -43,6 +43,14 @@ do not write GitHub files or verify hosted authorization, sandbox concurrency or
 client adoption. The examples and resolved schemas live in `guardedGitFiles` in
 the same coordinated fixture, separate from the API-owned error-envelope export.
 
+`publishedChatRecovery.test.ts` binds the canonical chat POST/GET and six session-chat
+exports to selected published error schemas. It covers the early active-run 409,
+unresolved-state 503, failed chat reads as 500, unchanged GET status-read 502, and
+empty/terminal finish-only 200 SSE. Auth validation, storage and workflow service
+leaves are synthetic; no workflow or customer request runs. The no-write assertions
+apply to the tested early rejection paths, not every possible 409/500. Client text
+preservation, disconnect behavior and live reconnect acceptance remain separate.
+
 `buildContextOperationCatalog` exports the current request schemas and separates
 delegated tool names from standard-only evidence tools. The Context fixture checks
 both maps and the evidence receipt/page schemas. Generate the four exports with:

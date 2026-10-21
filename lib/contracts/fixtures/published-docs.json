@@ -112,16 +112,349 @@
         ],
         "additionalProperties": {}
       }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat",
+      "status": 409,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "description": "Optional validation path for the first rejected field. String entries identify object/query fields; integer entries identify array positions. An empty path can represent validation of the path value itself. Lookup or workflow errors can omit this field."
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "description": "Optional validation path for the first rejected field. String entries identify object/query fields; integer entries identify array positions. An empty path can represent validation of the path value itself. Lookup or workflow errors can omit this field."
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat",
+      "status": 503,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "description": "Optional validation path for the first rejected field. String entries identify object/query fields; integer entries identify array positions. An empty path can represent validation of the path value itself. Lookup or workflow errors can omit this field."
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "GET",
+      "path": "/api/chat/{chatId}/stream",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "description": "Optional validation path for the first rejected field. String entries identify object/query fields; integer entries identify array positions. An empty path can represent validation of the path value itself. Lookup or workflow errors can omit this field."
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "GET",
+      "path": "/api/chat/{chatId}/stream",
+      "status": 502,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "description": "Optional validation path for the first rejected field. String entries identify object/query fields; integer entries identify array positions. An empty path can represent validation of the path value itself. Lookup or workflow errors can omit this field."
+          }
+        }
+      }
+    },
+    {
+      "specification": "sessions.json",
+      "method": "GET",
+      "path": "/api/sessions/{sessionId}/chats",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Always `\"error\"` for error responses."
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      }
+    },
+    {
+      "specification": "sessions.json",
+      "method": "POST",
+      "path": "/api/sessions/{sessionId}/chats",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Always `\"error\"` for error responses."
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      }
+    },
+    {
+      "specification": "sessions.json",
+      "method": "GET",
+      "path": "/api/sessions/{sessionId}/chats/{chatId}",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Always `\"error\"` for error responses."
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      }
+    },
+    {
+      "specification": "sessions.json",
+      "method": "PATCH",
+      "path": "/api/sessions/{sessionId}/chats/{chatId}",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Always `\"error\"` for error responses."
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      }
+    },
+    {
+      "specification": "sessions.json",
+      "method": "DELETE",
+      "path": "/api/sessions/{sessionId}/chats/{chatId}",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Always `\"error\"` for error responses."
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      }
+    },
+    {
+      "specification": "sessions.json",
+      "method": "POST",
+      "path": "/api/sessions/{sessionId}/chats/{chatId}/read",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Always `\"error\"` for error responses."
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      }
     }
   ],
   "sourceHashes": {
     "content/docs/source/api-reference/openapi/accounts.json": "3c667f2d6bd457a266e41783135eacb10a7c49a979f27221c5f9ad338e2055f4",
     "content/docs/source/api-reference/openapi/content.json": "0ea7a89887b2e6d8ab681d56d74766ecb58bf32f7d09386a1e12d8024e9b8c1c",
-    "content/docs/source/api-reference/openapi/research.json": "d5ab0abefd13b16a1337b9a4cc9c461f3cd4e96feff3d89e717f527e8d5dedc8",
+    "content/docs/source/api-reference/openapi/research.json": "0814658b70cc620c9419d84b545a54caf45d38b61eb7d8ec12027fa27f0b87b3",
     "content/docs/source/api-reference/openapi/releases.json": "03ee4a93225a13664f4d16dd7b34d51294821a7ab14d21f2f8f654f89b80db96",
     "content/docs/source/api-reference/openapi/social.json": "49c837327886827b5bc33ae4daac76f12473ecf4a6f75cc073656e9247ba73ca",
     "content/docs/source/api-reference/openapi/context.json": "8a95843d8146f9ce1efa9ae17baee1564bdf7188ad6dd9d1ae5e353ad53ea8e9",
     "content/docs/source/api-reference/openapi/projects.json": "b059cf8baa83a7f73a3c15db19f54fa56e46a3840e91bd42979b83550f543ace",
+    "content/docs/source/api-reference/openapi/sessions.json": "85af56cc150374b28c25541c45db15849c71fdeb6288cf90dc2beb08f494e83e",
     "content/docs/source/api-reference/sites/overview.mdx": "b3ff0526f1e7aee0a5bfc3e96539f8b329c3339c729c1e6c9bf9d7ff8440276f",
     "content/docs/source/credits.mdx": "cfb803d4f9c4bb66ae015496f1d89de2b7c856c7949b89536945b7384bfe22c6"
   },
