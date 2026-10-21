@@ -345,7 +345,7 @@
     }
   ],
   "sourceHashes": {
-    "content/docs/source/api-reference/openapi/accounts.json": "3c667f2d6bd457a266e41783135eacb10a7c49a979f27221c5f9ad338e2055f4",
+    "content/docs/source/api-reference/openapi/accounts.json": "2d107a6832ac1732233580675b67a24af7d914bb2417dbaa9377e26677695341",
     "content/docs/source/api-reference/openapi/content.json": "c109fc9eb3b5557c6585f32fb4771d3ebe6103ac9532c6a7a3b8f929a2603511",
     "content/docs/source/api-reference/openapi/research.json": "ba0ebf1af7bb7cb1441d47830581c318cca770164ab7362c010e03f5fa381b20",
     "content/docs/source/api-reference/openapi/releases.json": "5823be0a303d9d4e106405aa4f7bafde9847c7bb559d0c3a4782700c1098e457",
