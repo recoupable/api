@@ -62,3 +62,38 @@ required database release or any customer workflow is live.
 The Context fixture's `evidenceResponseReferences` point to local definitions under `evidenceSchemas`.
 `evidenceResponseReferenceSource` separately records the canonical Marketing
 document and its OpenAPI pointers; `sourceHash` binds that document's exact bytes.
+
+`publishedStoredComments.test.ts` consumes the `storedComments` fixture generated
+from Marketing's Social specification. It calls the real `GET /api/comments`
+wrapper, query validator and authentication mechanism selection with synthetic
+auth/access/storage leaves. An unexpected database call is fenced off explicitly.
+The cases cover the five-field projection, three nullable row fields, effective
+limit clamping, offset/input rejection, both 401 envelopes, denial/missing targets,
+masked 500s and private/no-store responses. They also reject wrong nullable types,
+missing projected fields and extra joined metadata. The separate restored-route
+and query suites retain ownership/join coverage; these contract fixtures do not
+establish live PostgREST permissions, null-post inclusion or a customer report.
+
+`publishedStoredCommentsWire.test.ts` connects the actual GET wrapper and
+Supabase SDK to synthetic HTTP responses. It verifies the beyond-final-page
+recovery returns an empty page with the exact same-scope count, preserves the
+creator/post filters in the HEAD retry, and keeps missing counts, count failures
+and unrelated backend errors as bounded 500s. This is SDK/HTTP-fixture evidence,
+not a customer database or live report result.
+
+`publishedPlanBalances.test.ts` compares the named public credits/subscription
+examples in `planBalances` with the existing pure response builders. It covers
+Free, paid Starter, direct and organization Pro, extra credits above the allowance,
+signed balances, inactive subscriptions and unavailable timestamps/billing details.
+It requires explicit standard null types, all projected required fields, integer
+micro-dollar values and a schema-valid copyable guide example. The producer also
+hashes the guide source. Stripe configuration is a synthetic fixture; no service,
+account, refill, payment, price discovery or real subscription is exercised.
+
+`publishedSitesLifecycle.test.ts` checks the guide's polling, selected-preview
+publish, unpublish and existing deletion examples against both request schemas.
+It checks route accounting through source files and serializes a synthetic paid-gate
+error through the real HTTP adapter. Authentication and processSiteOperation are
+mocked: no lifecycle implementation, workspace/subscription lookup, production
+workflow, provider, publish, unpublish or delete operation runs. Static source
+accounting and schema examples do not prove paid eligibility or hosted behavior.

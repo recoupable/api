@@ -1,0 +1,9 @@
+# Headless request/error/timing contract — Mono #334
+
+The released message validator, SDK converter and status handler remain unchanged. The coordinated documentation correction replaces the erroneous required `message` field on headless validation errors with `error`, keeps `missing_fields` optional, and uses standard JSON Schema null types for createdAt/startedAt/completedAt/durationMs. Every timing getter is best-effort; terminal status does not guarantee timing availability.
+
+The existing documentation producer freezes resolved headless request, error and status schemas plus the text and synthetic inline-file examples in `headlessChat`. Provider-free API tests validate both examples against the reference schema, execute the real request validator and workflow converter, verify actual validation-error envelopes, and exercise timing getter failures across run states. An external-fetch guard prevents either example from downloading a file. Non-text support is not reduced to a text-only message shape; the existing SDK remains the structural authority.
+
+This is contract/example verification only. It does not start a headless run, provision an account/session/key/sandbox, invoke a model/provider, test hosted authentication/ownership, or prove every non-text/provider/client combination. Public copy and normal readback require the actual approved API/Marketing/retained-Docs publication chain. A local generated fixture is not published documentation.
+
+Network permission was revoked during preparation. Candidates are retained locally for independent review; no remote publication or production operation is authorized by these checks. Other accepted local comments, plan-balance, workspace and range corrections remain independent and must be preserved when integrating producer/fixture changes.
