@@ -23,7 +23,7 @@ export async function OPTIONS() {
  *
  * Query parameters:
  * - runId (optional): Retrieve one run instead of listing recent runs
- * - account_id (optional): Target account, subject to existing access checks
+ * - account_id (optional): Target account UUID, subject to existing access checks
  * - limit (optional): List size, 1–100; defaults to 20
  *
  * @param request - The request object containing query parameters.
