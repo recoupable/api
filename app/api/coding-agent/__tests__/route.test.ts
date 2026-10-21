@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
+import { createHmac } from "node:crypto";
 
 vi.mock("next/server", async () => {
   const actual = await vi.importActual("next/server");
@@ -28,9 +29,13 @@ const { POST } = await import("../[platform]/route");
 describe("POST /api/coding-agent/[platform]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("SLACK_SIGNING_SECRET", "test-secret");
   });
 
+  afterEach(() => vi.unstubAllEnvs());
+
   it("responds to Slack url_verification challenge", async () => {
+    const timestamp = String(Math.floor(Date.now() / 1000));
     const body = JSON.stringify({
       type: "url_verification",
       challenge: "test_challenge_value",
@@ -39,7 +44,13 @@ describe("POST /api/coding-agent/[platform]", () => {
     const request = new NextRequest("https://example.com/api/coding-agent/slack", {
       method: "POST",
       body,
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "x-slack-request-timestamp": timestamp,
+        "x-slack-signature": `v0=${createHmac("sha256", "test-secret")
+          .update(`v0:${timestamp}:${body}`)
+          .digest("hex")}`,
+      },
     });
 
     const response = await POST(request, {
@@ -125,10 +136,11 @@ describe("POST /api/coding-agent/[platform]", () => {
       headers: { "content-type": "application/json" },
     });
 
-    await POST(request, {
+    const response = await POST(request, {
       params: Promise.resolve({ platform: "slack" }),
     });
 
+    expect(response.status).toBe(401);
     expect(mockInitialize).not.toHaveBeenCalled();
   });
 });
