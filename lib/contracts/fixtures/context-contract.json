@@ -1,6 +1,6 @@
 {
   "evidence": "Provider-free request syntax and static contract claims only. URLs are placeholders; no provider, payment or customer workflow is exercised.",
-  "sourceHash": "e6ca7f2c15bf2ab85a22e7620318c3db1f3b64ef6994906fb813b390bd121089",
+  "sourceHash": "dd0a72fef32fa9abd74410caa71ac2b71df0ee36edb3a6cbc3614cde408c0593",
   "requestSchemas": [
     {
       "type": "object",
@@ -2870,13 +2870,7 @@
                           },
                           "status": {
                             "type": "string",
-                            "enum": [
-                              "accepted",
-                              "partial",
-                              "invalid",
-                              "stale",
-                              "withdrawn"
-                            ]
+                            "const": "accepted"
                           },
                           "evidenceKind": {
                             "type": "string",
@@ -2884,8 +2878,7 @@
                               "observation",
                               "estimate",
                               "interpretation",
-                              "customer_assertion",
-                              "creative_proposal"
+                              "customer_assertion"
                             ]
                           },
                           "text": {
@@ -2903,9 +2896,7 @@
                             "type": "string",
                             "enum": [
                               "full",
-                              "partial",
-                              "unknown",
-                              "unavailable"
+                              "partial"
                             ]
                           },
                           "sources": {
@@ -3273,7 +3264,6 @@
                   "campaign",
                   "release",
                   "recording",
-                  "composition",
                   "catalog",
                   "material"
                 ]
@@ -3283,14 +3273,11 @@
                 "enum": [
                   "musicbrainz",
                   "mlc_recording",
-                  "mlc_search",
-                  "mlc_work",
                   "songstats",
                   "saved_socials",
                   "catalog_valuation",
                   "company_research",
                   "campaign_context",
-                  "release_expansion",
                   "spotify_release",
                   "material_extraction",
                   "songwriter_research"
@@ -4964,13 +4951,7 @@
               },
               "status": {
                 "type": "string",
-                "enum": [
-                  "accepted",
-                  "partial",
-                  "invalid",
-                  "stale",
-                  "withdrawn"
-                ]
+                "const": "accepted"
               },
               "evidenceKind": {
                 "type": "string",
@@ -4978,8 +4959,7 @@
                   "observation",
                   "estimate",
                   "interpretation",
-                  "customer_assertion",
-                  "creative_proposal"
+                  "customer_assertion"
                 ]
               },
               "text": {
@@ -4997,9 +4977,7 @@
                 "type": "string",
                 "enum": [
                   "full",
-                  "partial",
-                  "unknown",
-                  "unavailable"
+                  "partial"
                 ]
               },
               "sources": {
