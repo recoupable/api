@@ -19,6 +19,7 @@ const {
   evidenceSchemas,
   responseSchemas,
   responseReferences,
+  responseStatusCodes,
 } = buildContextOperationCatalog();
 
 // Optional provider-free export used to refresh the maintained OpenAPI request union.
@@ -104,5 +105,6 @@ describe("published Context request catalog", () => {
       withoutDescriptions(responseSchemas),
     );
     expect(contextFixture.responseReferences).toEqual(responseReferences);
+    expect(contextFixture.responseStatusCodes).toEqual(responseStatusCodes);
   });
 });

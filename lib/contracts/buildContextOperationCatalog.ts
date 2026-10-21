@@ -5,7 +5,11 @@ import {
   evidenceAttachmentListSchema,
 } from "@/lib/context/evidenceAttachmentSchemas";
 import { contextToolOperations } from "@/lib/mcp/oauth/contextToolOperations";
-import { catalogPlanningResponseSchema } from "@/lib/context/catalogPlanningResponseSchema";
+import {
+  contextResponseSchemas,
+  contextResponseReferences,
+  contextResponseStatusCodes,
+} from "@/lib/context/contracts/contextOperationResponseCatalog";
 
 /** Export source contracts without presenting standard-only tools as delegated capabilities. */
 export function buildContextOperationCatalog() {
@@ -33,12 +37,11 @@ export function buildContextOperationCatalog() {
       .map(jsonSchema),
     mcpOperations: names(true),
     standardMcpOperations: names(false),
-    responseSchemas: {
-      catalogPlanning: jsonSchema(catalogPlanningResponseSchema),
-    },
-    responseReferences: {
-      plan_catalog_members: "#/responseSchemas/catalogPlanning",
-    },
+    responseSchemas: Object.fromEntries(
+      Object.entries(contextResponseSchemas).map(([name, schema]) => [name, jsonSchema(schema)]),
+    ),
+    responseReferences: contextResponseReferences,
+    responseStatusCodes: contextResponseStatusCodes,
     evidenceSchemas: {
       receipt: jsonSchema(evidenceAttachmentReceiptSchema),
       page: jsonSchema(evidenceAttachmentListSchema),
