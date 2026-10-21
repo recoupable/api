@@ -58,6 +58,9 @@ export async function POST(request: NextRequest): Promise<Response> {
  * Authentication: x-api-key header or Authorization Bearer token required.
  *
  * Query parameters:
+ * - metadata_only: (optional) "true" skips live sandbox status lookups and returns
+ *   an empty sandboxes array alongside snapshot_id, github_repo, and filetree.
+ *   Defaults to "false"; repository filetree lookup still runs when available.
  * - sandbox_id: (optional) Filter by a specific sandbox ID. Must be a sandbox
  *   that your account or organization is an admin of.
  *

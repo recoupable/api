@@ -15,6 +15,7 @@ import type { SandboxCreatedResponse } from "./createSandbox";
  * For org keys: Returns sandboxes for all accounts in the organization.
  *
  * Optional query parameters:
+ * - metadata_only: Return metadata without live status lookups when true
  * - sandbox_id: Filter to a specific sandbox (must belong to account/org)
  *
  * @param request - The request object.
@@ -26,13 +27,15 @@ export async function getSandboxesHandler(request: NextRequest): Promise<NextRes
     return validated;
   }
 
+  const { metadataOnly, ...sandboxParams } = validated;
+
   // Determine account ID for snapshot lookup
   const snapshotAccountId =
     validated.accountIds?.length === 1 ? validated.accountIds[0] : validated.orgId;
 
   // Fetch sandbox records and snapshot info in parallel
   const [accountSandboxes, snapshots] = await Promise.all([
-    selectAccountSandboxes(validated),
+    selectAccountSandboxes(sandboxParams),
     snapshotAccountId ? selectAccountSnapshots(snapshotAccountId) : Promise.resolve([]),
   ]);
 
@@ -42,7 +45,9 @@ export async function getSandboxesHandler(request: NextRequest): Promise<NextRes
 
   // Fetch live sandbox statuses and filetree in parallel
   const [statusResults, filetree] = await Promise.all([
-    Promise.all(accountSandboxes.map(record => getSandboxStatus(record.sandbox_id))),
+    metadataOnly
+      ? Promise.resolve([])
+      : Promise.all(accountSandboxes.map(record => getSandboxStatus(record.sandbox_id))),
     github_repo ? getRepoFileTree(github_repo) : Promise.resolve(null),
   ]);
 
