@@ -543,3 +543,50 @@ it("rejects a withheld snapshot payload or an unsupported rights capability bein
     }).success,
   ).toBe(false);
 });
+
+it("does not advertise unreachable public modules or excluded brief evidence", async () => {
+  activeAction = "plan";
+  const planInput = contextOperationExampleInputs.find(example => example.action === "plan")!;
+  const planResponse = await POST(
+    new NextRequest("https://fixture.invalid/api/context", {
+      method: "POST",
+      body: JSON.stringify(planInput),
+    }),
+  );
+  const plan = await planResponse.json();
+  expect(contextResponseSchemas.modulePlan.safeParse(plan).success).toBe(true);
+  for (const module of ["mlc_search", "mlc_work", "release_expansion"])
+    expect(
+      contextResponseSchemas.modulePlan.safeParse({ ...plan, plan: [{ ...plan.plan[0], module }] })
+        .success,
+    ).toBe(false);
+  expect(
+    contextResponseSchemas.modulePlan.safeParse({
+      ...plan,
+      plan: [{ ...plan.plan[0], targetKind: "composition" }],
+    }).success,
+  ).toBe(false);
+  activeAction = "brief";
+  const briefInput = contextOperationExampleInputs.find(example => example.action === "brief")!;
+  const briefResponse = await POST(
+    new NextRequest("https://fixture.invalid/api/context", {
+      method: "POST",
+      body: JSON.stringify(briefInput),
+    }),
+  );
+  const brief = await briefResponse.json();
+  expect(contextResponseSchemas.brief.safeParse(brief).success).toBe(true);
+  for (const change of [
+    { status: "withdrawn" },
+    { evidenceKind: "creative_proposal" },
+    { coverage: "unavailable" },
+    { coverage: "unknown" },
+  ])
+    expect(
+      contextResponseSchemas.brief.safeParse({
+        ...brief,
+        documents: [{ ...brief.documents[0], ...change }],
+      }).success,
+    ).toBe(false);
+  noUnexpectedDispatch("");
+});

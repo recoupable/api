@@ -9,17 +9,11 @@ const document = z.strictObject({
   subjectId: z.uuid(),
   topic: z.string(),
   version: z.number(),
-  status: z.enum(["accepted", "partial", "invalid", "stale", "withdrawn"]),
-  evidenceKind: z.enum([
-    "observation",
-    "estimate",
-    "interpretation",
-    "customer_assertion",
-    "creative_proposal",
-  ]),
+  status: z.literal("accepted"),
+  evidenceKind: z.enum(["observation", "estimate", "interpretation", "customer_assertion"]),
   text: z.string(),
   sourceVersionIds: z.array(z.uuid()),
-  coverage: z.enum(["full", "partial", "unknown", "unavailable"]),
+  coverage: z.enum(["full", "partial"]),
   sources: z
     .array(
       z.strictObject({ versionId: z.uuid(), url: z.string().nullable(), retrievedAt: z.string() }),
