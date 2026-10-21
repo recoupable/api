@@ -21,3 +21,7 @@ app #2023 is the original feature issue, not an implementation PR. API #480's cl
 Route tests execute the actual HTTP wrapper, current authentication mechanism selection and existing roster checks with synthetic storage/authentication leaves. Query tests enforce nested post ownership, post narrowing, empty-set denial, stable sort/range and saved nullable projections. An actual Supabase SDK builder runs against a stubbed HTTP boundary to verify URL/count/range serialization. These fixtures are not live PostgREST/database permission checks.
 
 Independent review, normal CI, coordinator merge approval, documentation companion publication and an explicitly authorized scoped customer/weekly-report journey remain separate gates. Do not close all of #327 or app #2023 based on local tests, a source merge or the presence of a route alone.
+
+## Out-of-range page behavior
+
+PostgREST can return `PGRST103` when the offset is beyond the final matching row. For that specific condition the adapter performs one HEAD/count request with the identical ownership joins and optional post filter, and returns an empty page with its scoped total. Other errors and failed/missing counts still fail closed. It does not retry provider work or drop access filters. The second count does not create a cross-request dataset snapshot.
