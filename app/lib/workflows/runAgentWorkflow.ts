@@ -11,6 +11,7 @@ import { persistAssistantMessageStep } from "@/app/lib/workflows/persistAssistan
 import { CHAT_AGENT_MAX_ITERATIONS } from "@/lib/chat/const";
 import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
 import { deleteEphemeralKeyStep } from "@/app/lib/workflows/deleteEphemeralKeyStep";
+import { countToolCallsInMessage } from "@/lib/credits/countToolCallsInMessage";
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 import type { AgentMessageMetadata } from "@/lib/agent/messageMetadata/AgentMessageMetadata";
@@ -220,6 +221,7 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         resourceUrl: `/sessions/${input.sessionId}/chats/${input.chatId}`,
         gatewayCostUsd: metadata?.totalMessageCost,
         usage: metadata?.totalMessageUsage ?? ZERO_USAGE,
+        toolCallCount: countToolCallsInMessage(pendingAssistantResponse),
       });
     }
 

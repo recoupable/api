@@ -21,6 +21,8 @@ interface HandleChatCreditsParams {
    * distinguish surface in spend rollups.
    */
   source?: "web" | "api";
+  /** Tool UI parts on the accumulated turn message, for audit metadata only. */
+  toolCallCount?: number;
   /** App-relative link to the chat that produced the turn, e.g. `/sessions/<sessionId>/chats/<chatId>`. */
   resourceUrl?: string;
 }
@@ -45,6 +47,7 @@ export const handleChatCredits = async ({
   gatewayCostUsd,
   source = "web",
   resourceUrl,
+  toolCallCount,
 }: HandleChatCreditsParams): Promise<void> => {
   if (!accountId) {
     console.error("No account ID provided, skipping credit deduction");
@@ -64,6 +67,7 @@ export const handleChatCredits = async ({
       outputTokens: usage.outputTokens,
       cachedInputTokens: usage.cachedInputTokens,
       ...(resourceUrl ? { resourceUrl } : {}),
+      ...(toolCallCount !== undefined ? { toolCallCount } : {}),
     });
   } catch (error) {
     console.error("Failed to handle chat credits:", error);

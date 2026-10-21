@@ -286,6 +286,7 @@ describe("runAgentWorkflow", () => {
 
     expect(handleChatCredits).toHaveBeenCalledTimes(1);
     expect(handleChatCredits).toHaveBeenCalledWith({
+      toolCallCount: 0,
       accountId: "acc-1",
       model: "anthropic/claude-haiku-4.5",
       source: "api",
@@ -317,6 +318,7 @@ describe("runAgentWorkflow", () => {
 
     expect(handleChatCredits).toHaveBeenCalledTimes(1);
     expect(handleChatCredits).toHaveBeenCalledWith({
+      toolCallCount: 0,
       accountId: "acc-1",
       model: "anthropic/claude-haiku-4.5",
       source: "api",
@@ -570,4 +572,85 @@ it("reuses a resumed Auto decision and preserves accumulated cost", async () => 
       originalMessages: [expect.objectContaining({ metadata })],
     }),
   );
+});
+
+describe("main-agent tool-call audit metadata", () => {
+  const toolParts = [
+    { type: "tool-lookup", toolCallId: "lookup", state: "output-available", input: {}, output: {} },
+    {
+      type: "dynamic-tool",
+      toolName: "task",
+      toolCallId: "task",
+      state: "output-error",
+      input: {},
+      errorText: "fixture failure",
+    },
+    { type: "tool-edit", toolCallId: "pending", state: "input-available", input: {} },
+  ];
+  it.each([false, true])(
+    "records tool UI requests on the existing charge path, aborted=%s",
+    async aborted => {
+      vi.mocked(runAgentStep).mockResolvedValue({
+        finishReason: "stop",
+        aborted,
+        responseMessages: [],
+        responseMessage: {
+          id: "assistant",
+          role: "assistant",
+          parts: [...toolParts, { type: "text", text: "done" }],
+          metadata: {
+            totalMessageCost: 0.07,
+            totalMessageUsage: { inputTokens: 100, outputTokens: 20 },
+          },
+        } as never,
+      });
+      await runAgentWorkflow(baseInput);
+      expect(handleChatCredits).toHaveBeenCalledExactlyOnceWith({
+        accountId: baseInput.accountId,
+        model: baseInput.modelId,
+        source: "api",
+        resourceUrl: "/sessions/session-1/chats/chat-1",
+        gatewayCostUsd: 0.07,
+        usage: { inputTokens: 100, outputTokens: 20 },
+        toolCallCount: 3,
+      });
+    },
+  );
+  it("counts the accumulated message once after multiple iterations", async () => {
+    vi.mocked(runAgentStep)
+      .mockResolvedValueOnce({
+        finishReason: "tool-calls",
+        aborted: false,
+        responseMessages: [],
+        responseMessage: { id: "assistant", role: "assistant", parts: [toolParts[0]] } as never,
+      })
+      .mockResolvedValueOnce({
+        finishReason: "stop",
+        aborted: false,
+        responseMessages: [],
+        responseMessage: { id: "assistant", role: "assistant", parts: toolParts } as never,
+      });
+    await runAgentWorkflow(baseInput);
+    expect(handleChatCredits).toHaveBeenCalledOnce();
+    expect(handleChatCredits).toHaveBeenCalledWith(expect.objectContaining({ toolCallCount: 3 }));
+  });
+  it("retains the whole-message count on a resumed assistant turn without adding another charge", async () => {
+    const prior = {
+      id: "existing-assistant",
+      role: "assistant",
+      parts: toolParts.slice(0, 2),
+    } as never;
+    vi.mocked(runAgentStep).mockResolvedValue({
+      finishReason: "stop",
+      aborted: false,
+      responseMessages: [],
+      responseMessage: { id: "existing-assistant", role: "assistant", parts: toolParts } as never,
+    });
+    await runAgentWorkflow({ ...baseInput, messages: [prior] });
+    expect(handleChatCredits).toHaveBeenCalledOnce();
+    expect(handleChatCredits).toHaveBeenCalledWith(
+      expect.objectContaining({ accountId: baseInput.accountId, toolCallCount: 3 }),
+    );
+    expect(generateAssistantMessageId).not.toHaveBeenCalled();
+  });
 });
