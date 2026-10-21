@@ -24,6 +24,16 @@ to pin that commit. Run both Python commands with `--check`, then
 the artifact, selected schemas, operation/status identities and both fixture copies.
 The API fixture records Marketing source-file hashes rather than a circular commit pin.
 
+`publishedAgentSignupMetadata.test.ts` checks the admin metadata report's shared
+examples and resolved schemas against the real GET export, authentication selection
+and UTC calendar cutoffs with synthetic credential, membership and metadata leaves.
+The fixture's `agentSignupMetadata` comes from Marketing's Accounts specification;
+the retained availability guide is hashed separately. Preserve the unavailable
+`/api/admins/agent/signups` URL and distinguish it from `/api/admins/agent-signups`.
+The report returns key-record metadata, never credential values; current matching
+emails and returned-record totals do not establish signup origin, unique agents,
+active keys, adoption or complete data collection. These tests make no live read.
+
 `publishedResponses.test.ts` calls the actual Artist Profile and Project GET exports
 with real Next request/response and auth code. Profile, project-access and credential
 dependencies are mocked. It checks Artist 404, both Projects 401 envelopes, and

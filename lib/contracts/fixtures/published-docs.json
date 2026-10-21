@@ -345,7 +345,7 @@
     }
   ],
   "sourceHashes": {
-    "content/docs/source/api-reference/openapi/accounts.json": "2dd43f5daf898995fe2072a720474b4a8d898dd2fcf35a92a6e3cb3b0cffefb0",
+    "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
     "content/docs/source/api-reference/openapi/content.json": "c109fc9eb3b5557c6585f32fb4771d3ebe6103ac9532c6a7a3b8f929a2603511",
     "content/docs/source/api-reference/openapi/research.json": "ba0ebf1af7bb7cb1441d47830581c318cca770164ab7362c010e03f5fa381b20",
     "content/docs/source/api-reference/openapi/releases.json": "5823be0a303d9d4e106405aa4f7bafde9847c7bb559d0c3a4782700c1098e457",
@@ -354,7 +354,8 @@
     "content/docs/source/api-reference/openapi/projects.json": "b059cf8baa83a7f73a3c15db19f54fa56e46a3840e91bd42979b83550f543ace",
     "content/docs/source/api-reference/openapi/sessions.json": "85af56cc150374b28c25541c45db15849c71fdeb6288cf90dc2beb08f494e83e",
     "content/docs/source/api-reference/sites/overview.mdx": "b3ff0526f1e7aee0a5bfc3e96539f8b329c3339c729c1e6c9bf9d7ff8440276f",
-    "content/docs/source/credits.mdx": "cfb803d4f9c4bb66ae015496f1d89de2b7c856c7949b89536945b7384bfe22c6"
+    "content/docs/source/credits.mdx": "cfb803d4f9c4bb66ae015496f1d89de2b7c856c7949b89536945b7384bfe22c6",
+    "content/docs/source/api-reference/admins/agent-signups.mdx": "a6b65f3ad1b0ead873b83cdccf2254cdd3afa1556ae94738502c9b1fc46954bc"
   },
   "examples": {
     "image": {
@@ -2100,6 +2101,223 @@
     "queryExample": {
       "period": "all",
       "tag": "U2"
+    }
+  },
+  "agentSignupMetadata": {
+    "path": "/api/admins/agent-signups",
+    "description": "Read API-key record metadata associated with current account emails matching the case-insensitive agent+ prefix. Authenticate with exactly one x-api-key or Authorization: Bearer credential for a Recoup admin account. Admin access is checked before query validation or metadata access.\n\nEach returned record contains only id, name, email and created_at. id identifies an API-key record, not an account or credential; no API key value or hash is selected or returned. email is the first matching current associated email, not necessarily a primary or canonical address. Multiple matching emails do not multiply a key record; multiple keys on one account remain separate records. Deleted keys are absent; expired key records are not excluded. Current email associations can change. This is a current-email metadata selection, not evidence of origin from POST /api/agents/signup, a unique-agent/account count, active-key count, usage or adoption.\n\nperiod defaults to all. Other values use inclusive midnight-UTC calendar boundaries on API-key record created_at: daily is today; weekly includes today and the preceding six calendar days; monthly includes today and the preceding 29 calendar days. Rows are ordered by key-record created_at descending. total is the length of the returned signups array, not a separate database-wide count. Existing database visibility and server row limits apply; no pagination or collection-completeness guarantee is provided. A successful empty read returns total 0 and signups []; a read failure returns a masked 500 instead.\n\nThis is GET /api/admins/agent-signups. The former GET /api/admins/agent/signups remains unavailable. The broader reporting decision in Mono #327 and original API #428 are not closed by this metadata route. Source tests use synthetic credential and storage boundaries; they do not prove production admin access, real data completeness or customer adoption. No UI, automatic caller, polling job, export or account/key creation is added.",
+    "security": [
+      {
+        "apiKeyAuth": []
+      },
+      {
+        "bearerAuth": []
+      }
+    ],
+    "parameters": [
+      {
+        "name": "period",
+        "in": "query",
+        "required": false,
+        "description": "Optional key-record creation window, inclusive from 00:00 UTC: daily = today; weekly = 7 calendar days including today; monthly = 30 calendar days including today; all = no cutoff. Defaults to all when omitted; an explicit empty or unsupported value returns 400. This is not a rolling 24-hour window and does not filter by account or email creation time.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "all",
+            "daily",
+            "weekly",
+            "monthly"
+          ],
+          "default": "all"
+        },
+        "example": "all"
+      }
+    ],
+    "schemas": {
+      "200": {
+        "type": "object",
+        "required": [
+          "status",
+          "total",
+          "signups"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of key records in this returned signups array. Not a separate database-wide count or a count of unique accounts, agents, active keys or adoption."
+          },
+          "signups": {
+            "type": "array",
+            "description": "Returned metadata rows ordered by key-record created_at descending. The retained wire name does not establish signup origin. Multiple keys for one account remain separate rows.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "name",
+                "email",
+                "created_at"
+              ],
+              "description": "One returned API-key record and the first matching current associated email. No credential value or hash is selected or returned.",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "API-key record ID, not an account ID or a credential."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Stored name of this API-key record."
+                },
+                "email": {
+                  "type": "string",
+                  "description": "First current associated email matching the case-insensitive agent+ prefix; not necessarily a primary or canonical email."
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Creation time of the API-key record, not the account or email."
+                }
+              }
+            }
+          }
+        }
+      },
+      "400": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      },
+      "401": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "status",
+              "error"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "error"
+                ],
+                "description": "Status of the request"
+              },
+              "error": {
+                "type": "string",
+                "description": "Error message describing what went wrong"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "status",
+              "message"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "error"
+                ],
+                "description": "Status of the request"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message describing what went wrong"
+              }
+            }
+          }
+        ]
+      },
+      "403": {
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      },
+      "500": {
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      }
+    },
+    "examples": {
+      "multipleKeys": {
+        "status": "success",
+        "total": 2,
+        "signups": [
+          {
+            "id": "11111111-1111-4111-8111-111111111112",
+            "name": "Second agent key",
+            "email": "agent+fixture@example.invalid",
+            "created_at": "2026-10-21T12:00:00Z"
+          },
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "name": "First agent key",
+            "email": "agent+fixture@example.invalid",
+            "created_at": "2026-10-20T12:00:00Z"
+          }
+        ]
+      },
+      "noRecords": {
+        "status": "success",
+        "total": 0,
+        "signups": []
+      }
     }
   },
   "headlessChat": {
