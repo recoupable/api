@@ -120,6 +120,20 @@ describe("capture track notes", () => {
     expect(getArtistsWithGenres).not.toHaveBeenCalled();
     expect(upsertSongs).not.toHaveBeenCalled();
   });
+  it.each([undefined, null])(
+    "does not turn missing explicit status %s into a false claim",
+    async explicit => {
+      vi.mocked(getTracks).mockResolvedValue({
+        tracks: [{ ...track, explicit } as unknown as SpotifyTrack],
+        error: null,
+      });
+      await mapUnmappedAlbumTracks(albums, new Set());
+      expect(upsertSongs).toHaveBeenCalledWith([
+        expect.objectContaining({ notes: "Song by Creator - a musical track from Album." }),
+      ]);
+      expect(getArtistsWithGenres).not.toHaveBeenCalled();
+    },
+  );
   it("does not invent notes for a missing title", async () => {
     vi.mocked(getTracks).mockResolvedValue({ tracks: [{ ...track, name: "" }], error: null });
     await mapUnmappedAlbumTracks(albums, new Set());

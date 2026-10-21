@@ -9,7 +9,8 @@ export function formatTrackNotes(track: SpotifyTrack, artistNames: string): stri
   if (
     !track.album?.release_date ||
     !Number.isFinite(track.duration_ms) ||
-    !Number.isFinite(track.popularity)
+    !Number.isFinite(track.popularity) ||
+    typeof track.explicit !== "boolean"
   ) {
     return summary;
   }
