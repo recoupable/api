@@ -24,6 +24,12 @@ to pin that commit. Run both Python commands with `--check`, then
 the artifact, selected schemas, operation/status identities and both fixture copies.
 The API fixture records Marketing source-file hashes rather than a circular commit pin.
 
+`publishedTaskFailures.test.ts` binds the four task 403 and GET/POST 500 schemas
+and examples to real routes, validators, authentication/override selection and
+PATCH/DELETE task-owner denial paths. Credential/access/storage/scheduler leaves
+are synthetic and networking is fenced. The allowed GET control and denial
+checks do not establish live organization policy, login or task execution.
+
 `publishedTaskAuthentication.test.ts` binds the four task operations' published
 401 schemas and credential alternatives to real route exports, validators,
 authentication selection and response constructors. Missing/conflicting headers
