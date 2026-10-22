@@ -24,6 +24,14 @@ to pin that commit. Run both Python commands with `--check`, then
 the artifact, selected schemas, operation/status identities and both fixture copies.
 The API fixture records Marketing source-file hashes rather than a circular commit pin.
 
+`publishedTaskValidation.test.ts` compares the POST/PATCH task 400 schemas and
+examples in `taskValidation` with the real request validators. Malformed JSON
+omits `missing_fields`; schema failures include the first issue path. Both stop
+before authentication and retain shared response headers. A title-only PATCH
+control preserves the optional schedule and resolves synthetic authentication.
+Authentication and network leaves are mocked or fenced; these checks do not
+create, update or run a stored task, or verify hosted schedule acceptance.
+
 `publishedContentCallback.test.ts` consumes `contentCallback` from Marketing's
 Content specification. It checks explicit optional `results[].imageUrl` declaration
 and preservation, copied image/video-only examples, and the actual route, validator,
