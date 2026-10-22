@@ -1,6 +1,5 @@
 import { ToolLoopAgent } from "ai";
 import { CHAT_AGENT_STOP_WHEN } from "@/lib/chat/const";
-import { AnthropicProviderOptions } from "@ai-sdk/anthropic";
 import { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import { DEFAULT_MODEL } from "@/lib/const";
@@ -15,6 +14,7 @@ import { selectAccountInfo } from "@/lib/supabase/account_info/selectAccountInfo
 import { getKnowledgeBaseText } from "@/lib/files/getKnowledgeBaseText";
 import { getAccountWithDetails } from "@/lib/supabase/accounts/getAccountWithDetails";
 import getPrepareStepResult from "@/lib/chat/toolChains/getPrepareStepResult";
+import { getAnthropicProviderOptions } from "@/lib/agents/generalAgent/getAnthropicProviderOptions";
 
 /**
  * Gets the general agent for the chat
@@ -66,9 +66,7 @@ export default async function getGeneralAgent(body: ChatRequestBody): Promise<Ro
       return options;
     },
     providerOptions: {
-      anthropic: {
-        thinking: { type: "enabled", budgetTokens: 12000 },
-      } satisfies AnthropicProviderOptions,
+      anthropic: getAnthropicProviderOptions(model),
       google: {
         thinkingConfig: {
           thinkingBudget: 8192,

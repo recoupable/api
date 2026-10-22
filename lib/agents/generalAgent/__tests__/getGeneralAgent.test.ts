@@ -499,6 +499,26 @@ describe("getGeneralAgent", () => {
       );
     });
 
+    it.each([
+      "anthropic/claude-opus-4.7",
+      "anthropic/claude-opus-4.6",
+      "anthropic/claude-sonnet-4.6",
+    ])("uses adaptive thinking for %s without a manual token budget", async model => {
+      const result = await getGeneralAgent({
+        accountId: "account-123",
+        orgId: null,
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+        model,
+      });
+
+      const settings = (result.agent as any).settings;
+      expect(settings.model).toBe(model);
+      expect(settings.providerOptions.anthropic).toEqual({
+        thinking: { type: "adaptive", display: "summarized" },
+        effort: "medium",
+      });
+    });
+
     it("creates ToolLoopAgent with prepareStep function", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",
