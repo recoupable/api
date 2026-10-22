@@ -24,6 +24,15 @@ to pin that commit. Run both Python commands with `--check`, then
 the artifact, selected schemas, operation/status identities and both fixture copies.
 The API fixture records Marketing source-file hashes rather than a circular commit pin.
 
+`publishedTaskAuthentication.test.ts` binds the four task operations' published
+401 schemas and credential alternatives to real route exports, validators,
+authentication selection and response constructors. Missing/conflicting headers
+use `error`; rejected API keys, including Bearer API keys, use `message`.
+Credential lookup and task/storage leaves are synthetic and networking is fenced.
+Successful GET controls retain both header transports without a real account,
+task, provider, database or billing operation. These checks do not establish
+Privy/OAuth login, organization access or a named client's refresh/revoke journey.
+
 `publishedTaskValidation.test.ts` compares the POST/PATCH task 400 schemas and
 examples in `taskValidation` with the real request validators. Malformed JSON
 omits `missing_fields`; schema failures include the first issue path. Both stop

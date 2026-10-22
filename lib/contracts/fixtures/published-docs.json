@@ -342,13 +342,225 @@
           }
         }
       }
+    },
+    {
+      "specification": "releases.json",
+      "method": "GET",
+      "path": "/api/tasks",
+      "status": 401,
+      "mediaType": "application/json",
+      "schema": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "description": "Human-readable error message or documented error code.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "description": "Human-readable authentication error message.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "POST",
+      "path": "/api/tasks",
+      "status": 401,
+      "mediaType": "application/json",
+      "schema": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "description": "Human-readable error message or documented error code.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "description": "Human-readable authentication error message.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "PATCH",
+      "path": "/api/tasks",
+      "status": 401,
+      "mediaType": "application/json",
+      "schema": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "description": "Human-readable error message or documented error code.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "description": "Human-readable authentication error message.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "DELETE",
+      "path": "/api/tasks",
+      "status": 401,
+      "mediaType": "application/json",
+      "schema": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "description": "Human-readable error message or documented error code.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "description": "Human-readable authentication error message.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      }
     }
   ],
   "sourceHashes": {
     "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
     "content/docs/source/api-reference/openapi/content.json": "b89165f9296a1aa98139f64ae095eefd2a5b306950170d3f15a4826de95ed036",
     "content/docs/source/api-reference/openapi/research.json": "ba0ebf1af7bb7cb1441d47830581c318cca770164ab7362c010e03f5fa381b20",
-    "content/docs/source/api-reference/openapi/releases.json": "0519ab23b2bd5e8b6c87d912e7025d13d7ec801e60fa4599584890e50806fe6d",
+    "content/docs/source/api-reference/openapi/releases.json": "88786303e606192c2258aacfaed89364e2b67b90347f02fbc4bd4b585cf35701",
     "content/docs/source/api-reference/openapi/social.json": "49c837327886827b5bc33ae4daac76f12473ecf4a6f75cc073656e9247ba73ca",
     "content/docs/source/api-reference/openapi/context.json": "dd0a72fef32fa9abd74410caa71ac2b71df0ee36edb3a6cbc3614cde408c0593",
     "content/docs/source/api-reference/openapi/projects.json": "b059cf8baa83a7f73a3c15db19f54fa56e46a3840e91bd42979b83550f543ace",
@@ -2784,6 +2996,91 @@
               "schedule"
             ],
             "error": "Invalid input: expected string, received number"
+          }
+        }
+      }
+    }
+  },
+  "taskAuthentication": {
+    "path": "/api/tasks",
+    "operations": {
+      "GET": {
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "examples": {
+          "missingOrConflictingCredentials": {
+            "status": "error",
+            "error": "Exactly one of x-api-key or Authorization must be provided"
+          },
+          "invalidCredential": {
+            "status": "error",
+            "message": "Unauthorized"
+          }
+        }
+      },
+      "POST": {
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "examples": {
+          "missingOrConflictingCredentials": {
+            "status": "error",
+            "error": "Exactly one of x-api-key or Authorization must be provided"
+          },
+          "invalidCredential": {
+            "status": "error",
+            "message": "Unauthorized"
+          }
+        }
+      },
+      "PATCH": {
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "examples": {
+          "missingOrConflictingCredentials": {
+            "status": "error",
+            "error": "Exactly one of x-api-key or Authorization must be provided"
+          },
+          "invalidCredential": {
+            "status": "error",
+            "message": "Unauthorized"
+          }
+        }
+      },
+      "DELETE": {
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "examples": {
+          "missingOrConflictingCredentials": {
+            "status": "error",
+            "error": "Exactly one of x-api-key or Authorization must be provided"
+          },
+          "invalidCredential": {
+            "status": "error",
+            "message": "Unauthorized"
           }
         }
       }
