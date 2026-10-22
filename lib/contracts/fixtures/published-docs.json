@@ -554,13 +554,229 @@
           }
         ]
       }
+    },
+    {
+      "specification": "releases.json",
+      "method": "GET",
+      "path": "/api/tasks",
+      "status": 403,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "examples": {
+        "accountOverrideDenied": {
+          "status": "error",
+          "error": "Access denied to specified account_id"
+        }
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "POST",
+      "path": "/api/tasks",
+      "status": 403,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "examples": {
+        "accountOverrideDenied": {
+          "status": "error",
+          "error": "Access denied to specified account_id"
+        }
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "PATCH",
+      "path": "/api/tasks",
+      "status": 403,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "examples": {
+        "accountOverrideDenied": {
+          "status": "error",
+          "error": "Access denied to specified account_id"
+        },
+        "taskAccessDenied": {
+          "status": "error",
+          "error": "Access denied to this task"
+        }
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "DELETE",
+      "path": "/api/tasks",
+      "status": 403,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "examples": {
+        "taskAccessDenied": {
+          "status": "error",
+          "error": "Access denied to this task"
+        }
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "GET",
+      "path": "/api/tasks",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "examples": {
+        "serviceError": {
+          "status": "error",
+          "error": "Task service unavailable"
+        },
+        "unexpectedFailure": {
+          "status": "error",
+          "error": "Internal server error"
+        }
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "POST",
+      "path": "/api/tasks",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "examples": {
+        "serviceError": {
+          "status": "error",
+          "error": "Task service unavailable"
+        },
+        "unexpectedFailure": {
+          "status": "error",
+          "error": "Internal server error"
+        }
+      }
     }
   ],
   "sourceHashes": {
     "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
     "content/docs/source/api-reference/openapi/content.json": "b89165f9296a1aa98139f64ae095eefd2a5b306950170d3f15a4826de95ed036",
     "content/docs/source/api-reference/openapi/research.json": "ba0ebf1af7bb7cb1441d47830581c318cca770164ab7362c010e03f5fa381b20",
-    "content/docs/source/api-reference/openapi/releases.json": "88786303e606192c2258aacfaed89364e2b67b90347f02fbc4bd4b585cf35701",
+    "content/docs/source/api-reference/openapi/releases.json": "1adbc10c563396790974201c4c6fc16cbf3567e02c64ad3d8d6118b8e7d49237",
     "content/docs/source/api-reference/openapi/social.json": "49c837327886827b5bc33ae4daac76f12473ecf4a6f75cc073656e9247ba73ca",
     "content/docs/source/api-reference/openapi/context.json": "dd0a72fef32fa9abd74410caa71ac2b71df0ee36edb3a6cbc3614cde408c0593",
     "content/docs/source/api-reference/openapi/projects.json": "b059cf8baa83a7f73a3c15db19f54fa56e46a3840e91bd42979b83550f543ace",
