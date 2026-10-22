@@ -348,7 +348,7 @@
     "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
     "content/docs/source/api-reference/openapi/content.json": "b89165f9296a1aa98139f64ae095eefd2a5b306950170d3f15a4826de95ed036",
     "content/docs/source/api-reference/openapi/research.json": "ba0ebf1af7bb7cb1441d47830581c318cca770164ab7362c010e03f5fa381b20",
-    "content/docs/source/api-reference/openapi/releases.json": "5823be0a303d9d4e106405aa4f7bafde9847c7bb559d0c3a4782700c1098e457",
+    "content/docs/source/api-reference/openapi/releases.json": "0519ab23b2bd5e8b6c87d912e7025d13d7ec801e60fa4599584890e50806fe6d",
     "content/docs/source/api-reference/openapi/social.json": "49c837327886827b5bc33ae4daac76f12473ecf4a6f75cc073656e9247ba73ca",
     "content/docs/source/api-reference/openapi/context.json": "dd0a72fef32fa9abd74410caa71ac2b71df0ee36edb3a6cbc3614cde408c0593",
     "content/docs/source/api-reference/openapi/projects.json": "b059cf8baa83a7f73a3c15db19f54fa56e46a3840e91bd42979b83550f543ace",
@@ -2682,6 +2682,111 @@
         }
       },
       "503": {}
+    }
+  },
+  "taskValidation": {
+    "path": "/api/tasks",
+    "responses": {
+      "POST": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "error"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ],
+              "description": "Always `error` when validation fails"
+            },
+            "missing_fields": {
+              "type": "array",
+              "description": "JSON path segments for the first schema validation issue, e.g. `[\"id\"]` or `[\"schedule\"]`. The path can be empty for a body-level issue. Omitted when the body is not valid JSON.",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              }
+            },
+            "error": {
+              "type": "string",
+              "description": "`Invalid JSON body` when JSON parsing fails; otherwise the message for the first schema validation issue."
+            }
+          },
+          "description": "Request-body validation error for creating or updating a task. Invalid JSON omits `missing_fields`; a schema validation failure includes the path of the first issue."
+        },
+        "examples": {
+          "invalidJson": {
+            "status": "error",
+            "error": "Invalid JSON body"
+          },
+          "invalidScheduleType": {
+            "status": "error",
+            "missing_fields": [
+              "schedule"
+            ],
+            "error": "Invalid input: expected string, received number"
+          }
+        }
+      },
+      "PATCH": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "error"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ],
+              "description": "Always `error` when validation fails"
+            },
+            "missing_fields": {
+              "type": "array",
+              "description": "JSON path segments for the first schema validation issue, e.g. `[\"id\"]` or `[\"schedule\"]`. The path can be empty for a body-level issue. Omitted when the body is not valid JSON.",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              }
+            },
+            "error": {
+              "type": "string",
+              "description": "`Invalid JSON body` when JSON parsing fails; otherwise the message for the first schema validation issue."
+            }
+          },
+          "description": "Request-body validation error for creating or updating a task. Invalid JSON omits `missing_fields`; a schema validation failure includes the path of the first issue."
+        },
+        "examples": {
+          "invalidJson": {
+            "status": "error",
+            "error": "Invalid JSON body"
+          },
+          "invalidScheduleType": {
+            "status": "error",
+            "missing_fields": [
+              "schedule"
+            ],
+            "error": "Invalid input: expected string, received number"
+          }
+        }
+      }
     }
   },
   "headlessChat": {
