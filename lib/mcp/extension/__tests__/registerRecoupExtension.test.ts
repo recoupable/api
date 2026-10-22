@@ -24,12 +24,27 @@ describe("Recoup extension protocol", () => {
         },
       ]);
       expect(open?._meta?.["openai/ui"]).toMatchObject({
-        entrypoints: [{ type: "global" }, { type: "thread" }],
+        entrypoints: [{ type: "thread" }],
       });
+      const sidebar = tools.find(tool => tool.name === "open_recoup_workflows_sidebar");
+      expect(sidebar?._meta?.["openai/ui"]).toEqual({ entrypoints: [{ type: "global" }] });
+      expect(sidebar?._meta?.ui).toMatchObject({
+        resourceUri: "ui://recoup/explore.html",
+        visibility: ["app"],
+      });
+      const sidebarResult = await client.callTool({
+        name: "open_recoup_workflows_sidebar",
+        arguments: {},
+      });
+      expect(sidebarResult.structuredContent).toMatchObject({ messageTarget: "new" });
       expect(open?._meta?.ui).toMatchObject({ resourceUri: "ui://recoup/explore.html" });
       const result = await client.callTool({ name: "open_recoup_workflows", arguments: {} });
       expect(result.isError).not.toBe(true);
-      expect(result.structuredContent).toMatchObject({ title: "Recoup", version: 1 });
+      expect(result.structuredContent).toMatchObject({
+        title: "Recoup",
+        version: 1,
+        messageTarget: "active",
+      });
       const resource = await client.readResource({ uri: "ui://recoup/explore.html" });
       expect(resource.contents[0].mimeType).toBe("text/html;profile=mcp-app");
       expect(resource.contents[0].text).toContain("Create cover art");
