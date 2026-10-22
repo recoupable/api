@@ -24,6 +24,9 @@ import { syncTriggerSchedule } from "@/lib/trigger/syncTriggerSchedule";
 
 vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
 vi.mock("@/lib/plans/assertTaskWithinPlan", () => ({ assertTaskWithinPlan: vi.fn() }));
+vi.mock("@/lib/supabase/scheduled_actions/deleteScheduledAction", () => ({
+  deleteScheduledAction: vi.fn(),
+}));
 vi.mock("@/lib/supabase/scheduled_actions/insertScheduledAction", () => ({
   insertScheduledAction: vi.fn(),
 }));
