@@ -346,7 +346,7 @@
   ],
   "sourceHashes": {
     "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
-    "content/docs/source/api-reference/openapi/content.json": "ae205323e8767f82e6d5387bccc10aad593a148610b9fe58834076854ce79ed8",
+    "content/docs/source/api-reference/openapi/content.json": "b89165f9296a1aa98139f64ae095eefd2a5b306950170d3f15a4826de95ed036",
     "content/docs/source/api-reference/openapi/research.json": "ba0ebf1af7bb7cb1441d47830581c318cca770164ab7362c010e03f5fa381b20",
     "content/docs/source/api-reference/openapi/releases.json": "5823be0a303d9d4e106405aa4f7bafde9847c7bb559d0c3a4782700c1098e457",
     "content/docs/source/api-reference/openapi/social.json": "49c837327886827b5bc33ae4daac76f12473ecf4a6f75cc073656e9247ba73ca",
@@ -2383,7 +2383,7 @@
               },
               "imageUrl": {
                 "type": "string",
-                "description": "Optional editorial-image string associated with this run. Used only when this result is completed and also has videoUrl; not an image-only job. Attachment uses supported reported MIME, with URL fallback on download/MIME failure. No URL syntax validation is added by this field."
+                "description": "Optional editorial-image string associated with this run. Used only when this result is completed and also has videoUrl; not an image-only job. Attachment uses supported reported MIME, with URL fallback on download/MIME failure. No URL syntax validation is added by this field. For an attachment filename, keep the final URL path component when it contains a dot; otherwise use editorial.<reported MIME extension>, with jpg for image/jpeg. Existing dotted filenames are not rewritten to match the MIME extension."
               }
             }
           }
@@ -2427,6 +2427,261 @@
           }
         ]
       }
+    },
+    "responseSchemas": {
+      "200": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok",
+            "enum": [
+              "ok"
+            ]
+          },
+          "skipped": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Present as true for an already-terminal thread; processing/media posting is skipped. This is not a concurrency-safe delivery guarantee."
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "400": {
+        "allOf": [
+          {
+            "type": "object",
+            "required": [
+              "status",
+              "error"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "type": "string",
+                "description": "Human-readable error. Callback-secret denial uses Unauthorized."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "missing_fields": {
+                "type": "array",
+                "description": "First schema issue path; omitted for malformed JSON. Path elements can be field names or numeric array positions.",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "example": [
+                  "results",
+                  0,
+                  "imageUrl"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "401": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error. Callback-secret denial uses Unauthorized."
+          }
+        }
+      },
+      "503": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "responseExamples": {
+      "200": {
+        "processed": {
+          "status": "ok"
+        },
+        "terminalRetry": {
+          "status": "ok",
+          "skipped": true
+        }
+      },
+      "400": {
+        "invalidJson": {
+          "status": "error",
+          "error": "Invalid JSON body"
+        },
+        "invalidImageType": {
+          "status": "error",
+          "error": "Invalid input: expected string, received number",
+          "missing_fields": [
+            "results",
+            0,
+            "imageUrl"
+          ]
+        }
+      },
+      "401": {
+        "denied": {
+          "status": "error",
+          "error": "Unauthorized"
+        }
+      },
+      "503": {
+        "unconfigured": {
+          "error": "Content agent not configured"
+        }
+      }
+    },
+    "responseHeaders": {
+      "200": {
+        "Access-Control-Allow-Origin": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "*"
+            ]
+          }
+        },
+        "Access-Control-Allow-Methods": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            ]
+          }
+        },
+        "Access-Control-Allow-Headers": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "Content-Type, Authorization, X-Requested-With, x-api-key"
+            ]
+          }
+        },
+        "Access-Control-Expose-Headers": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "x-workflow-run-id, x-workflow-stream-tail-index"
+            ]
+          }
+        }
+      },
+      "400": {
+        "Access-Control-Allow-Origin": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "*"
+            ]
+          }
+        },
+        "Access-Control-Allow-Methods": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            ]
+          }
+        },
+        "Access-Control-Allow-Headers": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "Content-Type, Authorization, X-Requested-With, x-api-key"
+            ]
+          }
+        },
+        "Access-Control-Expose-Headers": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "x-workflow-run-id, x-workflow-stream-tail-index"
+            ]
+          }
+        }
+      },
+      "401": {
+        "Access-Control-Allow-Origin": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "*"
+            ]
+          }
+        },
+        "Access-Control-Allow-Methods": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            ]
+          }
+        },
+        "Access-Control-Allow-Headers": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "Content-Type, Authorization, X-Requested-With, x-api-key"
+            ]
+          }
+        },
+        "Access-Control-Expose-Headers": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "x-workflow-run-id, x-workflow-stream-tail-index"
+            ]
+          }
+        }
+      },
+      "503": {}
     }
   },
   "headlessChat": {

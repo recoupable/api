@@ -29,7 +29,11 @@ Content specification. It checks explicit optional `results[].imageUrl` declarat
 and preservation, copied image/video-only examples, and the actual route, validator,
 handler and poster with synthetic bot/thread/media leaves. Tests retain image order,
 reported-MIME/link fallback, secret denial, terminal skip and no image-only posting.
-They do not exercise worker deployment, real media downloads, Slack uploads or
+Selected 200/400/401/503 schemas/examples and response headers also bind normal
+versus skipped acknowledgements, secret-before-parse ordering, validation paths,
+the unconfigured-bot branch and existing MIME filename fallback. No stable 500,
+browser preflight or delivery guarantee is introduced. Tests do not exercise
+worker deployment, real media downloads, Slack uploads or
 end-to-end delivery. Keep receiver support separate from the polling mapper release.
 
 `publishedAgentSignupMetadata.test.ts` checks the admin metadata report's shared

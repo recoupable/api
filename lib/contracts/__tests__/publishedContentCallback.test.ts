@@ -6,13 +6,16 @@ import { contentAgentCallbackSchema } from "@/lib/agents/content/validateContent
 import fixture from "../fixtures/published-docs.json";
 
 const mocks = vi.hoisted(() => ({
+  configured: true,
   initialize: vi.fn(),
   thread: vi.fn(),
   image: vi.fn(),
   video: vi.fn(),
 }));
 vi.mock("@/lib/agents/content/bot", () => ({
-  contentAgentBot: { initialize: mocks.initialize },
+  get contentAgentBot() {
+    return mocks.configured ? { initialize: mocks.initialize } : null;
+  },
 }));
 vi.mock("@/lib/agents/getThread", () => ({ getThread: mocks.thread }));
 vi.mock("@/lib/agents/content/downloadMediaBuffer", () => ({ downloadMediaBuffer: mocks.image }));
@@ -28,6 +31,9 @@ interface CallbackContract {
   security: unknown[];
   requestSchema: Record<string, unknown>;
   examples: Record<string, CallbackExample>;
+  responseSchemas: Record<string, Record<string, unknown>>;
+  responseExamples: Record<string, Record<string, unknown>>;
+  responseHeaders: Record<string, Record<string, { schema: { enum: string[] } }>>;
 }
 const contract = (fixture as unknown as { contentCallback?: CallbackContract }).contentCallback;
 let thread: {
@@ -42,8 +48,27 @@ const request = (body: unknown, secret = "fixture-secret") =>
     body: JSON.stringify(body),
   });
 
+function matchesResponse(response: Response, body: unknown) {
+  expect(contract!.responseSchemas).toBeDefined();
+  const code = String(response.status);
+  const validate = new Ajv({ strict: false, allErrors: true }).compile(
+    contract!.responseSchemas[code],
+  );
+  expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
+  for (const name of [
+    "Access-Control-Allow-Origin",
+    "Access-Control-Allow-Methods",
+    "Access-Control-Allow-Headers",
+    "Access-Control-Expose-Headers",
+  ]) {
+    const header = contract!.responseHeaders[code][name];
+    expect(response.headers.get(name)).toBe(header ? header.schema.enum[0] : null);
+  }
+}
+
 beforeEach(() => {
   vi.resetAllMocks();
+  mocks.configured = true;
   vi.stubEnv("CODING_AGENT_CALLBACK_SECRET", "fixture-secret");
   vi.stubGlobal(
     "fetch",
@@ -62,11 +87,26 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllEnvs();
   vi.unstubAllGlobals();
 });
 
 describe("published internal content callback image contract", () => {
+  it("declares actual acknowledgements and error envelopes without a stable 500 contract", () => {
+    expect(contract).toBeDefined();
+    expect(contract!.responseSchemas).toBeDefined();
+    expect(Object.keys(contract!.responseSchemas).sort()).toEqual(["200", "400", "401", "503"]);
+    expect(contract!.responseExamples["200"]).toEqual({
+      processed: { status: "ok" },
+      terminalRetry: { status: "ok", skipped: true },
+    });
+    expect(Object.keys(contract!.responseHeaders["200"])).toHaveLength(4);
+    expect(contract!.responseHeaders["503"]).toEqual({});
+    const allow = contract!.responseHeaders["200"]["Access-Control-Allow-Headers"].schema.enum[0];
+    expect(allow.toLowerCase()).not.toContain("x-callback-secret");
+  });
+
   it("explicitly declares optional string imageUrl without inventing URL validation", () => {
     expect(contract).toBeDefined();
     expect(contract!.path).toBe("/api/content-agent/callback");
@@ -112,7 +152,9 @@ describe("published internal content callback image contract", () => {
     }));
     const response = await POST(request(body));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ status: "ok" });
+    const acknowledgement = await response.json();
+    expect(acknowledgement).toEqual(contract!.responseExamples["200"].processed);
+    matchesResponse(response, acknowledgement);
     expect(mocks.thread).toHaveBeenCalledExactlyOnceWith(body.threadId);
     expect(mocks.image.mock.calls).toEqual(body.results.map(row => [row.imageUrl]));
     expect(thread.post).toHaveBeenCalledTimes(4);
@@ -161,15 +203,27 @@ describe("published internal content callback image contract", () => {
       request({ ...body, results: [{ ...body.results[0], imageUrl: 42 }] }),
     );
     expect(response.status).toBe(400);
+    const error = await response.json();
+    expect(error).toMatchObject({ status: "error", missing_fields: ["results", 0, "imageUrl"] });
+    matchesResponse(response, error);
     expect(mocks.thread).not.toHaveBeenCalled();
     expect(mocks.image).not.toHaveBeenCalled();
   });
 
   it("rejects denied callback secrets before accessing the thread or media", async () => {
     expect(contract).toBeDefined();
-    expect((await POST(request(contract!.examples.withEditorialImages, "denied"))).status).toBe(
-      401,
-    );
+    const incoming = new NextRequest("https://example.invalid/api/content-agent/callback", {
+      method: "POST",
+      headers: { "x-callback-secret": "denied" },
+      body: "{",
+    });
+    const parse = vi.spyOn(incoming, "json");
+    const response = await POST(incoming);
+    expect(response.status).toBe(401);
+    const body = await response.json();
+    expect(body).toEqual(contract!.responseExamples["401"].denied);
+    matchesResponse(response, body);
+    expect(parse).not.toHaveBeenCalled();
     expect(mocks.thread).not.toHaveBeenCalled();
     expect(mocks.image).not.toHaveBeenCalled();
     expect(mocks.video).not.toHaveBeenCalled();
@@ -179,7 +233,9 @@ describe("published internal content callback image contract", () => {
     expect(contract).toBeDefined();
     thread.state = Promise.resolve({ status: "completed" });
     const response = await POST(request(contract!.examples.withEditorialImages));
-    expect(await response.json()).toEqual({ status: "ok", skipped: true });
+    const body = await response.json();
+    expect(body).toEqual(contract!.responseExamples["200"].terminalRetry);
+    matchesResponse(response, body);
     expect(mocks.image).not.toHaveBeenCalled();
     expect(mocks.video).not.toHaveBeenCalled();
     expect(thread.post).not.toHaveBeenCalled();
@@ -189,11 +245,71 @@ describe("published internal content callback image contract", () => {
     expect(contract).toBeDefined();
     const body = structuredClone(contract!.examples.withEditorialImages);
     for (const row of body.results) delete row.videoUrl;
-    expect((await POST(request(body))).status).toBe(200);
+    const response = await POST(request(body));
+    expect(response.status).toBe(200);
+    const acknowledgement = await response.json();
+    expect(acknowledgement).toEqual(contract!.responseExamples["200"].processed);
+    matchesResponse(response, acknowledgement);
     expect(mocks.image).not.toHaveBeenCalled();
     expect(mocks.video).not.toHaveBeenCalled();
     expect(thread.post).toHaveBeenCalledExactlyOnceWith(
       "Content generation finished but no videos were produced.",
     );
+  });
+
+  it("returns the documented JSON parse 400 with shared response headers", async () => {
+    expect(contract).toBeDefined();
+    const response = await POST(
+      new NextRequest("https://example.invalid/api/content-agent/callback", {
+        method: "POST",
+        headers: { "x-callback-secret": "fixture-secret" },
+        body: "{",
+      }),
+    );
+    const body = await response.json();
+    expect(response.status).toBe(400);
+    expect(body).toEqual(contract!.responseExamples["400"].invalidJson);
+    matchesResponse(response, body);
+    expect(mocks.thread).not.toHaveBeenCalled();
+    expect(mocks.image).not.toHaveBeenCalled();
+  });
+
+  it("returns unconfigured-bot 503 before initialization/auth/parsing, without shared CORS", async () => {
+    expect(contract).toBeDefined();
+    mocks.configured = false;
+    const incoming = new NextRequest("https://example.invalid/api/content-agent/callback", {
+      method: "POST",
+      headers: { "x-callback-secret": "denied" },
+      body: "{",
+    });
+    const parse = vi.spyOn(incoming, "json");
+    const response = await POST(incoming);
+    const body = await response.json();
+    expect(response.status).toBe(503);
+    expect(body).toEqual(contract!.responseExamples["503"].unconfigured);
+    matchesResponse(response, body);
+    expect(mocks.initialize).not.toHaveBeenCalled();
+    expect(parse).not.toHaveBeenCalled();
+    expect(mocks.thread).not.toHaveBeenCalled();
+    expect(mocks.image).not.toHaveBeenCalled();
+    expect(mocks.video).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["https://example.invalid/files/kept.custom?download=1", "image/jpeg", "kept.custom"],
+    ["https://example.invalid/files/image", "image/jpeg", "editorial.jpg"],
+    ["https://example.invalid/files/image", "image/png", "editorial.png"],
+    ["https://example.invalid/files/image", "image/webp", "editorial.webp"],
+    ["https://example.invalid/files/image", "image/gif", "editorial.gif"],
+  ])("preserves the documented filename rule for %s and %s", async (url, mimeType, filename) => {
+    expect(contract).toBeDefined();
+    const body = structuredClone(contract!.examples.withEditorialImages);
+    body.results = [{ ...body.results[0], imageUrl: url }];
+    mocks.image.mockResolvedValue({ buffer: Buffer.from([1]), mimeType });
+    expect((await POST(request(body))).status).toBe(200);
+    expect(thread.post.mock.calls[0][0]).toMatchObject({
+      markdown: "**Editorial Image**",
+      files: [{ filename, mimeType }],
+    });
   });
 });
