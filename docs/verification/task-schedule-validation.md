@@ -26,8 +26,11 @@ bounded compatibility evidence, not exhaustive provider equivalence.
 
 Only the existing five provider aliases are accepted; v5-only randomized/hashed
 syntax and new aliases are excluded. Blank input and explicit seconds fields,
-including whitespace-separated seconds, are rejected. Expressions are validated
-without rewriting them. The provider retains final authority; local acceptance
+including whitespace-separated seconds, are rejected. Validation uses field-specific names/characters and a temporary deduplicated
+expression, preserving provider-supported overlapping lists despite v5 duplicate
+rejection. That temporary form is never stored or sent: the original expression
+remains unchanged. Provider-v4 explicit month/day constraints are also retained
+when a restricted weekday is present. The provider retains final authority; local acceptance
 is not proof a hosted schedule exists or will run.
 
 ## Boundaries
@@ -48,3 +51,22 @@ Provider source: [Trigger CronPattern](https://github.com/triggerdotdev/trigger.
 and [supported schedule syntax](https://trigger.dev/docs/tasks/scheduled#supported-cron-syntax),
 checked October 21, 2026. Parser implementation and syntax are additionally
 checked from the installed pinned package. No live provider call is required.
+
+## Independent-review corrections
+
+Records rejected the initial wrapper: global alias handling admitted month/weekday
+names in the wrong field and minute `?`, while v5 duplicate checks rejected valid
+overlapping lists. Regression fixtures reproduce these failures through shared
+schemas, direct create/update calls and HTTP validators. They also verify supported
+overlapping lists reach mocked persistence and scheduler calls unchanged. The
+correction is confined to compatibility validation and its tests; auth, ownership,
+plan/cadence, timezone and the seven-file scope remain unchanged. Earlier green CI
+did not clear this hold. The corrected revision needs fresh checks and Records
+acceptance before a release decision.
+
+The corrected compatibility check also compares 420 bounded cases against the
+retained provider-family parser, with zero acceptance differences in that
+matrix. It includes field-specific aliases/tokens, duplicate/range/step lists,
+last-day/nth-weekday syntax and month/day combinations. This is not universal
+equivalence or evidence a schedule will fire. Legacy duplicate-month acceptance
+is preserved during temporary validation; no stored expression is normalized.

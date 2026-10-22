@@ -17,6 +17,8 @@ import { validateUpdateTaskRequest } from "../validateUpdateTaskRequest";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { insertScheduledAction } from "@/lib/supabase/scheduled_actions/insertScheduledAction";
 import { selectScheduledActions } from "@/lib/supabase/scheduled_actions/selectScheduledActions";
+import { updateScheduledAction } from "@/lib/supabase/scheduled_actions/updateScheduledAction";
+import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import { createSchedule } from "@/lib/trigger/createSchedule";
 import { syncTriggerSchedule } from "@/lib/trigger/syncTriggerSchedule";
 
@@ -51,9 +53,15 @@ describe("task schedule validation before side effects", () => {
     "99 * * * *",
     "0 25 * * *",
     "0 0 31 2 *",
+    "0 0 31 2 1",
     "* * * * * *",
     "*\t*\t*\t*\t*\t*",
     "   ",
+    "0 0 * MON *",
+    "0 9 * * JAN",
+    "? 9 * * *",
+    "0 ? * * *",
+    "0 9 * ? *",
   ])("rejects %j across REST, MCP and persistence schemas", schedule => {
     expect(createTaskBodySchema.safeParse({ ...create, schedule }).success).toBe(false);
     expect(mcpCreateTaskBodySchema.safeParse({ ...create, schedule }).success).toBe(false);
@@ -71,15 +79,33 @@ describe("task schedule validation before side effects", () => {
     ).toBe(false);
   });
 
-  it.each(["0 9 * * 1", "*/15 * * * *", "0 9 * JAN MON", "0 0 L * *", "0 0 * * 1L", "@daily"])(
-    "preserves supported expression %j without rewriting it",
-    schedule => {
-      expect(createTaskBodySchema.parse({ ...create, schedule }).schedule).toBe(schedule);
-      expect(mcpCreateTaskBodySchema.parse({ ...create, schedule }).schedule).toBe(schedule);
-      expect(updateTaskRestBodySchema.parse({ ...update, schedule }).schedule).toBe(schedule);
-      expect(mcpUpdateTaskBodySchema.parse({ ...update, schedule }).schedule).toBe(schedule);
-    },
-  );
+  it.each([
+    "0 9 * * 1",
+    "*/15 * * * *",
+    "0 9 * JAN MON",
+    "0 0 L * *",
+    "0 0 * * 1L",
+    "@daily",
+    "0 9 * * 1,MON",
+    "0 9 * * MON-FRI,FRI",
+    "0 0,*/6 * * *",
+    "0,0 9 * * *",
+    "0 9 * * L",
+    "0 9 * * L,L",
+    "0 9 31 FEB,FEB *",
+  ])("preserves supported expression %j without rewriting it", schedule => {
+    expect(createTaskBodySchema.parse({ ...create, schedule }).schedule).toBe(schedule);
+    expect(mcpCreateTaskBodySchema.parse({ ...create, schedule }).schedule).toBe(schedule);
+    expect(updateTaskRestBodySchema.parse({ ...update, schedule }).schedule).toBe(schedule);
+    expect(mcpUpdateTaskBodySchema.parse({ ...update, schedule }).schedule).toBe(schedule);
+    expect(
+      createTaskPayloadSchema.parse({ ...create, schedule, account_id: accountId }).schedule,
+    ).toBe(schedule);
+    expect(
+      updateTaskPersistInputSchema.parse({ ...update, schedule, resolvedAccountId: accountId })
+        .schedule,
+    ).toBe(schedule);
+  });
 
   it("keeps schedule optional for non-schedule patches", () => {
     expect(
@@ -91,41 +117,74 @@ describe("task schedule validation before side effects", () => {
     ).not.toHaveProperty("schedule");
   });
 
-  it("rejects invalid direct creates and updates before database or scheduler calls", async () => {
-    await expect(
-      createTask({ ...create, schedule: "invalid", account_id: accountId }),
-    ).rejects.toThrow();
-    await expect(
-      updateTask({ ...update, schedule: "invalid", resolvedAccountId: accountId }),
-    ).rejects.toThrow();
-    expect(insertScheduledAction).not.toHaveBeenCalled();
-    expect(selectScheduledActions).not.toHaveBeenCalled();
-    expect(createSchedule).not.toHaveBeenCalled();
-    expect(syncTriggerSchedule).not.toHaveBeenCalled();
-  });
+  it.each(["0 9 * * 1,MON", "0 9 * * MON-FRI,FRI", "0 0,*/6 * * *"])(
+    "passes supported overlapping list %j unchanged to persistence and scheduler",
+    async schedule => {
+      const task = {
+        id: taskId,
+        account_id: accountId,
+        schedule: "0 9 * * 1",
+        enabled: true,
+        trigger_schedule_id: "fixture-schedule",
+      };
+      vi.mocked(insertScheduledAction).mockResolvedValue([task] as never);
+      vi.mocked(updateScheduledAction).mockResolvedValue(task as never);
+      vi.mocked(createSchedule).mockResolvedValue({ id: "fixture-schedule" } as never);
+      vi.mocked(selectScheduledActions).mockResolvedValue([task] as never);
+      vi.mocked(canAccessAccount).mockResolvedValue(true);
+      vi.mocked(syncTriggerSchedule).mockResolvedValue("fixture-schedule");
 
-  it.each(["POST", "PATCH"])(
-    "returns the existing HTTP validation envelope for %s",
-    async method => {
-      const body = method === "POST" ? create : update;
-      const request = new NextRequest("https://example.com/api/tasks", {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...body, schedule: "invalid" }),
-      });
-      const response = await (
-        method === "POST" ? validateCreateTaskRequest : validateUpdateTaskRequest
-      )(request);
-      expect(response).toBeInstanceOf(NextResponse);
-      const error = response as NextResponse;
-      expect(error.status).toBe(400);
-      expect(await error.json()).toEqual({
-        status: "error",
-        error: expect.any(String),
-        missing_fields: ["schedule"],
-      });
-      expect(error.headers.get("Access-Control-Allow-Origin")).toBe("*");
-      expect(validateAuthContext).not.toHaveBeenCalled();
+      await createTask({ ...create, schedule, account_id: accountId });
+      expect(insertScheduledAction).toHaveBeenCalledWith(expect.objectContaining({ schedule }));
+      expect(createSchedule).toHaveBeenCalledWith(expect.objectContaining({ cron: schedule }));
+
+      await updateTask({ ...update, schedule, resolvedAccountId: accountId });
+      expect(syncTriggerSchedule).toHaveBeenCalledWith(
+        expect.objectContaining({ cronExpression: schedule }),
+      );
+      expect(updateScheduledAction).toHaveBeenLastCalledWith(
+        expect.objectContaining({ id: taskId, schedule }),
+      );
     },
   );
+
+  it.each(["invalid", "0 0 * MON *", "0 9 * * JAN", "? 9 * * *"])(
+    "rejects %j before direct database or scheduler calls",
+    async schedule => {
+      await expect(createTask({ ...create, schedule, account_id: accountId })).rejects.toThrow();
+      await expect(
+        updateTask({ ...update, schedule, resolvedAccountId: accountId }),
+      ).rejects.toThrow();
+      expect(insertScheduledAction).not.toHaveBeenCalled();
+      expect(selectScheduledActions).not.toHaveBeenCalled();
+      expect(createSchedule).not.toHaveBeenCalled();
+      expect(syncTriggerSchedule).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(
+    ["POST", "PATCH"].flatMap(method =>
+      ["invalid", "0 0 * MON *", "0 9 * * JAN", "? 9 * * *"].map(schedule => [method, schedule]),
+    ),
+  )("returns the existing HTTP validation envelope for %s / %s", async (method, schedule) => {
+    const body = method === "POST" ? create : update;
+    const request = new NextRequest("https://example.com/api/tasks", {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...body, schedule }),
+    });
+    const response = await (
+      method === "POST" ? validateCreateTaskRequest : validateUpdateTaskRequest
+    )(request);
+    expect(response).toBeInstanceOf(NextResponse);
+    const error = response as NextResponse;
+    expect(error.status).toBe(400);
+    expect(await error.json()).toEqual({
+      status: "error",
+      error: expect.any(String),
+      missing_fields: ["schedule"],
+    });
+    expect(error.headers.get("Access-Control-Allow-Origin")).toBe("*");
+    expect(validateAuthContext).not.toHaveBeenCalled();
+  });
 });
