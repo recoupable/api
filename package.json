@@ -52,6 +52,7 @@
     "autoevals": "^0.0.129",
     "braintrust": "^0.4.9",
     "chat": "^4.15.0",
+    "cron-parser": "5.10.2",
     "ioredis": "^5.8.2",
     "jose": "6.2.12",
     "marked": "^15.0.12",
