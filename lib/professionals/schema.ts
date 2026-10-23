@@ -43,6 +43,7 @@ export const confirmProfessionalSchema = z
   });
 
 export const professionalSchema = z.object({
+  artist_id: z.uuid(),
   id: z.uuid(),
   organization_id: z.uuid(),
   name: z.string(),
