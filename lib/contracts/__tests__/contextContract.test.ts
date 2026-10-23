@@ -62,6 +62,9 @@ describe("published Context request catalog", () => {
       "attach_evidence",
       "read_evidence_attachment",
       "list_evidence_attachments",
+      "save_catalog_case",
+      "read_catalog_case",
+      "list_catalog_cases",
     ]);
     for (const action of Object.keys(standardMcpOperations))
       expect(mcpOperations).not.toHaveProperty(action);

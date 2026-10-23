@@ -20,9 +20,14 @@ export async function contextOperationHandler(request: NextRequest) {
     "read_evidence_attachment",
     "list_evidence_attachments",
   ].includes(parsed.action);
+  const catalogCase = ["save_catalog_case", "read_catalog_case", "list_catalog_cases"].includes(
+    parsed.action,
+  );
   const headers = {
     ...getCorsHeaders(),
-    ...(parsed.action === "read" || evidence ? { "Cache-Control": "private, no-store" } : {}),
+    ...(parsed.action === "read" || evidence || catalogCase
+      ? { "Cache-Control": "private, no-store" }
+      : {}),
   };
   try {
     const result = await processContextOperation(auth.accountId, parsed, {
@@ -40,7 +45,7 @@ export async function contextOperationHandler(request: NextRequest) {
   } catch (error) {
     if (parsed.action === "read") {
       console.error("[context] read failed", { reason: getContextFailureReason(error) });
-    } else if (evidence) {
+    } else if (evidence || catalogCase) {
       console.error("[context] evidence operation failed", {
         reason: getContextFailureReason(error),
       });

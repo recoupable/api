@@ -4,6 +4,27 @@ const subject = "00000000-0000-4000-8000-000000000004";
 const record = "00000000-0000-4000-8000-000000000005";
 const examples = [
   {
+    action: "save_catalog_case",
+    case_id: record,
+    expected_revision: 0,
+    idempotency_key: "catalog-case-example",
+    snapshot: {
+      schema_version: 1,
+      case_id: record,
+      workspace_id: "00000000-0000-4000-8000-000000000002",
+      revision: 0,
+      scope: "One supplied composition; customer assertion",
+      sources: {},
+      assessments: {},
+      findings: {},
+      actions: {},
+      attempts: {},
+      outcomes: {},
+    },
+  },
+  { action: "read_catalog_case", case_id: record, revision: 1 },
+  { action: "list_catalog_cases", limit: 50 },
+  {
     action: "ingest",
     url: "https://open.spotify.com/track/4uLU6hMCjMI75M1A2tKUQC",
     topics: ["catalog_metadata"],

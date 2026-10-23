@@ -1,3 +1,4 @@
+import { catalogCaseReceiptSchema, catalogCasePageSchema } from "../catalogCaseResponseSchemas";
 import { z } from "zod";
 import type { contextOperationSchema } from "../processContextOperation";
 import { catalogPlanningResponseSchema } from "../catalogPlanningResponseSchema";
@@ -25,6 +26,8 @@ import {
 
 /** Source-described responses only: this registry is not runtime validation or permission. */
 export const contextResponseSchemas = {
+  catalogCase: catalogCaseReceiptSchema,
+  catalogCases: catalogCasePageSchema,
   catalogPlanning: catalogPlanningResponseSchema,
   request: z.strictObject({ request: contextRequestRecordSchema }),
   read: z.strictObject({
@@ -62,6 +65,9 @@ type Reference =
   | "#/evidenceSchemas/receipt"
   | "#/evidenceSchemas/page";
 export const contextResponseReferences = {
+  save_catalog_case: "#/responseSchemas/catalogCase",
+  read_catalog_case: "#/responseSchemas/catalogCase",
+  list_catalog_cases: "#/responseSchemas/catalogCases",
   attach_evidence: "#/evidenceSchemas/receipt",
   read_evidence_attachment: "#/evidenceSchemas/receipt",
   list_evidence_attachments: "#/evidenceSchemas/page",
