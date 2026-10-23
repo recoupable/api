@@ -469,16 +469,20 @@
 
 .connection.handoff-active {
   position: fixed;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
+  right: 16px;
+  bottom: 16px;
   z-index: 60;
   width: max-content;
-  max-width: calc(100% - 48px);
-  padding: 14px 20px;
+  max-width: min(360px, calc(100% - 32px));
+  margin: 0;
+  padding: 10px 14px;
   border-radius: 12px;
   background: var(--surface);
   color: var(--text);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18), 0 0 0 1px var(--line);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.18),
+    0 0 0 1px var(--line);
   font-size: 14px;
+  line-height: 1.4;
+  pointer-events: none;
 }
