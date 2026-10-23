@@ -29,6 +29,9 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
         "Prefer the audio file attached to the conversation via file. Alternatively accept audio_url. " +
         "Provide exactly one source (MP3, WAV, FLAC; up to 20 minutes). " +
         "Use the host-supplied file object; do not ask users to host audio or invent a download URL. " +
+        "If only a local audio path is available, use upload_release_pack_asset mode=signed_url, " +
+        "transfer the selected file to the returned private upload URL, then mode=finalize and analyze its verified URL. " +
+        "Do not create a release pack or extract an API key for that transfer. " +
         "If no audio is attached, ask them to attach their song. Default to catalog_metadata for a song overview.",
       inputSchema: analyzeMusicToolSchema,
       _meta: { "openai/fileParams": ["file"] },
@@ -91,7 +94,8 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
       try {
         result = await processAnalyzeMusicRequest(params, {
           accountId,
-          ...(file ? { recordAudioUrl: false } : {}),
+          // audio_url can also be a finalized private upload or signed host link.
+          recordAudioUrl: false,
         });
       } catch (err) {
         const message = err instanceof Error ? err.message : "An unexpected error occurred";
