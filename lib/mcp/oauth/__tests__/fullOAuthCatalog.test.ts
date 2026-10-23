@@ -17,7 +17,21 @@ vi.mock("@/lib/apify/client", () => ({ default: {}, apifyClient: {} }));
 vi.mock("@/lib/privy/client", () => ({ default: {} }));
 vi.mock("@/lib/emails/client", () => ({ default: {} }));
 vi.mock("@/lib/stripe/client", () => ({ default: {} }));
+const standardOnlyContextActions = [
+  "attach_evidence",
+  "read_evidence_attachment",
+  "list_evidence_attachments",
+  "save_catalog_case",
+  "read_catalog_case",
+  "list_catalog_cases",
+];
 it("discovers the entire delegated catalog over the real MCP SDK", async () => {
+  expect(
+    Object.entries(contextToolOperations)
+      .filter(([, operation]) => "delegated" in operation && operation.delegated === false)
+      .map(([action]) => action)
+      .sort(),
+  ).toEqual([...standardOnlyContextActions].sort());
   const server = new McpServer({ name: "recoup-test", version: "1" });
   registerFullOAuthTools(server, vi.fn(), { prepare: vi.fn(), listArtists: vi.fn() });
   const client = new Client({ name: "test", version: "1" });
@@ -34,25 +48,14 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
         "get_daily_email_status",
         "set_daily_email_status",
         ...Object.entries(contextToolOperations)
-          .filter(
-            ([action]) =>
-              ![
-                "attach_evidence",
-                "read_evidence_attachment",
-                "list_evidence_attachments",
-              ].includes(action),
-          )
+          .filter(([action]) => !standardOnlyContextActions.includes(action))
           .map(([, operation]) => operation.name),
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
     expect(tools).toHaveLength(91);
     for (const [action, operation] of Object.entries(contextToolOperations)) {
-      if (
-        ["attach_evidence", "read_evidence_attachment", "list_evidence_attachments"].includes(
-          action,
-        )
-      ) {
+      if (standardOnlyContextActions.includes(action)) {
         expect(tools.map(tool => tool.name)).not.toContain(operation.name);
         continue;
       }
