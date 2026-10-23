@@ -32,6 +32,8 @@ export type AnalyzeMusicResult = FullReportSuccess | AnalysisSuccess | AnalysisE
 /** Who pays for the model calls this request makes. */
 export interface AnalyzeMusicContext {
   accountId: string;
+  /** Temporary attachment download URLs must not become usage record links. */
+  recordAudioUrl?: boolean;
 }
 
 /**
@@ -56,6 +58,7 @@ export async function processAnalyzeMusicRequest(
     const { report, elapsed_seconds } = await executeFullReport(
       params.audio_url,
       context.accountId,
+      context.recordAudioUrl ?? true,
     );
     return { type: "success", preset: "full_report", report, elapsed_seconds };
   }
@@ -96,7 +99,7 @@ export async function processAnalyzeMusicRequest(
   await chargeForFlamingoCall({
     accountId: context.accountId,
     elapsedSeconds: result.elapsed_seconds,
-    audioUrl: params.audio_url,
+    ...(context.recordAudioUrl === false ? {} : { audioUrl: params.audio_url }),
   });
 
   // Apply post-processing if the preset defines one

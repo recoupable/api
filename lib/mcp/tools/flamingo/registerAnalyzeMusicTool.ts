@@ -5,10 +5,8 @@ import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
-import {
-  flamingoGenerateBodySchema,
-  type FlamingoGenerateBody,
-} from "@/lib/flamingo/flamingoGenerateBodySchema";
+import { type FlamingoGenerateBody } from "@/lib/flamingo/flamingoGenerateBodySchema";
+import { analyzeMusicToolSchema, type AnalyzeMusicToolInput } from "./analyzeMusicToolSchema";
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
 import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
 import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsForAnalyzeRequest";
@@ -28,12 +26,15 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
         "Analyze music or answer music questions using Recoupable's Audio Language Model. " +
         "Accepts either a 'preset' name for structured analysis (e.g. 'catalog_metadata', 'mood_tags', 'sync_brief_match', 'full_report') " +
         "or a custom 'prompt' for free-form questions about the audio. " +
-        "audio_url is required in every mode and must be a public URL to an audio file " +
-        "(MP3, WAV, FLAC; up to 20 minutes); it is checked before the model runs.",
-      inputSchema: flamingoGenerateBodySchema,
+        "Prefer the audio file attached to the conversation via file. Alternatively accept audio_url. " +
+        "Provide exactly one source (MP3, WAV, FLAC; up to 20 minutes). " +
+        "Use the host-supplied file object; do not ask users to host audio or invent a download URL. " +
+        "If no audio is attached, ask them to attach their song. Default to catalog_metadata for a song overview.",
+      inputSchema: analyzeMusicToolSchema,
+      _meta: { "openai/fileParams": ["file"] },
     },
     async (
-      args: FlamingoGenerateBody,
+      args: AnalyzeMusicToolInput,
       extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
     ) => {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
@@ -50,16 +51,31 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
         return getToolResultError("Failed to resolve account ID");
       }
 
-      const audio = await verifyAudioUrl(args.audio_url);
+      const parsed = analyzeMusicToolSchema.safeParse(args);
+      if (!parsed.success) {
+        return getToolResultError(parsed.error.issues[0].message);
+      }
+      const { file, ...input } = parsed.data;
+      const params: FlamingoGenerateBody = {
+        ...input,
+        audio_url: file?.download_url ?? input.audio_url!,
+      };
+      const audio = await verifyAudioUrl(params.audio_url);
       if (audio.ok === false) {
-        return getToolResultError(audio.message);
+        return getToolResultError(
+          file
+            ? audio.error === "audio_url_not_audio"
+              ? "The attached file could not be read as audio. Attach an MP3, WAV, or FLAC file."
+              : "The attached audio could not be accessed. Please attach the song again and retry."
+            : audio.message,
+        );
       }
 
       let gate;
       try {
         gate = await checkCreditsAvailable({
           accountId,
-          creditsToDeduct: minimumCreditsForAnalyzeRequest(args),
+          creditsToDeduct: minimumCreditsForAnalyzeRequest(params),
         });
       } catch (err) {
         console.error("[analyze_music] credit gate failed:", err);
@@ -73,7 +89,10 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
 
       let result;
       try {
-        result = await processAnalyzeMusicRequest(args, { accountId });
+        result = await processAnalyzeMusicRequest(params, {
+          accountId,
+          ...(file ? { recordAudioUrl: false } : {}),
+        });
       } catch (err) {
         const message = err instanceof Error ? err.message : "An unexpected error occurred";
         return getToolResultError(`Music analysis failed: ${message}`);
