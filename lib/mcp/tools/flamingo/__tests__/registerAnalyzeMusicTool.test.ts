@@ -81,7 +81,7 @@ describe("registerAnalyzeMusicTool — audio_url guard", () => {
     expect(checkCreditsAvailable).toHaveBeenCalledTimes(1);
     expect(processAnalyzeMusicRequest).toHaveBeenCalledWith(
       expect.objectContaining({ preset: "mood_tags", audio_url: AUDIO }),
-      { accountId: "acc_1" },
+      { accountId: "acc_1", recordAudioUrl: false },
     );
   });
   it("accepts a host attachment with only the required file fields", () => {
@@ -182,5 +182,20 @@ describe("registerAnalyzeMusicTool — audio_url guard", () => {
     );
     expect(JSON.parse(result.content[0].text).message).toContain("Attach an MP3, WAV, or FLAC");
     expect(checkCreditsAvailable).not.toHaveBeenCalled();
+  });
+  it("keeps finalized private upload links out of usage records", async () => {
+    vi.mocked(verifyAudioUrl).mockResolvedValue({ ok: true, contentType: "audio/mpeg" });
+    vi.mocked(processAnalyzeMusicRequest).mockResolvedValue({
+      type: "success",
+      response: "warm",
+      elapsed_seconds: 2,
+    });
+    const url =
+      "https://project.supabase.co/storage/v1/object/sign/user-files/audio.mp3?token=private";
+    await handler({ preset: "catalog_metadata", audio_url: url }, extra);
+    expect(processAnalyzeMusicRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ audio_url: url }),
+      { accountId: "acc_1", recordAudioUrl: false },
+    );
   });
 });
