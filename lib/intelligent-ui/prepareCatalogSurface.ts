@@ -96,7 +96,7 @@ export async function prepareCatalogSurface(input: z.input<typeof inputSchema>) 
       .filter(r => !safeDistribution || r.current_streams === null)
       .map(
         r =>
-          `${(r.name?.trim() || r.isrc).slice(0, 160)}: ${r.current_streams === null ? `unavailable; ${r.missing_days.length > 0 ? `${r.missing_days.length} dates missing from the comparison` : "saved values could not be compared"}` : `${r.current_streams} streams`}.`,
+          `${(r.name?.trim() || r.isrc).slice(0, 160)}: ${r.current_streams === null ? `unavailable; ${r.missing_days.length > 0 ? `${r.missing_days.length} ${r.missing_days.length === 1 ? "date" : "dates"} missing from the comparison` : "saved values could not be compared"}` : `${r.current_streams} streams`}.`,
       ),
   ].join("\n\n");
   const evidenceId = "saved-stream-observations";

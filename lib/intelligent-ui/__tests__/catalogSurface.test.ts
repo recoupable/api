@@ -253,3 +253,45 @@ it.each([
     text: expect.stringContaining(phrase),
   });
 });
+
+it.each([
+  [1, "1 date missing"],
+  [2, "2 dates missing"],
+])("uses correct date wording for %s missing dates", async (missing, phrase) => {
+  vi.mocked(selectCatalogStreamObservations).mockResolvedValue(
+    missing === 1 ? [row("2026-09-02", 3)] : [],
+  );
+  const result = await prepareCatalogSurface(input);
+  expect(result.surface.fallbackText).toContain(phrase);
+  expect(result.surface.answer.parts[0]).toMatchObject({
+    type: "markdown",
+    text: expect.stringContaining(phrase),
+  });
+  if (missing === 1) {
+    await expect(JSON.stringify(result, null, 2) + "\n").toMatchFileSnapshot(
+      "../__fixtures__/catalog-streams-missing-date-v1.json",
+    );
+    const chunks: UIMessageChunk[] = [{ type: "start", messageId: input.assistantMessageId }];
+    await sendCatalogSurfaceStep(
+      new WritableStream({
+        write(chunk) {
+          chunks.push(chunk);
+        },
+      }),
+      input.assistantMessageId,
+      result,
+    );
+    chunks.push({ type: "finish" });
+    const response = createUIMessageStreamResponse({
+      stream: new ReadableStream({
+        start(controller) {
+          chunks.forEach(chunk => controller.enqueue(chunk));
+          controller.close();
+        },
+      }),
+    });
+    await expect(await response.text()).toMatchFileSnapshot(
+      "../__fixtures__/catalog-streams-missing-date-v1.sse",
+    );
+  }
+});
