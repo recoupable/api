@@ -101,16 +101,20 @@ tested failures stop before turn persistence or the corresponding chat writes.
 These assertions do not describe every possible 500 path. Compatibility cases
 require POST running/pending rejection with 409 before opening an old reader,
 persisting the rejected turn or starting work; GET retains its empty or terminal
-finish-only 200 SSE. The coordinated API #1071 / Marketing #209 successor freezes admission 409/503 and
-optional POST/GET lifecycle declarations against reviewed API #1128. The five
+finish-only 200 SSE. API #1129 / Marketing #230 succeed API #1071 / Marketing #209
+and freeze admission 409/503 and optional POST/GET lifecycle declarations against
+API #1128, merged as `8f48a2a1d51264f2ae34a0f21db05bcaeed806ce`. The five
 retryable early-admission controls validate reservation, failed/unknown status
 and stale-slot-clear outcomes against the shared 503 schema before persistence or
 start. `publishedChatLifecycle.test.ts` checks the optional string declaration
 and real exact-single query validator, including legacy defaults for missing,
-empty, unknown and repeated values. These source candidates remain held until
-actual API #1128 merge, actual source-pin refresh and final independent review. Authentication validation, storage and workflow service leaves
-are synthetic. No real run or customer request occurs; final App native
-acceptance and production release remain required before the API release.
+empty, unknown and repeated values. The runtime's exact merge has a successful
+production deployment; that receipt does not establish hosted behavior. Marketing
+must pin the actual API #1129 merge before its release, and retained Docs follows
+the actual Marketing merge. Authentication validation, storage and workflow
+service leaves are synthetic. No real run or customer request occurs in these
+tests; authenticated hosted send/reconnect/Stop and provider cancellation remain
+unverified.
 
 `publishedChatStop.test.ts` binds the canonical Stop route's no-active and
 confirmed 200 responses, pending-start 503, cancellation failure 502 and terminal
