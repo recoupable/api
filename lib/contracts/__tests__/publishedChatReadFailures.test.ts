@@ -123,7 +123,7 @@ describe("published chat read failures against canonical route exports", () => {
   });
 
   it.each(["running", "pending"])(
-    "keeps the documented existing POST %s resume behavior",
+    "rejects an unaccepted POST during a %s run without opening its reader",
     async status => {
       const getReadable = vi.fn(
         () =>
@@ -135,17 +135,18 @@ describe("published chat read failures against canonical route exports", () => {
       );
       vi.mocked(getRun).mockReturnValue({ status: Promise.resolve(status), getReadable } as never);
       const response = await startChat(request("POST", "/api/chat", {}));
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(409);
       expect(fixture.contracts.chatStartResponses).toContain(String(response.status));
-      expect(fixture.contracts.chatStartResponses).not.toContain("503");
-      expect(fixture.contracts.chatStartMediaTypes).toContain("text/event-stream");
-      expect(response.headers.get("content-type")).toContain("text/event-stream");
-      expect(response.headers.get("x-workflow-run-id")).toBe("wrun_existing");
-      expect(getReadable).toHaveBeenCalledTimes(1);
+      expect(response.headers.get("content-type")).toContain("application/json");
+      expect(response.headers.get("x-workflow-run-id")).toBeNull();
+      expect(await response.json()).toMatchObject({
+        status: "error",
+        error: expect.stringContaining("GET /api/chat/"),
+      });
+      expect(getReadable).not.toHaveBeenCalled();
       expect(start).not.toHaveBeenCalled();
       expect(persistLatestUserMessage).not.toHaveBeenCalled();
       expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
-      await response.text();
     },
   );
 

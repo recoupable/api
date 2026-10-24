@@ -99,10 +99,14 @@ the same coordinated fixture, separate from the API-owned error-envelope export.
 session-chat exports to their published 500 schemas for failed chat lookups. The
 tested failures stop before turn persistence or the corresponding chat writes.
 These assertions do not describe every possible 500 path. Compatibility cases
-retain the existing POST running/pending 200 resume behavior and GET's empty or
-terminal finish-only 200 SSE. Authentication validation, storage and workflow
-service leaves are synthetic. No real run or customer request occurs; client
-text handling, Stop/disconnect and the held submission repair remain separate.
+require POST running/pending rejection with 409 before opening an old reader,
+persisting the rejected turn or starting work; GET retains its empty or terminal
+finish-only 200 SSE. This is the held API admission successor, not evidence that
+the published start contract already describes its new retryable 503 branch or
+lifecycle opt-in. API1071/Marketing209 update those contracts after final source
+qualification. Authentication validation, storage and workflow service leaves
+are synthetic. No real run or customer request occurs; final App native
+acceptance and production release remain required before the API release.
 
 `publishedChatStop.test.ts` binds the canonical Stop route's no-active and
 confirmed 200 responses, pending-start 503, cancellation failure 502 and terminal
