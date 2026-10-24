@@ -104,6 +104,14 @@ terminal finish-only 200 SSE. Authentication validation, storage and workflow
 service leaves are synthetic. No real run or customer request occurs; client
 text handling, Stop/disconnect and the held submission repair remain separate.
 
+`publishedChatStop.test.ts` binds the canonical Stop route's no-active and
+confirmed 200 responses, pending-start 503, cancellation failure 502 and terminal
+wait timeout 504 to selected published schemas. The pending-start body must match
+the documented example and cannot release the reservation or call workflow
+cancellation before a run ID exists. Authentication, storage and workflow service
+leaves are synthetic. This does not change POST admission or disconnect policy,
+establish client recovery, or verify a real hosted Stop.
+
 `buildContextOperationCatalog` exports the current request schemas and separates
 delegated tool names from standard-only evidence tools. The Context fixture checks
 both maps and the evidence receipt/page schemas. Generate the four exports with:
