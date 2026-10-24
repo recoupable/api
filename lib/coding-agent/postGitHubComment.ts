@@ -11,6 +11,10 @@ export async function postGitHubComment(
   body: string,
 ): Promise<void> {
   const token = process.env.GITHUB_TOKEN;
+  if (!token) {
+    console.error("GITHUB_TOKEN environment variable is not set");
+    return;
+  }
 
   const response = await fetch(`https://api.github.com/repos/${repo}/issues/${prNumber}/comments`, {
     method: "POST",
