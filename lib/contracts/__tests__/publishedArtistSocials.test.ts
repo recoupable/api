@@ -19,6 +19,7 @@ const published = fixture as unknown as {
     responses: Record<"list" | "update", SocialContract>;
   };
 };
+const ajv = new Ajv({ strict: false, allErrors: true, validateFormats: false });
 const profile: NonNullable<SocialJoin["social"]> = {
   id: "11111111-1111-4111-8111-111111111111",
   username: "river",
@@ -68,9 +69,7 @@ describe.each(["list", "update"] as const)("published artist %s socials", operat
       { ...profile, link: profile.profile_url, type: "INSTAGRAM" },
       { ...profile, profile_url: "", link: "", type: "NONE" },
     ]);
-    const validate = new Ajv({ strict: false, allErrors: true, validateFormats: false }).compile(
-      published.artistSocials.responses[operation].schema,
-    );
+    const validate = ajv.compile(published.artistSocials.responses[operation].schema);
     expect(validate(account_socials), JSON.stringify(validate.errors)).toBe(true);
     expect(validate([{ ...profile, link: 123 }])).toBe(false);
     expect(validate([{ ...profile, type: 123 }])).toBe(false);
@@ -78,9 +77,7 @@ describe.each(["list", "update"] as const)("published artist %s socials", operat
   });
 
   it("accepts an empty list when there are no existing joined profiles", () => {
-    const validate = new Ajv({ strict: false, validateFormats: false }).compile(
-      published.artistSocials.responses[operation].schema,
-    );
+    const validate = ajv.compile(published.artistSocials.responses[operation].schema);
     expect(getFormattedArtist({ account_socials: [join(null)] }).account_socials).toEqual([]);
     expect(validate([])).toBe(true);
   });
@@ -92,8 +89,6 @@ it("keeps the copyable list-profile example consistent with the actual formatter
   const [social] = getFormattedArtist({ account_socials: [join(profile)] }).account_socials;
   expect(social).toMatchObject(example!);
   expect(Object.keys(example!).sort()).toEqual(["id", "link", "profile_url", "type", "username"]);
-  const validate = new Ajv({ strict: false, validateFormats: false }).compile(
-    published.artistSocials.responses.list.schema,
-  );
+  const validate = ajv.compile(published.artistSocials.responses.list.schema);
   expect(validate([example])).toBe(true);
 });

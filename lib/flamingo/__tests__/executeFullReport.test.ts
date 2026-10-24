@@ -95,4 +95,12 @@ describe("executeFullReport — credits", () => {
     );
     errorSpy.mockRestore();
   });
+  it("does not persist temporary attachment URLs in any section's usage record", async () => {
+    vi.mocked(callFlamingoGenerate).mockResolvedValue({ response: "ok", elapsed_seconds: 3 });
+    await executeFullReport(AUDIO, "acc_1", false);
+    expect(chargeForFlamingoCall).toHaveBeenCalledTimes(N);
+    for (const [args] of vi.mocked(chargeForFlamingoCall).mock.calls) {
+      expect(args).not.toHaveProperty("audioUrl");
+    }
+  });
 });
