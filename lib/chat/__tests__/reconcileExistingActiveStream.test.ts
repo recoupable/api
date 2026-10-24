@@ -24,13 +24,13 @@ function mockRun(status: string, getReadable: () => ReadableStream = () => new R
 
 describe("reconcileExistingActiveStream", () => {
   it("returns action=resume when status is 'running'", async () => {
-    const stream = new ReadableStream();
-    mockRun("running", () => stream);
+    const getReadable = vi.fn(() => new ReadableStream());
+    mockRun("running", getReadable);
     const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
     expect(result.action).toBe("resume");
     if (result.action !== "resume") return;
     expect(result.runId).toBe(RUN_ID);
-    expect(result.stream).toBe(stream);
+    expect(getReadable).not.toHaveBeenCalled();
   });
 
   it("returns action=resume when status is 'pending'", async () => {
