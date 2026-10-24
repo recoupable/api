@@ -172,6 +172,29 @@ const savedDocument = {
 };
 let activeAction = "";
 function storage(name: string, params: Record<string, unknown>): unknown {
+  if (name === "save_context_catalog_case" || name === "read_context_catalog_case") {
+    const snapshot = contextOperationExampleInputs.find(
+      input => input.action === "save_catalog_case",
+    )!.snapshot;
+    return {
+      case_id: record,
+      revision: 1,
+      state: "saved",
+      evidence_kind: "customer_assertion",
+      snapshot: { ...snapshot, revision: 1 },
+      withheld_record_ids: [],
+      snapshot_usable_for_save: true,
+      external_actions: "unsupported",
+      created_at: when,
+    };
+  }
+  if (name === "list_context_catalog_cases")
+    return {
+      cases: [{ case_id: record, revision: 1, created_at: when, updated_at: when }],
+      has_more: false,
+      next_id: null,
+    };
+
   expect(params.p_owner).toBe(owner);
   if (name === "read_context_request") return requestRecord();
   if (name === "create_context_request")
@@ -409,7 +432,13 @@ it.each(contextOperationExampleInputs)(
     const body = await response.json();
     expect(schema.parse(body)).toEqual(body);
     const result = await handleContextToolOperation(input, {
-      authInfo: { extra: { oauth: true } },
+      authInfo: {
+        extra: {
+          oauth: !["save_catalog_case", "read_catalog_case", "list_catalog_cases"].includes(
+            parsed.action,
+          ),
+        },
+      },
     } as unknown as Parameters<typeof handleContextToolOperation>[1]);
     expect("isError" in result ? result.isError : false).not.toBe(true);
     expect(JSON.parse(result.content[0].text)).toEqual(body);

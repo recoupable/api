@@ -1,3 +1,4 @@
+import { catalogCaseToolOperations } from "./catalogCaseToolOperations";
 import { evidenceToolOperations } from "./evidenceToolOperations";
 import type { z } from "zod";
 import type { contextOperationSchema } from "@/lib/context/processContextOperation";
@@ -6,6 +7,7 @@ type Action = z.infer<typeof contextOperationSchema>["action"];
 /** Each public operation has its own schema and permission classification. */
 export const contextToolOperations = {
   ...evidenceToolOperations,
+  ...catalogCaseToolOperations,
   list_release_cases: {
     name: "list_music_release_cases",
     description: "List saved release cases and their review status.",

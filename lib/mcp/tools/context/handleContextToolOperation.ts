@@ -24,6 +24,17 @@ export async function handleContextToolOperation(
     });
     if (error || !accountId)
       return { ...getToolResultError("Authentication required"), isError: true };
+    if (
+      authInfo?.extra?.oauth &&
+      args &&
+      typeof args === "object" &&
+      "action" in args &&
+      ["save_catalog_case", "read_catalog_case", "list_catalog_cases"].includes(String(args.action))
+    )
+      return {
+        ...getToolResultError("Catalog case operations are unavailable for delegated OAuth."),
+        isError: true,
+      };
     return getToolResultSuccess(
       await processContextOperation(accountId, args, {
         rpc: callContextRpc,

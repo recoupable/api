@@ -286,3 +286,55 @@ withdrawal, replay and history behavior applies.
 
 This requires the database company-assessment purpose migration before API release.
 Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
+
+## Catalog case artifacts (CATD-29)
+
+`POST /api/context` and standard MCP expose `save_catalog_case`,
+`read_catalog_case` and `list_catalog_cases` through the same scoped processor.
+Dedicated MCP tools use those exact names; the combined `context` tool accepts
+an `action`. These operations persist **customer assertions** and bounded portable
+workflow artifacts. They do not verify rights, execute provider operations, send
+correspondence or establish that a royalty reached a bank. `external_actions` is
+always `unsupported`. No artist, recording identifier or ingestion request is required.
+
+Save accepts `case_id` (UUID), `expected_revision` (zero for first save),
+`idempotency_key`, optional `organization_id`, and the portable `schema_version: 1`
+snapshot. The snapshot's case ID and revision must match the request; its workspace
+ID must match the authenticated owner. Omit local `history`: hosted revisions are
+server-maintained and unknown fields are rejected, never silently dropped. The scope
+is a string and sources/assessments/findings/actions/attempts/outcomes are dictionaries
+keyed by stable record IDs. Each collection is bounded to 1,000 records and the snapshot
+to 1 MiB. Structured stage workpapers live in each record's `data`; preserve unsupported
+formats privately rather than coercing them into a false complete record. Action payloads
+require nonempty provider, operation, account and party strings; nonempty subject IDs;
+a nonempty scope object; and explicit disclosure/cost arrays. Expired historical
+authorization assertions can be retained and grant no present authority.
+
+A successful save returns the next revision. Retrying an uncertain save uses the same
+key, expected revision and unchanged snapshot; changing any of these is a new proposal,
+not a safe replay. Re-read before editing after a conflict. This preserves concurrent
+writers and makes continuation independent of the chat. The artifact's action authorization
+field records a customer assertion; it grants no API or provider permission.
+
+Read accepts `case_id` and an optional saved `revision` (at least one). Current workspace
+access and retention are rechecked. Optional source `context_source_version_id` values
+are scoped retained Context versions validated by storage. Withdrawal redacts the linked
+source and dependent records, including transitive dependencies, from historical reads.
+The response reports `state: partial`, `withheld_record_ids` and
+`snapshot_usable_for_save: false`. A redacted projection is not a write snapshot: explicitly
+reassemble from permitted current evidence rather than resaving it and deleting history.
+Stale records may retain a prior source version to explain invalidation; they remain stale.
+Storage requires an earlier same-case binding for that version. An imported stale record
+without a retained historical source cannot be saved as if its provenance were known.
+
+List accepts optional `after_id`, `limit` (1–100, default 50) and `organization_id`.
+Follow `next_id` while `has_more` is true. Storage orders by creation time and ID
+descending; the UUID cursor is an opaque case reference, not a sortable boundary by itself. HTTP responses use private/no-store caching;
+errors omit raw storage/provider details. These actions are excluded from delegated
+OAuth until that permission and retention surface is audited; standard authenticated
+MCP remains available under the same owner checks as HTTP.
+
+Deployment depends on the corresponding catalog-case database migration and scoped RPCs.
+Unit/transport tests prove the source contract, not that migrations are deployed, provider
+registrations accepted, or financial results verified. Database lifecycle/RLS tests belong
+to the owning migration. Capability claims must preserve these separate evidence states.
