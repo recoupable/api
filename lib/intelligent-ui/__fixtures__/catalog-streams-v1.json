@@ -50,14 +50,14 @@
         "text": "Luminate source-reported daily streams across reporting DSPs, worldwide; not Spotify-only, listeners or royalties.\nCurrent UTC period [2026-09-02, 2026-09-03); equal previous period [2026-09-01, 2026-09-02).\nComparable recordings on catalog page 1; 1 loaded of 2 catalog recordings. More pages: no. Provider update time unknown. Calendar completeness does not prove freshness.\nHistorical saved observations at this response revision; a new read rechecks access and selects retained corrections. Paused collection is not withdrawal.\nInput fingerprint (catalog-streams-v1): a970ac8618b364557ea76d2bf180f5c3783fffd3447b92b71c8c583b50133bcb.\nRetained retrieval range: 2026-09-04T00:00:00.000Z to 2026-09-04T00:00:00.000Z; not provider update times."
       }
     ],
-    "fallbackText": "Saved Luminate streams across reporting services, worldwide.\n\n2026-09-02 to 2026-09-02 (UTC), compared with the preceding 1 days.\n\nShowing 1 of 2 recordings on page 1.\n\nOnly recordings with complete, comparable periods appear in the chart.\n\nSaved streams by recording\nStreams across reporting services · 2026-09-02 to 2026-09-02\nComparable recordings on catalog page 1; 1 loaded of 2 catalog recordings. Partial selection: 1 of 2 records.\nTrack: 3 streams\nTotal supplied: 3 streams.\n\nSaved stream history · Luminate stream history · 2026-09-04T00:00:00.000Z · partial",
+    "fallbackText": "Saved Luminate streams across reporting services, worldwide.\n\n2026-09-02 to 2026-09-02 (UTC), compared with the preceding 1 day.\n\nShowing 1 of 2 recordings on page 1.\n\nOnly recordings with complete, comparable periods appear in the chart.\n\nSaved streams by recording\nStreams across reporting services · 2026-09-02 to 2026-09-02\nComparable recordings on catalog page 1; 1 loaded of 2 catalog recordings. Partial selection: 1 of 2 records.\nTrack: 3 streams\nTotal supplied: 3 streams.\n\nSaved stream history · Luminate stream history · 2026-09-04T00:00:00.000Z · partial",
     "answer": {
       "revision": 1,
       "parts": [
         {
           "type": "markdown",
           "id": "source-context",
-          "text": "Saved Luminate streams across reporting services, worldwide.\n\n2026-09-02 to 2026-09-02 (UTC), compared with the preceding 1 days.\n\nShowing 1 of 2 recordings on page 1.\n\nOnly recordings with complete, comparable periods appear in the chart."
+          "text": "Saved Luminate streams across reporting services, worldwide.\n\n2026-09-02 to 2026-09-02 (UTC), compared with the preceding 1 day.\n\nShowing 1 of 2 recordings on page 1.\n\nOnly recordings with complete, comparable periods appear in the chart."
         },
         {
           "type": "representation",

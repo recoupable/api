@@ -241,3 +241,15 @@ it("delivers only the same readable answer in explicit text mode", async () => {
   expect(chunks.some(c => c.type === "data-intelligent-ui-snapshot")).toBe(false);
   expect(message.parts).toEqual([{ type: "text", text: prepared.surface.fallbackText }]);
 });
+
+it.each([
+  [1, "preceding 1 day."],
+  [2, "preceding 2 days."],
+])("uses correct day wording for a %s-day comparison", async (days, phrase) => {
+  const result = await prepareCatalogSurface({ ...input, query: { ...query, days } });
+  expect(result.surface.fallbackText).toContain(phrase);
+  expect(result.surface.answer.parts[0]).toMatchObject({
+    type: "markdown",
+    text: expect.stringContaining(phrase),
+  });
+});

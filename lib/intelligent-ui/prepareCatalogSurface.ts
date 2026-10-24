@@ -87,7 +87,7 @@ export async function prepareCatalogSurface(input: z.input<typeof inputSchema>) 
   ].join("\n");
   const sourceText = [
     "Saved Luminate streams across reporting services, worldwide.",
-    `${data.periods.current.start} to ${inclusiveEnd} (UTC), compared with the preceding ${query.days} days.`,
+    `${data.periods.current.start} to ${inclusiveEnd} (UTC), compared with the preceding ${query.days} ${query.days === 1 ? "day" : "days"}.`,
     `Showing ${data.recordings.length} of ${data.pagination.total_count} recordings on page ${query.page}.${data.pagination.has_more ? " More recordings are available on later pages." : ""}`,
     ...(safeDistribution
       ? ["Only recordings with complete, comparable periods appear in the chart."]
