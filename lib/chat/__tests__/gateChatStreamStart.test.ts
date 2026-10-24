@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { maybeResumeChatStream } from "@/lib/chat/maybeResumeChatStream";
+import { gateChatStreamStart } from "@/lib/chat/gateChatStreamStart";
 import { reconcileExistingActiveStream } from "@/lib/chat/reconcileExistingActiveStream";
 
 vi.mock("@/lib/chat/reconcileExistingActiveStream", () => ({
@@ -11,36 +11,34 @@ vi.mock("@/lib/networking/getCorsHeaders", () => ({
 
 beforeEach(() => vi.clearAllMocks());
 
-describe("maybeResumeChatStream", () => {
+describe("gateChatStreamStart", () => {
   it("returns null when there is no active_stream_id", async () => {
-    const res = await maybeResumeChatStream("chat-1", null);
+    const res = await gateChatStreamStart("chat-1", null);
     expect(res).toBeNull();
     expect(reconcileExistingActiveStream).not.toHaveBeenCalled();
   });
 
   it("returns null when reconcile says action=ready", async () => {
     vi.mocked(reconcileExistingActiveStream).mockResolvedValue({ action: "ready" });
-    const res = await maybeResumeChatStream("chat-1", "wrun_dead");
+    const res = await gateChatStreamStart("chat-1", "wrun_dead");
     expect(res).toBeNull();
   });
 
-  it("returns a 200 SSE response with x-workflow-run-id on resume", async () => {
-    const stream = new ReadableStream();
+  it("returns 409 with a GET recovery path instead of silently dropping the new message", async () => {
     vi.mocked(reconcileExistingActiveStream).mockResolvedValue({
       action: "resume",
       runId: "wrun_live",
-      stream,
     });
-    const res = await maybeResumeChatStream("chat-1", "wrun_live");
+    const res = await gateChatStreamStart("chat-1", "wrun_live");
     expect(res).not.toBeNull();
-    expect(res!.status).toBe(200);
-    expect(res!.headers.get("x-workflow-run-id")).toBe("wrun_live");
-    expect(res!.headers.get("content-type") ?? "").toMatch(/text\/event-stream/);
+    expect(res!.status).toBe(409);
+    expect(res!.headers.get("x-workflow-run-id")).toBeNull();
+    expect(await res!.json()).toMatchObject({ error: expect.stringContaining("GET /api/chat/") });
   });
 
-  it("returns a 409 on conflict", async () => {
+  it("returns a retryable 503 on an unresolved slot", async () => {
     vi.mocked(reconcileExistingActiveStream).mockResolvedValue({ action: "conflict" });
-    const res = await maybeResumeChatStream("chat-1", "wrun_x");
-    expect(res!.status).toBe(409);
+    const res = await gateChatStreamStart("chat-1", "wrun_x");
+    expect(res!.status).toBe(503);
   });
 });

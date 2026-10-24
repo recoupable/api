@@ -23,16 +23,16 @@ export async function OPTIONS() {
 /**
  * GET /api/chat/{chatId}/stream — reconnect to an in-progress chat response.
  *
- * The resume counterpart to `POST /api/chat`, which only resumes as a side
- * effect of starting a turn. Pass `startIndex` to continue from the chunk
- * after the last one received; omit it to read the response from the start.
+ * Pass `startIndex` to continue after the last chunk received; omit it to
+ * read from the start. The exact streamLifecycle=explicit-stop-v1 query
+ * preserves a run when this reader disconnects; use authenticated Stop to cancel.
  *
  * Contract: https://docs.recoupable.dev/api-reference/chat/workflow-stream
  *
  * @param request - The incoming NextRequest.
  * @param options - Route options containing the async params.
  * @param options.params - Route params containing the chat id.
- * @returns A streaming 200, 204 when there is nothing to resume, or an error.
+ * @returns A streaming 200 (finish-only when nothing remains), or an error.
  */
 export async function GET(
   request: NextRequest,
