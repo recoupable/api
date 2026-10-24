@@ -64,9 +64,7 @@ export async function processAndSendEmail(
     const data = await result.json();
     return {
       success: false,
-      error:
-        data?.error?.message ||
-        `Failed to send email from ${RECOUP_FROM_EMAIL} to ${to.join(", ")}.`,
+      error: data?.error?.message || "Failed to send email.",
     };
   }
 
