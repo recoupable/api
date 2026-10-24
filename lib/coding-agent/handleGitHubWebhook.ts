@@ -93,10 +93,6 @@ export async function handleGitHubWebhook(request: Request): Promise<NextRespons
       repo: prState.repo,
       callbackThreadId: threadId,
     });
-
-    await postGitHubComment(fullRepo, thread.prNumber, "Got your feedback. Updating the PRs...");
-
-    return NextResponse.json({ status: "update_triggered" }, { headers: getCorsHeaders() });
   } catch (error) {
     await setCodingAgentPRState(fullRepo, branch, prState);
     console.error("Failed to trigger update-pr:", error);
@@ -105,4 +101,12 @@ export async function handleGitHubWebhook(request: Request): Promise<NextRespons
       { status: 500, headers: getCorsHeaders() },
     );
   }
+
+  try {
+    await postGitHubComment(fullRepo, thread.prNumber, "Got your feedback. Updating the PRs...");
+  } catch (error) {
+    console.error("Failed to acknowledge update-pr:", error);
+  }
+
+  return NextResponse.json({ status: "update_triggered" }, { headers: getCorsHeaders() });
 }
