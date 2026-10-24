@@ -124,7 +124,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   const run = await start(runAgentWorkflow, [
     buildRunAgentInput({
       messages: validated.messages,
-      intelligentUI: validated.intelligentUI,
+      devCatalogSurface: validated.devCatalogSurface,
       chatId: validated.chatId,
       sessionId: validated.sessionId,
       accountId: validated.accountId,

@@ -68,7 +68,8 @@ describe("saved catalog surface", () => {
       items: [{ value: 3 }],
     });
     expect(result.surface.fallbackText).toContain("Luminate");
-    expect(result.surface.fallbackText).toContain(result.fingerprint);
+    expect(result.surface.fallbackText).not.toContain(result.fingerprint);
+    expect(result.surface.evidence[0].text).toContain(result.fingerprint);
     expect(result.surface.fallbackText).toContain("page 1");
   });
   it("denies a forged or revoked workspace before data reads", async () => {
@@ -99,7 +100,7 @@ describe("saved catalog surface", () => {
     expect(c.fingerprint).not.toBe(a.fingerprint);
     expect(c.lineage[0].streams).toBeNull();
     expect(c.surface.components).toEqual([]);
-    expect(c.surface.fallbackText).toContain("incomplete");
+    expect(c.surface.fallbackText).toContain("unavailable");
   });
   it("keeps generic catalog access and output shape unchanged", async () => {
     const result = await getCatalogStreams(actor, query);
@@ -178,7 +179,7 @@ it("preserves a measured zero in text without inventing a positive distribution"
   ]);
   const result = await prepareCatalogSurface(input);
   expect(result.surface.components).toEqual([]);
-  expect(result.surface.fallbackText).toContain("USAAA2400001: 0 streams");
+  expect(result.surface.fallbackText).toContain("Track: 0 streams");
 });
 it("suppresses the chart when provider identity changes between periods", async () => {
   vi.mocked(selectCatalogStreamObservations).mockResolvedValue([
@@ -188,7 +189,7 @@ it("suppresses the chart when provider identity changes between periods", async 
   const result = await prepareCatalogSurface(input);
   expect(result.surface.components).toEqual([]);
   expect(result.lineage).toHaveLength(2);
-  expect(result.surface.fallbackText).toContain("incomplete");
+  expect(result.surface.fallbackText).toContain("unavailable");
 });
 
 it("uses saved retrieval time and supplies a representation reading plan", async () => {
@@ -221,7 +222,7 @@ it("keeps an allowed unmeasured 28-day page bounded without inventing observatio
   expect(result.surface.fallbackText.length).toBeLessThan(8000);
   expect(result.surface.answer.parts[0]).toMatchObject({
     type: "markdown",
-    text: expect.stringContaining("missing dates: 56"),
+    text: expect.stringContaining("56 dates missing"),
   });
 });
 it("delivers only the same readable answer in explicit text mode", async () => {

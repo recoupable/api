@@ -1,18 +1,23 @@
 # Development-only saved catalog result (App #2202 / #2206)
 
-The existing authenticated `POST /api/chat/workflow` accepts `intelligentUI` **only when `NODE_ENV=development`**. The source step repeats this guard, including direct Workflow calls. This does not activate production UI. No new endpoint, tracking job, provider request or model tool is added.
+The existing authenticated `POST /api/chat/workflow` accepts `devCatalogSurface` **only when `NODE_ENV=development`**. The source step repeats this guard, including direct Workflow calls. This does not activate production UI. No new endpoint, tracking job, provider request or model tool is added.
 
 ```json
 {
-  "intelligentUI": {
-    "schemaVersion": 1,
-    "workspace": { "kind": "organization", "id": "00000000-0000-4000-8000-000000000002" },
-    "subject": { "kind": "catalog", "id": "00000000-0000-4000-8000-000000000003" }
+  "devCatalogSurface": {
+    "workspaceId": "00000000-0000-4000-8000-000000000002",
+    "query": {
+      "catalog_id": "00000000-0000-4000-8000-000000000003",
+      "since": "2026-09-02",
+      "days": 1,
+      "page": 1,
+      "limit": 25
+    }
   }
 }
 ```
 
-This matches App2340’s `CatalogIntelligentUIContext`. `workspace.kind` is `organization` or `account`; an `account` workspace must equal the authenticated account. The server chooses page 1, limit 25, and the last 28 completed UTC days (current start is UTC today minus 28 days; end is exclusive UTC today). It compares the preceding equal 28 days. The host does not send dates or paging in this first integration; exact periods/page/coverage are disclosed in the answer.
+This is the adopted App2340 pairing contract. The host sends an explicit `since` and `days` (1–366); only existing page 1 / limit 25 defaults apply when omitted. The API independently validates the query and requires completed UTC comparison windows. It does not choose a new reporting window for the host. The selected catalog is `query.catalog_id` and the selected workspace is `workspaceId`; both are independently authorized using the authenticated actor.
 
 This is part of the existing chat body, with existing messages/chat/session IDs and authentication. The actor comes from authentication, not this selection. The server checks current actor membership and an `account_catalogs` link for **this selected workspace**, including the personal account as its own workspace. Generic `getCatalogStreams` callers keep existing access and output behavior. App must supply a trusted host context with the actual `catalog` subject and selected workspace; the ordinary artist context is not interchangeable. App connection/production enablement is separate work.
 
@@ -26,7 +31,7 @@ A distribution includes only comparable recording totals on the selected page. P
 
 Supported envelope: App `schemaVersion: 1`, complete snapshots only, distribution component subset or text fallback. Mapping/catalog version: `catalog-streams-v1`. This intentionally does not introduce a general schema registry or patch engine. Compatibility reference: App `a642a5dac63cefc51b47f42ee88fe098d57cce50`.
 
-The internal saved-read option preserves the latest retained observation per date, including null corrections and rows considered when selecting provider identity. Canonical fingerprint input uses fixed object key order, parsed/defaulted query, workspace, periods, page membership/count, selected provider identity and source rows sorted by ISRC/date. Each row retains catalog/ISRC/date/provider identity/value/run ID/source hash/retrieval time. These existing references are not new Context source IDs; the fingerprint does not claim a transactional cross-recording database snapshot. Current membership and the returned saved rows are what this read observed. The journaled prepared result retains the complete tuple list; the bounded UI/source text carries its fingerprint. Missing retained source hashes/run IDs fail closed rather than inventing authority. Evidence dates use the latest retained retrieval, with the full retained retrieval range disclosed separately; provider update time remains unknown. An unmeasured page has no invented observation evidence/timestamp. Missing-date explanations use counts so an allowed 25-recording/28-day unmeasured page remains bounded.
+The internal saved-read option preserves the latest retained observation per date, including null corrections and rows considered when selecting provider identity. Canonical fingerprint input uses fixed object key order, parsed/defaulted query, workspace, periods, page membership/count, selected provider identity and source rows sorted by ISRC/date. Each row retains catalog/ISRC/date/provider identity/value/run ID/source hash/retrieval time. These existing references are not new Context source IDs; the fingerprint does not claim a transactional cross-recording database snapshot. Current membership and the returned saved rows are what this read observed. The journaled prepared result retains the complete tuple list; the existing Sources details carry its fingerprint, while the main narrative and Copy stay readable. Missing retained source hashes/run IDs fail closed rather than inventing authority. Evidence dates use the latest retained retrieval, with the full retained retrieval range disclosed separately; provider update time remains unknown. An unmeasured page has no invented observation evidence/timestamp. Missing-date explanations use counts so an allowed 25-recording/28-day unmeasured page remains bounded.
 
 The synthetic JSON and SSE fixtures under `__fixtures__` are generated by the actual adapter and API SDK serializer in tests. Their actor/catalog IDs and values are invented. They prove local source/serialization contracts, not deployed SQL, hosted Workflow behavior or customer outcomes.
 
@@ -36,6 +41,6 @@ The existing Workflow allocates a fresh durable assistant ID for each explicit c
 
 Preparation is a separate journaled step from delivery: a Workflow replay reuses the same prepared source result, fingerprint, timestamp and IDs. The explicit v1-capable host receives one complete `data-intelligent-ui-snapshot` with an `answer.parts` reading plan; no duplicate ordinary full-answer text part is sent. The snapshot includes its readable text alternative. The internal delivery helper also supports explicit text-only mode, which sends the same complete alternative without a snapshot; this is not a separate public request mode. It never emits partial surface patches. A rejected output stream stops delivery and releases the writer. Only successful delivery proceeds to the existing assistant-message persistence. Existing finish/close/active-stream cleanup runs on every exit. This branch makes no model call, credit debit or sandbox Git commit. Ordinary chat behavior is unchanged.
 
-The App's existing scope-bound consumer rejects wrong subjects/workspaces, unsupported schemas and same/older snapshot revisions, preserving the last accepted complete result. A host unable to show the distribution can derive readable text from the same answer plan; explicit internal text mode emits that alternative as ordinary text. Older clients without this context continue the existing ordinary chat path. Source explanation, numeric chart inputs and text use the same prepared response revision/fingerprint; no model rewrites the evidence.
+The App's existing scope-bound consumer rejects wrong subjects/workspaces, unsupported schemas and same/older snapshot revisions, preserving the last accepted complete result. A host unable to show the distribution can derive readable text from the same answer plan; explicit internal text mode emits that alternative as ordinary text. Older clients without this context continue the existing ordinary chat path. Source explanation, numeric chart inputs and text use the same prepared response revision; the internal typed result retains its fingerprint and the existing Sources evidence exposes the audit details, without placing them in the main narrative. No model rewrites the evidence.
 
 Historical answers describe the saved observations used then. They are not silently updated after source corrections or represented as fresh reads. Fresh reads select newer retained rows and recheck membership/access. Tracking disable pauses collection and retains history; it is not withdrawal. No source-owned withdrawal mechanism, automatic invalidation service, saved filters, conflict handling or new business persistence is claimed here. Existing message persistence may fail under its established error policy; this change does not strengthen that into a save guarantee.

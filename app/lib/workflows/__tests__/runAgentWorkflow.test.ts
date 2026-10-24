@@ -669,18 +669,17 @@ describe("catalog complete snapshot branch", () => {
     vi.mocked(prepareCatalogSurfaceStep).mockResolvedValue(prepared as never);
     vi.mocked(sendCatalogSurfaceStep).mockResolvedValue(message as never);
     const request = {
-      schemaVersion: 1 as const,
-      workspace: { kind: "organization" as const, id: "workspace" },
-      subject: { kind: "catalog" as const, id: "catalog" },
+      workspaceId: "workspace",
+      query: { catalog_id: "catalog", since: "2026-09-02", days: 1, page: 1, limit: 25 },
     };
     await runAgentWorkflow({
       ...baseInput,
       messages: [{ id: "client-assistant", role: "assistant", parts: [] }],
-      intelligentUI: request,
+      devCatalogSurface: request,
     });
     expect(prepareCatalogSurfaceStep).toHaveBeenCalledWith({
       accountId: baseInput.accountId,
-      context: request,
+      ...request,
       assistantMessageId: "asst-fresh-id",
     });
     expect(sendCatalogSurfaceStep).toHaveBeenCalledWith(writableStub, "asst-fresh-id", prepared);
@@ -697,10 +696,9 @@ describe("catalog complete snapshot branch", () => {
     await expect(
       runAgentWorkflow({
         ...baseInput,
-        intelligentUI: {
-          schemaVersion: 1,
-          workspace: { kind: "organization", id: "workspace" },
-          subject: { kind: "catalog", id: "catalog" },
+        devCatalogSurface: {
+          workspaceId: "workspace",
+          query: { catalog_id: "catalog", since: "2026-09-02", days: 1, page: 1, limit: 25 },
         },
       }),
     ).rejects.toThrow("cancelled");

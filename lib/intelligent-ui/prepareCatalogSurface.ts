@@ -68,8 +68,8 @@ export async function prepareCatalogSurface(input: z.input<typeof inputSchema>) 
   const inclusiveEnd = new Date(Date.parse(data.periods.current.end_exclusive) - 86400000)
     .toISOString()
     .slice(0, 10);
-  const population = `Comparable recordings on catalog page ${query.page}; ${data.recordings.length} loaded of ${data.pagination.total_count} current members`;
-  const sourceText = [
+  const population = `Comparable recordings on catalog page ${query.page}; ${data.recordings.length} loaded of ${data.pagination.total_count} catalog recordings`;
+  const auditText = [
     "Luminate source-reported daily streams across reporting DSPs, worldwide; not Spotify-only, listeners or royalties.",
     `Current UTC period [${data.periods.current.start}, ${data.periods.current.end_exclusive}); equal previous period [${data.periods.previous.start}, ${data.periods.previous.end_exclusive}).`,
     `${population}. More pages: ${data.pagination.has_more ? "yes" : "no"}. Provider update time unknown. Calendar completeness does not prove freshness.`,
@@ -85,6 +85,20 @@ export async function prepareCatalogSurface(input: z.input<typeof inputSchema>) 
       ? ["Distribution unavailable: no safe positive total; missing values are not zero."]
       : []),
   ].join("\n");
+  const sourceText = [
+    "Saved Luminate streams across reporting services, worldwide.",
+    `${data.periods.current.start} to ${inclusiveEnd} (UTC), compared with the preceding ${query.days} days.`,
+    `Showing ${data.recordings.length} of ${data.pagination.total_count} recordings on page ${query.page}.${data.pagination.has_more ? " More recordings are available on later pages." : ""}`,
+    ...(safeDistribution
+      ? ["Only recordings with complete, comparable periods appear in the chart."]
+      : ["A chart is unavailable for this page; missing values are not counted as zero."]),
+    ...data.recordings
+      .filter(r => !safeDistribution || r.current_streams === null)
+      .map(
+        r =>
+          `${(r.name?.trim() || r.isrc).slice(0, 160)}: ${r.current_streams === null ? `unavailable; ${r.missing_days.length > 0 ? `${r.missing_days.length} dates missing from the comparison` : "saved values could not be compared"}` : `${r.current_streams} streams`}.`,
+      ),
+  ].join("\n\n");
   const evidenceId = "saved-stream-observations";
   const components = safeDistribution
     ? [
@@ -93,7 +107,7 @@ export async function prepareCatalogSurface(input: z.input<typeof inputSchema>) 
           id: "catalog-current-streams",
           title: "Saved streams by recording",
           measure: {
-            label: "Luminate streams across reporting DSPs",
+            label: "Streams across reporting services",
             unit: "streams",
             periodStart: data.periods.current.start,
             periodEnd: inclusiveEnd,
@@ -119,12 +133,12 @@ export async function prepareCatalogSurface(input: z.input<typeof inputSchema>) 
     ? [
         {
           id: evidenceId,
-          label: "Saved observation retrievals",
-          sourceLabel: "Luminate / retained catalog observations",
+          label: "Saved stream history",
+          sourceLabel: "Luminate stream history",
           observedAt: observationTime,
           kind: "observed" as const,
           status: "partial" as const,
-          text: `${sourceText}\nRetained retrieval range: ${retrievals[0]} to ${observationTime}; not provider update times.`,
+          text: `${auditText}\nRetained retrieval range: ${retrievals[0]} to ${observationTime}; not provider update times.`,
         },
       ]
     : [];

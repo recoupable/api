@@ -1,13 +1,11 @@
 import { z } from "zod";
+import { catalogStreamHistoryQuerySchema } from "@/lib/catalog/validateCatalogStreamHistoryQuery";
 
-/** Matches the App catalog host; the API authorizes references and chooses the reporting window. */
+/** Selected host workspace/catalog and explicit reporting query; actor is authentication-derived. */
 export const catalogSurfaceRequestSchema = z
   .object({
-    schemaVersion: z.literal(1),
-    workspace: z
-      .object({ kind: z.enum(["organization", "account"]), id: z.string().uuid() })
-      .strict(),
-    subject: z.object({ kind: z.literal("catalog"), id: z.string().uuid() }).strict(),
+    workspaceId: z.string().uuid(),
+    query: catalogStreamHistoryQuerySchema,
   })
   .strict();
 export type CatalogSurfaceRequest = z.infer<typeof catalogSurfaceRequestSchema>;

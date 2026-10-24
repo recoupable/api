@@ -1,27 +1,24 @@
 import { prepareCatalogSurface } from "@/lib/intelligent-ui/prepareCatalogSurface";
-import {
-  catalogSurfaceRequestSchema,
-  type CatalogSurfaceRequest,
-} from "@/lib/intelligent-ui/catalogSurfaceRequest";
+import { catalogSurfaceRequestSchema } from "@/lib/intelligent-ui/catalogSurfaceRequest";
+import type { z } from "zod";
 
-/** Journal one authorized saved read; the server owns its UTC window and bounded first page. */
-export async function prepareCatalogSurfaceStep(input: {
-  accountId: string;
-  context: CatalogSurfaceRequest;
-  assistantMessageId: string;
-}) {
+/** Journal the authorized explicit query separately from delivery; replay must not refetch. */
+export async function prepareCatalogSurfaceStep(
+  input: z.input<typeof catalogSurfaceRequestSchema> & {
+    accountId: string;
+    assistantMessageId: string;
+  },
+) {
   "use step";
   if (process.env.NODE_ENV !== "development")
     throw new Error("Catalog surfaces are development-only");
-  const context = catalogSurfaceRequestSchema.parse(input.context);
-  if (context.workspace.kind === "account" && context.workspace.id !== input.accountId)
-    throw new Error("Catalog not found");
-  const today = Date.parse(new Date().toISOString().slice(0, 10));
-  const since = new Date(today - 28 * 86400000).toISOString().slice(0, 10);
+  const selection = catalogSurfaceRequestSchema.parse({
+    workspaceId: input.workspaceId,
+    query: input.query,
+  });
   return prepareCatalogSurface({
+    ...selection,
     accountId: input.accountId,
-    workspaceId: context.workspace.id,
     assistantMessageId: input.assistantMessageId,
-    query: { catalog_id: context.subject.id, since, days: 28, page: 1, limit: 25 },
   });
 }

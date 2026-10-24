@@ -9,7 +9,7 @@ import { catalogSurfaceRequestSchema } from "@/lib/intelligent-ui/catalogSurface
 
 export const chatWorkflowBodySchema = z.object({
   messages: z.array(z.any()),
-  intelligentUI: catalogSurfaceRequestSchema.optional(),
+  devCatalogSurface: catalogSurfaceRequestSchema.optional(),
   chatId: z.string().min(1, "chatId is required"),
   sessionId: z.string().min(1, "sessionId is required"),
   context: z
@@ -60,7 +60,7 @@ export async function validateChatWorkflow(
     return validationErrorResponse(firstError.message, firstError.path);
   }
 
-  if (parsed.data.intelligentUI && process.env.NODE_ENV !== "development")
+  if (parsed.data.devCatalogSurface && process.env.NODE_ENV !== "development")
     return errorResponse("Catalog surfaces are development-only", 400);
 
   const auth = await validateAuthContext(request);

@@ -9,7 +9,7 @@ import type { CatalogSurfaceRequest } from "@/lib/intelligent-ui/catalogSurfaceR
 
 export type BuildRunAgentInputParams = {
   messages: UIMessage[];
-  intelligentUI?: CatalogSurfaceRequest;
+  devCatalogSurface?: CatalogSurfaceRequest;
   chatId: string;
   sessionId: string;
   accountId: string;
@@ -45,7 +45,7 @@ export type BuildRunAgentInputParams = {
  */
 export function buildRunAgentInput({
   messages,
-  intelligentUI,
+  devCatalogSurface,
   chatId,
   sessionId,
   accountId,
@@ -65,7 +65,7 @@ export function buildRunAgentInput({
 
   return {
     messages,
-    ...(intelligentUI ? { intelligentUI } : {}),
+    ...(devCatalogSurface ? { devCatalogSurface } : {}),
     chatId,
     sessionId,
     accountId,
