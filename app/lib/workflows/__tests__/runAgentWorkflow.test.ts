@@ -1,3 +1,5 @@
+import { prepareCatalogSurfaceStep } from "../prepareCatalogSurfaceStep";
+import { sendCatalogSurfaceStep } from "../sendCatalogSurfaceStep";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { routeChatModelStep } from "../routeChatModelStep";
 import { persistAssistantMessageStep } from "../persistAssistantMessageStep";
@@ -10,6 +12,11 @@ import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistan
 import { handleChatCredits } from "@/lib/credits/handleChatCredits";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 import { deleteEphemeralKeyStep } from "@/app/lib/workflows/deleteEphemeralKeyStep";
+
+vi.mock("@/app/lib/workflows/prepareCatalogSurfaceStep", () => ({
+  prepareCatalogSurfaceStep: vi.fn(),
+}));
+vi.mock("@/app/lib/workflows/sendCatalogSurfaceStep", () => ({ sendCatalogSurfaceStep: vi.fn() }));
 
 vi.mock("@/app/lib/workflows/routeChatModelStep", () => ({ routeChatModelStep: vi.fn() }));
 vi.mock("@/app/lib/workflows/deleteEphemeralKeyStep", () => ({
@@ -652,5 +659,51 @@ describe("main-agent tool-call audit metadata", () => {
       expect.objectContaining({ accountId: baseInput.accountId, toolCallCount: 3 }),
     );
     expect(generateAssistantMessageId).not.toHaveBeenCalled();
+  });
+});
+
+describe("catalog complete snapshot branch", () => {
+  it("uses server actor/fresh assistant ID and avoids model, credits and git work", async () => {
+    const prepared = { surface: { id: "catalog-result", revision: 1 } };
+    const message = { id: "asst-fresh-id", role: "assistant", parts: [] };
+    vi.mocked(prepareCatalogSurfaceStep).mockResolvedValue(prepared as never);
+    vi.mocked(sendCatalogSurfaceStep).mockResolvedValue(message as never);
+    const request = {
+      workspaceId: "workspace",
+      query: { catalog_id: "catalog", since: "2026-09-02", days: 1, page: 1, limit: 25 },
+    };
+    await runAgentWorkflow({
+      ...baseInput,
+      messages: [{ id: "client-assistant", role: "assistant", parts: [] }],
+      devCatalogSurface: request,
+    });
+    expect(prepareCatalogSurfaceStep).toHaveBeenCalledWith({
+      accountId: baseInput.accountId,
+      ...request,
+      assistantMessageId: "asst-fresh-id",
+    });
+    expect(sendCatalogSurfaceStep).toHaveBeenCalledWith(writableStub, "asst-fresh-id", prepared);
+    expect(persistAssistantMessageStep).toHaveBeenCalledWith(baseInput.chatId, message);
+    expect(runAgentStep).not.toHaveBeenCalled();
+    expect(handleChatCredits).not.toHaveBeenCalled();
+    expect(autoCommitChatTurn).not.toHaveBeenCalled();
+    expect(sendStreamFinish).toHaveBeenCalledTimes(1);
+    expect(clearChatActiveStream).toHaveBeenCalled();
+  });
+  it("does not persist a replacement if delivery is cancelled", async () => {
+    vi.mocked(prepareCatalogSurfaceStep).mockResolvedValue({ surface: {} } as never);
+    vi.mocked(sendCatalogSurfaceStep).mockRejectedValue(new Error("cancelled"));
+    await expect(
+      runAgentWorkflow({
+        ...baseInput,
+        devCatalogSurface: {
+          workspaceId: "workspace",
+          query: { catalog_id: "catalog", since: "2026-09-02", days: 1, page: 1, limit: 25 },
+        },
+      }),
+    ).rejects.toThrow("cancelled");
+    expect(persistAssistantMessageStep).not.toHaveBeenCalled();
+    expect(sendStreamFinish).toHaveBeenCalledTimes(1);
+    expect(closeChatStream).toHaveBeenCalled();
   });
 });

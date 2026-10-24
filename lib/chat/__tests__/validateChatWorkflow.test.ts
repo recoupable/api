@@ -153,3 +153,62 @@ describe("validateChatWorkflow", () => {
     });
   });
 });
+
+describe("development catalog surface gate", () => {
+  const devCatalogSurface = {
+    workspaceId: "00000000-0000-4000-8000-000000000001",
+    query: { catalog_id: "00000000-0000-4000-8000-000000000003", since: "2026-09-02", days: 1 },
+  };
+  it("rejects production requests before authentication or data work", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.mocked(validateAuthContext).mockClear();
+    try {
+      const result = await validateChatWorkflow(makeRequest({ ...validBody, devCatalogSurface }));
+      expect(result).toBeInstanceOf(NextResponse);
+      expect((result as NextResponse).status).toBe(400);
+      expect(validateAuthContext).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+  it("accepts explicit development scope while keeping actor server-derived", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    mockAuthOk();
+    try {
+      const result = await validateChatWorkflow(makeRequest({ ...validBody, devCatalogSurface }));
+      expect(result).toMatchObject({
+        accountId: ACCOUNT_ID,
+        devCatalogSurface: {
+          workspaceId: devCatalogSurface.workspaceId,
+          query: { ...devCatalogSurface.query, page: 1, limit: 25 },
+        },
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
+it("rejects actor overrides, missing explicit dates and obsolete context shape", async () => {
+  vi.stubEnv("NODE_ENV", "development");
+  try {
+    const context = {
+      workspaceId: "00000000-0000-4000-8000-000000000001",
+      query: { catalog_id: "00000000-0000-4000-8000-000000000003", since: "2026-09-02", days: 1 },
+    };
+    for (const devCatalogSurface of [
+      { ...context, accountId: "override" },
+      { ...context, query: { ...context.query, since: undefined } },
+      {
+        schemaVersion: 1,
+        workspace: { kind: "account", id: context.workspaceId },
+        subject: { kind: "catalog", id: context.query.catalog_id },
+      },
+    ]) {
+      const result = await validateChatWorkflow(makeRequest({ ...validBody, devCatalogSurface }));
+      expect((result as NextResponse).status).toBe(400);
+    }
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
