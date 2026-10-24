@@ -153,3 +153,57 @@ describe("validateChatWorkflow", () => {
     });
   });
 });
+
+describe("development catalog surface gate", () => {
+  const intelligentUI = {
+    schemaVersion: 1,
+    workspace: { kind: "account", id: "00000000-0000-4000-8000-000000000001" },
+    subject: { kind: "catalog", id: "00000000-0000-4000-8000-000000000003" },
+  };
+  it("rejects production requests before authentication or data work", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.mocked(validateAuthContext).mockClear();
+    try {
+      const result = await validateChatWorkflow(makeRequest({ ...validBody, intelligentUI }));
+      expect(result).toBeInstanceOf(NextResponse);
+      expect((result as NextResponse).status).toBe(400);
+      expect(validateAuthContext).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+  it("accepts explicit development scope while keeping actor server-derived", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    mockAuthOk();
+    try {
+      const result = await validateChatWorkflow(makeRequest({ ...validBody, intelligentUI }));
+      expect(result).toMatchObject({
+        accountId: ACCOUNT_ID,
+        intelligentUI,
+      });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+});
+
+it("rejects unsupported surface schemas, subject kinds and client reporting windows", async () => {
+  vi.stubEnv("NODE_ENV", "development");
+  try {
+    const context = {
+      schemaVersion: 1,
+      workspace: { kind: "account", id: "00000000-0000-4000-8000-000000000001" },
+      subject: { kind: "catalog", id: "00000000-0000-4000-8000-000000000003" },
+    };
+    for (const intelligentUI of [
+      { ...context, schemaVersion: 2 },
+      { ...context, subject: { ...context.subject, kind: "artist" } },
+      { ...context, query: { days: 28 } },
+    ]) {
+      const result = await validateChatWorkflow(makeRequest({ ...validBody, intelligentUI }));
+      expect((result as NextResponse).status).toBe(400);
+    }
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});

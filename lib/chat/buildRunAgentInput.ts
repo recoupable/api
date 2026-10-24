@@ -5,8 +5,11 @@ import type { VercelState } from "@/lib/sandbox/vercel/state";
 import { parseGitHubRepoIdentifiers } from "@/lib/github/parseGitHubRepoIdentifiers";
 import { extractOrgId } from "@/lib/recoupable/extractOrgId";
 
+import type { CatalogSurfaceRequest } from "@/lib/intelligent-ui/catalogSurfaceRequest";
+
 export type BuildRunAgentInputParams = {
   messages: UIMessage[];
+  intelligentUI?: CatalogSurfaceRequest;
   chatId: string;
   sessionId: string;
   accountId: string;
@@ -42,6 +45,7 @@ export type BuildRunAgentInputParams = {
  */
 export function buildRunAgentInput({
   messages,
+  intelligentUI,
   chatId,
   sessionId,
   accountId,
@@ -61,6 +65,7 @@ export function buildRunAgentInput({
 
   return {
     messages,
+    ...(intelligentUI ? { intelligentUI } : {}),
     chatId,
     sessionId,
     accountId,
