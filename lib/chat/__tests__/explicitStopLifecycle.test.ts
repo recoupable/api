@@ -145,7 +145,7 @@ it.each([
   );
   expect(resume.status).toBe(200);
   expect(resume.headers.get("x-workflow-stream-tail-index")).toBe("23");
-  expect(getReadable).toHaveBeenLastCalledWith({ startIndex: 12 });
+  expect(getReadable).toHaveBeenLastCalledWith({ startIndex: 12, ops: expect.any(Array) });
   const second = resume.body!.getReader();
   await second.read();
   await second.cancel();

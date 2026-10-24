@@ -1,11 +1,12 @@
 import { TERMINAL_WORKFLOW_RUN_STATUSES } from "@/lib/const";
 import { NextRequest, NextResponse } from "next/server";
-import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
+import { createUIMessageStreamResponse } from "ai";
 import { getRun } from "workflow/api";
 import { validateChatOwnership } from "@/lib/chat/validateChatOwnership";
 import { parseStreamStartIndex } from "@/lib/chat/parseStreamStartIndex";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
 import { validateChatStreamLifecycleQuery } from "@/lib/chat/validateChatStreamLifecycleQuery";
+import { getChatWorkflowReadable } from "@/lib/chat/getChatWorkflowReadable";
 import { wrapWorkflowStreamWatcher } from "@/lib/chat/wrapWorkflowStreamWatcher";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
@@ -67,7 +68,7 @@ export async function handleResumeChatStream(
     return createNothingToResumeResponse();
   }
 
-  const readable = run.getReadable<UIMessageChunk>({ startIndex });
+  const readable = getChatWorkflowReadable(run, { startIndex });
 
   // Tell the client where this read ends so its next reconnect can resume
   // exactly there instead of replaying from chunk zero. Upstream open-agents
