@@ -776,7 +776,7 @@
     "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
     "content/docs/source/api-reference/openapi/content.json": "b89165f9296a1aa98139f64ae095eefd2a5b306950170d3f15a4826de95ed036",
     "content/docs/source/api-reference/openapi/research.json": "ba0ebf1af7bb7cb1441d47830581c318cca770164ab7362c010e03f5fa381b20",
-    "content/docs/source/api-reference/openapi/releases.json": "1adbc10c563396790974201c4c6fc16cbf3567e02c64ad3d8d6118b8e7d49237",
+    "content/docs/source/api-reference/openapi/releases.json": "7bfbdee327e8b3e27ba39cea3fcfe1fe930997d2ea05cb19a707f926ae3bdba2",
     "content/docs/source/api-reference/openapi/social.json": "49c837327886827b5bc33ae4daac76f12473ecf4a6f75cc073656e9247ba73ca",
     "content/docs/source/api-reference/openapi/context.json": "dd0a72fef32fa9abd74410caa71ac2b71df0ee36edb3a6cbc3614cde408c0593",
     "content/docs/source/api-reference/openapi/projects.json": "b059cf8baa83a7f73a3c15db19f54fa56e46a3840e91bd42979b83550f543ace",
@@ -1307,6 +1307,96 @@
         "page": 1,
         "limit": 20,
         "total_pages": 1
+      }
+    }
+  },
+  "artistSocials": {
+    "example": {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "username": "river",
+      "profile_url": "https://instagram.com/river",
+      "link": "https://instagram.com/river",
+      "type": "INSTAGRAM"
+    },
+    "responses": {
+      "list": {
+        "method": "GET",
+        "path": "/api/artists",
+        "status": 200,
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "UUID of the social profile"
+              },
+              "username": {
+                "type": "string",
+                "description": "Username on the platform"
+              },
+              "profile_url": {
+                "type": "string",
+                "description": "Full URL to the social media profile"
+              },
+              "link": {
+                "type": "string",
+                "description": "Profile URL mirrored from profile_url; an empty URL remains an empty string."
+              },
+              "type": {
+                "type": "string",
+                "description": "Uppercase platform identifier inferred from the profile URL, for example INSTAGRAM or LINKEDIN. Unrecognized or empty URLs produce NONE."
+              }
+            },
+            "example": {
+              "id": "11111111-1111-4111-8111-111111111111",
+              "username": "river",
+              "profile_url": "https://instagram.com/river",
+              "link": "https://instagram.com/river",
+              "type": "INSTAGRAM"
+            }
+          },
+          "description": "Existing social media profiles linked to the artist. Missing joined profile records are omitted. A profile with an empty URL is retained with link \"\" and type \"NONE\"."
+        }
+      },
+      "update": {
+        "method": "PATCH",
+        "path": "/api/artists/{id}",
+        "status": 200,
+        "schema": {
+          "type": "array",
+          "description": "Social profiles linked to the artist after the update",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "UUID of the underlying social record"
+              },
+              "username": {
+                "type": "string",
+                "nullable": true,
+                "description": "Username on the platform"
+              },
+              "profile_url": {
+                "type": "string",
+                "nullable": true,
+                "description": "Full profile URL on the platform"
+              },
+              "link": {
+                "type": "string",
+                "description": "Profile URL (mirror of profile_url for legacy clients)"
+              },
+              "type": {
+                "type": "string",
+                "description": "Uppercase platform identifier inferred from the profile URL, for example INSTAGRAM or LINKEDIN. Unrecognized or empty URLs produce NONE."
+              }
+            }
+          }
+        }
       }
     }
   },

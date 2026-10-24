@@ -1,5 +1,12 @@
 # Published response contracts
 
+`publishedArtistSocials.test.ts` checks the list/update social-array declarations
+and the copyable list example against the real shared artist formatter. Explicit
+field assertions require `type` and `link`, rather than accepting undocumented
+extra properties. Null joined records are omitted; existing profiles with empty
+URLs remain. These formatter/fixture checks do not exercise HTTP authentication,
+database records, live customer responses or historical data repair.
+
 `lib/networking/errorResponseSchemas.ts` owns the existing error and authentication
 message envelopes. The response constructors use the inferred types; neither envelope
 is renamed. `pnpm typecheck:response-contracts` checks the constructors and rejects
