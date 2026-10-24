@@ -125,10 +125,11 @@ describe("handleContentAgentCallback", () => {
         thread,
         [expect.objectContaining({ videoUrl: "https://cdn.example.com/video.mp4" })],
         1,
+        0,
       );
     });
 
-    it("posts fallback message when no videos produced", async () => {
+    it("includes observed failures when no videos are produced", async () => {
       const thread = mockThread();
       mockedValidate.mockReturnValue({
         threadId: "slack:C123:T456",
@@ -140,7 +141,7 @@ describe("handleContentAgentCallback", () => {
 
       expect(response.status).toBe(200);
       expect(thread.post).toHaveBeenCalledWith(
-        "Content generation finished but no videos were produced.",
+        "Content generation finished but no videos were produced (1 run(s) failed).",
       );
       expect(mockedPostVideos).not.toHaveBeenCalled();
     });

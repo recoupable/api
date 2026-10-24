@@ -4,6 +4,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateContentAgentCallback } from "./validateContentAgentCallback";
 import { getThread } from "@/lib/agents/getThread";
 import { postVideoResults } from "./postVideoResults";
+import { formatContentRunFailureSummary } from "./formatContentRunFailureSummary";
 import type { ContentAgentThreadState } from "./types";
 
 /**
@@ -61,21 +62,33 @@ export async function handleContentAgentCallback(request: Request): Promise<Next
       const results = validated.results ?? [];
       const videos = results.filter(r => r.status === "completed" && r.videoUrl);
       const failed = results.filter(r => r.status === "failed");
+      const timedOut = results.filter(r => r.status === "timeout");
 
       if (videos.length > 0) {
-        await postVideoResults(thread, videos, failed.length);
+        await postVideoResults(thread, videos, failed.length, timedOut.length);
       } else {
-        await thread.post("Content generation finished but no videos were produced.");
+        const summary = formatContentRunFailureSummary(failed.length, timedOut.length);
+        await thread.post(
+          `Content generation finished but no videos were produced${summary ? ` (${summary})` : ""}.`,
+        );
       }
 
       await thread.setState({ status: "completed" });
       break;
     }
 
-    case "failed":
+    case "failed": {
       await thread.setState({ status: "failed" });
-      await thread.post(`Content generation failed: ${validated.message ?? "Unknown error"}`);
+      const results = validated.results ?? [];
+      const summary = formatContentRunFailureSummary(
+        results.filter(r => r.status === "failed").length,
+        results.filter(r => r.status === "timeout").length,
+      );
+      await thread.post(
+        `Content generation failed: ${validated.message ?? (summary || "Unknown error")}`,
+      );
       break;
+    }
 
     case "timeout":
       await thread.setState({ status: "timeout" });

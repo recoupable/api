@@ -1,6 +1,7 @@
 import { downloadVideoBuffer } from "./downloadVideoBuffer";
 import { downloadMediaBuffer } from "./downloadMediaBuffer";
 import { getFilenameFromUrl } from "./getFilenameFromUrl";
+import { formatContentRunFailureSummary } from "./formatContentRunFailureSummary";
 
 interface VideoResult {
   runId: string;
@@ -26,11 +27,13 @@ interface Thread {
  * @param thread - The thread to post results to
  * @param videos - Array of completed video results
  * @param failedCount - Number of failed runs to report
+ * @param timedOutCount - Number of timed-out runs to report (default 0)
  */
 export async function postVideoResults(
   thread: Thread,
   videos: VideoResult[],
   failedCount: number,
+  timedOutCount: number = 0,
 ): Promise<void> {
   const [buffers, images] = await Promise.all([
     Promise.all(videos.map(v => downloadVideoBuffer(v.videoUrl!))),
@@ -88,7 +91,8 @@ export async function postVideoResults(
     }
   }
 
-  if (failedCount > 0) {
-    await thread.post(`_${failedCount} run(s) failed._`);
+  const summary = formatContentRunFailureSummary(failedCount, timedOutCount);
+  if (summary) {
+    await thread.post(`_${summary}._`);
   }
 }
