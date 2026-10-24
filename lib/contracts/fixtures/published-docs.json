@@ -182,6 +182,119 @@
       }
     },
     {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat/{chatId}/stop",
+      "status": 200,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "success",
+          "stopped"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Always true when the request was processed.",
+            "example": true
+          },
+          "stopped": {
+            "type": "boolean",
+            "description": "True when an in-progress response was cancelled; false when nothing was running.",
+            "example": true
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat/{chatId}/stop",
+      "status": 502,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat/{chatId}/stop",
+      "status": 503,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      },
+      "examples": {
+        "pendingStart": {
+          "status": "error",
+          "error": "Workflow is still starting; retry Stop shortly"
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat/{chatId}/stop",
+      "status": 504,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      }
+    },
+    {
       "specification": "sessions.json",
       "method": "GET",
       "path": "/api/sessions/{sessionId}/chats",
@@ -775,7 +888,7 @@
   "sourceHashes": {
     "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
     "content/docs/source/api-reference/openapi/content.json": "b89165f9296a1aa98139f64ae095eefd2a5b306950170d3f15a4826de95ed036",
-    "content/docs/source/api-reference/openapi/research.json": "ba0ebf1af7bb7cb1441d47830581c318cca770164ab7362c010e03f5fa381b20",
+    "content/docs/source/api-reference/openapi/research.json": "4fa29d7d88b57f0b8806788e45a1958eb7b1b74e458060328f1aa5a6d9a4e488",
     "content/docs/source/api-reference/openapi/releases.json": "7bfbdee327e8b3e27ba39cea3fcfe1fe930997d2ea05cb19a707f926ae3bdba2",
     "content/docs/source/api-reference/openapi/social.json": "49c837327886827b5bc33ae4daac76f12473ecf4a6f75cc073656e9247ba73ca",
     "content/docs/source/api-reference/openapi/context.json": "dd0a72fef32fa9abd74410caa71ac2b71df0ee36edb3a6cbc3614cde408c0593",
@@ -908,6 +1021,7 @@
       "404",
       "500",
       "502",
+      "503",
       "504"
     ],
     "taskModelType": "string",
