@@ -1,3 +1,4 @@
+import { TERMINAL_WORKFLOW_RUN_STATUSES } from "@/lib/const";
 import type { UIMessageChunk } from "ai";
 import { getRun } from "workflow/api";
 import { trackToolCallChunk, type OpenTool } from "@/lib/chat/trackToolCallChunk";
@@ -18,7 +19,6 @@ import { trackToolCallChunk, type OpenTool } from "@/lib/chat/trackToolCallChunk
  * Extracted from `handleChatWorkflowStream` so it can be unit-tested
  * in isolation.
  */
-const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set(["cancelled", "completed", "failed"]);
 const STATUS_POLL_MS = 500;
 const CANCEL_ERROR_TEXT = "Cancelled";
 
@@ -76,7 +76,7 @@ export function wrapWorkflowStreamWatcher(
         while (!closedByStatus && !consumerCancelled) {
           try {
             const status = await getRun(runId).status;
-            if (TERMINAL_RUN_STATUSES.has(status)) {
+            if (TERMINAL_WORKFLOW_RUN_STATUSES.includes(status)) {
               closedByStatus = true;
               closeWithSyntheticErrors();
               try {

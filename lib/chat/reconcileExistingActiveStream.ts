@@ -1,3 +1,4 @@
+import { TERMINAL_WORKFLOW_RUN_STATUSES } from "@/lib/const";
 import { getRun } from "workflow/api";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
 
@@ -7,7 +8,6 @@ export type ReconcileResult =
   | { action: "conflict" };
 
 const RUNNING_STATUSES = new Set(["running", "pending"]);
-const TERMINAL_STATUSES = new Set(["completed", "cancelled", "failed"]);
 
 /**
  * Resolves what to do when `chats.active_stream_id` is already set at the
@@ -48,7 +48,7 @@ export async function reconcileExistingActiveStream(
     return { action: "conflict" };
   }
 
-  if (!TERMINAL_STATUSES.has(status)) return { action: "conflict" };
+  if (!TERMINAL_WORKFLOW_RUN_STATUSES.includes(status)) return { action: "conflict" };
 
   // Run is terminally done. Attempt to clear the stale id via CAS. If we
   // win → ready. Anything else (race lost OR DB error) → conflict, so we

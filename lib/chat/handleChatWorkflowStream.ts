@@ -4,7 +4,7 @@ import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { start, getRun } from "workflow/api";
 import { validateChatWorkflow } from "@/lib/chat/validateChatWorkflow";
 import { gateChatStreamStart } from "@/lib/chat/gateChatStreamStart";
-import { usesExplicitChatStop } from "@/lib/chat/usesExplicitChatStop";
+import { validateChatStreamLifecycleQuery } from "@/lib/chat/validateChatStreamLifecycleQuery";
 import { wrapWorkflowStreamWatcher } from "@/lib/chat/wrapWorkflowStreamWatcher";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
@@ -154,7 +154,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
 
   return createUIMessageStreamResponse({
     stream: wrapWorkflowStreamWatcher(run.runId, run.getReadable<UIMessageChunk>(), {
-      cancelOnDisconnect: !usesExplicitChatStop(request),
+      cancelOnDisconnect: !validateChatStreamLifecycleQuery(request),
     }),
     headers: { ...getCorsHeaders(), "x-workflow-run-id": run.runId },
   });

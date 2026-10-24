@@ -1,11 +1,10 @@
+import { TERMINAL_WORKFLOW_RUN_STATUSES } from "@/lib/const";
 import { getRun } from "workflow/api";
 
 /** Cap on how long to wait for a workflow run to reach a terminal status. */
 const TERMINAL_WAIT_TIMEOUT_MS = 8000;
 /** Poll interval while waiting for terminal status. */
 const TERMINAL_WAIT_INTERVAL_MS = 100;
-
-const TERMINAL_STATUSES: ReadonlySet<string> = new Set(["cancelled", "completed", "failed"]);
 
 /**
  * Block until the workflow run reaches a terminal status (`cancelled` /
@@ -20,7 +19,7 @@ export async function waitForTerminalRunStatus(runId: string): Promise<boolean> 
   while (Date.now() < deadline) {
     try {
       const status = await getRun(runId).status;
-      if (TERMINAL_STATUSES.has(status)) return true;
+      if (TERMINAL_WORKFLOW_RUN_STATUSES.includes(status)) return true;
     } catch {
       // Transient errors: swallow and retry until the deadline.
     }

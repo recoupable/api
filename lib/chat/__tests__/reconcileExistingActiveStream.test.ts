@@ -39,8 +39,8 @@ describe("reconcileExistingActiveStream", () => {
     expect(result.action).toBe("resume");
   });
 
-  it("returns action=ready after CASing a completed run's stale id to null", async () => {
-    mockRun("completed");
+  it.each(["cancelled", "completed", "failed"])("safely releases a %s run slot", async status => {
+    mockRun(status);
     vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue({ ok: true, claimed: true });
     const result = await reconcileExistingActiveStream(CHAT_ID, RUN_ID);
     expect(result.action).toBe("ready");

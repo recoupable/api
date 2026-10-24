@@ -1,16 +1,15 @@
+import { TERMINAL_WORKFLOW_RUN_STATUSES } from "@/lib/const";
 import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { getRun } from "workflow/api";
 import { validateChatOwnership } from "@/lib/chat/validateChatOwnership";
 import { parseStreamStartIndex } from "@/lib/chat/parseStreamStartIndex";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
-import { usesExplicitChatStop } from "@/lib/chat/usesExplicitChatStop";
+import { validateChatStreamLifecycleQuery } from "@/lib/chat/validateChatStreamLifecycleQuery";
 import { wrapWorkflowStreamWatcher } from "@/lib/chat/wrapWorkflowStreamWatcher";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { createNothingToResumeResponse } from "@/lib/chat/createNothingToResumeResponse";
-
-const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set(["completed", "cancelled", "failed"]);
 
 /**
  * Handles `GET /api/chat/{chatId}/stream` — reconnect to an in-progress
@@ -58,7 +57,7 @@ export async function handleResumeChatStream(
     return errorResponse("Failed to read the workflow run", 502);
   }
 
-  if (TERMINAL_RUN_STATUSES.has(status)) {
+  if (TERMINAL_WORKFLOW_RUN_STATUSES.includes(status)) {
     // The run is done, so the slot is stale bookkeeping. Best-effort clear:
     // a failed CAS just leaves it for the next request to heal.
     const cleared = await compareAndSetChatActiveStreamId(chatId, activeStreamId, null);
@@ -84,7 +83,7 @@ export async function handleResumeChatStream(
 
   return createUIMessageStreamResponse({
     stream: wrapWorkflowStreamWatcher(activeStreamId, readable, {
-      cancelOnDisconnect: !usesExplicitChatStop(request),
+      cancelOnDisconnect: !validateChatStreamLifecycleQuery(request),
     }),
     headers: {
       ...getCorsHeaders(),
