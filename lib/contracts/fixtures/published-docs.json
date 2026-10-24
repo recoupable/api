@@ -117,7 +117,75 @@
       "specification": "research.json",
       "method": "POST",
       "path": "/api/chat",
+      "status": 409,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "description": "Optional validation path for the first rejected field. String entries identify object/query fields; integer entries identify array positions. An empty path can represent validation of the path value itself. Lookup or workflow errors can omit this field."
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat",
       "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "description": "Optional validation path for the first rejected field. String entries identify object/query fields; integer entries identify array positions. An empty path can represent validation of the path value itself. Lookup or workflow errors can omit this field."
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat",
+      "status": 503,
       "mediaType": "application/json",
       "schema": {
         "type": "object",
@@ -888,7 +956,7 @@
   "sourceHashes": {
     "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
     "content/docs/source/api-reference/openapi/content.json": "b89165f9296a1aa98139f64ae095eefd2a5b306950170d3f15a4826de95ed036",
-    "content/docs/source/api-reference/openapi/research.json": "4fa29d7d88b57f0b8806788e45a1958eb7b1b74e458060328f1aa5a6d9a4e488",
+    "content/docs/source/api-reference/openapi/research.json": "053556fdeec5379fbaf6cfdbd37c721cd0793f08fa728b82c281e0c6af249457",
     "content/docs/source/api-reference/openapi/releases.json": "7bfbdee327e8b3e27ba39cea3fcfe1fe930997d2ea05cb19a707f926ae3bdba2",
     "content/docs/source/api-reference/openapi/social.json": "49c837327886827b5bc33ae4daac76f12473ecf4a6f75cc073656e9247ba73ca",
     "content/docs/source/api-reference/openapi/context.json": "dd0a72fef32fa9abd74410caa71ac2b71df0ee36edb3a6cbc3614cde408c0593",
@@ -999,7 +1067,8 @@
       "403",
       "404",
       "409",
-      "500"
+      "500",
+      "503"
     ],
     "chatStartMediaTypes": [
       "text/event-stream"
@@ -3741,6 +3810,70 @@
           "example": 2498614
         }
       }
+    }
+  },
+  "chatLifecycle": {
+    "start": {
+      "method": "POST",
+      "path": "/api/chat",
+      "parameters": [
+        {
+          "name": "streamLifecycle",
+          "in": "query",
+          "required": false,
+          "description": "Send streamLifecycle=explicit-stop-v1 exactly once on the initial POST and every reconnect GET to keep server work running when that reader disconnects. Only exactly one parameter with that exact value opts in. Omitting it, an empty or unknown value, or repeating the parameter retains legacy disconnect cancellation. Use authenticated POST /api/chat/{chatId}/stop for cancellation; a local reader abort is not confirmation that server work stopped. This is a query parameter, not a request-body field.",
+          "schema": {
+            "type": "string"
+          },
+          "example": "explicit-stop-v1"
+        }
+      ]
+    },
+    "resume": {
+      "method": "GET",
+      "path": "/api/chat/{chatId}/stream",
+      "parameters": [
+        {
+          "name": "chatId",
+          "in": "path",
+          "required": true,
+          "description": "UUID of the chat to resume.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "account_id",
+          "in": "query",
+          "required": false,
+          "description": "Act on a chat belonging to another account. Only honoured for a key that is authorised for that account \u2014 an organization key may pass a member account's id; a personal key passing anyone else's is rejected with `403 Access denied to specified account_id`. Omit it to act as the authenticated account.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "startIndex",
+          "in": "query",
+          "required": false,
+          "description": "Zero-based index of the first stream chunk to return, so a client that was already receiving this response resumes where it left off instead of replaying the whole turn.\n\nPass the number of chunks already received. Omit it to receive the response from the beginning \u2014 the right choice for a fresh reader such as a page load, or a client watching a headless [`POST /api/chat/runs`](/api-reference/chat/runs) run for the first time.\n\nA long turn's stream can end before the run does; reconnecting with `startIndex` is how a client keeps rendering without duplicating or skipping chunks.",
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        {
+          "name": "streamLifecycle",
+          "in": "query",
+          "required": false,
+          "description": "Send streamLifecycle=explicit-stop-v1 exactly once on the initial POST and every reconnect GET to keep server work running when that reader disconnects. Only exactly one parameter with that exact value opts in. Omitting it, an empty or unknown value, or repeating the parameter retains legacy disconnect cancellation. Use authenticated POST /api/chat/{chatId}/stop for cancellation; a local reader abort is not confirmation that server work stopped. This is a query parameter, not a request-body field.",
+          "schema": {
+            "type": "string"
+          },
+          "example": "explicit-stop-v1"
+        }
+      ]
     }
   }
 }
