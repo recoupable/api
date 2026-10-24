@@ -44,6 +44,10 @@ export async function handleStopChatWorkflow(
       // having a slot-clearing race against a still-streaming workflow.
       return errorResponse("Workflow did not terminate in time", 504);
     }
+  } else {
+    // A pending reservation has no cancellable run id yet. Keep it held: a
+    // delayed start can still complete, so reporting stopped:true would lie.
+    return errorResponse("Workflow is still starting; retry Stop shortly", 503);
   }
 
   // Best-effort slot release: the run is already cancelled, so a failed clear is

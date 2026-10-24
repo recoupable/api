@@ -8,7 +8,7 @@ import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { isSandboxActive } from "@/lib/sandbox/isSandboxActive";
 import { updateSession } from "@/lib/supabase/sessions/updateSession";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
-import { maybeResumeChatStream } from "@/lib/chat/maybeResumeChatStream";
+import { gateChatStreamStart } from "@/lib/chat/gateChatStreamStart";
 import { persistLatestUserMessage } from "@/lib/chat/persistLatestUserMessage";
 import { start, getRun } from "workflow/api";
 
@@ -23,8 +23,8 @@ vi.mock("@/lib/supabase/sessions/updateSession", () => ({ updateSession: vi.fn()
 vi.mock("@/lib/sandbox/buildActiveLifecycleUpdate", () => ({
   buildActiveLifecycleUpdate: vi.fn(() => ({})),
 }));
-vi.mock("@/lib/chat/maybeResumeChatStream", () => ({
-  maybeResumeChatStream: vi.fn(),
+vi.mock("@/lib/chat/gateChatStreamStart", () => ({
+  gateChatStreamStart: vi.fn(),
 }));
 vi.mock("@/lib/chat/persistLatestUserMessage", () => ({
   persistLatestUserMessage: vi.fn(),
@@ -58,7 +58,7 @@ const SESSION_ID = "22222222-2222-2222-2222-222222222222";
 const CHAT_ID = "11111111-1111-1111-1111-111111111111";
 
 function makeRequest(): NextRequest {
-  return new NextRequest("http://localhost/api/chat/workflow", {
+  return new NextRequest("http://localhost/api/chat", {
     method: "POST",
     headers: { "x-api-key": "test-key", "content-type": "application/json" },
     body: JSON.stringify({ messages: [], chatId: CHAT_ID, sessionId: SESSION_ID }),
@@ -109,8 +109,8 @@ function mockStartedRun(runId = "wrun_test_run_1") {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // Default: maybeResumeChatStream returns null (no resume / no active stream)
-  vi.mocked(maybeResumeChatStream).mockResolvedValue(null);
+  // Default: gateChatStreamStart returns null (no resume / no active stream)
+  vi.mocked(gateChatStreamStart).mockResolvedValue(null);
 });
 
 describe("handleChatWorkflowStream", () => {
@@ -176,27 +176,26 @@ describe("handleChatWorkflowStream", () => {
     });
   });
 
-  describe("resume / conflict via maybeResumeChatStream", () => {
+  describe("new-turn admission via gateChatStreamStart", () => {
     beforeEach(() => {
       mockValidated();
       mockSessionOwnedActive();
       mockChatOwned({ active_stream_id: "wrun_existing" });
     });
 
-    it("returns the resume response when maybeResumeChatStream yields one", async () => {
-      const resumeResponse = new Response("ok", {
-        status: 200,
-        headers: { "x-workflow-run-id": "wrun_existing" },
-      });
-      vi.mocked(maybeResumeChatStream).mockResolvedValue(resumeResponse);
+    it("returns the retryable recovery response when the admission gate yields one", async () => {
+      const recovery = NextResponse.json({ error: "Retry shortly" }, { status: 503 });
+      vi.mocked(gateChatStreamStart).mockResolvedValue(recovery);
       const res = await handleChatWorkflowStream(makeRequest());
-      expect(res.headers.get("x-workflow-run-id")).toBe("wrun_existing");
+      expect(res).toBe(recovery);
+      expect(res.status).toBe(503);
+      expect(res.headers.get("x-workflow-run-id")).toBeNull();
       expect(start).not.toHaveBeenCalled();
     });
 
-    it("returns the conflict response when maybeResumeChatStream yields 409", async () => {
+    it("returns the conflict response when gateChatStreamStart yields 409", async () => {
       const conflict = NextResponse.json({ status: "error", error: "conflict" }, { status: 409 });
-      vi.mocked(maybeResumeChatStream).mockResolvedValue(conflict);
+      vi.mocked(gateChatStreamStart).mockResolvedValue(conflict);
       const res = await handleChatWorkflowStream(makeRequest());
       expect(res.status).toBe(409);
       expect(start).not.toHaveBeenCalled();

@@ -258,3 +258,35 @@ describe("wrapWorkflowStreamWatcher", () => {
     expect(cancelSpy).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("explicit Stop reader lifecycle", () => {
+  it("releases the opted-in reader without cancelling its workflow or leaving a status poller", async () => {
+    vi.useFakeTimers();
+    try {
+      const cancel = vi.fn(async () => {});
+      mockRun({ status: () => "running", cancel });
+      const release = vi.fn();
+      const source = new ReadableStream<UIMessageChunk>({
+        start(c) {
+          c.enqueue({ type: "text-start", id: "a" });
+        },
+        cancel: release,
+      });
+      const reader = wrapWorkflowStreamWatcher(RUN_ID, source, {
+        cancelOnDisconnect: false,
+      }).getReader();
+      await reader.read();
+      await reader.cancel();
+      await vi.advanceTimersByTimeAsync(1000);
+      const polls = vi.mocked(getRun).mock.calls.length;
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(getRun).toHaveBeenCalledTimes(polls);
+      expect(cancel).not.toHaveBeenCalled();
+      expect(release).toHaveBeenCalledTimes(1);
+      expect(source.locked).toBe(false);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});

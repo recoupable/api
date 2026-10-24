@@ -4,6 +4,7 @@ import { getRun } from "workflow/api";
 import { validateChatOwnership } from "@/lib/chat/validateChatOwnership";
 import { parseStreamStartIndex } from "@/lib/chat/parseStreamStartIndex";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
+import { usesExplicitChatStop } from "@/lib/chat/usesExplicitChatStop";
 import { wrapWorkflowStreamWatcher } from "@/lib/chat/wrapWorkflowStreamWatcher";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
@@ -16,10 +17,9 @@ const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set(["completed", "cancel
  * chat response.
  *
  * A long turn's SSE stream can end before the run does, which leaves the
- * client rendering a half-finished message with no way back in: `POST
- * /api/chat` resumes only as a side effect of starting a turn, so today
- * recovery needs a full page load (chat#1923). This is the resume path,
- * and `startIndex` is what makes it gap-free.
+ * client rendering a half-finished message. This dedicated read path follows
+ * the existing run without submitting another turn; startIndex resumes at
+ * the requested absolute chunk position.
  *
  * Contract (docs#286): 200 SSE + `x-workflow-run-id`. When there is
  * nothing to resume, 400 malformed `startIndex`, 401/403/404 from auth
@@ -27,7 +27,8 @@ const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set(["completed", "cancel
  *
  * @param request - The incoming request.
  * @param chatId - Chat id from the route params.
- * @returns The resumed stream, a terminal `finish`-only stream when there is\n *   nothing to resume, or an error response.
+ * @returns The resumed stream, a terminal `finish`-only stream when there is
+ *   nothing to resume, or an error response.
  */
 export async function handleResumeChatStream(
   request: NextRequest,
@@ -82,7 +83,9 @@ export async function handleResumeChatStream(
   }
 
   return createUIMessageStreamResponse({
-    stream: wrapWorkflowStreamWatcher(activeStreamId, readable),
+    stream: wrapWorkflowStreamWatcher(activeStreamId, readable, {
+      cancelOnDisconnect: !usesExplicitChatStop(request),
+    }),
     headers: {
       ...getCorsHeaders(),
       "x-workflow-run-id": activeStreamId,

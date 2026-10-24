@@ -30,7 +30,7 @@ describe("reconcileExistingActiveStream", () => {
     expect(result.action).toBe("resume");
     if (result.action !== "resume") return;
     expect(result.runId).toBe(RUN_ID);
-    expect(result.stream).toBe(stream);
+    expect(getRun).toHaveBeenCalledWith(RUN_ID);
   });
 
   it("returns action=resume when status is 'pending'", async () => {
@@ -89,4 +89,19 @@ describe("reconcileExistingActiveStream", () => {
     // P1 fix: a failed re-read after CAS no longer falls through to "ready".
     expect(result.action).toBe("conflict");
   });
+});
+
+it.each(["unknown", "queued", "404"])("holds the slot on unrecognized status %s", async status => {
+  vi.clearAllMocks();
+  mockRun(status);
+  expect(await reconcileExistingActiveStream(CHAT_ID, RUN_ID)).toEqual({ action: "conflict" });
+  expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
+});
+it("does not probe a pending reservation as a run or release it", async () => {
+  vi.clearAllMocks();
+  expect(await reconcileExistingActiveStream(CHAT_ID, "pending-unfinished")).toEqual({
+    action: "conflict",
+  });
+  expect(getRun).not.toHaveBeenCalled();
+  expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
 });

@@ -52,7 +52,7 @@ const SESSION_ID = "22222222-2222-2222-2222-222222222222";
 const CHAT_ID = "11111111-1111-1111-1111-111111111111";
 
 function makeRequest(): NextRequest {
-  return new NextRequest("http://localhost/api/chat/workflow", {
+  return new NextRequest("http://localhost/api/chat", {
     method: "POST",
     headers: { "x-api-key": "test-key", "content-type": "application/json" },
     body: JSON.stringify({ messages: [], chatId: CHAT_ID, sessionId: SESSION_ID }),
@@ -96,9 +96,9 @@ beforeEach(() => {
   mockChatOwned({ active_stream_id: "wrun_existing" });
 });
 
-describe("DB-only repair preserves the current POST resume path", () => {
+describe("POST admission rejects an unaccepted message during an existing run", () => {
   it.each(["running", "pending"])(
-    "still resumes a %s run through the existing helper",
+    "rejects a %s run and leaves GET reconnection separate",
     async status => {
       const getReadable = vi.fn(
         () =>
@@ -110,14 +110,15 @@ describe("DB-only repair preserves the current POST resume path", () => {
       );
       vi.mocked(getRun).mockReturnValue({ status: Promise.resolve(status), getReadable } as never);
       const response = await handleChatWorkflowStream(makeRequest());
-      expect(response.status).toBe(200);
-      expect(response.headers.get("x-workflow-run-id")).toBe("wrun_existing");
-      expect(response.headers.get("content-type")).toContain("text/event-stream");
-      expect(getReadable).toHaveBeenCalledTimes(1);
+      expect(response.status).toBe(409);
+      expect(response.headers.get("x-workflow-run-id")).toBeNull();
+      expect(await response.json()).toMatchObject({
+        error: expect.stringContaining("GET /api/chat/"),
+      });
+      expect(getReadable).not.toHaveBeenCalled();
       expect(start).not.toHaveBeenCalled();
       expect(persistLatestUserMessage).not.toHaveBeenCalled();
       expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
-      await response.text();
     },
   );
 });
