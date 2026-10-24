@@ -1,9 +1,9 @@
 import { it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
-import { handleResumeChatStream } from "@/lib/chat/handleResumeChatStream";
+import { GET as handleResumeChatStream } from "@/app/api/chat/[chatId]/stream/route";
 import { validateChatOwnership } from "@/lib/chat/validateChatOwnership";
-import { handleChatWorkflowStream } from "@/lib/chat/handleChatWorkflowStream";
+import { POST as handleChatWorkflowStream } from "@/app/api/chat/route";
 import { validateChatWorkflow } from "@/lib/chat/validateChatWorkflow";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
@@ -133,7 +133,7 @@ async function open(route: string, explicit: boolean) {
       )
     : handleResumeChatStream(
         new NextRequest(`https://api.test/api/chat/${CHAT_ID}/stream${query}`),
-        CHAT_ID,
+        { params: Promise.resolve({ chatId: CHAT_ID }) },
       );
 }
 
