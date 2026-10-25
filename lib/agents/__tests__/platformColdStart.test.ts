@@ -11,6 +11,8 @@ const calls = vi.hoisted(() => ({
   whatsapp: vi.fn(),
   initialize: vi.fn(),
   webhook: vi.fn(),
+  githubWebhook: vi.fn(),
+  whatsappWebhook: vi.fn(),
   registerCoding: vi.fn(),
   registerContent: vi.fn(),
 }));
@@ -99,14 +101,16 @@ beforeEach(() => {
   calls.github.mockReturnValue({
     name: "github",
     initialize: calls.initialize,
-    handleWebhook: calls.webhook,
+    handleWebhook: calls.githubWebhook,
   });
   calls.whatsapp.mockReturnValue({
     name: "whatsapp",
     initialize: calls.initialize,
-    handleWebhook: calls.webhook,
+    handleWebhook: calls.whatsappWebhook,
   });
-  calls.webhook.mockImplementation(async (req: Request) => new Response(await req.text()));
+  for (const webhook of [calls.webhook, calls.githubWebhook, calls.whatsappWebhook]) {
+    webhook.mockImplementation(async (req: Request) => new Response(await req.text()));
+  }
 });
 afterEach(() => vi.unstubAllEnvs());
 
@@ -200,6 +204,13 @@ describe("cold agent platform routes", () => {
       const res = await POST(req, params(platform));
       expect(res.status).toBe(200);
       expect(await res.text()).toBe('{ "synthetic": true }');
+      const adapterWebhook =
+        platform === "slack"
+          ? calls.webhook
+          : platform === "github"
+            ? calls.githubWebhook
+            : calls.whatsappWebhook;
+      expect(adapterWebhook).toHaveBeenLastCalledWith(req, { waitUntil: expect.any(Function) });
     }
     expect(calls.redis).toHaveBeenCalledOnce();
     expect(calls.state).toHaveBeenCalledOnce();
@@ -210,7 +221,9 @@ describe("cold agent platform routes", () => {
     expect(calls.github).toHaveBeenCalledOnce();
     expect(calls.whatsapp).toHaveBeenCalledOnce();
     expect(calls.initialize).toHaveBeenCalledTimes(3);
-    expect(calls.webhook).toHaveBeenCalledTimes(4);
+    expect(calls.webhook).toHaveBeenCalledTimes(2);
+    expect(calls.githubWebhook).toHaveBeenCalledOnce();
+    expect(calls.whatsappWebhook).toHaveBeenCalledOnce();
     expect(calls.registerCoding).toHaveBeenCalledOnce();
     expect(calls.registerContent).not.toHaveBeenCalled();
     expect(calls.registerCoding.mock.invocationCallOrder[0]).toBeLessThan(
