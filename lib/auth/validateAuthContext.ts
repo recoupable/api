@@ -15,6 +15,8 @@ export interface AuthContextInput {
   accountId?: string;
   /** Optional organization_id from request body */
   organizationId?: string | null;
+  /** Defaults to true; false keeps Privy authentication from onboarding an account. */
+  allowAccountCreation?: boolean;
 }
 
 /**
@@ -70,7 +72,10 @@ export async function validateAuthContext(
     authToken = apiKey!;
   } else {
     // Validate bearer token authentication
-    const accountIdOrError = await getAuthenticatedAccountId(request);
+    const accountIdOrError =
+      input.allowAccountCreation === false
+        ? await getAuthenticatedAccountId(request, { allowAccountCreation: false })
+        : await getAuthenticatedAccountId(request);
     if (accountIdOrError instanceof NextResponse) {
       return accountIdOrError;
     }
