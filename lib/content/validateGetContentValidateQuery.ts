@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
@@ -34,10 +35,7 @@ export async function validateGetContentValidateQuery(
     artist_account_id: request.nextUrl.searchParams.get("artist_account_id") ?? undefined,
   });
   if (!parsed.success) {
-    return NextResponse.json(
-      { status: "error", error: parsed.error.issues[0].message },
-      { status: 400, headers: getCorsHeaders() },
-    );
+    return errorResponse(parsed.error.issues[0].message, 400);
   }
 
   const artistAccountId = parsed.data.artist_account_id;
