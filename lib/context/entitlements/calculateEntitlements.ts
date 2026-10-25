@@ -129,6 +129,16 @@ function pythonText(value: unknown): string {
       ? "None"
       : String(value);
 }
+// Python sorts Unicode code points; JavaScript's default sort uses UTF-16 units.
+function compareEvidence(a: string, b: string): number {
+  const left = Array.from(a),
+    right = Array.from(b);
+  for (let i = 0; i < Math.min(left.length, right.length); i++) {
+    const difference = left[i].codePointAt(0)! - right[i].codePointAt(0)!;
+    if (difference) return difference;
+  }
+  return left.length - right.length;
+}
 const kinds = new Set([
   "deduction",
   "reserve_withheld",
@@ -257,7 +267,7 @@ export function calculateEntitlements(input: unknown): EntitlementResult {
               ? "potential_overpayment_or_clawback"
               : "matched",
         recovered_cash: null,
-        evidence_refs: [...new Set(evidence)].sort(),
+        evidence_refs: [...new Set(evidence)].sort(compareEvidence),
         bridge,
       });
     } catch (error) {
@@ -334,7 +344,7 @@ export function calculateEntitlements(input: unknown): EntitlementResult {
         closing_variance: closing.sub(reported),
         potential_payable: payable,
         earnings_line_ids: ids,
-        evidence_refs: [...new Set(evidence)].sort(),
+        evidence_refs: [...new Set(evidence)].sort(compareEvidence),
         cash_received: null,
       });
       ids.forEach(id => allocated.add(id));

@@ -52,6 +52,9 @@ describe("canonical entitlement parity", () => {
     nullMovements: (x: any) => {
       x.recoupment_accounts[0].movements = null;
     },
+    unicodeEvidence: (x: any) => {
+      x.lines[0].evidence_refs = ["\ue000", "\u{10000}"];
+    },
     subcent: (x: any) => {
       x.lines[0].gross_amount = "0.000000000000000001";
     },
