@@ -15,6 +15,10 @@ vi.mock("@/lib/supabase/scheduled_posts/selectScheduledPosts", () => ({
 }));
 vi.mock("@/lib/publishing/findConnectedAccountId", () => ({ findConnectedAccountId: vi.fn() }));
 vi.mock("@/lib/publishing/stats/getLinkedInPostStats", () => ({ getLinkedInPostStats: vi.fn() }));
+vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
+  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+}));
+vi.mock("@/lib/publishing/stats/chargePostStatsRead", () => ({ chargePostStatsRead: vi.fn() }));
 
 const accountId = "550e8400-e29b-41d4-a716-446655440000";
 const artistId = "660e8400-e29b-41d4-a716-446655440000";

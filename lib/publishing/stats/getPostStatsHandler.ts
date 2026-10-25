@@ -9,6 +9,9 @@ import { selectScheduledPosts } from "@/lib/supabase/scheduled_posts/selectSched
 import { findConnectedAccountId } from "@/lib/publishing/findConnectedAccountId";
 import { parseLinkedInPostUrn } from "@/lib/publishing/stats/parseLinkedInPostUrn";
 import { getLinkedInPostStats } from "@/lib/publishing/stats/getLinkedInPostStats";
+import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
+import { chargePostStatsRead } from "@/lib/publishing/stats/chargePostStatsRead";
+import { POST_STATS_CREDITS } from "@/lib/publishing/stats/postStatsCredits";
 
 const ORGANIZATION_PREFIX = "urn:li:organization:";
 
@@ -17,7 +20,8 @@ const ORGANIZATION_PREFIX = "urn:li:organization:";
  *
  * A published post's own platform numbers, read live through the connection
  * that published it. LinkedIn company-page posts only; other platforms and
- * member posts answer 422. Reads cost no credits. Uuid, auth and access checks
+ * member posts answer 422. A read costs $0.001: credits are checked (402)
+ * before LinkedIn is called and charged only after a successful read. Uuid, auth and access checks
  * match getPostHandler.
  *
  * @param request - The incoming request.
@@ -63,6 +67,12 @@ export async function getPostStatsHandler(request: NextRequest, id: string): Pro
       return errorResponse("linkedin is not connected for this account", 409);
     }
 
+    const short = await ensureCreditsOrShortCircuit({
+      accountId: authResult.accountId,
+      creditsToDeduct: POST_STATS_CREDITS,
+    });
+    if (short) return short;
+
     let metrics;
     try {
       metrics = await getLinkedInPostStats(connectedAccountId, organization, post);
@@ -70,6 +80,8 @@ export async function getPostStatsHandler(request: NextRequest, id: string): Pro
       console.error("LinkedIn rejected the post stats read:", error);
       return errorResponse("LinkedIn rejected the stats read for this post", 502);
     }
+
+    await chargePostStatsRead(authResult.accountId, row.platform, row.post_url);
 
     return successResponse({
       stats: {
