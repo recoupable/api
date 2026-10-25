@@ -229,7 +229,17 @@ try {
   const firstEvents = (await events()).filter(e => e.runId === first.runId);
   assert.deepEqual(
     firstEvents.map(e => e.action),
-    ["bind", "user", "provider", "release", "key-cleanup"],
+    [
+      "bind",
+      "user",
+      "provider",
+      "assistant",
+      "provider",
+      "assistant",
+      "update_parts",
+      "release",
+      "key-cleanup",
+    ],
   );
   for (const event of firstEvents) {
     assert.deepEqual(event.authority, authority);
@@ -306,6 +316,63 @@ try {
     (await events()).filter(e => e.runId === failed.runId).map(e => e.action),
     ["bind", "key-cleanup"],
   );
+  const failedRequiredRuns = [];
+  for (const [owner, options, expected] of [
+    [
+      "77777777-7777-4777-8777-777777777777",
+      { failAssistant: true, preflightAssistant: true },
+      ["bind", "user", "key-cleanup"],
+    ],
+    [
+      "88888888-8888-4888-8888-888888888888",
+      { failAssistant: true },
+      ["bind", "user", "provider", "key-cleanup"],
+    ],
+    [
+      "99999999-9999-4999-8999-999999999999",
+      { failUpdateParts: true },
+      ["bind", "user", "provider", "assistant", "provider", "assistant", "key-cleanup"],
+    ],
+  ]) {
+    const captured = { ...authority, owner };
+    assert.equal((await claim(captured)({ payload: { attempt_id: attemptId } })).claimed, true);
+    const token = `fixture-required-${owner}`;
+    const run = await start(fenceFixture, [
+      { authority: captured, attemptId, hookToken: token, ...options },
+    ]);
+    await waitHook(token);
+    await resumeHook(token, "go");
+    await assert.rejects(bounded(run.returnValue), /Required (assistant|parts) write failed/);
+    failedRequiredRuns.push({
+      runId: run.runId,
+      action: options.failUpdateParts ? "update_parts" : "write",
+      role: "assistant",
+    });
+    assert.deepEqual(
+      (await events()).filter(e => e.runId === run.runId).map(e => e.action),
+      expected,
+    );
+  }
+  const writes = (await readFile(join(effects, "writes.jsonl"), "utf8"))
+    .trim()
+    .split("\n")
+    .map(line => JSON.parse(line));
+  const failedWrites = writes.filter(w => w.runId === failed.runId);
+  assert.equal(failedWrites.length, 1); // Fatal failure never repeats a required write automatically.
+  for (const failedRun of failedRequiredRuns) {
+    const attempts = writes.filter(
+      w =>
+        w.runId === failedRun.runId &&
+        w.command.action === failedRun.action &&
+        (failedRun.action === "update_parts" || w.command.payload.role === failedRun.role),
+    );
+    assert.equal(attempts.length, 1);
+  }
+  for (const write of writes) {
+    assert.equal(write.command.payload.run_id, write.runId);
+    assert.equal(write.command.payload.epoch, authority.epoch);
+    assert.deepEqual(write.command.payload.parts.metadata, { trace: "preserved" });
+  }
   assert.equal(networkAttempts, 0);
   console.log(
     JSON.stringify(
@@ -316,6 +383,8 @@ try {
         oneShotDispatch: true,
         lostClaimAndStartResponses: true,
         bindBeforeStartResponse: true,
+        requiredPersistence: true,
+        requiredWriteAttempts: writes.length,
         originalRunId: first.runId,
         loserRunId: loser.runId,
         firstEvents,

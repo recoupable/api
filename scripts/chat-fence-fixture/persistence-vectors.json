@@ -1,0 +1,639 @@
+{
+  "account": "11111111-1111-4111-8111-111111111111",
+  "admissions": [
+    {
+      "request_id": "22222222-2222-4222-8222-222222222222",
+      "expected_epoch": 0,
+      "input_hash": "6f7b32cc047392658b8d441b97c5bc249a95eba872c844e21c63cd58407a8ab1",
+      "admission_envelope": {
+        "contractVersion": "chat-admission/v1",
+        "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+        "sessionId": "session",
+        "chatId": "chat",
+        "expectedEpoch": 0,
+        "messages": [
+          {
+            "id": "user-1",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "hello"
+              }
+            ]
+          }
+        ],
+        "options": {
+          "modelId": "synthetic-model",
+          "artistId": null,
+          "interactive": true,
+          "devSurface": null
+        },
+        "executionSnapshot": {
+          "id": "persistence-0",
+          "digest": "f25dc0ad169a6b40e988dcd6978ff6111732b1f7d2cd9db5da4d6c086d936477"
+        }
+      },
+      "execution_snapshot": {
+        "contractVersion": "chat-execution/v1",
+        "id": "persistence-0",
+        "requestId": "22222222-2222-4222-8222-222222222222",
+        "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+        "chatId": "chat",
+        "sessionId": "session",
+        "content": {
+          "options": {
+            "modelId": "synthetic-model",
+            "artistId": null,
+            "interactive": true,
+            "devSurface": null
+          },
+          "sessionTitle": null,
+          "repoOwner": null,
+          "repoName": null,
+          "sandbox": {
+            "workingDirectory": "/workspace",
+            "currentBranch": null,
+            "state": {
+              "sandboxName": "synthetic-sandbox",
+              "sandboxId": null,
+              "snapshotId": null,
+              "expiresAt": null,
+              "source": null
+            }
+          },
+          "recoupOrgId": null,
+          "skills": [],
+          "credentialPolicy": {
+            "policyVersion": "chat-credential/v1",
+            "credentialIntentId": "33333333-3333-4333-8333-333333333333",
+            "principal": {
+              "mechanism": "recoup_api_key",
+              "accountId": "11111111-1111-4111-8111-111111111111",
+              "keyId": "44444444-4444-4444-8444-444444444444"
+            },
+            "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+            "organizationId": null,
+            "authorization": {
+              "version": "synthetic/v1",
+              "basis": "self",
+              "permissions": [
+                "chat:execute"
+              ]
+            },
+            "recovery": "reauthenticate_proven_never_dispatched"
+          }
+        }
+      },
+      "admission_canonical": "{\"chatId\":\"chat\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"f25dc0ad169a6b40e988dcd6978ff6111732b1f7d2cd9db5da4d6c086d936477\",\"id\":\"persistence-0\"},\"expectedEpoch\":0,\"messages\":[{\"id\":\"user-1\",\"parts\":[{\"text\":\"hello\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session\"}",
+      "execution_canonical": "{\"chatId\":\"chat\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"persistence-0\",\"requestId\":\"22222222-2222-4222-8222-222222222222\",\"sessionId\":\"session\"}"
+    },
+    {
+      "request_id": "55555555-5555-4555-8555-555555555555",
+      "expected_epoch": 1,
+      "input_hash": "25f13b74df873042fa5028031edf9c6e47bcf535f5c314fbe325eaef172bf84c",
+      "admission_envelope": {
+        "contractVersion": "chat-admission/v1",
+        "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+        "sessionId": "session",
+        "chatId": "chat",
+        "expectedEpoch": 1,
+        "messages": [
+          {
+            "id": "user-1",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "hello"
+              }
+            ]
+          }
+        ],
+        "options": {
+          "modelId": "synthetic-model",
+          "artistId": null,
+          "interactive": true,
+          "devSurface": null
+        },
+        "executionSnapshot": {
+          "id": "persistence-1",
+          "digest": "a3d2179fa3891637dbb1f931793d39cab35fbf8612d97a10ad48a864af858388"
+        }
+      },
+      "execution_snapshot": {
+        "contractVersion": "chat-execution/v1",
+        "id": "persistence-1",
+        "requestId": "55555555-5555-4555-8555-555555555555",
+        "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+        "chatId": "chat",
+        "sessionId": "session",
+        "content": {
+          "options": {
+            "modelId": "synthetic-model",
+            "artistId": null,
+            "interactive": true,
+            "devSurface": null
+          },
+          "sessionTitle": null,
+          "repoOwner": null,
+          "repoName": null,
+          "sandbox": {
+            "workingDirectory": "/workspace",
+            "currentBranch": null,
+            "state": {
+              "sandboxName": "synthetic-sandbox",
+              "sandboxId": null,
+              "snapshotId": null,
+              "expiresAt": null,
+              "source": null
+            }
+          },
+          "recoupOrgId": null,
+          "skills": [],
+          "credentialPolicy": {
+            "policyVersion": "chat-credential/v1",
+            "credentialIntentId": "33333333-3333-4333-8333-333333333333",
+            "principal": {
+              "mechanism": "recoup_api_key",
+              "accountId": "11111111-1111-4111-8111-111111111111",
+              "keyId": "44444444-4444-4444-8444-444444444444"
+            },
+            "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+            "organizationId": null,
+            "authorization": {
+              "version": "synthetic/v1",
+              "basis": "self",
+              "permissions": [
+                "chat:execute"
+              ]
+            },
+            "recovery": "reauthenticate_proven_never_dispatched"
+          }
+        }
+      },
+      "admission_canonical": "{\"chatId\":\"chat\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"a3d2179fa3891637dbb1f931793d39cab35fbf8612d97a10ad48a864af858388\",\"id\":\"persistence-1\"},\"expectedEpoch\":1,\"messages\":[{\"id\":\"user-1\",\"parts\":[{\"text\":\"hello\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session\"}",
+      "execution_canonical": "{\"chatId\":\"chat\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"persistence-1\",\"requestId\":\"55555555-5555-4555-8555-555555555555\",\"sessionId\":\"session\"}"
+    },
+    {
+      "request_id": "66666666-6666-4666-8666-666666666666",
+      "expected_epoch": 3,
+      "input_hash": "de84aae1e7509affaed1d557e934253e59142debc7555d8889b44f3afc0f1c53",
+      "admission_envelope": {
+        "contractVersion": "chat-admission/v1",
+        "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+        "sessionId": "session",
+        "chatId": "chat",
+        "expectedEpoch": 3,
+        "messages": [
+          {
+            "id": "user-1",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "hello"
+              }
+            ]
+          }
+        ],
+        "options": {
+          "modelId": "synthetic-model",
+          "artistId": null,
+          "interactive": true,
+          "devSurface": null
+        },
+        "executionSnapshot": {
+          "id": "persistence-2",
+          "digest": "eb10183fd115553fe1c73b683f3137285d3ab7527f9f7d8cf3357a593fff1952"
+        }
+      },
+      "execution_snapshot": {
+        "contractVersion": "chat-execution/v1",
+        "id": "persistence-2",
+        "requestId": "66666666-6666-4666-8666-666666666666",
+        "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+        "chatId": "chat",
+        "sessionId": "session",
+        "content": {
+          "options": {
+            "modelId": "synthetic-model",
+            "artistId": null,
+            "interactive": true,
+            "devSurface": null
+          },
+          "sessionTitle": null,
+          "repoOwner": null,
+          "repoName": null,
+          "sandbox": {
+            "workingDirectory": "/workspace",
+            "currentBranch": null,
+            "state": {
+              "sandboxName": "synthetic-sandbox",
+              "sandboxId": null,
+              "snapshotId": null,
+              "expiresAt": null,
+              "source": null
+            }
+          },
+          "recoupOrgId": null,
+          "skills": [],
+          "credentialPolicy": {
+            "policyVersion": "chat-credential/v1",
+            "credentialIntentId": "33333333-3333-4333-8333-333333333333",
+            "principal": {
+              "mechanism": "recoup_api_key",
+              "accountId": "11111111-1111-4111-8111-111111111111",
+              "keyId": "44444444-4444-4444-8444-444444444444"
+            },
+            "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+            "organizationId": null,
+            "authorization": {
+              "version": "synthetic/v1",
+              "basis": "self",
+              "permissions": [
+                "chat:execute"
+              ]
+            },
+            "recovery": "reauthenticate_proven_never_dispatched"
+          }
+        }
+      },
+      "admission_canonical": "{\"chatId\":\"chat\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"eb10183fd115553fe1c73b683f3137285d3ab7527f9f7d8cf3357a593fff1952\",\"id\":\"persistence-2\"},\"expectedEpoch\":3,\"messages\":[{\"id\":\"user-1\",\"parts\":[{\"text\":\"hello\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session\"}",
+      "execution_canonical": "{\"chatId\":\"chat\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"persistence-2\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session\"}"
+    }
+  ],
+  "commands": {
+    "user": {
+      "action": "write",
+      "payload": {
+        "epoch": 1,
+        "owner": "22222222-2222-4222-8222-222222222222",
+        "run_id": "original-run-0",
+        "id": "user-1",
+        "role": "user",
+        "mode": "insert",
+        "parts": {
+          "id": "user-1",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    },
+    "changedUser": {
+      "action": "write",
+      "payload": {
+        "epoch": 1,
+        "owner": "22222222-2222-4222-8222-222222222222",
+        "run_id": "original-run-0",
+        "id": "user-1",
+        "role": "user",
+        "mode": "insert",
+        "parts": {
+          "id": "user-1",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "changed"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    },
+    "assistant": {
+      "action": "write",
+      "payload": {
+        "epoch": 1,
+        "owner": "22222222-2222-4222-8222-222222222222",
+        "run_id": "original-run-0",
+        "id": "assistant-1",
+        "role": "assistant",
+        "mode": "upsert",
+        "parts": {
+          "id": "assistant-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    },
+    "assistantChanged": {
+      "action": "write",
+      "payload": {
+        "epoch": 1,
+        "owner": "22222222-2222-4222-8222-222222222222",
+        "run_id": "original-run-0",
+        "id": "assistant-1",
+        "role": "assistant",
+        "mode": "upsert",
+        "parts": {
+          "id": "assistant-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "changed"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    },
+    "parts": {
+      "action": "update_parts",
+      "payload": {
+        "epoch": 1,
+        "owner": "22222222-2222-4222-8222-222222222222",
+        "run_id": "original-run-0",
+        "id": "assistant-1",
+        "parts": {
+          "id": "assistant-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "data part"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    },
+    "missing": {
+      "action": "update_parts",
+      "payload": {
+        "epoch": 1,
+        "owner": "22222222-2222-4222-8222-222222222222",
+        "run_id": "original-run-0",
+        "id": "missing",
+        "parts": {
+          "id": "missing",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    },
+    "ambiguous": {
+      "action": "write",
+      "payload": {
+        "epoch": 1,
+        "owner": "22222222-2222-4222-8222-222222222222",
+        "run_id": "original-run-0",
+        "id": "ambiguous-user",
+        "role": "user",
+        "mode": "insert",
+        "parts": {
+          "id": "ambiguous-user",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    },
+    "previousAssistant": {
+      "action": "write",
+      "payload": {
+        "epoch": 2,
+        "owner": "55555555-5555-4555-8555-555555555555",
+        "run_id": "original-run-1",
+        "id": "assistant-1",
+        "role": "assistant",
+        "mode": "upsert",
+        "parts": {
+          "id": "assistant-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "data part"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    },
+    "previousParts": {
+      "action": "update_parts",
+      "payload": {
+        "epoch": 2,
+        "owner": "55555555-5555-4555-8555-555555555555",
+        "run_id": "original-run-1",
+        "id": "assistant-1",
+        "parts": {
+          "id": "assistant-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    },
+    "historicalAssistant": {
+      "action": "write",
+      "payload": {
+        "epoch": 2,
+        "owner": "55555555-5555-4555-8555-555555555555",
+        "run_id": "original-run-1",
+        "id": "historical",
+        "role": "assistant",
+        "mode": "upsert",
+        "parts": {
+          "id": "historical",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    },
+    "historicalParts": {
+      "action": "update_parts",
+      "payload": {
+        "epoch": 2,
+        "owner": "55555555-5555-4555-8555-555555555555",
+        "run_id": "original-run-1",
+        "id": "historical",
+        "parts": {
+          "id": "historical",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    },
+    "crossGenerationUserReplay": {
+      "action": "write",
+      "payload": {
+        "epoch": 2,
+        "owner": "55555555-5555-4555-8555-555555555555",
+        "run_id": "original-run-1",
+        "id": "user-1",
+        "role": "user",
+        "mode": "insert",
+        "parts": {
+          "id": "user-1",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    },
+    "deletedUser": {
+      "action": "write",
+      "payload": {
+        "epoch": 4,
+        "owner": "66666666-6666-4666-8666-666666666666",
+        "run_id": "original-run-2",
+        "id": "user-1",
+        "role": "user",
+        "mode": "insert",
+        "parts": {
+          "id": "user-1",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    },
+    "deletedAssistant": {
+      "action": "write",
+      "payload": {
+        "epoch": 4,
+        "owner": "66666666-6666-4666-8666-666666666666",
+        "run_id": "original-run-2",
+        "id": "assistant-1",
+        "role": "assistant",
+        "mode": "upsert",
+        "parts": {
+          "id": "assistant-1",
+          "role": "assistant",
+          "parts": [
+            {
+              "type": "text",
+              "text": "hello"
+            }
+          ],
+          "metadata": {
+            "trace": {
+              "source": "synthetic"
+            }
+          }
+        }
+      }
+    }
+  },
+  "historical": {
+    "id": "historical",
+    "role": "assistant",
+    "parts": [
+      {
+        "type": "text",
+        "text": "hello"
+      }
+    ],
+    "metadata": {
+      "trace": {
+        "source": "synthetic"
+      }
+    }
+  }
+}

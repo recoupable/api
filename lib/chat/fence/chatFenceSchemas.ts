@@ -13,6 +13,8 @@ export const chatFenceAuthoritySchema = identity
   .extend({ epoch: epoch.min(1), owner: z.uuid() })
   .strict();
 export type ChatFenceAuthority = Readonly<z.infer<typeof chatFenceAuthoritySchema>>;
+export const chatFenceWriterSchema = chatFenceAuthoritySchema.extend({ runId }).strict();
+export type ChatFenceWriter = Readonly<z.infer<typeof chatFenceWriterSchema>>;
 const token = { epoch: epoch.min(1), owner: z.uuid() };
 const writer = { ...token, run_id: runId };
 const retry = { request_id: z.uuid(), expected_epoch: epoch };
