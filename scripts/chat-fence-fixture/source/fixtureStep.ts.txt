@@ -1,0 +1,70 @@
+import { appendFile, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { getWorkflowMetadata, FatalError } from "workflow";
+import { createChatFenceAuthority } from "@/lib/chat/fence/createChatFenceAuthority";
+import { parseChatFenceReceipt } from "@/lib/chat/fence/parseChatFenceReceipt";
+import type { ChatFenceAuthority } from "@/lib/chat/fence/chatFenceSchemas";
+
+/** Synthetic effects only. This does not model SQL locks or call a provider. */
+export async function fixtureStep(
+  action: "bind" | "user" | "provider" | "release" | "key-cleanup",
+  input: { authority: ChatFenceAuthority; attemptId: string; failWrite?: boolean },
+  runId: string,
+) {
+  "use step";
+  const dir = process.env.CHAT_FENCE_FIXTURE_DIR;
+  if (!dir) throw new FatalError("Offline fixture directory is required");
+  const authority = createChatFenceAuthority(input.authority);
+  if (getWorkflowMetadata().workflowRunId !== runId) throw new FatalError("Metadata run mismatch");
+  const file = join(dir, `${authority.owner}.json`);
+  const payload = { epoch: authority.epoch, owner: authority.owner, run_id: runId };
+  if (action === "bind") {
+    const originalAttempt = await readFile(join(dir, `${authority.owner}.claim`), "utf8");
+    if (originalAttempt !== input.attemptId) {
+      await appendFile(join(dir, "events.jsonl"), JSON.stringify({ action: "lost", runId }) + "\n");
+      return { ok: false };
+    }
+    try {
+      await writeFile(file, JSON.stringify({ runId, authority, attemptId: input.attemptId }), { flag: "wx" });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      if (JSON.parse(await readFile(file, "utf8")).runId !== runId) {
+        await appendFile(
+          join(dir, "events.jsonl"),
+          JSON.stringify({ action: "lost", runId }) + "\n",
+        );
+        return { ok: false };
+      }
+    }
+    const result = parseChatFenceReceipt(
+      authority.chatId,
+      { action: "bind", payload: { ...payload, attempt_id: input.attemptId } },
+      { bound: true },
+    );
+    if (!result.ok) throw new FatalError("Invalid bind receipt");
+  } else {
+    if (JSON.parse(await readFile(file, "utf8")).runId !== runId)
+      throw new FatalError("Wrong bound run");
+    if (action === "user") {
+      await new Promise(resolve => setTimeout(resolve, 25));
+      if (input.failWrite) return { ok: false };
+      const result = parseChatFenceReceipt(
+        authority.chatId,
+        {
+          action: "write",
+          payload: {
+            ...payload,
+            id: "synthetic-user",
+            role: "user",
+            mode: "insert",
+            parts: { id: "synthetic-user", role: "user", parts: [] },
+          },
+        },
+        { written: true, outcome: "inserted" },
+      );
+      if (!result.ok) throw new FatalError("Invalid write receipt");
+    }
+  }
+  await appendFile(join(dir, "events.jsonl"), JSON.stringify({ action, runId, authority, attemptId: input.attemptId }) + "\n");
+  return { ok: true };
+}
