@@ -15,6 +15,9 @@ vi.mock("@/lib/supabase/scheduled_posts/selectScheduledPosts", () => ({
 }));
 vi.mock("@/lib/publishing/findConnectedAccountId", () => ({ findConnectedAccountId: vi.fn() }));
 vi.mock("@/lib/publishing/stats/getLinkedInPostStats", () => ({ getLinkedInPostStats: vi.fn() }));
+vi.mock("@/lib/publishing/stats/getLinkedInVideoStats", () => ({
+  getLinkedInVideoStats: vi.fn(),
+}));
 vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
   ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
 }));

@@ -8,7 +8,7 @@ import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import { selectScheduledPosts } from "@/lib/supabase/scheduled_posts/selectScheduledPosts";
 import { findConnectedAccountId } from "@/lib/publishing/findConnectedAccountId";
 import { parseLinkedInPostUrn } from "@/lib/publishing/stats/parseLinkedInPostUrn";
-import { getLinkedInPostStats } from "@/lib/publishing/stats/getLinkedInPostStats";
+import { getLinkedInPostAnalytics } from "@/lib/publishing/stats/getLinkedInPostAnalytics";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
 import { chargePostStatsRead } from "@/lib/publishing/stats/chargePostStatsRead";
 import { POST_STATS_CREDITS } from "@/lib/publishing/stats/postStatsCredits";
@@ -75,7 +75,7 @@ export async function getPostStatsHandler(request: NextRequest, id: string): Pro
 
     let metrics;
     try {
-      metrics = await getLinkedInPostStats(connectedAccountId, organization, post);
+      metrics = await getLinkedInPostAnalytics(connectedAccountId, organization, post);
     } catch (error) {
       console.error("LinkedIn rejected the post stats read:", error);
       return errorResponse("LinkedIn rejected the stats read for this post", 502);
