@@ -1,7 +1,8 @@
 # Development entitlement calculation (CATD-06 / CATD-29)
 
-This is a **distinct, unregistered development adapter**. No HTTP action, MCP tool,
-chat producer, database migration or production activation is added. Existing case
+This is a **distinct, production-disabled development adapter**. The separate
+development-only HTTP/MCP transports are specified in `DEVELOPMENT-TRANSPORT.md`.
+No production tool registration, chat producer, database migration or activation is added. Existing case
 save/read operations continue to store customer assertions. Stream surfaces remain
 stream observations. This is not production hosted parity acceptance.
 
@@ -31,11 +32,11 @@ precision loss and ambiguous non-JSON Python inputs. Internally scaled BigInt
 arithmetic preserves all digits and decimal places. The supported fixed multiplications
 and bounded sums fit within the canonical Python Decimal precision of 128.
 
-## Proposed invocation
+## Internal invocation
 
 `runDevelopmentEntitlement(authenticatedAccountId, input, { rpc })` requires both
 `NODE_ENV=development` and `CATALOG_ENTITLEMENT_DEV=true`. Production is always
-rejected, even with the second flag set. It is not registered with any caller.
+rejected, even with the second flag set. Only the separately gated development dispatcher invokes it from HTTP/MCP.
 The account argument must come from authentication; input cannot contain an actor.
 The existing `authorizeContextOwner` policy is the default, rechecked before the
 read and before returning the result. Dependency injection is for internal tests,
@@ -76,7 +77,7 @@ execution, recognized debt, rights verification or received money.
 
 The only RPC is the existing scoped current case read. No result is saved, no
 provider is called and no payment or action authorization is created. A future
-public transport needs separate review of authentication, operation registration,
+production transport needs separate review of authentication, operation registration,
 no-store/error behavior, retention, limits and exact schema. This proposal does not
 silently broaden the existing read/save route or advertise a working customer tool.
 

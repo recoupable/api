@@ -716,5 +716,14 @@
     ],
     "status": "excluded until application/OAuth contract review",
     "authorizationWork": "Keep excluded from delegated OAuth. Before enablement review selected-workspace grant binding, current membership and revocation checks, and the read-only registration preflight contract. Validation does not persist an application, verify origin ownership, create fan identities, issue credentials or authorize spending."
+  },
+  {
+    "name": "dev_calculate_catalog_entitlements",
+    "file": "lib/mcp/tools/context/registerDevelopmentEntitlementTool.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "development only; delegated unavailable",
+    "authorizationWork": "Static read-effect classification only, not a delegated permission grant. Register only with NODE_ENV=development and CATALOG_ENTITLEMENT_DEV=true; keep excluded from delegated OAuth discovery and invocation. Derive actor from standard authentication and recheck current workspace, case revision and source evidence. No persistence, provider action, payment or production enablement."
   }
 ]

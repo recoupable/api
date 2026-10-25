@@ -3,10 +3,12 @@ import { resolve, relative } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
 import inventory from "../tool-policy.json";
+import { fullOAuthToolPolicy } from "../../../lib/mcp/oauth/fullOAuthToolPolicy";
+import { isStandardOnlyContextTool } from "../../../lib/mcp/oauth/isStandardOnlyContextTool";
 import { assertDirectRegistrations } from "../assertDirectRegistrations";
 
-// Deliberately inspects source, not runtime imports: inventory must never initialize providers
-// or contact production services. New registration patterns fail instead of silently disappearing.
+// Inspect registrations as source, never import provider-backed tool modules. The policy-only
+// imports above initialize no providers or services. Unknown registration patterns fail closed.
 const root = resolve(import.meta.dirname, "../../..");
 function files(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap(entry => {
@@ -17,6 +19,14 @@ function files(directory: string): string[] {
 }
 
 describe("MCP OAuth tool authorization inventory", () => {
+  it("classifies the development calculator without granting delegated permission", () => {
+    const name = "dev_calculate_catalog_entitlements";
+    const entry = inventory.find(tool => tool.name === name);
+    expect(entry?.status).toBe("development only; delegated unavailable");
+    expect(entry?.scopes).toEqual(["mcp:read"]);
+    expect(isStandardOnlyContextTool(name)).toBe(true);
+    expect(fullOAuthToolPolicy).not.toHaveProperty(name);
+  });
   it("requires an explicit launch policy for every registered tool, including explicitly classified dynamic manifests", () => {
     const discovered: Array<{ name: string; file: string }> = [];
     for (const path of files(resolve(root, "lib/mcp/tools"))) {
