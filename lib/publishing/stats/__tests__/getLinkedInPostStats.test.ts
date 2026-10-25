@@ -14,6 +14,7 @@ describe("getLinkedInPostStats", () => {
       data: {
         elements: [
           {
+            ugcPost: "urn:li:ugcPost:7",
             totalShareStatistics: {
               impressionCount: 900,
               uniqueImpressionsCount: 700,
@@ -52,7 +53,9 @@ describe("getLinkedInPostStats", () => {
 
   it("uses shares=List(...) for a share URN and nulls missing numbers", async () => {
     vi.mocked(proxyLinkedIn).mockResolvedValue({
-      data: { elements: [{ totalShareStatistics: { impressionCount: 5 } }] },
+      data: {
+        elements: [{ share: "urn:li:share:9", totalShareStatistics: { impressionCount: 5 } }],
+      },
       headers: {},
     });
 

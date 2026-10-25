@@ -11,7 +11,9 @@ export type LinkedInPostUrn = {
  * @returns The URN and the share-statistics filter it belongs to, or null.
  */
 export function parseLinkedInPostUrn(postUrl: string): LinkedInPostUrn | null {
-  const match = postUrl.match(/urn:li:(ugcPost|share):\d+/);
+  const match = postUrl.match(
+    /^https:\/\/www\.linkedin\.com\/feed\/update\/(urn:li:(ugcPost|share):\d+)\/?$/,
+  );
   if (!match) return null;
-  return { urn: match[0], kind: match[1] === "ugcPost" ? "ugcPosts" : "shares" };
+  return { urn: match[1], kind: match[2] === "ugcPost" ? "ugcPosts" : "shares" };
 }

@@ -37,8 +37,13 @@ export async function getLinkedInPostStats(
     `&${post.kind}=List(${encodeURIComponent(post.urn)})`;
   const { data } = await proxyLinkedIn(connectedAccountId, "GET", url);
 
-  const elements = (data.elements ?? []) as { totalShareStatistics?: Record<string, unknown> }[];
-  const totals = elements[0]?.totalShareStatistics ?? {};
+  const elements = (data.elements ?? []) as {
+    ugcPost?: string;
+    share?: string;
+    totalShareStatistics?: Record<string, unknown>;
+  }[];
+  const field = post.kind === "ugcPosts" ? "ugcPost" : "share";
+  const totals = elements.find(element => element[field] === post.urn)?.totalShareStatistics ?? {};
 
   return {
     impressions: num(totals.impressionCount),
