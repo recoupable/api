@@ -11,12 +11,12 @@ import type { SandboxCreatedResponse } from "./createSandbox";
  * Handler for retrieving sandbox statuses for an account.
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
- * For personal keys: Returns sandboxes for the key owner's account.
- * For org keys: Returns sandboxes for all accounts in the organization.
+ * Defaults to the authenticated account; explicit targets use the existing account-access policy.
  *
  * Optional query parameters:
  * - metadata_only: Return metadata without live status lookups when true
  * - sandbox_id: Filter to a specific sandbox (must belong to account/org)
+ * - account_id: Optional authorized account UUID; echoed on success
  *
  * @param request - The request object.
  * @returns A NextResponse with array of sandbox statuses, plus snapshot_id and github_repo.
@@ -27,7 +27,7 @@ export async function getSandboxesHandler(request: NextRequest): Promise<NextRes
     return validated;
   }
 
-  const { metadataOnly, ...sandboxParams } = validated;
+  const { metadataOnly, targetAccountId, ...sandboxParams } = validated;
 
   // Determine account ID for snapshot lookup
   const snapshotAccountId =
@@ -63,6 +63,7 @@ export async function getSandboxesHandler(request: NextRequest): Promise<NextRes
       snapshot_id,
       github_repo,
       filetree,
+      ...(targetAccountId && { account_id: targetAccountId }),
     },
     {
       status: 200,

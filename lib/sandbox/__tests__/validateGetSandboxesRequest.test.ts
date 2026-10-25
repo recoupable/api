@@ -174,6 +174,7 @@ describe("validateGetSandboxesRequest", () => {
       expect(result).toEqual({
         accountIds: ["550e8400-e29b-41d4-a716-446655440000"],
         sandboxId: "sbx_abc123",
+        targetAccountId: "550e8400-e29b-41d4-a716-446655440000",
       });
     });
   });

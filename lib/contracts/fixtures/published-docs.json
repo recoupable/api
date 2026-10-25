@@ -955,7 +955,7 @@
   ],
   "sourceHashes": {
     "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
-    "content/docs/source/api-reference/openapi/content.json": "b89165f9296a1aa98139f64ae095eefd2a5b306950170d3f15a4826de95ed036",
+    "content/docs/source/api-reference/openapi/content.json": "a59fa965788414731d19e031ec4b44f4a83319bdc651cb0aa49fba5a534317b0",
     "content/docs/source/api-reference/openapi/research.json": "053556fdeec5379fbaf6cfdbd37c721cd0793f08fa728b82c281e0c6af249457",
     "content/docs/source/api-reference/openapi/releases.json": "7bfbdee327e8b3e27ba39cea3fcfe1fe930997d2ea05cb19a707f926ae3bdba2",
     "content/docs/source/api-reference/openapi/social.json": "49c837327886827b5bc33ae4daac76f12473ecf4a6f75cc073656e9247ba73ca",
@@ -1118,6 +1118,39 @@
       "path": "drafts/notes.txt",
       "include_revision": "true"
     },
+    "scopedReadQuery": {
+      "path": "drafts/notes.txt",
+      "include_revision": "true",
+      "account_id": "11111111-1111-4111-8111-111111111111"
+    },
+    "listQuery": {
+      "account_id": "11111111-1111-4111-8111-111111111111",
+      "metadata_only": "true"
+    },
+    "accountScopeParameters": {
+      "list": {
+        "name": "account_id",
+        "in": "query",
+        "description": "Optional target account UUID authorized by the existing account-access policy. Omit for the authenticated account. Successful explicit-target reads echo this value as account_id; this does not grant file-write access.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "example": "11111111-1111-4111-8111-111111111111"
+      },
+      "file": {
+        "name": "account_id",
+        "in": "query",
+        "description": "Optional target account UUID authorized by the existing account-access policy. Omit for the authenticated account. Successful explicit-target reads echo this value as account_id; this does not grant file-write access.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "example": "11111111-1111-4111-8111-111111111111"
+      }
+    },
     "upload": {
       "path": "drafts",
       "message": "Update release notes",
@@ -1193,6 +1226,156 @@
     "responses": [
       {
         "method": "GET",
+        "path": "/api/sandboxes",
+        "status": 200,
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "sandboxes"
+          ],
+          "description": "Response containing sandbox information",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "success",
+                "error"
+              ],
+              "description": "Status of the request"
+            },
+            "sandboxes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "sandboxId",
+                  "sandboxStatus",
+                  "timeout",
+                  "createdAt"
+                ],
+                "description": "A sandbox environment instance",
+                "properties": {
+                  "sandboxId": {
+                    "type": "string",
+                    "description": "Unique identifier for the sandbox",
+                    "example": "sbx_abc123def456"
+                  },
+                  "sandboxStatus": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "running",
+                      "stopping",
+                      "stopped",
+                      "failed"
+                    ],
+                    "description": "Current lifecycle state of the sandbox",
+                    "example": "running"
+                  },
+                  "timeout": {
+                    "type": "integer",
+                    "description": "Milliseconds remaining before the sandbox stops automatically",
+                    "example": 300000
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 timestamp when the sandbox was created",
+                    "example": "2024-01-15T10:30:00.000Z"
+                  },
+                  "runId": {
+                    "type": "string",
+                    "description": "Unique identifier for the command execution run. Only present if a command was provided when creating the sandbox. Use this with [GET /api/tasks/runs](/api-reference/tasks/runs) to check the status and retrieve results.",
+                    "example": "run_xyz789abc123"
+                  }
+                }
+              },
+              "description": "Array of sandbox objects"
+            },
+            "snapshot_id": {
+              "type": "string",
+              "description": "The account's saved snapshot ID used for creating new sandboxes. Null if no snapshot has been saved.",
+              "example": "snap_abc123def456",
+              "nullable": true
+            },
+            "github_repo": {
+              "type": "string",
+              "description": "The GitHub repository URL associated with the account's sandbox environment. Used as the filesystem source when restoring sandboxes.",
+              "example": "https://github.com/username/repo",
+              "nullable": true
+            },
+            "filetree": {
+              "type": "array",
+              "nullable": true,
+              "description": "The recursive file tree of the account's GitHub repository. Null if no github_repo is set or if the fetch fails.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "path",
+                  "type",
+                  "sha"
+                ],
+                "description": "A single entry in a GitHub repository file tree",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "The file or directory path relative to the repository root",
+                    "example": "src/index.ts"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "blob",
+                      "tree"
+                    ],
+                    "description": "The type of entry: blob for files, tree for directories"
+                  },
+                  "sha": {
+                    "type": "string",
+                    "description": "The SHA hash of the entry",
+                    "example": "abc123def456"
+                  },
+                  "size": {
+                    "type": "integer",
+                    "description": "The size of the file in bytes. Only present for blob entries.",
+                    "example": 1024
+                  }
+                }
+              }
+            },
+            "error": {
+              "type": "string",
+              "description": "Error message (only present if status is error)"
+            },
+            "account_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "On successful GET reads only: the explicitly requested, authorized target account UUID. Present even for an explicit self target; absent when account_id was omitted. This is read scope, not write authorization.",
+              "example": "11111111-1111-4111-8111-111111111111"
+            }
+          }
+        },
+        "examples": {
+          "ownMetadata": {
+            "status": "success",
+            "sandboxes": [],
+            "snapshot_id": null,
+            "github_repo": null,
+            "filetree": null
+          },
+          "targetMetadata": {
+            "status": "success",
+            "sandboxes": [],
+            "snapshot_id": null,
+            "github_repo": null,
+            "filetree": null,
+            "account_id": "11111111-1111-4111-8111-111111111111"
+          }
+        }
+      },
+      {
+        "method": "GET",
         "path": "/api/sandboxes/file",
         "status": 200,
         "schema": {
@@ -1225,7 +1408,41 @@
               "pattern": "^[a-f0-9]{40}$",
               "description": "Present when include_revision=true; use this reader-observed blob SHA as files[].expected_sha. Absent from legacy reads. It identifies the returned bytes, not an accepted Context source version.",
               "example": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "account_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "On successful GET reads only: the explicitly requested, authorized target account UUID. Present even for an explicit self target; absent when account_id was omitted. This is read scope, not write authorization.",
+              "example": "11111111-1111-4111-8111-111111111111"
             }
+          }
+        },
+        "examples": {
+          "legacyText": {
+            "status": "success",
+            "content": "Release notes"
+          },
+          "versionedText": {
+            "status": "success",
+            "content": "Release notes",
+            "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "versionedBinary": {
+            "status": "success",
+            "content": "aGVsbG8=",
+            "encoding": "base64",
+            "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "targetText": {
+            "status": "success",
+            "content": "Release notes",
+            "account_id": "11111111-1111-4111-8111-111111111111"
+          },
+          "targetVersionedText": {
+            "status": "success",
+            "content": "Release notes",
+            "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "account_id": "11111111-1111-4111-8111-111111111111"
           }
         }
       },
