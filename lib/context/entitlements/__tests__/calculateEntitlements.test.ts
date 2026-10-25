@@ -95,6 +95,25 @@ describe("canonical entitlement parity", () => {
       mutate(input);
       expect(calculateEntitlements(input)).toEqual(python(input));
     });
+  for (const [name, terms] of Object.entries({
+    boolean: true,
+    object: { tier: "escalator" },
+    quotedList: ["writer's bonus"],
+    nested: { conditions: [true, false, null, { note: "both ' and \" quotes" }] },
+    escapes: [
+      "back\\slash",
+      "line\nfeed\ttab\rreturn",
+      "\x00\x1f\x7f\u00a0\u2028\ue000",
+      "music 🎵",
+    ],
+    numbers: [0.000001, 1.2e-7, 1e21, 1e20, -0.0025, 12, 1.5],
+    rawString: "writer's bonus\nnot a list",
+  }))
+    it(`canonical unsupported-term text: ${name}`, () => {
+      const input = fixture();
+      input.rules[0].unsupported_terms = terms;
+      expect(calculateEntitlements(input)).toEqual(python(input));
+    });
   it("pins the Python oracle bytes to the reviewed source", () => {
     const manifest = JSON.parse(
       readFileSync(new URL("../oracle-manifest.json", import.meta.url), "utf8"),

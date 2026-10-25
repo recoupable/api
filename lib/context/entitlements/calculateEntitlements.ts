@@ -1,3 +1,4 @@
+import { pythonJsonText } from "./pythonJsonText";
 import { entitlementResultSchema, type EntitlementResult } from "./entitlementResultSchema";
 import { entitlementInputSchema } from "./entitlementSchemas";
 
@@ -122,13 +123,6 @@ function truthy(value: unknown): boolean {
       ? Object.keys(value).length > 0
       : Boolean(value);
 }
-function pythonText(value: unknown): string {
-  return Array.isArray(value)
-    ? `[${value.map(v => (typeof v === "string" ? `'${v}'` : pythonText(v))).join(", ")}]`
-    : value === undefined || value === null
-      ? "None"
-      : String(value);
-}
 // Python sorts Unicode code points; JavaScript's default sort uses UTF-16 units.
 function compareEvidence(a: string, b: string): number {
   const left = Array.from(a),
@@ -167,7 +161,8 @@ export function calculateEntitlements(input: unknown): EntitlementResult {
       if (!truthy(rule.rule_version)) throw new Error("rule_version is required");
       if (truthy(rule.unsupported_terms))
         throw new Error(
-          "Manual workpaper required for unsupported terms: " + pythonText(rule.unsupported_terms),
+          "Manual workpaper required for unsupported terms: " +
+            pythonJsonText(rule.unsupported_terms),
         );
       if (rule.adjustments_complete !== true)
         throw new Error(
@@ -230,7 +225,7 @@ export function calculateEntitlements(input: unknown): EntitlementResult {
       ).values()) {
         const kind = adjustment.kind;
         if (!kinds.has(kind as string) || already.includes(kind))
-          throw new Error("Unknown or already deducted adjustment: " + pythonText(kind));
+          throw new Error("Unknown or already deducted adjustment: " + pythonJsonText(kind));
         if ("currency" in adjustment && currency(adjustment) !== ccy)
           throw new Error(
             "Adjustment currency differs from line; use an evidenced manual FX workpaper",
