@@ -10,12 +10,12 @@ import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadine
  * are performed in the background task before spend-heavy steps.
  */
 export async function getContentValidateHandler(request: NextRequest): Promise<NextResponse> {
-  const validated = await validateGetContentValidateQuery(request);
-  if (validated instanceof NextResponse) {
-    return validated;
-  }
-
   try {
+    const validated = await validateGetContentValidateQuery(request);
+    if (validated instanceof NextResponse) {
+      return validated;
+    }
+
     const readiness = await getArtistContentReadiness({
       accountId: validated.accountId,
       artistAccountId: validated.artistAccountId,
