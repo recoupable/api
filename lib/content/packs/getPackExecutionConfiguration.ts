@@ -1,12 +1,16 @@
-import { FLAMINGO_MODEL_ID, FLAMINGO_GENERATE_URL, LIGHTWEIGHT_MODEL } from "@/lib/const";
+import {
+  FLAMINGO_MODEL_ID,
+  FLAMINGO_GENERATE_URL,
+  LIGHTWEIGHT_MODEL,
+  HOUSE_VIDEO_MODEL,
+  TWELVELABS_ANALYSIS_MODEL,
+  packExecutionSettings,
+} from "@/lib/const";
 import { buildImageInput } from "@/lib/content/image/buildImageInput";
-import { HOUSE_VIDEO_MODEL } from "@/lib/content/video/houseVideoModel";
-import { TWELVELABS_ANALYSIS_MODEL } from "@/lib/twelvelabs/analyzeVideo";
 import { FAL_IMAGE_USD_PER_UNIT } from "@/lib/content/creditCostForImageUnits";
 import { FAL_VIDEO_USD_PER_UNIT } from "@/lib/content/creditCostForVideoUnits";
 import { estimateVideoUnits } from "@/lib/content/estimateVideoUnits";
 import { usdToCredits } from "@/lib/credits/usdToCredits";
-import { packExecutionSettings } from "./packExecutionSettings";
 /** Server-owned identity of existing routes/settings/charges; not a provider license or immutable weights claim. */
 export function getPackExecutionConfiguration() {
   return {

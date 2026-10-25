@@ -1,7 +1,6 @@
-import { packExecutionSettings } from "./packExecutionSettings";
+import { packExecutionSettings, LIGHTWEIGHT_MODEL } from "@/lib/const";
 import { generateText } from "ai";
 import { z } from "zod";
-import { LIGHTWEIGHT_MODEL } from "@/lib/const";
 import { analyzeVideo } from "@/lib/twelvelabs/analyzeVideo";
 import { createSignedFileUrlByKey } from "@/lib/supabase/storage/createSignedFileUrlByKey";
 import { fetchPackMedia } from "./fetchPackMedia";

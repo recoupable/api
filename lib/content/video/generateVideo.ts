@@ -7,8 +7,8 @@ import { buildVideoInput } from "./buildVideoInput";
 // verified against fal 2026-09-02. Not caller-overridable — cost is only
 // predictable if the model is ours (recoupable/app#2052). Lipsync/OmniHuman
 // is out of this endpoint's scope for now (docs#328, 2026-09-03).
-import { HOUSE_VIDEO_MODEL } from "./houseVideoModel";
-export { HOUSE_VIDEO_MODEL } from "./houseVideoModel";
+import { HOUSE_VIDEO_MODEL } from "@/lib/const";
+export { HOUSE_VIDEO_MODEL } from "@/lib/const";
 
 type VideoParams = z.infer<typeof createVideoBodySchema>;
 

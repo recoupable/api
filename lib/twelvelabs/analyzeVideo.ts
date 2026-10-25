@@ -1,4 +1,4 @@
-export const TWELVELABS_ANALYSIS_MODEL = "pegasus1.5";
+import { TWELVELABS_ANALYSIS_MODEL } from "@/lib/const";
 
 const TWELVELABS_ANALYZE_URL = "https://api.twelvelabs.io/v1.3/analyze";
 

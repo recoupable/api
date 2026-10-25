@@ -1,5 +1,5 @@
 import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
-import { packExecutionSettings } from "./packExecutionSettings";
+import { packExecutionSettings } from "@/lib/const";
 import { z } from "zod";
 import { createHash } from "node:crypto";
 import { fetchPackMedia } from "./fetchPackMedia";
