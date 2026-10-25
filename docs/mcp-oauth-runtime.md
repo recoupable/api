@@ -20,6 +20,8 @@ The loader rejects duplicate symmetric secrets. HTTP is accepted only for `127.0
 
 ## Request budgets
 
+The root discovery alias emits only the fixed `oauth_discovery_unavailable` event when metadata resolution fails; its public response remains HTTP 503 with `oauth_unavailable`. Malformed operator-configured issuer values can be retained in URL exception fields, so this boundary never logs the exception, cause, stack or configured value. October 25, 2026 local route tests cover malformed configuration and injected exceptions plus normal redirect, disabled and preflight controls. This is source-level redaction evidence, not evidence of production credential exposure or deployed log delivery; broader observability requirements remain in [Mono #214](https://github.com/recoupable/mono/issues/214).
+
 Before runtime initialization, every enabled request consumes atomic shared Supabase/PostgreSQL budgets: 1,200 requests/minute per issuer and 120/minute per socket peer. Registration additionally allows 100/minute per issuer and 10/minute per peer. Excess traffic receives 429 with Retry-After. Database failure returns a generic 503 with a redacted availability event; request bodies, tokens, addresses and backend error details are never logged.
 
 Peer identity uses the socket address, never caller-controlled forwarded headers. Behind a platform proxy, unrelated clients may share that peer budget. Validate deployment behavior and configure edge per-client limits before public launch; do not blindly trust X-Forwarded-For to increase capacity. These conservative application budgets protect storage work but do not replace edge DDoS controls.

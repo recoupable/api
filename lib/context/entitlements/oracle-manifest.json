@@ -1,0 +1,9 @@
+{
+  "repository": "recoupable/skills",
+  "commit": "c3059ef3718abe1568fe3ae7c6e1e4c9d2589e48",
+  "files": {
+    "calculate-entitlements.py": "a8773004cfd047425c4c146e4e2500bdd2aca15a3a5771526c74dfe64197435e",
+    "_finance.py": "2a4ae5221636361fc2dca99dcb72d08ac0648320644002f9cb091ad955dcbc45",
+    "input.json": "c2b7f9aeeb548866d0faa090f53e0807323da58fe3a9b1a141b8eaae3beef6b6"
+  }
+}
