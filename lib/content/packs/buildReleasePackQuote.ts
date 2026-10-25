@@ -1,3 +1,5 @@
+import { getPackExecutionConfiguration } from "./getPackExecutionConfiguration";
+import { getPackConfigurationDigest } from "./getPackConfigurationDigest";
 import { createHash } from "node:crypto";
 import { FAL_IMAGE_USD_PER_UNIT } from "@/lib/content/creditCostForImageUnits";
 import { FAL_VIDEO_USD_PER_UNIT } from "@/lib/content/creditCostForVideoUnits";
@@ -19,9 +21,12 @@ export function buildReleasePackQuote(
   brief: ReleasePackBrief,
   deliverables: ReleasePackDeliverables,
 ) {
+  const execution_config = getPackExecutionConfiguration();
+  const execution_config_digest = getPackConfigurationDigest(execution_config);
   const assets: PackAssetPlan[] = [];
   const motionCost =
-    FAL_VIDEO_USD_PER_UNIT * estimateVideoUnits(deliverables.video_seconds, "768P");
+    FAL_VIDEO_USD_PER_UNIT *
+    estimateVideoUnits(deliverables.video_seconds, execution_config.motion.resolution);
   const kinds: [PackAssetKind, number][] = [
     ["video", deliverables.videos],
     ["artwork", deliverables.artwork],
@@ -40,9 +45,13 @@ export function buildReleasePackQuote(
   const stills = assets.reduce((sum, a) => sum + a.files, 0);
   const maximum_usd = Number(assets.reduce((sum, a) => sum + a.maximum_usd, 0).toFixed(6));
   return {
-    pricing_version: "release-pack-house-rates-v1",
+    pricing_version: execution_config.pricing_version,
+    execution_config,
+    execution_config_digest,
     brief_fingerprint: getPackBriefFingerprint(brief),
-    fingerprint: createHash("sha256").update(JSON.stringify({ brief, deliverables })).digest("hex"),
+    fingerprint: createHash("sha256")
+      .update(JSON.stringify({ brief, deliverables, execution_config_digest }))
+      .digest("hex"),
     creative_piece_count: assets.length,
     generated_file_count: stills,
     caption_count: assets.length,

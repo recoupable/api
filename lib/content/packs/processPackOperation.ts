@@ -1,3 +1,4 @@
+import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
 import { importPackSources } from "./importPackSources";
 import { randomUUID, createHash } from "node:crypto";
 import { z } from "zod";
@@ -105,7 +106,12 @@ export async function processPackOperation(
       ...full,
       fingerprint: createHash("sha256")
         .update(
-          JSON.stringify({ brief: saved.job.brief, deliverables: saved.job.deliverables, sources }),
+          JSON.stringify({
+            brief: saved.job.brief,
+            deliverables: saved.job.deliverables,
+            sources,
+            execution_config_digest: full.execution_config_digest,
+          }),
         )
         .digest("hex"),
       assets: plan,
@@ -158,7 +164,14 @@ export async function processPackOperation(
       );
       if (
         !receipts.length ||
-        receipts.some(([, value]) => !(value as { request_id?: string }).request_id)
+        receipts.some(([, value]) => {
+          const receipt = value as { state?: string; request_id?: string; model?: string };
+          return (
+            !receipt.request_id ||
+            (receipt.state !== "complete" &&
+              (typeof receipt.model !== "string" || !receipt.model.trim()))
+          );
+        })
       )
         throw new Error(
           "Submission outcome is uncertain; no safe automatic retry is available. Your existing outputs and brief are retained.",
@@ -171,11 +184,13 @@ export async function processPackOperation(
       });
       resumedAssetId = selected.id;
     } else {
+      assertPackQuoteConfiguration(saved.job.quote);
       if (saved.job.quote.retry_asset_id !== input.asset_id)
         throw new Error("Request and approve a fresh estimate for this failed asset first");
       funded = await runPackCommand(actor, "approve", saved.job.id, input);
     }
   } else {
+    assertPackQuoteConfiguration(saved.job.quote);
     const credits =
       saved.job.status === "running"
         ? { kind: "available" as const }
