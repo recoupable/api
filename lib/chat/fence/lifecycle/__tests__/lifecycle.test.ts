@@ -32,12 +32,55 @@ beforeEach(() => {
   vi.mocked(getRun).mockReturnValue({ cancel, status: Promise.resolve("cancelled") } as never);
 });
 afterEach(() => vi.useRealTimers());
-it("pending Stop and resume preserve ownership without SDK calls or a no-start release", async () => {
-  const pending = { ...target, phase: "pending" as const, runId: null };
-  expect((await stopFencedChatWorkflow(pending)).status).toBe(503);
-  expect((await resumeFencedChatStream(pending, url)).status).toBe(503);
+it("pending resume preserves ownership with zero SQL/SDK effects", async () => {
+  expect(
+    (await resumeFencedChatStream({ ...target, phase: "pending", runId: null }, url)).status,
+  ).toBe(503);
   expect(getRun).not.toHaveBeenCalled();
   expect(rpc).not.toHaveBeenCalled();
+});
+it("pending Stop closes atomically using only captured original authority", async () => {
+  const pending = { ...target, phase: "pending" as const, runId: null };
+  rpc.mockImplementation(async () => {
+    pending.epoch = 2;
+    pending.owner = "55555555-5555-4555-8555-555555555555";
+    return { data: { closed: true }, error: null };
+  });
+  const response = await stopFencedChatWorkflow(pending);
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ success: true, stopped: true });
+  expect(rpc).toHaveBeenCalledExactlyOnceWith("chat_fence_command", {
+    p_chat: target.chatId,
+    p_account: target.effectiveAccount,
+    p_action: "close_unattempted",
+    p: { epoch: 1, owner: target.owner },
+  });
+  expect(getRun).not.toHaveBeenCalled();
+});
+it.each([
+  { closed: false },
+  {},
+  { closed: "true" },
+  { closed: true, extra: 1 },
+  { released: true },
+  null,
+  "transport",
+  "sql",
+])("pending Stop cannot derive cleanup permission from %j", async receipt => {
+  rpc.mockImplementation(async () => {
+    if (receipt === "transport") throw new Error("lost committed close acknowledgement");
+    return receipt === "sql"
+      ? { data: null, error: { code: "42501" } }
+      : { data: receipt, error: null };
+  });
+  const response = await stopFencedChatWorkflow({ ...target, phase: "pending", runId: null });
+  expect(response.status).toBe(503);
+  expect(await response.json()).toMatchObject({
+    error: "Workflow is still starting; retry Stop shortly",
+  });
+  expect(rpc).toHaveBeenCalledTimes(1);
+  expect(rpc.mock.calls[0][1].p_action).toBe("close_unattempted");
+  expect(getRun).not.toHaveBeenCalled();
 });
 it("cancels only the original run, then releases only after terminal evidence", async () => {
   const response = await stopFencedChatWorkflow(target);

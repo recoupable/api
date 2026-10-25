@@ -43,7 +43,9 @@ beforeEach(() => {
     data:
       args.p_action === "state"
         ? { chat_id: "chat", phase: "running", epoch: 1, owner: target.owner, run_id: target.runId }
-        : { released: true },
+        : args.p_action === "close_unattempted"
+          ? { closed: false }
+          : { released: true },
     error: null,
   }));
 });
@@ -69,8 +71,15 @@ it.each(["pending", "cancel-failed", "timeout"])(
     expect(fenced.status).toBe(legacy.status);
     expect(await fenced.json()).toEqual(await legacy.json());
     expect(cas).not.toHaveBeenCalled();
-    expect(rpc.mock.calls.every(([, args]) => args.p_action === "state")).toBe(true);
-    if (mode === "pending") expect(getRun).not.toHaveBeenCalled();
+    expect(
+      rpc.mock.calls.every(
+        ([, args]) => args.p_action === (mode === "pending" ? "close_unattempted" : "state"),
+      ),
+    ).toBe(true);
+    if (mode === "pending") {
+      expect(getRun).not.toHaveBeenCalled();
+      expect(rpc).toHaveBeenCalledTimes(1);
+    }
   },
 );
 it("preserves actual resume status-read failure contract instead of fake completion", async () => {

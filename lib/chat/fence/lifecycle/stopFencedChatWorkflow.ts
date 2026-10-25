@@ -1,3 +1,4 @@
+import { executeChatFenceCommand } from "@/lib/supabase/chat_fence/executeChatFenceCommand";
 import { NextResponse } from "next/server";
 import { getRun } from "workflow/api";
 import { waitForTerminalRunStatus } from "@/lib/chat/waitForTerminalRunStatus";
@@ -9,8 +10,20 @@ import type { ChatLifecycleTarget } from "./chatLifecycleTargetSchema";
 /** Disabled internal adapter. Caller must authorize the captured original chat/account; no public producer. */
 export async function stopFencedChatWorkflow(input: ChatLifecycleTarget): Promise<NextResponse> {
   const original = await readOriginalChatLifecycle(input);
-  if (original.state === "pending")
+  if (original.state === "pending") {
+    const { chatId, effectiveAccount, epoch, owner } = original.target;
+    const result = await executeChatFenceCommand(chatId, effectiveAccount, {
+      action: "close_unattempted",
+      payload: { epoch, owner },
+    });
+    // False, malformed, failed or lost acknowledgement grants no follow-up effects.
+    if (result.ok && result.action === "close_unattempted" && result.value.closed)
+      return NextResponse.json(
+        { success: true, stopped: true },
+        { status: 200, headers: getCorsHeaders() },
+      );
     return errorResponse("Workflow is still starting; retry Stop shortly", 503);
+  }
   if (original.state !== "running")
     return errorResponse(
       "Stream state is temporarily unresolved for this chat; retry shortly",

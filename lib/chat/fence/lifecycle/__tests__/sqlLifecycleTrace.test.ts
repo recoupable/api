@@ -1,6 +1,6 @@
 import { buildChatExecutionSnapshot } from "../../buildChatExecutionSnapshot";
 import { canonicalizeChatAdmission } from "../../canonicalizeChatAdmission";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { expect, it, vi } from "vitest";
 import { getRun } from "workflow/api";
 import { stopFencedChatWorkflow } from "../stopFencedChatWorkflow";
@@ -34,7 +34,12 @@ it("records actual adapter RPC commands and synthetic SDK evidence for pinned SQ
   };
   const traces = [];
   for (const name of [
-    "pending-stop",
+    "pending-close-wins",
+    "pending-claim-wins",
+    "pending-bound",
+    "pending-stale",
+    "pending-retry",
+    "pending-lost-ack",
     "pending-resume",
     "stop-success",
     "resume-terminal",
@@ -84,8 +89,14 @@ it("records actual adapter RPC commands and synthetic SDK evidence for pinned SQ
           ? { chat_id: target.chatId, epoch: 1, owner: null, phase: "idle", run_id: null }
           : current;
     rpc.mockImplementation(async (_name, args) => {
-      const receipt = args.p_action === "state" ? state : { released: name !== "release-race" };
+      const receipt =
+        args.p_action === "close_unattempted"
+          ? { closed: name === "pending-close-wins" || name === "pending-lost-ack" }
+          : args.p_action === "state"
+            ? state
+            : { released: name !== "release-race" };
       commands.push({ args: structuredClone(args), receipt });
+      if (name === "pending-lost-ack") throw new Error("synthetic committed acknowledgement loss");
       return { data: receipt, error: null };
     });
     vi.mocked(getRun).mockImplementation(id => {
@@ -110,14 +121,15 @@ it("records actual adapter RPC commands and synthetic SDK evidence for pinned SQ
       ? await resumeFencedChatStream(input, new URL("https://api.test/stream"))
       : await stopFencedChatWorkflow(input);
     const status =
-      name === "stop-success" || name === "resume-terminal"
+      name === "pending-close-wins" || name === "stop-success" || name === "resume-terminal"
         ? 200
         : name === "cancel-failure" || name === "resume-status-failure"
           ? 502
           : 503;
     expect(response.status).toBe(status);
     if (name.startsWith("pending")) {
-      expect(commands).toEqual([]);
+      if (name === "pending-resume") expect(commands).toEqual([]);
+      else expect(commands).toHaveLength(1);
       expect(sdk).toEqual([]);
     }
     if (name === "stale-original" || name === "closed-original") expect(sdk).toEqual([]);
@@ -139,3 +151,48 @@ it("records actual adapter RPC commands and synthetic SDK evidence for pinned SQ
       ) + "\n",
     );
 });
+
+it.runIf(!!process.env.CHAT_LIFECYCLE_SQL_RESULTS)(
+  "round-trips real SQL close receipts through the actual pending Stop adapter",
+  async () => {
+    const results = JSON.parse(
+      readFileSync(process.env.CHAT_LIFECYCLE_SQL_RESULTS!, "utf8"),
+    ) as Array<{
+      name: string;
+      httpStatus: number;
+      receipts: Array<{
+        command: {
+          p_chat: string;
+          p_account: string;
+          p_action: string;
+          p: { owner: string; epoch: number };
+        };
+        receipt: unknown;
+      }>;
+    }>;
+    const pending = results.filter(
+      row => row.name.startsWith("pending-") && row.name !== "pending-resume",
+    );
+    expect(pending).toHaveLength(6);
+    for (const row of pending) {
+      const { command, receipt } = row.receipts[0];
+      rpc.mockReset();
+      vi.mocked(getRun).mockReset();
+      rpc.mockImplementation(async () => {
+        if (row.name === "pending-lost-ack")
+          throw new Error("committed SQL result lost in transit");
+        return { data: receipt, error: null };
+      });
+      const response = await stopFencedChatWorkflow({
+        chatId: command.p_chat,
+        effectiveAccount: command.p_account,
+        ...command.p,
+        phase: "pending",
+        runId: null,
+      });
+      expect(response.status).toBe(row.httpStatus);
+      expect(rpc).toHaveBeenCalledExactlyOnceWith("chat_fence_command", command);
+      expect(getRun).not.toHaveBeenCalled();
+    }
+  },
+);

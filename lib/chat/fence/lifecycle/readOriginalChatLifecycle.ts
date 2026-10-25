@@ -2,7 +2,7 @@ import { executeChatFenceCommand } from "@/lib/supabase/chat_fence/executeChatFe
 import { captureChatLifecycleTarget } from "./captureChatLifecycleTarget";
 import type { ChatLifecycleTarget, RunningChatLifecycleTarget } from "./chatLifecycleTargetSchema";
 export type OriginalChatLifecycle =
-  | { state: "pending" }
+  | { state: "pending"; target: Extract<ChatLifecycleTarget, { phase: "pending" }> }
   | { state: "unresolved" }
   | { state: "running"; target: RunningChatLifecycleTarget };
 /** Comparison only. Pending observations never confer atomic no-start permission. */
@@ -11,8 +11,8 @@ export async function readOriginalChatLifecycle(
 ): Promise<OriginalChatLifecycle> {
   try {
     const target = captureChatLifecycleTarget(input);
-    // Under SQL61d8, a claim can race any never_attempted read. Always preserve pending.
-    if (target.phase === "pending") return { state: "pending" };
+    // Do not infer dispatch history. Only Stop may submit the atomic original-token close.
+    if (target.phase === "pending") return { state: "pending", target };
     const result = await executeChatFenceCommand(target.chatId, target.effectiveAccount, {
       action: "state",
       payload: {},

@@ -11,7 +11,7 @@ import subprocess
 import sys
 import types
 import unittest
-COMMIT = "61d8b530f8b960b32402f4dd1f0d0a8f4f83d76e"
+COMMIT = "7914f063729db04960149647d9ee19c8f857c417"
 REPO = Path(sys.argv.pop(1)).resolve()
 PROPOSAL = "proposals/chat-writer-fencing-636"
 
@@ -90,7 +90,7 @@ class Golden(unittest.TestCase):
                 starts = []  # Synthetic external side effects; SQL cannot enforce provider behavior.
                 if vector["name"] == "normalization":
                     # Closed never-attempted original: null attempt is history, never permission.
-                    self.cmd("release", {**token, "reason": "confirmed_no_start"})
+                    self.cmd("close_unattempted", token)
                     denied = self.cmd("claim_dispatch", {**token, "attempt_id": attempt_a})
                     self.assertFalse(denied["claimed"]); self.assertIsNone(denied["attempt_id"])
                 elif vector["name"] == "numeric-keys":
