@@ -1,8 +1,10 @@
+import Ajv from "ajv";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { GET as readFile } from "@/app/api/sandboxes/file/route";
 import { GET as listFiles } from "@/app/api/sandboxes/route";
 import { RECOUP_ORG_ID } from "@/lib/const";
+import fixture from "@/lib/contracts/fixtures/published-docs.json";
 
 const mock = vi.hoisted(() => ({
   key: vi.fn(),
@@ -49,6 +51,19 @@ const caller = "11111111-1111-4111-8111-111111111111";
 const target = "22222222-2222-4222-8222-222222222222";
 const org = "33333333-3333-4333-8333-333333333333";
 const sha = "a".repeat(40);
+const ajv = new Ajv({ allErrors: true });
+ajv.addKeyword({ keyword: "example", valid: true });
+ajv.addFormat("uuid", /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+ajv.addFormat("date-time", value => !Number.isNaN(Date.parse(value)));
+const matchesPublishedResponse = (kind: "file" | "list", body: unknown) => {
+  const path = kind === "file" ? "/api/sandboxes/file" : "/api/sandboxes";
+  const contract = fixture.guardedGitFiles.responses.find(
+    item => item.method === "GET" && item.path === path && item.status === 200,
+  );
+  expect(contract).toBeDefined();
+  const validate = ajv.compile(contract!.schema);
+  expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
+};
 const bearer = { authorization: "Bearer synthetic-privy-token" };
 const apiKey = { "x-api-key": "recoup_sk_synthetic" };
 const repo = (account: string) => `https://github.com/example/${account}`;
@@ -93,7 +108,7 @@ beforeEach(() => {
   mock.resolve.mockImplementation(async input => input);
   mock.raw.mockResolvedValue({ content: "selected file" });
   mock.versioned.mockResolvedValue({ content: "selected revision", sha });
-  mock.tree.mockResolvedValue([{ name: "draft.txt", type: "file" }]);
+  mock.tree.mockResolvedValue([{ path: "draft.txt", type: "blob", sha }]);
 });
 
 describe.each(["file", "list"] as const)("account-scoped %s GET route", kind => {
@@ -102,7 +117,9 @@ describe.each(["file", "list"] as const)("account-scoped %s GET route", kind => 
     async headers => {
       const response = await invoke(kind, { account_id: target }, headers);
       expect(response.status).toBe(200);
-      expect(await response.json()).toMatchObject({ status: "success", account_id: target });
+      const body = await response.json();
+      expect(body).toMatchObject({ status: "success", account_id: target });
+      matchesPublishedResponse(kind, body);
       expect(mock.memberships).toHaveBeenCalledWith({ accountId: caller });
       expect(mock.shared).toHaveBeenCalledWith(target, [org]);
       expect(mock.snapshots).toHaveBeenCalledExactlyOnceWith(target);
@@ -118,7 +135,9 @@ describe.each(["file", "list"] as const)("account-scoped %s GET route", kind => 
   it("keeps the authenticated-account legacy response unchanged", async () => {
     const response = await invoke(kind);
     expect(response.status).toBe(200);
-    expect(await response.json()).not.toHaveProperty("account_id");
+    const body = await response.json();
+    expect(body).not.toHaveProperty("account_id");
+    matchesPublishedResponse(kind, body);
     expect(mock.snapshots).toHaveBeenCalledExactlyOnceWith(caller);
     expect(mock.memberships).not.toHaveBeenCalled();
   });
@@ -198,6 +217,24 @@ it("pairs selected-account content and SHA without falling back to a raw read", 
     format: undefined,
   });
   expect(mock.raw).not.toHaveBeenCalled();
+});
+
+it("executes the published scoped read/list queries with the documented acknowledgement", async () => {
+  for (const kind of ["file", "list"] as const) {
+    const query =
+      kind === "file" ? fixture.guardedGitFiles.scopedReadQuery : fixture.guardedGitFiles.listQuery;
+    expect(fixture.guardedGitFiles.accountScopeParameters[kind]).toMatchObject({
+      name: "account_id",
+      in: "query",
+      required: false,
+      schema: { type: "string", format: "uuid" },
+    });
+    const response = await invoke(kind, query);
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.account_id).toBe(query.account_id);
+    matchesPublishedResponse(kind, body);
+  }
 });
 
 it("preserves binary encoding with the selected account", async () => {
