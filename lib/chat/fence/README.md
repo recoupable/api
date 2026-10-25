@@ -1,8 +1,9 @@
 # Chat fence foundation — disabled and unwired
 
 This is the first API foundation for recoupable/chat#636 and draft Database #122
-at `61d8b530f8b960b32402f4dd1f0d0a8f4f83d76e`. No route, MCP tool, production
-workflow, enrollment flag or generated database type uses it. Current quiescent
+at `7914f063729db04960149647d9ee19c8f857c417`. Disabled internal workflow and
+lifecycle adapters use it; no route/MCP producer, enrollment flag or generated
+database type enables it. Current quiescent
 trailing DELETE and explicit Stop/editor recovery behavior are unchanged.
 
 ## Source contract
@@ -30,7 +31,10 @@ trailing DELETE and explicit Stop/editor recovery behavior are unchanged.
 - `executeChatFenceCommand` is the sole Supabase I/O boundary. It validates exact
   command and receipt shapes, scoped identity and receipt epochs. It performs one
   RPC call, no retry, no token refresh and no logging of DB payloads/errors.
-  `updated:false` and `released:false` remain explicit non-successful mutations.
+  `updated:false`, `released:false` and `closed:false` remain explicit non-successful mutations.
+  `close_unattempted {owner,epoch}` atomically closes only an unclaimed pending
+  original. Pending confirmed_no_start release requires a recorded attempt plus
+  independently authoritative external evidence; SQL does not validate that evidence.
   Write outcomes distinguish inserted/exactDuplicate/updated; they do not prove
   title/activity effects were delivered.
 - SQLSTATE `40001` means conflict, including stale/tombstoned identity; it does

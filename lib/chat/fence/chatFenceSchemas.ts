@@ -42,6 +42,7 @@ const update = z
   .strict()
   .refine(p => p.id === p.parts.id);
 export const chatFenceCommandSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("close_unattempted"), payload: z.object(token).strict() }).strict(),
   z.object({ action: z.literal("state"), payload: z.object({}).strict() }).strict(),
   z
     .object({
@@ -158,6 +159,7 @@ export const chatFenceReceiptSchemas = {
       execution_canonical: z.string().min(1),
     })
     .strict(),
+  close_unattempted: z.object({ closed: z.boolean() }).strict(),
   bind: z.object({ bound: z.literal(true) }).strict(),
   write: z
     .object({
