@@ -21,6 +21,11 @@ vi.mock("@/lib/supabase/account_emails/selectAccountEmails", () => ({
   default: (...args: unknown[]) => mockSelectAccountEmails(...args),
 }));
 
+const mockSelectAccounts = vi.fn();
+vi.mock("@/lib/supabase/accounts/selectAccounts", () => ({
+  selectAccounts: (...args: unknown[]) => mockSelectAccounts(...args),
+}));
+
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({}),
 }));
@@ -34,6 +39,7 @@ beforeEach(() => {
   mockValidateAuthContext.mockResolvedValue(mockAuth);
   mockCheckIsAdmin.mockResolvedValue(true);
   mockSelectAccountEmails.mockResolvedValue([]);
+  mockSelectAccounts.mockResolvedValue([]);
 });
 
 describe("getAdminSandboxesHandler", () => {
@@ -80,6 +86,10 @@ describe("getAdminSandboxesHandler", () => {
       { account_id: "acc-1", email: "alice@example.com", id: "1", updated_at: "" },
       { account_id: "acc-2", email: "bob@example.com", id: "2", updated_at: "" },
     ]);
+    mockSelectAccounts.mockResolvedValue([
+      { id: "acc-2", name: "Bob", timestamp: null },
+      { id: "acc-1", name: "Alice", timestamp: null },
+    ]);
 
     const request = new NextRequest("http://localhost/api/admins/sandboxes");
     const response = await getAdminSandboxesHandler(request);
@@ -91,12 +101,14 @@ describe("getAdminSandboxesHandler", () => {
     expect(body.accounts[0]).toEqual({
       account_id: "acc-1",
       account_email: "alice@example.com",
+      account_name: "Alice",
       total_sandboxes: 5,
       last_created_at: "2026-03-10T12:00:00Z",
     });
     expect(body.accounts[1]).toEqual({
       account_id: "acc-2",
       account_email: "bob@example.com",
+      account_name: "Bob",
       total_sandboxes: 2,
       last_created_at: "2026-03-09T08:00:00Z",
     });
