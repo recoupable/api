@@ -18,6 +18,7 @@
     "eval": "braintrust eval --external-packages playwright playwright-core chromium-bidi @browserbasehq/stagehand @composio/core @composio/vercel",
     "test:mcp-oauth": "vitest run --config vitest.oauth.config.ts",
     "typecheck:mcp-oauth": "pnpm build:extension && tsc --noEmit --project tsconfig.oauth.json",
+    "typecheck:release-format": "tsc --noEmit --project tsconfig.release-format.json",
     "typecheck:response-contracts": "tsc --noEmit --project tsconfig.response-contracts.json",
     "build:extension": "node scripts/mcp-extension/build.mjs",
     "test:extension": "pnpm build:extension && vitest run lib/mcp/extension ui/recoup app/mcp/__tests__",

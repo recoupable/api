@@ -63,6 +63,8 @@ A separate `mcp:tools` approval enables the business catalog through `registerFu
 
 Every tool execution revalidates the token, active grant, account, audience and approved scope. Clients cannot supply an owner account. Revocation blocks subsequent operations; it cannot undo a write already in progress or completed.
 
+October 25, 2026 local outbound-denial acceptance composes the full OAuth wrapper, real `prepareFullOAuthTool`, shared recipient policy and actual `send_email` callback. Synthetic payment/account lookups and a mocked send boundary verify that disallowed `to`/`cc`, lost recipient eligibility, lookup failure, revoked authority and owner overrides prevent sending; an allowed own-address control reaches the callback with custom routing headers removed. Bypassing the recipient guard makes the denial tests fail. This proves local call ordering, not live delivery, credit charging, action approval or retry/idempotency safety. Those broader #212/#214 criteria remain open.
+
 - `/.well-known/oauth-protected-resource/mcp` and the origin-level alias publish the exact `/mcp` resource and supported scopes.
 - `/.well-known/oauth-authorization-server/api/oauth` serves the provider's discovery document, with canonical `/api/oauth` issuer.
 - `/mcp` returns a canonical resource-metadata challenge and supports bearer-only browser CORS.

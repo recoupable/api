@@ -65,6 +65,9 @@ beforeEach(() => {
     vi.stubEnv(route.env, route.secret);
     route.bot.webhooks.slack.mockResolvedValue(new Response("adapter result"));
   }
+  vi.stubEnv("SLACK_CONTENT_BOT_TOKEN", "synthetic-token");
+  vi.stubEnv("CODING_AGENT_CALLBACK_SECRET", "synthetic-secret");
+  vi.stubEnv("REDIS_URL", "redis://synthetic.invalid");
 });
 afterEach(() => {
   vi.restoreAllMocks();
@@ -122,11 +125,12 @@ for (const route of routes) {
       vi.stubEnv(route.env, "");
       expect((await route.post(request(route.secret))).status).toBe(401);
     });
-    it("leaves ordinary event verification and body consumption to the adapter", async () => {
+    it("preserves signed ordinary events and their body for the adapter", async () => {
       const body = '{"type":"event_callback"}';
-      const req = request(undefined, String(now), body);
+      const req = request(route.secret, String(now), body);
       expect((await route.post(req)).status).toBe(200);
-      expect(route.bot.initialize).toHaveBeenCalledOnce();
+      if (route.name === "chat") expect(route.bot.initialize).toHaveBeenCalledOnce();
+      else expect(route.bot.initialize).not.toHaveBeenCalled();
       expect(route.bot.webhooks.slack).toHaveBeenCalledWith(req, expect.any(Object));
       expect(await req.text()).toBe(body);
     });
@@ -137,14 +141,22 @@ describe("unknown platform", () => {
   it.each(["unknown", "toString", "constructor"])(
     "rejects %s before initialize",
     async platform => {
-      const { POST } = createPlatformRoutes({ getBot: () => bots.coding });
+      const { POST } = createPlatformRoutes({
+        getBot: () => bots.coding,
+        getPlatforms: () => ["slack"],
+        getSigningSecret: () => "coding-secret",
+      });
       expect((await POST(request(), { params: Promise.resolve({ platform }) })).status).toBe(404);
       expect(bots.coding.initialize).not.toHaveBeenCalled();
     },
   );
   it("does not initialize when the handler is absent even if initialize would throw", async () => {
     bots.coding.initialize.mockRejectedValueOnce(new Error("Redis unavailable"));
-    const { POST } = createPlatformRoutes({ getBot: () => bots.coding });
+    const { POST } = createPlatformRoutes({
+      getBot: () => bots.coding,
+      getPlatforms: () => ["slack"],
+      getSigningSecret: () => "coding-secret",
+    });
     expect(
       (await POST(request(), { params: Promise.resolve({ platform: "unknown" }) })).status,
     ).toBe(404);
@@ -154,10 +166,10 @@ describe("unknown platform", () => {
 });
 
 describe("coding-agent GET platform probes", () => {
-  it("delegates a supported platform without initialization", async () => {
+  it("rejects an unsigned supported platform probe without initialization", async () => {
     const req = new NextRequest("https://example.com/api/coding-agent/slack");
-    expect((await codingGet(req, params)).status).toBe(200);
-    expect(bots.coding.webhooks.slack).toHaveBeenCalledWith(req, expect.any(Object));
+    expect((await codingGet(req, params)).status).toBe(401);
+    expect(bots.coding.webhooks.slack).not.toHaveBeenCalled();
     expect(bots.coding.initialize).not.toHaveBeenCalled();
   });
   it.each(["unknown", "toString", "constructor"])(
