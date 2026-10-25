@@ -228,10 +228,23 @@ export async function processContextOperation(
     args.action === "review_release_case"
   )
     return processReleaseCaseOperation(accountId, ownerId, args, deps.rpc);
-  if (args.action === "read_brief")
-    return {
-      snapshot: await deps.rpc("read_context_brief", { p_owner: ownerId, p_brief: args.brief_id }),
-    };
+  // Evidence reads and persistence can outlive the membership check at entry.
+  const recheckOwner = async () => {
+    const current = await (deps.authorize ?? authorizeContextOwner)(
+      accountId,
+      args.organization_id,
+    );
+    if (current.ownerId.toLowerCase() !== ownerId.toLowerCase())
+      throw new Error("Context owner changed");
+  };
+  if (args.action === "read_brief") {
+    const snapshot = await deps.rpc("read_context_brief", {
+      p_owner: ownerId,
+      p_brief: args.brief_id,
+    });
+    await recheckOwner();
+    return { snapshot };
+  }
   if (args.action === "plan") {
     const { planStoredContextModules } = await import("./planning/planStoredContextModules");
     return planStoredContextModules(accountId, ownerId, args.request_id);
@@ -539,13 +552,16 @@ export async function processContextOperation(
     purpose: args.purpose,
     maxCharacters: args.max_characters,
   });
-  if (args.action === "save_brief")
-    return {
-      snapshot: await deps.rpc("save_context_brief", {
-        p_owner: ownerId,
-        p_key: args.idempotency_key,
-        p_snapshot: brief,
-      }),
-    };
+  await recheckOwner();
+  if (args.action === "save_brief") {
+    const snapshot = await deps.rpc("save_context_brief", {
+      p_owner: ownerId,
+      p_key: args.idempotency_key,
+      p_snapshot: brief,
+    });
+    // A completed write cannot be undone here; withhold its content after revocation.
+    await recheckOwner();
+    return { snapshot };
+  }
   return brief;
 }
