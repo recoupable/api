@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { baseSessionRow } from "@/lib/sessions/__tests__/baseSessionRow";
+import { DEFAULT_MODEL } from "@/lib/const";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: () => ({ "Access-Control-Allow-Origin": "*" }),
@@ -52,7 +53,7 @@ describe("getSessionChatsHandler", () => {
         id: "chat_1",
         sessionId: "sess_1",
         title: "First",
-        modelId: null,
+        modelId: DEFAULT_MODEL,
         activeStreamId: null,
         lastAssistantMessageAt: null,
         createdAt: "2026-05-01T00:00:00.000Z",
@@ -70,7 +71,7 @@ describe("getSessionChatsHandler", () => {
       defaultModelId: string;
     };
     expect(body.chats).toEqual(summaries);
-    expect(body.defaultModelId).toBe("moonshotai/kimi-k3");
+    expect(body.defaultModelId).toBe(DEFAULT_MODEL);
     expect(getChatSummaries).toHaveBeenCalledWith({
       sessionId: "sess_1",
       accountId,

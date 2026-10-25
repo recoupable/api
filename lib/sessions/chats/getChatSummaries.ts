@@ -1,11 +1,12 @@
 import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { selectChatReads } from "@/lib/supabase/chat_reads/selectChatReads";
+import { DEFAULT_MODEL } from "@/lib/const";
 
 export interface ChatSummary {
   id: string;
   sessionId: string;
   title: string;
-  modelId: string | null;
+  modelId: string;
   activeStreamId: string | null;
   lastAssistantMessageAt: string | null;
   createdAt: string;
@@ -18,6 +19,7 @@ export interface ChatSummary {
  * Returns chats in the given session as camelCase `ChatSummary` rows.
  * `hasUnread` is derived from the caller's `chat_reads` row (if any);
  * `isStreaming` is derived from `active_stream_id`.
+ * Chats without a saved model use the current `DEFAULT_MODEL`.
  *
  * @param params - The session id to list and the account id to scope reads to.
  * @returns Chat summaries sorted by `createdAt`, or null on chat read failure.
@@ -59,7 +61,7 @@ export async function getChatSummaries({
         id: row.id,
         sessionId: row.session_id,
         title: row.title,
-        modelId: row.model_id,
+        modelId: row.model_id ?? DEFAULT_MODEL,
         activeStreamId: row.active_stream_id,
         lastAssistantMessageAt,
         createdAt: row.created_at,
