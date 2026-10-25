@@ -218,6 +218,8 @@ composition, writer/publisher, contract and approved-master linkage are not buil
 `distribute`, `register_rights` and `collect_royalties` are explicitly `unsupported`.
 Provider/model calls are zero; infrastructure cost is `unmeasured`, not free.
 
+- `release_format` (`20261010213900_context_release_format_observation.sql`) is projected in the database from the saved Spotify album observation and passed through by the API without reinterpretation: `format_state` is `single`, `album` or `compilation` only when Spotify reports exactly that type, otherwise `unknown`; `disc_count` and `multi_disc` come from the observed disc numbers of the whole track array, and `track_coverage` (`full`, `partial` or `uncollected`) says whether every reported slot was collected: with a partial list (page limit or a failed later page) `disc_count` stays `null` and `multi_disc` is `true` only when disc 2 or higher was already seen, otherwise `null`; `upc` is present only when the provider reported one (`upc_state` is `observed`, `not_observed` or `uncollected`); `reissue` and `physical_format` are the literal `unknown` because Spotify metadata cannot establish them; `state` is `uncollected` before any observation is saved. Replacing the read function changes every case fingerprint even though no evidence changed, so every earlier saved review reads `stale: true` after release and operators must re-review those cases.
+
 The companion Chat `/releases` page in [App PR2172](https://github.com/recoupable/app/pull/2172)
 is implemented on its feature branch, not yet merged or production-verified. It uses these operations through its authenticated Context
 proxy. Switching workspaces hides previous results immediately; late responses are
@@ -338,3 +340,10 @@ Deployment depends on the corresponding catalog-case database migration and scop
 Unit/transport tests prove the source contract, not that migrations are deployed, provider
 registrations accepted, or financial results verified. Database lifecycle/RLS tests belong
 to the owning migration. Capability claims must preserve these separate evidence states.
+
+Release-format rollout: `release_format` is optional on live projections as well as
+immutable historical snapshots. The API passes through both old and new database
+responses without inventing evidence. Database PR #109 requires separate migration
+approval; releasing these types does not activate its projection. Applying that
+migration changes every case fingerprint and makes prior reviews stale, even when
+the underlying evidence has not changed.

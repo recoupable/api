@@ -1,6 +1,6 @@
 {
   "evidence": "Provider-free request syntax and static contract claims only. URLs are placeholders; no provider, payment or customer workflow is exercised.",
-  "sourceHash": "7986a997d2da4eeec358764b727d31f8b841f49db350e1357ef02289504e0bb9",
+  "sourceHash": "2d28305aa357b3771a12bc1fbc26df78e2b9bbacd459642e31b1b1e13a314875",
   "requestSchemas": [
     {
       "type": "object",
@@ -2784,6 +2784,158 @@
             }
           ]
         },
+        "release_format": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "const": "spotify_album_observation"
+            },
+            "state": {
+              "type": "string",
+              "enum": [
+                "observed",
+                "uncollected"
+              ]
+            },
+            "observed_type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "format_state": {
+              "type": "string",
+              "enum": [
+                "single",
+                "album",
+                "compilation",
+                "unknown"
+              ]
+            },
+            "reported_total_tracks": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "release_date": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "release_date_precision": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "label": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "upc": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "upc_state": {
+              "type": "string",
+              "enum": [
+                "observed",
+                "not_observed",
+                "uncollected"
+              ]
+            },
+            "track_coverage": {
+              "type": "string",
+              "enum": [
+                "full",
+                "partial",
+                "uncollected"
+              ]
+            },
+            "disc_count": {
+              "anyOf": [
+                {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "multi_disc": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "reissue": {
+              "type": "string",
+              "const": "unknown"
+            },
+            "physical_format": {
+              "type": "string",
+              "const": "unknown"
+            }
+          },
+          "required": [
+            "source",
+            "state",
+            "observed_type",
+            "format_state",
+            "reported_total_tracks",
+            "release_date",
+            "release_date_precision",
+            "label",
+            "upc",
+            "upc_state",
+            "track_coverage",
+            "disc_count",
+            "multi_disc",
+            "reissue",
+            "physical_format"
+          ],
+          "additionalProperties": false,
+          "description": "Optional saved Spotify format observation. Absent before separately approved database rollout and in older saved snapshots. Reissue and physical format remain unknown; this field grants no distribution or rights authority."
+        },
         "readiness": {
           "type": "string",
           "enum": [
@@ -3346,6 +3498,157 @@
                       "type": "null"
                     }
                   ]
+                },
+                "release_format": {
+                  "type": "object",
+                  "properties": {
+                    "source": {
+                      "type": "string",
+                      "const": "spotify_album_observation"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "observed",
+                        "uncollected"
+                      ]
+                    },
+                    "observed_type": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "format_state": {
+                      "type": "string",
+                      "enum": [
+                        "single",
+                        "album",
+                        "compilation",
+                        "unknown"
+                      ]
+                    },
+                    "reported_total_tracks": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "release_date": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "release_date_precision": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "label": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "upc": {
+                      "anyOf": [
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "upc_state": {
+                      "type": "string",
+                      "enum": [
+                        "observed",
+                        "not_observed",
+                        "uncollected"
+                      ]
+                    },
+                    "track_coverage": {
+                      "type": "string",
+                      "enum": [
+                        "full",
+                        "partial",
+                        "uncollected"
+                      ]
+                    },
+                    "disc_count": {
+                      "anyOf": [
+                        {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "multi_disc": {
+                      "anyOf": [
+                        {
+                          "type": "boolean"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "reissue": {
+                      "type": "string",
+                      "const": "unknown"
+                    },
+                    "physical_format": {
+                      "type": "string",
+                      "const": "unknown"
+                    }
+                  },
+                  "required": [
+                    "source",
+                    "state",
+                    "observed_type",
+                    "format_state",
+                    "reported_total_tracks",
+                    "release_date",
+                    "release_date_precision",
+                    "label",
+                    "upc",
+                    "upc_state",
+                    "track_coverage",
+                    "disc_count",
+                    "multi_disc",
+                    "reissue",
+                    "physical_format"
+                  ],
+                  "additionalProperties": false
                 },
                 "readiness": {
                   "type": "string",
