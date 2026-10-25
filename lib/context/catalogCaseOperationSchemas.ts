@@ -1,3 +1,4 @@
+import { sameCatalogUuid } from "./sameCatalogUuid";
 import { z } from "zod";
 import { contextIngestSchema } from "./schema";
 import { catalogCaseSnapshotSchema } from "./catalogCaseSnapshotSchema";
@@ -14,7 +15,7 @@ export const catalogCaseOperationSchemas = [
     })
     .superRefine((input, ctx) => {
       if (
-        input.snapshot.case_id !== input.case_id ||
+        !sameCatalogUuid(input.snapshot.case_id, input.case_id) ||
         input.snapshot.revision !== input.expected_revision
       )
         ctx.addIssue({

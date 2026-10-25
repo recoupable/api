@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { validateCatalogCaseDependencies } from "./validateCatalogCaseDependencies";
 import { isCatalogJson } from "./isCatalogJson";
 
 // Unconstrained JSON Schema accurately describes generic JSON extension slots.
@@ -169,8 +170,10 @@ export const catalogCaseSnapshotSchema = z
     outcomes: bounded(outcome),
   })
   .superRefine((snapshot, ctx) => {
-    if (Buffer.byteLength(JSON.stringify(snapshot), "utf8") > 1048576)
+    if (Buffer.byteLength(JSON.stringify(snapshot), "utf8") > 1048576) {
       ctx.addIssue({ code: "custom", message: "Snapshot exceeds 1 MiB" });
+      return;
+    }
     const records = new Map<string, { depends_on?: string[]; stale?: boolean }>();
     for (const collection of collections) {
       for (const [key, record] of Object.entries(snapshot[collection])) {
@@ -210,21 +213,7 @@ export const catalogCaseSnapshotSchema = z
           });
       }
     }
-    for (const [recordId, record] of records) {
-      const pending = [...(record.depends_on ?? [])];
-      const seen = new Set<string>();
-      while (pending.length) {
-        const dependency = pending.pop()!;
-        if (dependency === recordId || !records.has(dependency)) {
-          ctx.addIssue({ code: "custom", message: "Missing or cyclic record dependency" });
-          break;
-        }
-        if (!seen.has(dependency)) {
-          seen.add(dependency);
-          pending.push(...(records.get(dependency)?.depends_on ?? []));
-        }
-      }
-    }
+    validateCatalogCaseDependencies(records, ctx);
   });
 
 const withheldSource = z.strictObject({

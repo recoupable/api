@@ -58,6 +58,35 @@ describe("catalog case artifact operations", () => {
     });
     expect(deps.dispatch).not.toHaveBeenCalled();
   });
+  it("accepts equivalent uppercase request, workspace and receipt UUIDs", async () => {
+    const mixedCaseId = "abcdefab-abcd-4abc-8abc-abcdefabcdef";
+    const mixedOwner = "bcdefabc-bcde-4bcd-8bcd-bcdefabcdefa";
+    const result = {
+      ...receipt,
+      case_id: mixedCaseId,
+      snapshot: { ...receipt.snapshot, case_id: mixedCaseId, workspace_id: mixedOwner },
+    };
+    const deps = dependencies(result);
+    deps.authorize.mockResolvedValue({
+      accountId: actor,
+      ownerId: mixedOwner,
+      organizationId: mixedOwner,
+    });
+    const request = {
+      ...save,
+      case_id: mixedCaseId.toUpperCase(),
+      organization_id: mixedOwner.toUpperCase(),
+      snapshot: { ...snapshot, case_id: mixedCaseId, workspace_id: mixedOwner.toUpperCase() },
+    };
+    expect(await processContextOperation(actor, request, deps)).toEqual(result);
+    expect(
+      await processContextOperation(
+        actor,
+        { action: "read_catalog_case", case_id: mixedCaseId.toUpperCase() },
+        deps,
+      ),
+    ).toEqual(result);
+  });
   it("reads a requested immutable revision", async () => {
     const deps = dependencies();
     await processContextOperation(

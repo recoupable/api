@@ -1,3 +1,4 @@
+import { sameCatalogUuid } from "./sameCatalogUuid";
 import type { CatalogCaseOperation } from "./catalogCaseOperationSchemas";
 import { validateCatalogCaseResult } from "./validateCatalogCaseResult";
 
@@ -9,7 +10,7 @@ export async function processCatalogCaseOperation(
   rpc: (name: string, params: Record<string, unknown>) => Promise<unknown>,
 ) {
   const scope = { p_actor: accountId, p_owner: ownerId };
-  if (args.action === "save_catalog_case" && args.snapshot.workspace_id !== ownerId)
+  if (args.action === "save_catalog_case" && !sameCatalogUuid(args.snapshot.workspace_id, ownerId))
     throw new Error("Catalog case workspace differs from authorized scope");
   const operation =
     args.action === "save_catalog_case"

@@ -1,3 +1,4 @@
+import { sameCatalogUuid } from "./sameCatalogUuid";
 import type { CatalogCaseOperation } from "./catalogCaseOperationSchemas";
 import { catalogCasePageSchema, catalogCaseReceiptSchema } from "./catalogCaseResponseSchemas";
 
@@ -20,9 +21,9 @@ export function validateCatalogCaseResult(
   }
   const receipt = catalogCaseReceiptSchema.parse(raw);
   if (
-    receipt.case_id !== args.case_id ||
-    receipt.snapshot.case_id !== args.case_id ||
-    receipt.snapshot.workspace_id !== ownerId ||
+    !sameCatalogUuid(receipt.case_id, args.case_id) ||
+    !sameCatalogUuid(receipt.snapshot.case_id, args.case_id) ||
+    !sameCatalogUuid(receipt.snapshot.workspace_id, ownerId) ||
     receipt.snapshot.revision !== receipt.revision
   )
     throw new Error("Catalog case receipt scope mismatch");
