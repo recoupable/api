@@ -39,6 +39,12 @@ Access tokens last five minutes and refresh tokens rotate. New approvals have no
 
 Chat and API should use same-site HTTPS domains. Arbitrary Vercel preview URLs may be cross-site and lose interaction cookies under browser third-party-cookie restrictions; use coordinated same-site preview domains for live browser validation. Do not weaken cookie protections as a workaround.
 
+## Consent storage diagnostics
+
+As of October 25, 2026, the consent handler emits the fixed `oauth_consent_storage_unavailable` event through the existing server error-log convention when an adapter storage boundary throws `OAuthStorageUnavailableError`. The payload contains only the event name; it includes no exception, cause, stack, request fields, account/client identifiers or credentials. Approval still attempts grant cleanup before reporting a storage failure. The public response remains HTTP 400 with `invalid_or_expired_interaction`.
+
+Expired or invalid interactions, invalid identity, ticket replay and explicit denial do not emit this storage event. An arbitrary exception with the same message is not classified as storage failure. This narrow signal does not diagnose identity-provider failures or arbitrary provider exceptions, establish request correlation, or complete the broader event, access-control and retention requirements in [Mono #214](https://github.com/recoupable/mono/issues/214). Local mocked-handler tests exercise the real encrypted adapter and approval helper; deployed log delivery remains unverified.
+
 ## Evidence and remaining work
 
 The real HTTP test uses Next's actual Pages resolver, the runtime provider and consent handler, path-aware cookies, synthetic authenticated identities, and (under the PostgreSQL runner) the encrypted durable adapter. It verifies invalid origin/cookie/account/scope/replay rejection, approval, denial, exact read/write scopes, refresh rotation, attribution, persistent new approvals and legacy finite deadlines. This does not verify a real Privy account, deployed proxy behavior, a named agent application, production deployment behavior or organization roles. The same test now exchanges a real provider token into the actual delegated MCP tool registration via the SDK, performs a synthetic artist write, rejects an account override, and rejects original and refreshed access tokens after grant revocation.
