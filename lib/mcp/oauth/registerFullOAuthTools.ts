@@ -41,6 +41,8 @@ export function registerFullOAuthTools(
     if (
       [
         "get_api_key",
+        // Registration preflight awaits the application/OAuth contract review.
+        "validate_application_registration",
         "list_professional_roster",
         "confirm_professional_roster",
         "get_catalog_playcount_history",

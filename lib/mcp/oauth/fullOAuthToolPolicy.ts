@@ -5,10 +5,6 @@ interface ToolPolicy {
 }
 /** Explicit inventory: a newly registered tool cannot silently become delegated authority. */
 export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
-  validate_application_registration: {
-    readOnly: true,
-    notice: "Preflight only; does not register, verify origins, issue credentials or grant access.",
-  },
   prepare_release_pack: { readOnly: false, destructive: false },
   get_release_pack: { readOnly: true },
   estimate_release_pack: { readOnly: false, destructive: false },

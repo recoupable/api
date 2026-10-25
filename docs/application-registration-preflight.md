@@ -7,9 +7,9 @@ No database migration is needed for this slice.
 
 `POST /api/applications/registration/validate` and MCP
 `validate_application_registration` call `validateApplicationRegistration`.
-HTTP uses existing API-key or account Bearer authentication. MCP derives the
-account from validated auth metadata; delegated MCP also keeps its existing
-full-consent and resource-boundary checks. There is no account-ID override.
+HTTP uses existing API-key or account Bearer authentication. Standard MCP derives
+the account from validated auth metadata. Delegated OAuth MCP deliberately excludes
+this new tool pending the application/OAuth contract review. There is no account-ID override.
 
 Example input:
 
@@ -58,9 +58,10 @@ No DNS lookup, URL fetch, provider callback edit, or ownership verification occu
   under this preflight task.
 - Quotas, origin verification, provider capabilities, and commercial policies
   must not be inferred from a successful validation response.
-- The shared-file delta adds standard MCP registration and one read-only delegated
-  catalog entry. No OAuth issuer/client, identity, consent, or provider operation
-  changes. OAuth owner review should confirm that catalog addition before merge.
+- The shared-file delta adds standard MCP registration and explicitly excludes the
+  new tool from delegated OAuth discovery. No OAuth issuer/client, identity, consent,
+  provider operation or delegated permission changes. OAuth owner review must
+  approve a separate policy/preparation contract before delegated exposure.
 - This source contract is for review. Marketing-owned public documentation and
   generated indexes must accompany the accepted API contract before release;
   do not claim a deployed endpoint from this proposal.

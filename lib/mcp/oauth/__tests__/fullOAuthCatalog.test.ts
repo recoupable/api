@@ -53,7 +53,7 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
-    expect(tools).toHaveLength(92);
+    expect(tools).toHaveLength(91);
     for (const [action, operation] of Object.entries(contextToolOperations)) {
       if (standardOnlyContextActions.includes(action)) {
         expect(tools.map(tool => tool.name)).not.toContain(operation.name);
@@ -67,6 +67,7 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
     const artist = tools.find(tool => tool.name === "create_new_artist")!;
     expect(artist.inputSchema.properties).not.toHaveProperty("active_conversation_id");
     expect(JSON.stringify(artist)).not.toMatch(/system prompt|copy.*conversation/i);
+    expect(tools.map(tool => tool.name)).not.toContain("validate_application_registration");
     expect(tools.map(tool => tool.name)).not.toContain("list_professional_roster");
     expect(tools.map(tool => tool.name)).not.toContain("confirm_professional_roster");
     expect(
