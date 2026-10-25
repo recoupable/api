@@ -1,3 +1,4 @@
+import { registerDevelopmentEntitlementTool } from "./registerDevelopmentEntitlementTool";
 import { registerCatalogCaseTools } from "./registerCatalogCaseTools";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { contextOperationSchema } from "@/lib/context/processContextOperation";
@@ -16,4 +17,5 @@ export function registerContextTool(server: McpServer) {
   );
   registerContextEvidenceTools(server);
   registerCatalogCaseTools(server);
+  registerDevelopmentEntitlementTool(server);
 }
