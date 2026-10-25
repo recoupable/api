@@ -1,0 +1,27 @@
+import { createHook, getWorkflowMetadata, FatalError } from "workflow";
+import { fixtureStep } from "./fixtureStep";
+import type { ChatFenceAuthority } from "@/lib/chat/fence/chatFenceSchemas";
+
+/** Compiled offline fixture only; this file is never discovered by the app build. */
+export async function fenceFixture(input: {
+  authority: ChatFenceAuthority;
+  hookToken: string;
+  failWrite?: boolean;
+}) {
+  "use workflow";
+  const { workflowRunId } = getWorkflowMetadata();
+  const binding = await fixtureStep("bind", input, workflowRunId);
+  // Outside winner cleanup: a losing duplicate must exit without touching its key.
+  if (!binding.ok) return { outcome: "lost", runId: workflowRunId };
+  try {
+    const gate = createHook<string>({ token: input.hookToken });
+    await gate;
+    const write = await fixtureStep("user", input, workflowRunId);
+    if (!write.ok) throw new FatalError("Required user write failed");
+    await fixtureStep("provider", input, workflowRunId);
+    await fixtureStep("release", input, workflowRunId);
+    return { outcome: "complete", runId: workflowRunId };
+  } finally {
+    await fixtureStep("key-cleanup", input, workflowRunId);
+  }
+}

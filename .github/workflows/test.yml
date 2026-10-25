@@ -30,6 +30,9 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Check disabled chat fence foundation and compiled offline workflow
+        run: pnpm test:chat-fence-foundation
+
       - name: Check response contract types
         run: pnpm typecheck:response-contracts
 
