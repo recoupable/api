@@ -1,3 +1,9 @@
+import type {
+  VerificationEvidence,
+  VerifiedCredential,
+  AccountAccessObservation,
+  OrganizationAccessObservation,
+} from "./VerificationEvidence";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
@@ -17,6 +23,8 @@ export interface AuthContextInput {
   organizationId?: string | null;
   /** Defaults to true; false keeps Privy authentication from onboarding an account. */
   allowAccountCreation?: boolean;
+  /** Server-only opt-in, never a body field; forces existing-account-only authentication. */
+  includeVerificationEvidence?: boolean;
 }
 
 /**
@@ -30,6 +38,7 @@ export interface AuthContext {
   orgId: string | null;
   /** The auth token for forwarding to downstream services */
   authToken: string;
+  verificationEvidence?: VerificationEvidence;
 }
 
 /**
@@ -59,12 +68,24 @@ export async function validateAuthContext(
     return errorResponse("Exactly one of x-api-key or Authorization must be provided", 401);
   }
 
+  const collected: {
+    credential?: VerifiedCredential;
+    accountAccess?: AccountAccessObservation;
+    organizationAccess?: OrganizationAccessObservation;
+  } = {};
+  const onVerified = input.includeVerificationEvidence
+    ? (credential: VerifiedCredential) => {
+        collected.credential = credential;
+      }
+    : undefined;
   let accountId: string;
   let authToken: string;
 
   if (hasApiKey) {
     // Validate API key authentication
-    const accountIdOrError = await getApiKeyAccountId(request);
+    const accountIdOrError = onVerified
+      ? await getApiKeyAccountId(request, onVerified)
+      : await getApiKeyAccountId(request);
     if (accountIdOrError instanceof NextResponse) {
       return accountIdOrError;
     }
@@ -72,8 +93,9 @@ export async function validateAuthContext(
     authToken = apiKey!;
   } else {
     // Validate bearer token authentication
-    const accountIdOrError =
-      input.allowAccountCreation === false
+    const accountIdOrError = onVerified
+      ? await getAuthenticatedAccountId(request, { allowAccountCreation: false, onVerified })
+      : input.allowAccountCreation === false
         ? await getAuthenticatedAccountId(request, { allowAccountCreation: false })
         : await getAuthenticatedAccountId(request);
     if (accountIdOrError instanceof NextResponse) {
@@ -83,11 +105,22 @@ export async function validateAuthContext(
     authToken = authHeader!.replace(/^Bearer\s+/i, "");
   }
 
+  const actorAccountId = accountId;
+  collected.accountAccess = { basis: "self" };
+
   // Handle account_id override from request body
   if (input.accountId) {
+    if (onVerified) collected.accountAccess = undefined;
     const overrideResult = await validateAccountIdOverride({
       currentAccountId: accountId,
       targetAccountId: input.accountId,
+      ...(onVerified
+        ? {
+            onAllowed: (observation: AccountAccessObservation) => {
+              collected.accountAccess = observation;
+            },
+          }
+        : {}),
     });
 
     if (overrideResult instanceof NextResponse) {
@@ -102,6 +135,13 @@ export async function validateAuthContext(
     const hasOrgAccess = await validateOrganizationAccess({
       accountId,
       organizationId: input.organizationId,
+      ...(onVerified
+        ? {
+            onAllowed: (observation: OrganizationAccessObservation) => {
+              collected.organizationAccess = observation;
+            },
+          }
+        : {}),
     });
 
     if (!hasOrgAccess) {
@@ -109,9 +149,31 @@ export async function validateAuthContext(
     }
   }
 
+  if (
+    onVerified &&
+    (!collected.credential ||
+      !collected.accountAccess ||
+      (input.organizationId && !collected.organizationAccess))
+  ) {
+    return errorResponse("Verified authorization evidence unavailable", 401);
+  }
   return {
     accountId,
     orgId: input.organizationId ?? null,
     authToken,
+    ...(onVerified
+      ? {
+          verificationEvidence: {
+            principal: { ...collected.credential!, actorAccountId },
+            effectiveAccountId: accountId,
+            accountAccess: collected.accountAccess!,
+            organizationAccess: collected.organizationAccess ?? null,
+            executionResources: {
+              status: "unresolved" as const,
+              reason: "resource_authorization_contract_missing" as const,
+            },
+          },
+        }
+      : {}),
   };
 }

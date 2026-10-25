@@ -1,3 +1,4 @@
+import type { CredentialObserver } from "./VerificationEvidence";
 import { NextRequest, NextResponse } from "next/server";
 import { getBearerToken } from "@/lib/auth/getBearerToken";
 import { getAccountIdByApiKey } from "@/lib/auth/getAccountIdByApiKey";
@@ -21,7 +22,7 @@ import { messageErrorResponse } from "@/lib/networking/messageErrorResponse";
  */
 export async function getAuthenticatedAccountId(
   request: NextRequest,
-  options: { allowAccountCreation?: boolean } = {},
+  options: { allowAccountCreation?: boolean; onVerified?: CredentialObserver } = {},
 ): Promise<string | NextResponse> {
   const authHeader = request.headers.get("authorization");
   const authToken = getBearerToken(authHeader);
@@ -33,7 +34,9 @@ export async function getAuthenticatedAccountId(
   // A Recoup API key sent as a Bearer token: validate it as an API key instead
   // of attempting (and failing) Privy JWT verification.
   if (authToken.startsWith("recoup_sk_")) {
-    const accountId = await getAccountIdByApiKey(authToken);
+    const accountId = options.onVerified
+      ? await getAccountIdByApiKey(authToken, options.onVerified)
+      : await getAccountIdByApiKey(authToken);
     if (!accountId) {
       return messageErrorResponse("Unauthorized", 401);
     }
@@ -42,18 +45,20 @@ export async function getAuthenticatedAccountId(
 
   try {
     let accountId: string | null;
-    if (options.allowAccountCreation === false) {
+    if (options.allowAccountCreation === false || options.onVerified) {
       const { getExistingAccountIdByAuthToken } = await import(
         "@/lib/privy/getExistingAccountIdByAuthToken"
       );
-      accountId = await getExistingAccountIdByAuthToken(authToken);
+      accountId = options.onVerified
+        ? await getExistingAccountIdByAuthToken(authToken, options.onVerified)
+        : await getExistingAccountIdByAuthToken(authToken);
     } else {
       accountId = await getOrCreateAccountIdByAuthToken(authToken);
     }
     if (!accountId) return messageErrorResponse("Unauthorized", 401);
     return accountId;
   } catch (error) {
-    console.error("[ERROR] Authentication failed:", error);
+    if (!options.onVerified) console.error("[ERROR] Authentication failed:", error);
     return messageErrorResponse("Failed to verify authentication token", 401);
   }
 }
