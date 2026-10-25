@@ -5,6 +5,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 
 /**
  * Returns the standard CORS preflight without loading account or credits data.
+ *
  * @returns An uncached 200 response with CORS headers
  */
 export function OPTIONS() {
