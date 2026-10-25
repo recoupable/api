@@ -1,3 +1,8 @@
+import { FatalError } from "workflow";
+import type { TrustedFencedWorkflowInput } from "./fence/TrustedFencedWorkflowInput";
+import { bindFencedWorkflowStep } from "./fence/bindFencedWorkflowStep";
+import { persistFencedMessageStep } from "./fence/persistFencedMessageStep";
+import { releaseFencedWorkflowStep } from "./fence/releaseFencedWorkflowStep";
 import { getWorkflowMetadata, getWritable } from "workflow";
 import type { LanguageModelUsage, UIMessage, UIMessageChunk } from "ai";
 import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
@@ -88,10 +93,23 @@ export type RunAgentWorkflowInput = {
  *   - All I/O (streamText, sandbox.exec, fetches) lives in `"use step"` functions.
  *   - The workflow body only orchestrates — no fetch / setTimeout / fs / crypto.
  */
-export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<void> {
+export async function runAgentWorkflow(
+  invocation: RunAgentWorkflowInput | TrustedFencedWorkflowInput,
+): Promise<void> {
   "use workflow";
 
   const { workflowRunId } = getWorkflowMetadata();
+  const fencedInvocation = "kind" in invocation ? invocation : undefined;
+  const input = fencedInvocation ? fencedInvocation.input : (invocation as RunAgentWorkflowInput);
+  // Before any other journaled step or stream handle. A losing bind has no cleanup authority.
+  const bound = fencedInvocation
+    ? await bindFencedWorkflowStep(
+        fencedInvocation.fence,
+        { chatId: input.chatId, accountId: input.accountId },
+        workflowRunId,
+      )
+    : undefined;
+  const writer = bound?.writer;
 
   console.log("[runAgentWorkflow] start", {
     chatId: input.chatId,
@@ -102,44 +120,66 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
 
   const writable = getWritable<UIMessageChunk>();
 
-  // Pick or generate a stable id for the assistant message. If the
-  // last message in the conversation is already an assistant message
-  // (we're resuming an in-progress turn after a tool-call interaction)
-  // reuse its id so chunks append to the same `chat_messages` row.
-  // Otherwise generate a fresh id once via a `"use step"` so the
-  // value is durable across workflow replays. Mirrors open-agents'
-  // pattern in `apps/web/app/workflows/chat.ts` where the id is
-  // generated in the workflow body and threaded into every
-  // `runAgentStep` call.
-  const latestMessage = input.messages.at(-1);
-  const assistantMessageId =
-    !input.devCatalogSurface && latestMessage?.role === "assistant"
-      ? latestMessage.id
-      : await generateAssistantMessageId();
-
-  // Convert once, before the loop. The workflow body owns this array and
-  // appends every iteration's `responseMessages` to it, which is how
-  // iteration N+1 sees iteration N's tool results.
-  const modelMessages = await convertMessagesStep(input.messages);
-
-  // The assistant message under construction. Threaded into each iteration
-  // as `originalMessages` so the AI SDK keeps appending to it instead of
-  // starting a new message, and so the turn's running usage totals carry
-  // across iterations.
-  let pendingAssistantResponse: UIMessage =
-    latestMessage?.role === "assistant"
-      ? latestMessage
-      : { id: assistantMessageId, role: "assistant", parts: [] };
-
-  // One `start` chunk for the whole turn — each iteration's stream is told
-  // `sendStart: false`, so without this the client renders N messages.
-  await sendStreamStart(writable, assistantMessageId);
-
-  // Tracks whether the terminal `finish` chunk has gone out, so the cleanup
-  // below can emit it on a failure path without doubling it on the happy one.
   let streamFinished = false;
-
+  let legacyCleanupEntered = false;
+  // Fenced failures close only this run's stream; retained DB authority needs reconciliation.
   try {
+    if (writer) {
+      const latestUser = input.messages.findLast(message => message.role === "user");
+      if (!latestUser) throw new FatalError("Fenced turn requires a user message");
+      await persistFencedMessageStep(writer, "user", latestUser);
+    }
+    // Pick or generate a stable id for the assistant message. If the
+    // last message in the conversation is already an assistant message
+    // (we're resuming an in-progress turn after a tool-call interaction)
+    // reuse its id so chunks append to the same `chat_messages` row.
+    // Otherwise generate a fresh id once via a `"use step"` so the
+    // value is durable across workflow replays. Mirrors open-agents'
+    // pattern in `apps/web/app/workflows/chat.ts` where the id is
+    // generated in the workflow body and threaded into every
+    // `runAgentStep` call.
+    const latestMessage = input.messages.at(-1);
+    if (
+      bound?.turn.kind === "same-turn-resume" &&
+      (input.devCatalogSurface ||
+        latestMessage?.role !== "assistant" ||
+        latestMessage.id !== bound.turn.assistantId)
+    )
+      throw new FatalError("Fenced resume identity mismatch");
+    if (writer && bound?.turn.kind === "same-turn-resume" && latestMessage)
+      // Existence + current message generation must be proven before any provider work.
+      await persistFencedMessageStep(writer, "update_parts", latestMessage);
+    const reuseAssistant = writer
+      ? bound?.turn.kind === "same-turn-resume"
+      : !input.devCatalogSurface && latestMessage?.role === "assistant";
+    const assistantMessageId =
+      reuseAssistant && latestMessage?.role === "assistant"
+        ? latestMessage.id
+        : await generateAssistantMessageId();
+
+    // Convert once, before the loop. The workflow body owns this array and
+    // appends every iteration's `responseMessages` to it, which is how
+    // iteration N+1 sees iteration N's tool results.
+    const modelMessages = await convertMessagesStep(input.messages);
+
+    // The assistant message under construction. Threaded into each iteration
+    // as `originalMessages` so the AI SDK keeps appending to it instead of
+    // starting a new message, and so the turn's running usage totals carry
+    // across iterations.
+    let pendingAssistantResponse: UIMessage =
+      (writer ? reuseAssistant : latestMessage?.role === "assistant") &&
+      latestMessage?.role === "assistant"
+        ? latestMessage
+        : { id: assistantMessageId, role: "assistant", parts: [] };
+
+    // One `start` chunk for the whole turn — each iteration's stream is told
+    // `sendStart: false`, so without this the client renders N messages.
+    await sendStreamStart(writable, assistantMessageId);
+    legacyCleanupEntered = !writer;
+
+    // Tracks whether the terminal `finish` chunk has gone out, so the cleanup
+    // below can emit it on a failure path without doubling it on the happy one.
+
     if (input.devCatalogSurface) {
       const prepared = await prepareCatalogSurfaceStep({
         accountId: input.accountId,
@@ -147,7 +187,10 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         assistantMessageId,
       });
       const message = await sendCatalogSurfaceStep(writable, assistantMessageId, prepared);
-      await persistAssistantMessageStep(input.chatId, message);
+      if (writer) {
+        await persistFencedMessageStep(writer, "assistant", message);
+        await releaseFencedWorkflowStep(writer);
+      } else await persistAssistantMessageStep(input.chatId, message);
       await sendStreamFinish(writable);
       streamFinished = true;
       return;
@@ -171,7 +214,8 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
           ...selection.metadata,
         },
       };
-      await persistAssistantMessageStep(input.chatId, pendingAssistantResponse);
+      if (writer) await persistFencedMessageStep(writer, "assistant", pendingAssistantResponse);
+      else await persistAssistantMessageStep(input.chatId, pendingAssistantResponse);
     }
     let result: Awaited<ReturnType<typeof runAgentStep>> | undefined;
 
@@ -203,7 +247,8 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
         // Persist per iteration so a long turn's transcript stays live rather
         // than landing only at the end. The stable assistantMessageId makes
         // each write overwrite the same row.
-        await persistAssistantMessageStep(input.chatId, pendingAssistantResponse);
+        if (writer) await persistFencedMessageStep(writer, "assistant", pendingAssistantResponse);
+        else await persistAssistantMessageStep(input.chatId, pendingAssistantResponse);
       }
       modelMessages.push(...result.responseMessages);
 
@@ -214,8 +259,10 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
 
     console.log("[runAgentWorkflow] finish", { finishReason: result?.finishReason });
 
-    await sendStreamFinish(writable);
-    streamFinished = true;
+    if (!writer) {
+      await sendStreamFinish(writable);
+      streamFinished = true;
+    }
 
     // The assistant message is persisted per iteration inside `runAgentStep`,
     // so it's not written here. We still use the accumulated message to
@@ -255,49 +302,62 @@ export async function runAgentWorkflow(input: RunAgentWorkflowInput): Promise<vo
       const sandboxState = input.agentContext.sandbox?.state
         ? ({ type: "vercel", ...input.agentContext.sandbox.state } as const)
         : undefined;
-      await autoCommitChatTurn({
+      const commitInput = {
         ...input,
         ...result,
         responseMessage: pendingAssistantResponse,
         writable,
         sandboxState,
-      });
+      };
+      if (writer) await autoCommitChatTurn(commitInput, writer);
+      else await autoCommitChatTurn(commitInput);
+    }
+    if (writer) {
+      await releaseFencedWorkflowStep(writer);
+      await sendStreamFinish(writable);
+      streamFinished = true;
     }
   } finally {
-    // Run two cleanup steps in parallel:
-    //   1) `clearChatActiveStream` — CAS-gated DB clear of the chat's
-    //      `active_stream_id` so the recovery probe flips to false.
-    //   2) `closeChatStream` — explicitly close the workflow writable
-    //      so the client's SSE response ends NOW. Without this, the
-    //      writable stays open until Vercel Workflow's runtime
-    //      garbage-collects the run (observed ~2m), and the AI SDK
-    //      chat hook keeps `chat.status` in `submitted` waiting for
-    //      stream-end. Mirrors open-agents'
-    //      `Promise.all([clearActiveStream, sendFinish.then(closeStream)])`.
-    //
-    // A third cleanup step runs only for headless `/api/chat/runs` runs:
-    //   3) `deleteEphemeralKeyStep` — revoke the per-run, account-scoped
-    //      `recoup_sk_…` key minted for the sandbox the moment the run ends.
-    //      The key's ~15m TTL is only the backstop if this delete is missed.
-    //
-    // `Promise.all` is safe because all helpers swallow their own errors —
-    // a failure in one doesn't cancel the others.
-    // `finish` must precede the close on EVERY exit path. A stream that ends
-    // without it leaves the client in-flight forever — `useChat` waits for the
-    // terminal chunk and `WorkflowChatTransport` loops `while (!gotFinish)` —
-    // and once the run is terminal the resume route 204s, so the chunk is
-    // unreachable after the fact. Guarded by `streamFinished` so a successful
-    // turn does not emit two. Mirrors open-agents `chat.ts` L939 / L968-971:
-    // `sendFinish(writable).then(() => closeStream(writable))`.
-    await Promise.all([
-      clearChatActiveStream(input.chatId, workflowRunId),
-      (async () => {
-        if (!streamFinished) await sendStreamFinish(writable);
-        await closeChatStream(writable);
-      })(),
-      ...(input.agentContext.ephemeralKeyId
-        ? [deleteEphemeralKeyStep(input.agentContext.ephemeralKeyId)]
-        : []),
-    ]);
+    if (writer) {
+      // No legacy slot clear/key revoke. The writer's CAS release is success-only.
+      // On required failure the original bound state remains for explicit reconciliation.
+      await closeChatStream(writable);
+    } else if (legacyCleanupEntered) {
+      // Run two cleanup steps in parallel:
+      //   1) `clearChatActiveStream` — CAS-gated DB clear of the chat's
+      //      `active_stream_id` so the recovery probe flips to false.
+      //   2) `closeChatStream` — explicitly close the workflow writable
+      //      so the client's SSE response ends NOW. Without this, the
+      //      writable stays open until Vercel Workflow's runtime
+      //      garbage-collects the run (observed ~2m), and the AI SDK
+      //      chat hook keeps `chat.status` in `submitted` waiting for
+      //      stream-end. Mirrors open-agents'
+      //      `Promise.all([clearActiveStream, sendFinish.then(closeStream)])`.
+      //
+      // A third cleanup step runs only for headless `/api/chat/runs` runs:
+      //   3) `deleteEphemeralKeyStep` — revoke the per-run, account-scoped
+      //      `recoup_sk_…` key minted for the sandbox the moment the run ends.
+      //      The key's ~15m TTL is only the backstop if this delete is missed.
+      //
+      // `Promise.all` is safe because all helpers swallow their own errors —
+      // a failure in one doesn't cancel the others.
+      // `finish` must precede the close on EVERY exit path. A stream that ends
+      // without it leaves the client in-flight forever — `useChat` waits for the
+      // terminal chunk and `WorkflowChatTransport` loops `while (!gotFinish)` —
+      // and once the run is terminal the resume route 204s, so the chunk is
+      // unreachable after the fact. Guarded by `streamFinished` so a successful
+      // turn does not emit two. Mirrors open-agents `chat.ts` L939 / L968-971:
+      // `sendFinish(writable).then(() => closeStream(writable))`.
+      await Promise.all([
+        clearChatActiveStream(input.chatId, workflowRunId),
+        (async () => {
+          if (!streamFinished) await sendStreamFinish(writable);
+          await closeChatStream(writable);
+        })(),
+        ...(input.agentContext.ephemeralKeyId
+          ? [deleteEphemeralKeyStep(input.agentContext.ephemeralKeyId)]
+          : []),
+      ]);
+    }
   }
 }

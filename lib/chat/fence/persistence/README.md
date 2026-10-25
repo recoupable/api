@@ -2,8 +2,12 @@
 
 Source baseline: API `9b92f80ddb817d90201dbebbf1723662266e2d14`. Contract: Context
 SQL/harness `61d8b530f8b960b32402f4dd1f0d0a8f4f83d76e`, tree
-`08bbb524033e34238ab6f4cf96dd1be581d874a0`. This module has no production caller,
-enrollment switch, migration, credential operation, or current-authority lookup.
+`08bbb524033e34238ab6f4cf96dd1be581d874a0`. The subsequent internal workflow branch now calls this adapter; see
+[its current execution and activation boundary](../../../../app/lib/workflows/fence/README.md).
+There is still no route/MCP producer, enrollment switch, migration, credential
+operation, or current-authority lookup. The call graph and future wiring sequence
+below record the accepted adapter-only baseline; workflow integration items are
+now superseded by that linked document.
 
 `createFencedMessageWriter(capturedWriter, executeChatFenceCommand)` validates and
 captures chat/account/epoch/owner/original bound run once. It sends the complete

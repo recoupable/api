@@ -1,3 +1,6 @@
+import type { UIMessage } from "ai";
+import type { ChatFenceWriter } from "@/lib/chat/fence/chatFenceSchemas";
+import { persistFencedAssistantDataPart } from "@/app/lib/workflows/fence/persistFencedAssistantDataPart";
 import type { UIMessageChunk } from "ai";
 import { hasAutoCommitChanges } from "@/lib/chat/auto-commit/hasAutoCommitChanges";
 import { runAutoCommit } from "@/lib/chat/auto-commit/runAutoCommit";
@@ -47,12 +50,16 @@ export interface AutoCommitChatTurnInput {
  *   - `sandboxState` is missing (no sandbox to commit in)
  *   - `hasAutoCommitChanges` returns false (`git status --porcelain` empty)
  *
- * Never throws — the inner steps swallow their errors and surface
+ * Legacy persistence remains best-effort. An internal fenced writer makes the
+ * final data-part update required and terminal on failure. Other inner steps swallow their errors and surface
  * the result via `AutoCommitResult.error`, which `buildCommitData`
  * shapes into a `status: "error"` chunk that's still persisted so
  * the UI shows "Commit failed" on refresh.
  */
-export async function autoCommitChatTurn(input: AutoCommitChatTurnInput): Promise<void> {
+export async function autoCommitChatTurn(
+  input: AutoCommitChatTurnInput,
+  fencedWriter?: ChatFenceWriter,
+): Promise<void> {
   const canAutoCommit =
     input.finishReason !== "tool-calls" &&
     input.repoOwner !== undefined &&
@@ -87,9 +94,12 @@ export async function autoCommitChatTurn(input: AutoCommitChatTurnInput): Promis
 
   // Persist the resolved data-commit part onto the assistant
   // message so the GitDataPartCard renders on page refresh.
-  await persistAssistantDataPart(input.responseMessage, {
+  const part = {
     type: "data-commit",
     id: commitPartId,
     data: resolvedData,
-  });
+  };
+  if (fencedWriter)
+    await persistFencedAssistantDataPart(fencedWriter, input.responseMessage as UIMessage, part);
+  else await persistAssistantDataPart(input.responseMessage, part);
 }
