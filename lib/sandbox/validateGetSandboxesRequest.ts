@@ -12,7 +12,11 @@ const getSandboxesQuerySchema = z.object({
   account_id: z.string().uuid("account_id must be a valid UUID").optional(),
 });
 
-export type ValidatedGetSandboxesParams = SelectAccountSandboxesParams & { metadataOnly?: boolean };
+export type ValidatedGetSandboxesParams = SelectAccountSandboxesParams & {
+  metadataOnly?: boolean;
+  /** Explicit, authorized target echoed to account-aware clients. */
+  targetAccountId?: string;
+};
 
 /**
  * Validates GET /api/sandboxes request.
@@ -78,6 +82,7 @@ export async function validateGetSandboxesRequest(
 
   return {
     ...params,
+    ...(targetAccountId && { targetAccountId }),
     ...(queryResult.data.metadata_only === "true" && { metadataOnly: true }),
   };
 }

@@ -18,7 +18,7 @@ export async function OPTIONS() {
 /**
  * GET /api/sandboxes/file
  *
- * Retrieves the raw contents of a file from the authenticated account's
+ * Retrieves the raw contents of a file from the authenticated or explicitly authorized account's
  * sandbox GitHub repository. Resolves the github_repo from the account's
  * snapshot, then fetches the file at the specified path.
  *
@@ -27,6 +27,7 @@ export async function OPTIONS() {
  * Query parameters:
  * - path: string (required) - The file path within the repository
  * - include_revision: "true" (optional) - Read content and blob SHA together from main
+ * - account_id: UUID (optional) - Target account, checked by the sandbox-list access policy
  *
  * Paths must be canonical relative paths: dot/traversal, backslashes, malformed Unicode
  * and leading/trailing/doubled slashes return 400, including for legacy callers.
@@ -36,6 +37,7 @@ export async function OPTIONS() {
  * - content: string - The raw file content
  * - encoding: "base64" - Present for recognized binary extensions; content is base64
  * - sha: string - Present for include_revision=true; use as files[].expected_sha
+ * - account_id: string - Present only when an explicit account_id was authorized
  *
  * Error (400/401/403/404):
  * - status: "error"

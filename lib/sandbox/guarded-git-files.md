@@ -21,6 +21,14 @@ Authentication and existing account snapshot/submodule resolution run before Git
 
 ## Compatibility and limits
 
+### Selected-account reads
+
+Both `GET /api/sandboxes` and `GET /api/sandboxes/file` accept an optional UUID `account_id`. The authenticated caller must pass the existing `canAccessAccount` policy (self, organization membership/shared organization, or existing Recoup administrator rule). Invalid UUIDs return 400; denied targets return 403 before repository lookup. Neither endpoint falls back to the caller's repository when an explicit target is denied or has no repository.
+
+Successful explicit-target responses include `account_id` matching the authorized request. Account-aware clients must check this acknowledgement before displaying results; an absent/mismatched field can mean an older API ignored the selection. Requests omitting `account_id` retain their existing response shape. File content, optional SHA and binary encoding all come from the selected account's resolved repository.
+
+This is read scoping, not write delegation. Existing file POSTs remain bound to the authenticated account. The paired App change keeps every explicit account override read-only, including upload, replacement and deletion; it does not turn a selected-account SHA into permission to write that account. Normal-account protected writes retain their existing conditions. Release this API before the paired App; clients pointed at an older API fail closed for selected-account reads. Authentication, selected account and API origin must each isolate client caches and invalidate pending work.
+
 - Omit `include_revision` to retain the existing raw-file read. Omit `expected_sha` to retain legacy create/update behavior on the repository default branch, including its latest-SHA lookup. Both guarded and legacy paths now reject dot/traversal/backslash/control segments, malformed Unicode, and leading/trailing/doubled slashes (empty segments) with HTTP 400. This is an intentional validation tightening: legacy callers must supply canonical relative paths instead of relying on provider normalization. Empty top-level upload directory remains valid; filenames must be nonempty. Legacy writes remain unguarded and must not be counted as D acceptance.
 - Version-aware clients must always include their observed condition for updates. No current UI/worker is silently migrated by adding this API option. A required-condition rollout would be a separate compatibility change.
 - Guarded reads and writes use `main`, matching the existing raw-file read and submodule discovery branch. No arbitrary ref, default-branch inference, create-if-absent condition or new-file token is introduced. A missing `main`/file is an error, not a fallback to a different branch or legacy write.
