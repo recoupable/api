@@ -16,8 +16,8 @@ export async function GET() {
     const location = new URL(`/.well-known/oauth-authorization-server${issuer.pathname}`, issuer)
       .href;
     return new Response(null, { status: 308, headers: { ...headers, Location: location } });
-  } catch (error) {
-    console.error("OAuth discovery alias unavailable:", error);
+  } catch {
+    console.error("OAuth discovery alias unavailable", { event: "oauth_discovery_unavailable" });
     return Response.json({ error: "oauth_unavailable" }, { status: 503, headers });
   }
 }
