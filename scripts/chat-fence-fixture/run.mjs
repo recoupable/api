@@ -1,5 +1,6 @@
 /** Compile and execute only synthetic local workflows; deny every network transport. */
 import assert from "node:assert/strict";
+import { writeFileSync } from "node:fs";
 import { createRequire, syncBuiltinESMExports } from "node:module";
 import {
   mkdtemp,
@@ -153,7 +154,8 @@ try {
     const file = join(effects, `${owner.owner}.claim`);
     let claimed = true;
     try {
-      await writeFile(file, command.payload.attempt_id, { flag: "wx" });
+      // Complete this tiny synthetic claim before a competing callback can read it.
+      writeFileSync(file, command.payload.attempt_id, { flag: "wx" });
     } catch (error) {
       if (error.code !== "EEXIST") throw error;
       claimed = false;
