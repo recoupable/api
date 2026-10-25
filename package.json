@@ -23,7 +23,7 @@
     "build:extension": "node scripts/mcp-extension/build.mjs",
     "test:extension": "pnpm build:extension && vitest run lib/mcp/extension ui/recoup app/mcp/__tests__",
     "typecheck:release-packs": "tsc --noEmit --project tsconfig.release-packs.json",
-    "test:chat-fence-foundation": "vitest run lib/chat/fence lib/supabase/chat_fence && tsc --noEmit --project tsconfig.chat-fence.json && node scripts/chat-fence-fixture/run.mjs"
+    "test:chat-fence-foundation": "vitest run lib/chat/fence lib/supabase/chat_fence && tsc --noEmit --project tsconfig.chat-fence.json && tsc --noEmit --project tsconfig.chat-fence.json --strict false && node scripts/chat-fence-fixture/run.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.78",

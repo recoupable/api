@@ -15,7 +15,7 @@ export async function getChatAdmissionSnapshot(
     action: "admission_snapshot",
     payload: { request_id: scope.requestId },
   });
-  if (!result.ok) return result;
+  if (result.ok === false) return result;
   try {
     if (result.action !== "admission_snapshot") throw new Error("Unexpected action");
     const snapshot = verifyChatAdmissionSnapshot(scope, result.value);

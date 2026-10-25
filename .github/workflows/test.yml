@@ -33,6 +33,9 @@ jobs:
       - name: Check disabled chat fence foundation and compiled offline workflow
         run: pnpm test:chat-fence-foundation
 
+      - name: Check production TypeScript configuration
+        run: pnpm exec tsc --noEmit --project tsconfig.build.json
+
       - name: Check response contract types
         run: pnpm typecheck:response-contracts
 
