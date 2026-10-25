@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { toChatResponse } from "@/lib/sessions/toChatResponse";
 import { validateGetSessionChatRequest } from "@/lib/sessions/chats/validateGetSessionChatRequest";
@@ -35,7 +36,8 @@ export async function getSessionChatHandler(
     return chat;
   }
 
-  const messages = (await selectChatMessages({ chatId, orderBy: { createdAt: "asc" } })) ?? [];
+  const messages = await selectChatMessages({ chatId, orderBy: { createdAt: "asc" } });
+  if (messages === null) return errorResponse("Failed to load messages", 500);
 
   return NextResponse.json(
     {
