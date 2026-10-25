@@ -1,6 +1,6 @@
 # Coding-agent setup
 
-This guide describes API source at `018779985065557367e60e7622206995747c8783` (October 25, 2026). It is configuration guidance, not evidence of an installed or working provider integration. The [source and acceptance record](verification/coding-agent-setup.md) identifies remaining requirements.
+This guide started from API source at `018779985065557367e60e7622206995747c8783` (October 25, 2026); its initialization notes include the source repair in [API #1149](https://github.com/recoupable/api/pull/1149). It is configuration guidance, not evidence of an installed or working provider integration. The [source and acceptance record](verification/coding-agent-setup.md) identifies remaining requirements.
 
 ## Configuration
 
@@ -63,13 +63,13 @@ This endpoint updates existing work; it does not start a new coding-agent task. 
 
 In the Meta app's WhatsApp webhook configuration, set the Callback URL to the WhatsApp destination and the Verify token to the same value as `WHATSAPP_VERIFY_TOKEN`. Subscribe the relevant WhatsApp business account to message notifications (`messages`). The adapter processes changes whose field is `messages`.
 
-Meta verifies the URL with GET parameters `hub.mode=subscribe`, `hub.verify_token` and `hub.challenge`. The locked adapter returns the challenge with 200 when the mode and token match, otherwise 403. POST events require `x-hub-signature-256` signed with `WHATSAPP_APP_SECRET`. Do not put access tokens or app secrets in the callback URL. When WhatsApp is omitted, its route has no registered handler and returns 404 if module initialization succeeds.
+Meta verifies the URL with GET parameters `hub.mode=subscribe`, `hub.verify_token` and `hub.challenge`. The shared route mirrors the locked adapter's verification: return the challenge with 200 when mode and token match, otherwise 403, without constructing the bot. POST events require `x-hub-signature-256` signed with `WHATSAPP_APP_SECRET`. Do not put access tokens or app secrets in the callback URL. When WhatsApp is omitted, its route returns 404 before bot initialization.
 
 ## Initialization limits
 
-For the dynamic Slack/WhatsApp route, the [shared platform helper](../lib/agents/createPlatformRoutes.ts) resolves GET handlers without calling `bot.initialize()`. POST checks for a registered platform, then initializes the bot before delegating ordinary events. A signed Slack setup challenge can return before that helper calls `getBot()`.
+For the dynamic Slack/WhatsApp route, the [shared platform helper](../lib/agents/createPlatformRoutes.ts) checks supported platforms and signatures before lazily importing the bot and registered handlers. Signed Slack setup challenges and WhatsApp GET verification complete without bot or Redis startup. Ordinary signed events keep their original request bodies and delegate initialization to the SDK webhook. The SDK initializes its shared state/adapters once; the route does not call `bot.initialize()` separately.
 
-However, the [coding-agent route](../app/api/coding-agent/[platform]/route.ts) eagerly imports the bot and registered handlers at this source revision. Bot construction validates configuration, creates Redis state and may start a connection during module loading. An early challenge branch does **not** guarantee credential-free or Redis-free cold startup. This guide does not claim the separately owned lazy-module fix is merged. The callback route also initializes the bot before its handler validates the callback secret/body. The separate static GitHub route imports shared Redis helpers, so it is not guaranteed to load without Redis configuration either.
+The [coding-agent dynamic route](../app/api/coding-agent/[platform]/route.ts) can therefore load and reject unsupported/unsigned requests without constructing its bot, state or adapters. Valid ordinary events still require the configured bot and Redis. This boundary does not cover every entrypoint: the callback route initializes the bot before its handler validates the callback secret/body. The separate static GitHub route imports shared Redis helpers, so it is not guaranteed to load without Redis configuration either. Source and mocked tests do not prove production configuration, persistence or delivery.
 
 ## Worker callback contract
 
@@ -113,4 +113,4 @@ Legacy code still contains a test-to-main follow-up action. New Recoup PRs targe
 
 ## Acceptance still required
 
-Source checks cannot establish live Slack/GitHub/Meta registration, token permissions, Redis compatibility, worker configuration, signed delivery, callback posting or merge authorization. Keep those with the existing integration owners. This documentation does not close the original PRs, supply missing WhatsApp-specific route regressions, implement cold-module isolation or decide the historical allowlist policy.
+Source checks cannot establish live Slack/GitHub/Meta registration, token permissions, Redis compatibility, worker configuration, signed delivery, callback posting or merge authorization. Keep those with the existing integration owners. API #1149 supplies bounded cold-module and WhatsApp-specific mocked route coverage; it does not close the original PRs as a whole or decide the historical allowlist policy.

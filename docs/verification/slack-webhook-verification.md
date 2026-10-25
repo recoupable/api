@@ -1,5 +1,11 @@
 # Slack webhook challenge verification
 
+This is the historical challenge-only repair record. The follow-up
+[`platform-webhook-lazy-init.md`](./platform-webhook-lazy-init.md) adds cold-import
+guards for coding/content dynamic routes and verifies ordinary event signatures
+before loading their bots. The separate chat Slack route remains as described
+here.
+
 Bounded successor to existing API PR297, original head `8e907cead1e77a06352a8b0acc6867549ba6d297`, compared with current main `e2fb91883891cb55aaac19a70822ccf5152758c5` under Mono358.
 
 Current shared `handleUrlVerification` echoes unsigned Slack setup challenges, bypassing adapter verification. Shared POST routing initializes the bot before checking whether the requested platform has a handler. The successor verifies only this setup shortcut and moves handler resolution ahead of initialization. It does not port the old branch's WhatsApp/environment/other feature additions or revive its retired test branch.
