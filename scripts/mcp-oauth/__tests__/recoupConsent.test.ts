@@ -56,7 +56,7 @@ function memoryAdapter(): AdapterFactory {
 }
 
 async function verifyConsent(mode: string) {
-  const requestedScopes = mode === "full" ? ["mcp:tools"] : ["mcp:read", "mcp:write"];
+  const requestedScopes = mode.startsWith("full") ? ["mcp:tools"] : ["mcp:read", "mcp:write"];
   const server = createServer();
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -373,6 +373,98 @@ async function verifyConsent(mode: string) {
     expect(tokens.refresh_token).toEqual(expect.any(String));
     const delegated = await verify(tokens.access_token);
     expect(delegated).toMatchObject({ accountId, scopes: requestedScopes });
+    if (mode.endsWith("lifecycle")) {
+      // Exercise real consent and token HTTP paths; no vendor host or production identity.
+      const connectClient = async (clientId: string) => {
+        const url = new URL(authorize);
+        url.searchParams.set("client_id", clientId);
+        const started = await browserFetch(url.href);
+        expect(started.status).toBe(303);
+        const interaction = started.headers.get("location")!;
+        expect(interaction).toContain("/interaction/");
+        const request = await (await browserFetch(interaction, { headers })).json();
+        expect(request.permissions.map((p: { scope: string }) => p.scope)).toEqual(requestedScopes);
+        const approval = await browserFetch(interaction, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ decision: "approve", csrf: request.csrf }),
+        });
+        expect(approval.status).toBe(200);
+        const resumed = await browserFetch((await approval.json()).redirectUrl);
+        const callback = new URL(resumed.headers.get("location")!);
+        expect(callback.searchParams.get("iss")).toBe(config.issuer);
+        expect(callback.searchParams.get("error")).toBeNull();
+        const response = await fetch(`${config.issuer}/token`, {
+          method: "POST",
+          body: new URLSearchParams({
+            client_id: clientId,
+            grant_type: "authorization_code",
+            code: callback.searchParams.get("code")!,
+            redirect_uri: "https://agent.example/callback",
+            code_verifier: verifier,
+            resource: config.resource,
+          }),
+        });
+        expect(response.status).toBe(200);
+        return response.json();
+      };
+      const refresh = (clientId: string, refreshToken: string) =>
+        fetch(`${config.issuer}/token`, {
+          method: "POST",
+          body: new URLSearchParams({
+            client_id: clientId,
+            grant_type: "refresh_token",
+            refresh_token: refreshToken,
+            resource: config.resource,
+          }),
+        });
+      const secondRegistration = await registerCallbacks(["https://agent.example/callback"]);
+      expect(secondRegistration.status).toBe(201);
+      const secondClient = await secondRegistration.json();
+      expect(secondClient.client_id).not.toBe(client.client_id);
+      const second = await connectClient(secondClient.client_id);
+      const secondAccess = await verify(second.access_token);
+      expect(secondAccess).toMatchObject({ accountId, scopes: requestedScopes });
+      expect(secondAccess!.grantId).not.toBe(delegated!.grantId);
+
+      // A refresh token is bound to its own client, even when the account is shared.
+      expect((await refresh(client.client_id, second.refresh_token)).status).toBe(400);
+      const rotatedResponse = await refresh(client.client_id, tokens.refresh_token);
+      expect(rotatedResponse.status).toBe(200);
+      const rotated = await rotatedResponse.json();
+      expect(rotated.refresh_token).not.toBe(tokens.refresh_token);
+      await adapter("Grant").revokeByGrantId(delegated!.grantId);
+      for (const accessToken of [tokens.access_token, rotated.access_token]) {
+        expect(await verify(accessToken)).toBeUndefined();
+        expect(
+          (await fetch(config.resource, { headers: { Authorization: `Bearer ${accessToken}` } }))
+            .status,
+        ).toBe(401);
+      }
+      expect((await refresh(client.client_id, rotated.refresh_token)).status).toBe(400);
+      expect(await verify(second.access_token)).toMatchObject({
+        accountId,
+        clientId: secondClient.client_id,
+      });
+      const secondRefresh = await refresh(secondClient.client_id, second.refresh_token);
+      expect(secondRefresh.status).toBe(200);
+      const secondRenewed = await secondRefresh.json();
+      expect(await verify(secondRenewed.access_token)).toMatchObject({ accountId });
+
+      // Reconnecting the same registration requires consent and creates a fresh grant.
+      const reconnected = await connectClient(client.client_id);
+      const reconnectedAccess = await verify(reconnected.access_token);
+      expect(reconnectedAccess).toMatchObject({ accountId, scopes: requestedScopes });
+      expect(reconnectedAccess!.grantId).not.toBe(delegated!.grantId);
+      expect(await verify(rotated.access_token)).toBeUndefined();
+      expect((await refresh(client.client_id, rotated.refresh_token)).status).toBe(400);
+      await adapter("Grant").revokeByGrantId(reconnectedAccess!.grantId);
+      expect(await verify(reconnected.access_token)).toBeUndefined();
+      expect(await verify(secondRenewed.access_token)).toMatchObject({ accountId });
+      await adapter("Grant").revokeByGrantId(secondAccess!.grantId);
+      expect(await verify(secondRenewed.access_token)).toBeUndefined();
+      return;
+    }
     if (mode === "full") {
       const refreshed = await fetch(`${config.issuer}/token`, {
         method: "POST",
@@ -531,7 +623,7 @@ async function verifyConsent(mode: string) {
   }
 }
 
-it.each(["dcr", "cimd", "legacy", "full"])(
+it.each(["dcr", "cimd", "legacy", "full", "limited-lifecycle", "full-lifecycle"])(
   "requires browser cookie, trusted origin, matching identity, and one-use consent before issuing tokens (%s)",
   verifyConsent,
 );
