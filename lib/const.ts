@@ -118,7 +118,7 @@ export const packExecutionSettings = {
     sync_mode: false,
   },
   caption: { maxOutputTokens: 350, maxRetries: 0 },
-  stillInspection: { maxOutputTokens: 600 },
+  stillInspection: { maxOutputTokens: 600, maxRetries: 0 },
   videoInspection: { temperature: 0, max_tokens: 600 },
   analysis: { max_new_tokens: 768, temperature: 0, do_sample: false },
 } as const;
