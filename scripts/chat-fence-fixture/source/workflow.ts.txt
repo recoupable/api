@@ -8,6 +8,9 @@ export async function fenceFixture(input: {
   attemptId: string;
   hookToken: string;
   failWrite?: boolean;
+  failAssistant?: boolean;
+  failUpdateParts?: boolean;
+  preflightAssistant?: boolean;
 }) {
   "use workflow";
   const { workflowRunId } = getWorkflowMetadata();
@@ -19,7 +22,12 @@ export async function fenceFixture(input: {
     await gate;
     const write = await fixtureStep("user", input, workflowRunId);
     if (!write.ok) throw new FatalError("Required user write failed");
-    await fixtureStep("provider", input, workflowRunId);
+    if (input.preflightAssistant) await fixtureStep("assistant", input, workflowRunId);
+    for (let iteration = 0; iteration < 2; iteration++) {
+      await fixtureStep("provider", input, workflowRunId);
+      await fixtureStep("assistant", input, workflowRunId);
+    }
+    await fixtureStep("update_parts", input, workflowRunId);
     await fixtureStep("release", input, workflowRunId);
     return { outcome: "complete", runId: workflowRunId };
   } finally {

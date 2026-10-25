@@ -1,5 +1,8 @@
 /** Encode strict JSON with UTF-16 sorted keys, without invoking getters or toJSON. */
-export function encodeStrictJson(input: unknown): string {
+export function encodeStrictJson(
+  input: unknown,
+  options: { omitUndefinedObjectProperties?: boolean } = {},
+): string {
   const ancestors = new Set<object>();
   function checkString(value: string): void {
     for (let i = 0; i < value.length; i++) {
@@ -57,6 +60,9 @@ export function encodeStrictJson(input: unknown): string {
       }
       // Serialize keys directly: JSON.stringify(object) reorders integer-like keys.
       return `{${Object.keys(descriptors)
+        .filter(
+          key => !options.omitUndefinedObjectProperties || descriptors[key].value !== undefined,
+        )
         .sort()
         .map(key => `${JSON.stringify(key)}:${encode(descriptors[key].value, depth + 1)}`)
         .join(",")}}`;
