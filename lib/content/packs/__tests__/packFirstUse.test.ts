@@ -183,6 +183,122 @@ describe("new-buyer pack acceptance fixture", () => {
         video_seconds: 8,
       },
     }) as Promise<any>;
+  it.each(["legacy", "changed"])(
+    "rejects %s quote before reserving credits or dispatching",
+    async kind => {
+      const prepared = await prepareWorld({
+        ...proposedWorld,
+        selection: {
+          direction_id: "paper",
+          selected_by: "customer",
+          decision_note: "Customer selected",
+        },
+      });
+      const estimated = (await processPackOperation("owner", "estimate", {
+        job_id: prepared.job.id,
+      })) as any;
+      if (kind === "legacy") delete fixture.saved.job.quote.execution_config;
+      else fixture.saved.job.quote.execution_config_digest = "outdated";
+      vi.mocked(runPackCommand).mockClear();
+      await expect(
+        processPackOperation("owner", "generate", {
+          job_id: prepared.job.id,
+          quote_id: estimated.job.quote.id,
+          expected_revision: 1,
+          approved_max_usd: estimated.job.quote.maximum_usd,
+        }),
+      ).rejects.toThrow(/new estimate/);
+      expect(runPackCommand).not.toHaveBeenCalledWith(
+        expect.anything(),
+        "approve",
+        expect.anything(),
+        expect.anything(),
+      );
+      expect(start).not.toHaveBeenCalled();
+    },
+  );
+  it.each(["failed", "uncertain"])(
+    "guards configuration without reauthorizing %s attempts",
+    async status => {
+      const prepared = await prepareWorld({
+        ...proposedWorld,
+        selection: {
+          direction_id: "paper",
+          selected_by: "customer",
+          decision_note: "Customer selected",
+        },
+      });
+      const estimated = (await processPackOperation("owner", "estimate", {
+        job_id: prepared.job.id,
+      })) as any;
+      const asset = fixture.saved.assets[0];
+      asset.id = crypto.randomUUID();
+      asset.status = status;
+      asset.provider_state = {
+        image_submission_0: { state: "accepted", request_id: "receipt", model: "original-route" },
+      };
+      fixture.saved.job.quote.retry_asset_id = asset.id;
+      delete fixture.saved.job.quote.execution_config;
+      vi.mocked(runPackCommand).mockClear();
+      const request = processPackOperation("owner", "retry", {
+        job_id: prepared.job.id,
+        asset_id: asset.id,
+        quote_id: estimated.job.quote.id,
+        expected_revision: 1,
+        approved_max_usd: estimated.job.quote.maximum_usd,
+      });
+      if (status === "failed") await expect(request).rejects.toThrow(/new estimate/);
+      else {
+        await request;
+        expect(runPackCommand).toHaveBeenCalledWith(
+          expect.anything(),
+          "resume",
+          prepared.job.id,
+          expect.objectContaining({ asset_id: asset.id }),
+        );
+      }
+      expect(runPackCommand).not.toHaveBeenCalledWith(
+        expect.anything(),
+        "approve",
+        expect.anything(),
+        expect.anything(),
+      );
+      expect(start).not.toHaveBeenCalled();
+    },
+  );
+  it("does not reserve a legacy accepted receipt without its original route", async () => {
+    const prepared = await prepareWorld({
+      ...proposedWorld,
+      selection: {
+        direction_id: "paper",
+        selected_by: "customer",
+        decision_note: "Customer selected",
+      },
+    });
+    const estimated = (await processPackOperation("owner", "estimate", {
+      job_id: prepared.job.id,
+    })) as any;
+    const asset = fixture.saved.assets[0];
+    asset.id = crypto.randomUUID();
+    asset.status = "uncertain";
+    asset.provider_state = { image_submission_0: { state: "accepted", request_id: "receipt" } };
+    vi.mocked(runPackCommand).mockClear();
+    await expect(
+      processPackOperation("owner", "retry", {
+        job_id: prepared.job.id,
+        asset_id: asset.id,
+        quote_id: estimated.job.quote.id,
+        expected_revision: 1,
+        approved_max_usd: estimated.job.quote.maximum_usd,
+      }),
+    ).rejects.toThrow(/reconcil|safe automatic retry/);
+    expect(runPackCommand).not.toHaveBeenCalledWith(
+      expect.anything(),
+      "resume",
+      expect.anything(),
+      expect.anything(),
+    );
+  });
   it("retains a guided proposed board but cannot quote, spend or dispatch final production", async () => {
     const prepared = await prepareWorld(proposedWorld);
     expect(prepared.job.status).toBe("needs_input");
