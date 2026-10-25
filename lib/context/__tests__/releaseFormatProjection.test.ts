@@ -1,6 +1,10 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 import { contextOperationSchema, processContextOperation } from "../processContextOperation";
 import type { ReleaseCaseProjection, ReleaseCaseReview } from "../releaseCaseTypes";
+import {
+  contextReleaseCaseSchema,
+  contextReleaseCaseReviewSchema,
+} from "../contracts/contextReleaseResponseSchemas";
 import type { ReleaseFormatObservation } from "../releaseFormatTypes";
 // Isolate module initialization from hosted Supabase credentials; tests inject authorization.
 vi.mock("../authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));
@@ -51,6 +55,38 @@ const projection: ReleaseCaseProjection = {
   latest_review: null,
 };
 describe("release format observation", () => {
+  it("publishes compatible schemas for legacy and enriched live cases and saved snapshots", () => {
+    const { release_format: _omitted, ...legacy } = projection;
+    for (const value of [legacy, projection]) {
+      expect(contextReleaseCaseSchema.safeParse(value).success).toBe(true);
+      const { latest_review: _latest, ...snapshot } = value;
+      expect(
+        contextReleaseCaseReviewSchema.safeParse({
+          id: request,
+          created_at: "2026-10-25T00:00:00Z",
+          actor_id: actor,
+          decision: "reviewed",
+          policy_version: "release-case-v1",
+          state: "saved",
+          stale: false,
+          snapshot,
+          note: null,
+        }).success,
+      ).toBe(true);
+    }
+    for (const extra of [
+      { reissue: "confirmed" },
+      { physical_format: "vinyl" },
+      { invented: true },
+    ]) {
+      expect(
+        contextReleaseCaseSchema.safeParse({
+          ...projection,
+          release_format: { ...observedFormat, ...extra },
+        }).success,
+      ).toBe(false);
+    }
+  });
   it("preserves an older database response without inventing format evidence", async () => {
     const { release_format: _omitted, ...legacy } = projection;
     const rpc = vi.fn(async () => legacy);

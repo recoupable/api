@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { contextReleaseFormatSchema } from "./contextReleaseFormatSchema";
 
 // Existing releaseCaseEvidenceTypes / release-track read and identity-review RPCs.
 export const contextReleaseTrackPageSchema = z.strictObject({
@@ -92,6 +93,7 @@ const releaseCaseBody = z.strictObject({
   subject_id: z.uuid(),
   title: z.string().nullable(),
   release_url: z.string().nullable(),
+  release_format: contextReleaseFormatSchema.optional(),
   readiness: z.enum(["partial", "blocked"]),
   tracks: z.array(
     z.strictObject({
