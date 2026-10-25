@@ -16,10 +16,12 @@ import { messageErrorResponse } from "@/lib/networking/messageErrorResponse";
  * user's Privy email (idempotent fetch-or-create, mirroring `POST /api/accounts`).
  *
  * @param request - The NextRequest object
+ * @param options - Set allowAccountCreation false for reads that must not onboard users
  * @returns Either the account ID string, or a NextResponse error if authentication fails
  */
 export async function getAuthenticatedAccountId(
   request: NextRequest,
+  options: { allowAccountCreation?: boolean } = {},
 ): Promise<string | NextResponse> {
   const authHeader = request.headers.get("authorization");
   const authToken = getBearerToken(authHeader);
@@ -39,7 +41,16 @@ export async function getAuthenticatedAccountId(
   }
 
   try {
-    const accountId = await getOrCreateAccountIdByAuthToken(authToken);
+    let accountId: string | null;
+    if (options.allowAccountCreation === false) {
+      const { getExistingAccountIdByAuthToken } = await import(
+        "@/lib/privy/getExistingAccountIdByAuthToken"
+      );
+      accountId = await getExistingAccountIdByAuthToken(authToken);
+    } else {
+      accountId = await getOrCreateAccountIdByAuthToken(authToken);
+    }
+    if (!accountId) return messageErrorResponse("Unauthorized", 401);
     return accountId;
   } catch (error) {
     console.error("[ERROR] Authentication failed:", error);
