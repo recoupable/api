@@ -37,7 +37,7 @@ Successful HTTP JSON and MCP JSON content are identical: the existing computed
 result and provenance, `persisted: false`, `external_actions: unsupported`. No result
 is saved or represented as verified rights, recognized debt or bank cash.
 
-Shared dispatcher failures return `{code, error}`. HTTP uses the corresponding
+Shared dispatcher failures return `{status: "error", code, error}`. HTTP uses the corresponding
 status; MCP returns that same JSON body with `isError: true`:
 
 | HTTP status | Code | Meaning |

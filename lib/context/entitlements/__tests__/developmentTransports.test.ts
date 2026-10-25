@@ -1,3 +1,4 @@
+import { errorResponseSchemas } from "@/lib/networking/errorResponseSchemas";
 import { readFileSync } from "node:fs";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -104,6 +105,30 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 describe("development entitlement transports", () => {
+  it.each([400, 401, 404, 409])(
+    "uses the shared error envelope and matching MCP body for %i",
+    async status => {
+      const handler = register().mock.calls[0][2];
+      const args = status === 400 ? {} : input;
+      if (status === 404) vi.stubEnv("NODE_ENV", "production");
+      if (status === 401) {
+        vi.mocked(validateAuthContext).mockRejectedValue(new Error("private-auth"));
+        vi.mocked(resolveAccountId).mockRejectedValue(new Error("private-auth"));
+      }
+      if (status === 409) vi.mocked(callContextRpc).mockRejectedValue(new Error("private-storage"));
+      const response = await http(args);
+      const body = await response.json();
+      expect(response.status).toBe(status);
+      expect(response.headers.get("cache-control")).toBe("private, no-store");
+      expect(errorResponseSchemas.ErrorResponse.safeParse(body).success).toBe(true);
+      if (status === 401)
+        expect(errorResponseSchemas.AuthenticationErrorResponse.safeParse(body).success).toBe(true);
+      const result = await handler(args, {});
+      expect(result.isError).toBe(true);
+      expect(JSON.parse(result.content[0].text)).toEqual(body);
+      expect(JSON.stringify(body)).not.toContain("private-");
+    },
+  );
   it("returns identical evidenced results through both transports without saving", async () => {
     const h = await http();
     expect(h.status).toBe(200);

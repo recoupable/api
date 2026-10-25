@@ -11,12 +11,19 @@ export async function dispatchDevelopmentEntitlement(
   authenticate: () => Promise<Authentication>,
 ) {
   if (process.env.NODE_ENV !== "development" || process.env.CATALOG_ENTITLEMENT_DEV !== "true")
-    return { status: 404, body: { code: "unavailable", error: "Operation unavailable." } };
+    return {
+      status: 404,
+      body: { status: "error" as const, code: "unavailable", error: "Operation unavailable." },
+    };
   const parsed = developmentEntitlementSchema.safeParse(await readInput().catch(() => null));
   if (!parsed.success)
     return {
       status: 400,
-      body: { code: "invalid_arguments", error: "Invalid entitlement calculation arguments." },
+      body: {
+        status: "error" as const,
+        code: "invalid_arguments",
+        error: "Invalid entitlement calculation arguments.",
+      },
     };
   let auth: Authentication;
   try {
@@ -24,13 +31,18 @@ export async function dispatchDevelopmentEntitlement(
   } catch {
     return {
       status: 401,
-      body: { code: "authentication_required", error: "Authentication required." },
+      body: {
+        status: "error" as const,
+        code: "authentication_required",
+        error: "Authentication required.",
+      },
     };
   }
   if ("denied" in auth)
     return {
       status: auth.denied === "authentication_required" ? 401 : 403,
       body: {
+        status: "error" as const,
         code: auth.denied,
         error:
           auth.denied === "authentication_required"
@@ -47,6 +59,7 @@ export async function dispatchDevelopmentEntitlement(
     return {
       status: 409,
       body: {
+        status: "error" as const,
         code: "calculation_unavailable",
         error:
           "Calculation unavailable. Check workspace access, current case revision and source evidence.",
