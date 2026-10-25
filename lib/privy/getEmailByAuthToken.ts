@@ -1,3 +1,4 @@
+import type { CredentialObserver } from "@/lib/auth/VerificationEvidence";
 import privyClient from "./client";
 
 /**
@@ -12,7 +13,10 @@ import privyClient from "./client";
  * @throws "Failed to fetch user data from Privy" if the user fetch fails
  * @throws "No email found in user account" if no email is linked
  */
-export async function getEmailByAuthToken(authToken: string): Promise<string> {
+export async function getEmailByAuthToken(
+  authToken: string,
+  onVerified?: CredentialObserver,
+): Promise<string> {
   const verified = await privyClient.utils().auth().verifyAuthToken(authToken);
   if (!verified) throw new Error("Invalid authentication token");
 
@@ -39,5 +43,22 @@ export async function getEmailByAuthToken(authToken: string): Promise<string> {
     throw new Error("No email found in user account");
   }
 
+  if (onVerified) {
+    if (
+      !verified.app_id ||
+      verified.app_id !== process.env.PRIVY_APP_ID ||
+      !verified.issuer ||
+      !verified.user_id ||
+      data.id !== verified.user_id
+    ) {
+      throw new Error("Verified identity evidence unavailable");
+    }
+    onVerified({
+      mechanism: "privy",
+      appId: verified.app_id,
+      issuer: verified.issuer,
+      subject: verified.user_id,
+    });
+  }
   return emailAccount.address;
 }

@@ -1,3 +1,4 @@
+import type { CredentialObserver } from "@/lib/auth/VerificationEvidence";
 import { getEmailByAuthToken } from "./getEmailByAuthToken";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";
 
@@ -8,8 +9,13 @@ import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmai
  * @param authToken - Privy authentication token
  * @returns Existing account ID, or null when none is found
  */
-export async function getExistingAccountIdByAuthToken(authToken: string): Promise<string | null> {
-  const email = await getEmailByAuthToken(authToken);
+export async function getExistingAccountIdByAuthToken(
+  authToken: string,
+  onVerified?: CredentialObserver,
+): Promise<string | null> {
+  const email = onVerified
+    ? await getEmailByAuthToken(authToken, onVerified)
+    : await getEmailByAuthToken(authToken);
   const accounts = await selectAccountEmails({ emails: [email] });
   return accounts[0]?.account_id ?? null;
 }
