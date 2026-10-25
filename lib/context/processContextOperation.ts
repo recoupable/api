@@ -1,3 +1,5 @@
+import { catalogCaseOperationSchemas } from "./catalogCaseOperationSchemas";
+import { processCatalogCaseOperation } from "./processCatalogCaseOperation";
 import { releaseCaseOperationSchemas } from "./releaseCaseOperationSchemas";
 import { evidenceAttachmentOperationSchemas } from "./evidenceAttachmentSchemas";
 import { processEvidenceAttachmentOperation } from "./processEvidenceAttachmentOperation";
@@ -26,6 +28,7 @@ const briefFields = {
 };
 
 export const contextOperationSchema = z.discriminatedUnion("action", [
+  ...catalogCaseOperationSchemas,
   ...evidenceAttachmentOperationSchemas,
   ...releaseCaseOperationSchemas,
   z.strictObject({
@@ -206,6 +209,12 @@ export async function processContextOperation(
     accountId,
     args.organization_id,
   );
+  if (
+    args.action === "save_catalog_case" ||
+    args.action === "read_catalog_case" ||
+    args.action === "list_catalog_cases"
+  )
+    return processCatalogCaseOperation(accountId, ownerId, args, deps.rpc);
   if (
     args.action === "attach_evidence" ||
     args.action === "read_evidence_attachment" ||

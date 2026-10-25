@@ -680,5 +680,32 @@
     ],
     "status": "full OAuth permission; production generation feature gated",
     "authorizationWork": "Import only explicitly selected attachment bytes or signed download URLs into the authorized private workspace. Enforce DNS, redirects, byte and MIME bounds; bind signed upload finalization to the owner and never export account OAuth credentials or read unrelated files."
+  },
+  {
+    "name": "list_catalog_cases",
+    "file": "lib/mcp/tools/context/registerCatalogCaseTools.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "excluded until delegated workspace-retention audit",
+    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement bind actor and selected workspace to current grants, preserve revision and exact-key replay checks, and recheck retained source access for current and historical snapshots. Partial withdrawal projections cannot be saved as full state. Stored customer assertions grant no provider, registration, claim or financial authority."
+  },
+  {
+    "name": "read_catalog_case",
+    "file": "lib/mcp/tools/context/registerCatalogCaseTools.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "excluded until delegated workspace-retention audit",
+    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement bind actor and selected workspace to current grants, preserve revision and exact-key replay checks, and recheck retained source access for current and historical snapshots. Partial withdrawal projections cannot be saved as full state. Stored customer assertions grant no provider, registration, claim or financial authority."
+  },
+  {
+    "name": "save_catalog_case",
+    "file": "lib/mcp/tools/context/registerCatalogCaseTools.ts",
+    "scopes": [
+      "mcp:write"
+    ],
+    "status": "excluded until delegated workspace-retention audit",
+    "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement bind actor and selected workspace to current grants, preserve revision and exact-key replay checks, and recheck retained source access for current and historical snapshots. Partial withdrawal projections cannot be saved as full state. Stored customer assertions grant no provider, registration, claim or financial authority."
   }
 ]
