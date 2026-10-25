@@ -1,8 +1,19 @@
 /** Encode strict JSON with UTF-16 sorted keys, without invoking getters or toJSON. */
 export function encodeStrictJson(input: unknown): string {
   const ancestors = new Set<object>();
+  function checkString(value: string): void {
+    for (let i = 0; i < value.length; i++) {
+      const unit = value.charCodeAt(i);
+      if (unit === 0) throw new Error("NUL is not supported by JSONB storage");
+      if (unit >= 0xd800 && unit <= 0xdbff) {
+        const next = value.charCodeAt(++i);
+        if (!(next >= 0xdc00 && next <= 0xdfff)) throw new Error("Unpaired surrogate");
+      } else if (unit >= 0xdc00 && unit <= 0xdfff) throw new Error("Unpaired surrogate");
+    }
+  }
   function encode(value: unknown, depth: number): string {
     if (depth > 100) throw new Error("JSON nesting exceeds 100 levels");
+    if (typeof value === "string") checkString(value);
     if (value === null || typeof value === "boolean" || typeof value === "string") {
       return JSON.stringify(value);
     }
@@ -27,6 +38,7 @@ export function encodeStrictJson(input: unknown): string {
       if (Reflect.ownKeys(value).some(key => typeof key !== "string"))
         throw new Error("Symbol JSON key");
       for (const [key, descriptor] of Object.entries(descriptors)) {
+        checkString(key);
         // Zod drops this own key while cloning JSON; reject rather than hash/write altered data.
         if (key === "__proto__") throw new Error("Unsupported JSON key: __proto__");
         if (Array.isArray(value) && key === "length") continue;

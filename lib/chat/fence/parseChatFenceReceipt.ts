@@ -18,6 +18,14 @@ export function parseChatFenceReceipt(
   };
   if (!parsed.success) return invalid;
   const value = parsed.data;
+  if (command.action === "admission_snapshot") {
+    const snapshot = chatFenceReceiptSchemas.admission_snapshot.parse(value);
+    if (
+      snapshot.receipt.chat_id !== chatId ||
+      snapshot.receipt.request_id !== command.payload.request_id
+    )
+      return invalid;
+  }
   if ("chat_id" in value && value.chat_id !== chatId) return invalid;
   if (command.action === "admit") {
     const receipt = chatFenceReceiptSchemas.admit.parse(value);

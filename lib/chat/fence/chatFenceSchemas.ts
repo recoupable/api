@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { chatAdmissionSchema } from "./chatAdmissionSchema";
+import { chatExecutionSnapshotSchema } from "./chatExecutionSnapshotSchema";
 
 const epoch = z.number().int().min(0).max(Number.MAX_SAFE_INTEGER);
 const runId = z
@@ -42,7 +44,22 @@ export const chatFenceCommandSchema = z.discriminatedUnion("action", [
   z
     .object({
       action: z.literal("admit"),
-      payload: z.object({ ...retry, input_hash: digest }).strict(),
+      payload: z
+        .object({
+          ...retry,
+          input_hash: digest,
+          admission_envelope: chatAdmissionSchema,
+          execution_snapshot: chatExecutionSnapshotSchema,
+          admission_canonical: z.string().min(1),
+          execution_canonical: z.string().min(1),
+        })
+        .strict(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("admission_snapshot"),
+      payload: z.object({ request_id: z.uuid() }).strict(),
     })
     .strict(),
   z.object({ action: z.literal("bind"), payload: z.object(writer).strict() }).strict(),
@@ -68,6 +85,16 @@ export const chatFenceCommandSchema = z.discriminatedUnion("action", [
 ]);
 export type ChatFenceCommand = z.infer<typeof chatFenceCommandSchema>;
 const stateBase = { chat_id: z.string().min(1), epoch };
+const admissionReceipt = z
+  .object({
+    chat_id: z.string().min(1),
+    ...retry,
+    input_hash: digest,
+    epoch: epoch.min(1),
+    bound_run_id: runId.nullable(),
+    closed: z.boolean(),
+  })
+  .strict();
 export const chatFenceReceiptSchemas = {
   state: z.discriminatedUnion("phase", [
     z
@@ -92,14 +119,14 @@ export const chatFenceReceiptSchemas = {
       })
       .strict(),
   ]),
-  admit: z
+  admit: admissionReceipt,
+  admission_snapshot: z
     .object({
-      chat_id: z.string().min(1),
-      ...retry,
-      input_hash: digest,
-      epoch: epoch.min(1),
-      bound_run_id: runId.nullable(),
-      closed: z.boolean(),
+      receipt: admissionReceipt,
+      admission_envelope: chatAdmissionSchema,
+      execution_snapshot: chatExecutionSnapshotSchema,
+      admission_canonical: z.string().min(1),
+      execution_canonical: z.string().min(1),
     })
     .strict(),
   bind: z.object({ bound: z.literal(true) }).strict(),

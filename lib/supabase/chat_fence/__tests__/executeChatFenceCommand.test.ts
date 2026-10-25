@@ -1,3 +1,4 @@
+import { snapshotFixture } from "@/lib/chat/fence/__tests__/snapshotFixture";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { executeChatFenceCommand } from "../executeChatFenceCommand";
 import { createChatFenceAuthority } from "@/lib/chat/fence/createChatFenceAuthority";
@@ -36,11 +37,11 @@ describe("disabled, unwired chat fence RPC foundation", () => {
     ["state", {}, { chat_id: "chat", epoch: 0, phase: "idle", owner: null, run_id: null }],
     [
       "admit",
-      { request_id: owner, expected_epoch: 0, input_hash: "a".repeat(64) },
+      snapshotFixture().payload,
       {
         chat_id: "chat",
         request_id: owner,
-        input_hash: "a".repeat(64),
+        input_hash: snapshotFixture().payload.input_hash,
         expected_epoch: 0,
         epoch: 1,
         bound_run_id: "original-run",

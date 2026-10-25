@@ -10,6 +10,7 @@ import {
 } from "@/lib/chat/fence/classifyChatFenceError";
 import { parseChatFenceReceipt } from "@/lib/chat/fence/parseChatFenceReceipt";
 import { encodeStrictJson } from "@/lib/chat/fence/encodeStrictJson";
+import { verifyChatAdmissionSnapshot } from "@/lib/chat/fence/verifyChatAdmissionSnapshot";
 
 /** Unwired foundation for draft Database #122. Callers must authorize the effective account. */
 export async function executeChatFenceCommand(
@@ -23,6 +24,33 @@ export async function executeChatFenceCommand(
   try {
     encodeStrictJson(input);
     command = chatFenceCommandSchema.parse(input);
+    if (command.action === "admit") {
+      const p = command.payload;
+      verifyChatAdmissionSnapshot(
+        {
+          chatId,
+          effectiveAccountId: effectiveAccount,
+          sessionId: p.admission_envelope.sessionId,
+          requestId: p.request_id,
+          expectedEpoch: p.expected_epoch,
+        },
+        {
+          admission_envelope: p.admission_envelope,
+          execution_snapshot: p.execution_snapshot,
+          admission_canonical: p.admission_canonical,
+          execution_canonical: p.execution_canonical,
+          receipt: {
+            chat_id: chatId,
+            request_id: p.request_id,
+            expected_epoch: p.expected_epoch,
+            input_hash: p.input_hash,
+            epoch: p.expected_epoch + 1,
+            bound_run_id: null,
+            closed: false,
+          },
+        },
+      );
+    }
   } catch {
     return classifyChatFenceError("22023");
   }
