@@ -2,7 +2,10 @@
 
 Proposed contract for app issue #2104, under Sites epic #2093. This is a
 registration **preflight**, not an application registry or an activation API.
-It creates no resource, identity, credential, consent, session, quota, or charge.
+After authentication resolves the account, the preflight itself creates no
+resource, identity, credential, consent, session, quota, or charge. The existing
+Privy authentication path can provision a Recoup account and send a welcome email
+before preflight runs; that authentication behavior is unchanged.
 No database migration is needed for this slice.
 
 `POST /api/applications/registration/validate` and MCP
