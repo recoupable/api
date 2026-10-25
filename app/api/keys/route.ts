@@ -20,8 +20,8 @@ export async function OPTIONS() {
  * GET /api/keys
  *
  * Retrieves all API keys for an account from account_api_keys.
- * Requires authentication via Bearer token in Authorization header.
- * The account ID is derived from the authenticated user's Privy token.
+ * Requires exactly one of x-api-key or Authorization Bearer authentication.
+ * The account ID is derived from the authenticated credential; overrides are not accepted.
  *
  * @param request - The request object.
  * @returns A NextResponse with the API keys.
@@ -34,8 +34,8 @@ export async function GET(request: NextRequest) {
  * POST /api/keys
  *
  * Creates a new API key record in account_api_keys.
- * Requires authentication via Bearer token in Authorization header.
- * The account ID is derived from the authenticated user's Privy token.
+ * Requires exactly one of x-api-key or Authorization Bearer authentication.
+ * The account ID is derived from the authenticated credential; overrides are not accepted.
  *
  * Body parameters:
  * - key_name (required): The name for the API key
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
  * DELETE /api/keys
  *
  * Deletes an API key record from account_api_keys.
- * Requires authentication via Bearer token in Authorization header.
+ * Requires exactly one of x-api-key or Authorization Bearer authentication.
  * Only allows deleting API keys that belong to the authenticated account.
  *
  * Body parameters:

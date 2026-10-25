@@ -59,7 +59,7 @@ async function host({ sidebar = true, extended = true, fails = false, toolInfo =
     return connect.call(this, appTransport);
   });
   vi.stubGlobal("window", { parent: {} });
-  const status = { textContent: "", classList: { add: vi.fn() } };
+  const status = { textContent: "", classList: { add: vi.fn(), remove: vi.fn() } };
   const cards = { setAttribute: vi.fn(), removeAttribute: vi.fn() };
   const send = createHostBridge(status as unknown as HTMLElement);
   await vi.waitFor(() => expect(status.textContent).toContain("Connected"));

@@ -1,3 +1,4 @@
+import { TERMINAL_WORKFLOW_RUN_STATUSES } from "@/lib/const";
 import type { UIMessageChunk } from "ai";
 import { getRun } from "workflow/api";
 import { trackToolCallChunk, type OpenTool } from "@/lib/chat/trackToolCallChunk";
@@ -11,22 +12,20 @@ import { trackToolCallChunk, type OpenTool } from "@/lib/chat/trackToolCallChunk
  *      then closes the consumer stream. Without this the AI SDK leaves
  *      those parts in their "executing" state on the live UI.
  *
- *   2. On consumer cancel (client disconnect / aiStop), propagates the
- *      cancel to the workflow run via `getRun(runId).cancel()`. Without
- *      this the run keeps producing chunks until the status poller
- *      detects cancellation independently — a ~750ms window where
- *      tools keep executing after the user has navigated away.
+ *   2. On consumer cancel, releases this reader and ends status polling.
+ *      Legacy clients also cancel the run. Clients opting into explicit Stop
+ *      leave the run alive and use the authenticated Stop endpoint instead.
  *
  * Extracted from `handleChatWorkflowStream` so it can be unit-tested
  * in isolation.
  */
-const TERMINAL_RUN_STATUSES: ReadonlySet<string> = new Set(["cancelled", "completed", "failed"]);
 const STATUS_POLL_MS = 500;
 const CANCEL_ERROR_TEXT = "Cancelled";
 
 export function wrapWorkflowStreamWatcher(
   runId: string,
   source: ReadableStream<UIMessageChunk>,
+  { cancelOnDisconnect = true }: { cancelOnDisconnect?: boolean } = {},
 ): ReadableStream<UIMessageChunk> {
   let reader: ReadableStreamDefaultReader<UIMessageChunk> | null = null;
   let consumerCancelled = false;
@@ -77,7 +76,7 @@ export function wrapWorkflowStreamWatcher(
         while (!closedByStatus && !consumerCancelled) {
           try {
             const status = await getRun(runId).status;
-            if (TERMINAL_RUN_STATUSES.has(status)) {
+            if (TERMINAL_WORKFLOW_RUN_STATUSES.includes(status)) {
               closedByStatus = true;
               closeWithSyntheticErrors();
               try {
@@ -127,10 +126,12 @@ export function wrapWorkflowStreamWatcher(
     },
     async cancel() {
       consumerCancelled = true;
-      try {
-        await getRun(runId).cancel();
-      } catch (error) {
-        console.error("[wrapWorkflowStreamWatcher] cancel propagation failed:", error);
+      if (cancelOnDisconnect) {
+        try {
+          await getRun(runId).cancel();
+        } catch (error) {
+          console.error("[wrapWorkflowStreamWatcher] cancel propagation failed:", error);
+        }
       }
       if (reader) {
         try {

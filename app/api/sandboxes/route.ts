@@ -63,6 +63,8 @@ export async function POST(request: NextRequest): Promise<Response> {
  *   Defaults to "false"; repository filetree lookup still runs when available.
  * - sandbox_id: (optional) Filter by a specific sandbox ID. Must be a sandbox
  *   that your account or organization is an admin of.
+ * - account_id: UUID (optional) - Target account, checked by the existing account-access policy.
+ *   Successful explicit-target reads echo account_id; omitted-target response shape is unchanged.
  *
  * Response (200):
  * - status: "success"

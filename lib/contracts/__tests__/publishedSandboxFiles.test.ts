@@ -29,6 +29,7 @@ vi.mock("@/lib/github/getVersionedFileContent", () => ({ getVersionedFileContent
 
 const ajv = new Ajv({ allErrors: true });
 ajv.addKeyword({ keyword: "example", valid: true });
+ajv.addFormat("uuid", /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
 
 function publishedContract(method: string, path: string, status: number) {
   expect(

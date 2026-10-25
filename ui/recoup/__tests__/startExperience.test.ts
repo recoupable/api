@@ -1,8 +1,14 @@
-import { expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { startExperience } from "../startExperience";
 
+beforeEach(() => vi.useFakeTimers());
+afterEach(() => {
+  vi.clearAllTimers();
+  vi.useRealTimers();
+});
+
 function elements() {
-  const status = { textContent: "", classList: { add: vi.fn() } };
+  const status = { textContent: "", classList: { add: vi.fn(), remove: vi.fn() } };
   const cards = { setAttribute: vi.fn(), removeAttribute: vi.fn() };
   return {
     status,
@@ -17,7 +23,10 @@ it("hands the selection to chat without requiring a brief", async () => {
   const send = vi.fn().mockResolvedValue({});
   await start(send)("wave");
   expect(send).toHaveBeenCalledWith(expect.stringContaining("recoup-song-find-hook"));
-  expect(status.textContent).toContain("sent");
+  expect(status.textContent).toBe("Sent to chat.");
+  vi.advanceTimersByTime(3000);
+  expect(status.textContent).toBe("");
+  expect(status.classList.remove).toHaveBeenCalledWith("handoff-active");
 });
 
 it("prevents duplicate requests while a handoff is pending", async () => {
@@ -44,8 +53,34 @@ it("shows failure feedback and allows retry", async () => {
   await open("cover");
   expect(status.textContent).toContain("try again");
   expect(cards.removeAttribute).toHaveBeenCalledWith("aria-busy");
+  vi.advanceTimersByTime(5000);
+  expect(status.textContent).toContain("try again");
   await open("cover");
-  expect(status.textContent).toContain("sent");
+  expect(status.textContent).toBe("Sent to chat.");
+});
+
+it("does not let an earlier confirmation clear the next request's feedback", async () => {
+  const { status, start } = elements();
+  let finish!: (result: { isError?: boolean }) => void;
+  const send = vi
+    .fn()
+    .mockResolvedValueOnce({})
+    .mockImplementationOnce(
+      () =>
+        new Promise(resolve => {
+          finish = resolve;
+        }),
+    );
+  const open = start(send);
+  await open("cover");
+  vi.advanceTimersByTime(2000);
+  const next = open("film");
+  vi.advanceTimersByTime(2000);
+  expect(status.textContent).toContain("Starting");
+  expect(status.classList.remove).not.toHaveBeenCalled();
+  finish({});
+  await next;
+  expect(status.textContent).toBe("Sent to chat.");
 });
 it.each([
   ["add-release", "recoup-release-add-release"],

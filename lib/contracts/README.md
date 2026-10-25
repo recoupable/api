@@ -1,5 +1,12 @@
 # Published response contracts
 
+`publishedArtistSocials.test.ts` checks the list/update social-array declarations
+and the copyable list example against the real shared artist formatter. Explicit
+field assertions require `type` and `link`, rather than accepting undocumented
+extra properties. Null joined records are omitted; existing profiles with empty
+URLs remain. These formatter/fixture checks do not exercise HTTP authentication,
+database records, live customer responses or historical data repair.
+
 `lib/networking/errorResponseSchemas.ts` owns the existing error and authentication
 message envelopes. The response constructors use the inferred types; neither envelope
 is renamed. `pnpm typecheck:response-contracts` checks the constructors and rejects
@@ -92,10 +99,30 @@ the same coordinated fixture, separate from the API-owned error-envelope export.
 session-chat exports to their published 500 schemas for failed chat lookups. The
 tested failures stop before turn persistence or the corresponding chat writes.
 These assertions do not describe every possible 500 path. Compatibility cases
-retain the existing POST running/pending 200 resume behavior and GET's empty or
-terminal finish-only 200 SSE. Authentication validation, storage and workflow
-service leaves are synthetic. No real run or customer request occurs; client
-text handling, Stop/disconnect and the held submission repair remain separate.
+require POST running/pending rejection with 409 before opening an old reader,
+persisting the rejected turn or starting work; GET retains its empty or terminal
+finish-only 200 SSE. API #1129 / Marketing #230 succeed API #1071 / Marketing #209
+and freeze admission 409/503 and optional POST/GET lifecycle declarations against
+API #1128, merged as `8f48a2a1d51264f2ae34a0f21db05bcaeed806ce`. The five
+retryable early-admission controls validate reservation, failed/unknown status
+and stale-slot-clear outcomes against the shared 503 schema before persistence or
+start. `publishedChatLifecycle.test.ts` checks the optional string declaration
+and real exact-single query validator, including legacy defaults for missing,
+empty, unknown and repeated values. The runtime's exact merge has a successful
+production deployment; that receipt does not establish hosted behavior. Marketing
+must pin the actual API #1129 merge before its release, and retained Docs follows
+the actual Marketing merge. Authentication validation, storage and workflow
+service leaves are synthetic. No real run or customer request occurs in these
+tests; authenticated hosted send/reconnect/Stop and provider cancellation remain
+unverified.
+
+`publishedChatStop.test.ts` binds the canonical Stop route's no-active and
+confirmed 200 responses, pending-start 503, cancellation failure 502 and terminal
+wait timeout 504 to selected published schemas. The pending-start body must match
+the documented example and cannot release the reservation or call workflow
+cancellation before a run ID exists. Authentication, storage and workflow service
+leaves are synthetic. This does not change POST admission or disconnect policy,
+establish client recovery, or verify a real hosted Stop.
 
 `buildContextOperationCatalog` exports the current request schemas and separates
 delegated tool names from standard-only evidence tools. The Context fixture checks

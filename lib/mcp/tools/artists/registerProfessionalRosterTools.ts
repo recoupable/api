@@ -20,7 +20,7 @@ export function registerProfessionalRosterTools(server: McpServer) {
     "confirm_professional_roster",
     {
       description:
-        "Add a new organization-private professional or roles to an existing professional ID. Requires explicit user roster intent and identity confirmation; never infer confirmation from research or name similarity. No login account, catalog rights, enrichment, or cross-workspace profile copying. Reuse idempotency_key on retry.",
+        "Add a new organization-private professional or roles to an existing professional ID. Requires explicit user roster intent and identity confirmation; never infer confirmation from research or name similarity. New professionals receive an artist account and organization roster membership; existing professional IDs reuse their artist_id. Roles do not assign catalog rights. No enrichment or cross-workspace profile copying. Reuse idempotency_key on retry.",
       inputSchema: confirmProfessionalSchema,
       annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     },

@@ -103,6 +103,37 @@ beforeEach(() => {
   ]);
 });
 
+describe("published retryable admission against the canonical POST route", () => {
+  it.each(["reservation", "status rejection", "unknown status", "clear lost", "clear error"])(
+    "binds %s to503 before accepting the submitted turn",
+    async failure => {
+      if (failure === "reservation") {
+        vi.mocked(selectChats).mockResolvedValue([
+          { id: chatId, session_id: sessionId, active_stream_id: "pending-synthetic" } as never,
+        ]);
+      }
+      vi.mocked(getRun).mockReturnValue({
+        status:
+          failure === "status rejection"
+            ? Promise.reject(new Error("synthetic"))
+            : Promise.resolve(failure === "unknown status" ? "unrecognized" : "completed"),
+      } as never);
+      vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue(
+        failure === "clear lost" ? { ok: true, claimed: false } : { ok: false, error: "synthetic" },
+      );
+      const response = await startChat(request("POST", "/api/chat", {}));
+      expect(response.status).toBe(503);
+      const validate = responseContract("POST", "/api/chat", 503);
+      expect(validate(await response.json()), JSON.stringify(validate.errors)).toBe(true);
+      expect(start).not.toHaveBeenCalled();
+      expect(persistLatestUserMessage).not.toHaveBeenCalled();
+      if (failure === "reservation") expect(getRun).not.toHaveBeenCalled();
+      if (!failure.startsWith("clear"))
+        expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
+    },
+  );
+});
+
 describe("published chat read failures against canonical route exports", () => {
   it("binds the POST failed chat read to 500 before starting a turn", async () => {
     vi.mocked(selectChats).mockResolvedValue(null);
@@ -123,7 +154,7 @@ describe("published chat read failures against canonical route exports", () => {
   });
 
   it.each(["running", "pending"])(
-    "keeps the documented existing POST %s resume behavior",
+    "rejects an unaccepted POST during a %s run without opening its reader",
     async status => {
       const getReadable = vi.fn(
         () =>
@@ -135,17 +166,21 @@ describe("published chat read failures against canonical route exports", () => {
       );
       vi.mocked(getRun).mockReturnValue({ status: Promise.resolve(status), getReadable } as never);
       const response = await startChat(request("POST", "/api/chat", {}));
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(409);
       expect(fixture.contracts.chatStartResponses).toContain(String(response.status));
-      expect(fixture.contracts.chatStartResponses).not.toContain("503");
-      expect(fixture.contracts.chatStartMediaTypes).toContain("text/event-stream");
-      expect(response.headers.get("content-type")).toContain("text/event-stream");
-      expect(response.headers.get("x-workflow-run-id")).toBe("wrun_existing");
-      expect(getReadable).toHaveBeenCalledTimes(1);
+      expect(response.headers.get("content-type")).toContain("application/json");
+      expect(response.headers.get("x-workflow-run-id")).toBeNull();
+      const body = await response.json();
+      expect(body).toMatchObject({
+        status: "error",
+        error: expect.stringContaining("GET /api/chat/"),
+      });
+      const validate = responseContract("POST", "/api/chat", 409);
+      expect(validate(body), JSON.stringify(validate.errors)).toBe(true);
+      expect(getReadable).not.toHaveBeenCalled();
       expect(start).not.toHaveBeenCalled();
       expect(persistLatestUserMessage).not.toHaveBeenCalled();
       expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
-      await response.text();
     },
   );
 
