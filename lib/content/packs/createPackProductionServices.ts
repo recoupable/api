@@ -1,3 +1,5 @@
+import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
+import { packExecutionSettings } from "./packExecutionSettings";
 import { generateText } from "ai";
 import { LIGHTWEIGHT_MODEL } from "@/lib/const";
 import { buildImageInput } from "@/lib/content/image/buildImageInput";
@@ -28,12 +30,10 @@ export function createPackProductionServices(
     generateImages: async (prompt, count) => {
       const images: string[] = [];
       for (let index = 0; index < count; index++) {
+        if (!state[`image_submission_${index}`]) assertPackQuoteConfiguration(job.quote);
         const built = buildImageInput({
           prompt: `${prompt}\nSlide ${index + 1} of ${count}. ${count > 1 ? ["Open with the exact song title and a strong campaign idea.", "Develop the audible mood and artwork concept without inventing lyrics.", "Make the verified campaign occasion clear without inventing history.", "Close with the approved primary action and only the supplied destination URL."][index] : ""}`,
-          num_images: 1,
-          output_format: "png",
-          sync_mode: false,
-          aspect_ratio: "9:16",
+          ...packExecutionSettings.image,
           image_urls: job.brief.reference_image_urls,
         });
         const data = await runPackFalRequest({
@@ -51,20 +51,21 @@ export function createPackProductionServices(
       return images;
     },
     generateMotion: async (prompt, image) => {
+      if (!state.motion_submission) assertPackQuoteConfiguration(job.quote);
       const input = buildVideoInput({
         prompt,
         image_url: image,
         duration: job.deliverables.video_seconds,
-        resolution: "768P",
-        prompt_expansion_mode: "balanced",
-        enable_safety_checker: true,
-        sync_mode: false,
+        ...packExecutionSettings.motion,
       });
       const data = await runPackFalRequest({
         model: HOUSE_VIDEO_MODEL,
         input,
         chargeCredits: creditCostForVideoUnits(
-          estimateVideoUnits(job.deliverables.video_seconds, "768P"),
+          estimateVideoUnits(
+            job.deliverables.video_seconds,
+            packExecutionSettings.motion.resolution,
+          ),
         ),
         key: "motion_submission",
         state,
@@ -75,10 +76,10 @@ export function createPackProductionServices(
       return url;
     },
     caption: async prompt => {
+      assertPackQuoteConfiguration(job.quote);
       const result = await generateText({
         model: LIGHTWEIGHT_MODEL,
-        maxOutputTokens: 350,
-        maxRetries: 0,
+        ...packExecutionSettings.caption,
         abortSignal: AbortSignal.timeout(30_000),
         system:
           "Write one concise, distinctive music campaign caption grounded only in the brief. No invented quotes or facts. Return plain text only.",
@@ -88,8 +89,14 @@ export function createPackProductionServices(
       if (!text) throw new Error("Caption generation returned no text");
       return text;
     },
-    compose: input => composePackMedia(job.owner_id, input),
-    inspect: inspectPackMedia,
+    compose: input => {
+      assertPackQuoteConfiguration(job.quote);
+      return composePackMedia(job.owner_id, input);
+    },
+    inspect: input => {
+      assertPackQuoteConfiguration(job.quote);
+      return inspectPackMedia(input);
+    },
     finish: result =>
       runPackCommand(actor, "finish_asset", job.id, { asset_id: asset.id, ...result }),
   };

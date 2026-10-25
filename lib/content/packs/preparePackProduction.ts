@@ -1,3 +1,5 @@
+import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
+import { packExecutionSettings } from "./packExecutionSettings";
 import { z } from "zod";
 import { createHash } from "node:crypto";
 import { fetchPackMedia } from "./fetchPackMedia";
@@ -24,6 +26,7 @@ export async function preparePackProduction(actor: PackActor, job: PackJob): Pro
   job = { ...job, brief: resolvePackCreativeContext(job.brief) };
   let context = contextSchema.safeParse(job.production_context);
   if (!context.success) {
+    assertPackQuoteConfiguration(job.quote);
     if ((job.production_context as { state?: string } | undefined)?.state === "analyzing")
       throw new Error(
         "Audio analysis outcome is uncertain; retained context needs reconciliation before production",
@@ -77,13 +80,12 @@ export async function preparePackProduction(actor: PackActor, job: PackJob): Pro
     await runPackCommand(actor, "context", job.id, {
       value: { state: "analyzing", audio, references, duration_seconds: duration },
     });
+    assertPackQuoteConfiguration(job.quote);
     const analysis = await callFlamingoGenerate(
       flamingoGenerateBodySchema.parse({
         audio_url: audio.url,
         prompt: `Listen to this supplied recording (${duration.toFixed(2)} seconds). Describe audible mood, instrumentation, energy, texture and a useful visual direction without quoting or inventing lyrics. Propose one strong ${job.deliverables.video_seconds}-second music excerpt start time within 0 and ${Math.max(0, duration - job.deliverables.video_seconds).toFixed(2)} seconds. Timing is a creative proposal, not verified transcription. Campaign occasion: ${job.brief.occasion}; artist: ${job.brief.artist_name}; song: ${job.brief.song_title}; customer direction: ${job.brief.creative_direction ?? "propose one unified artwork-led direction"}; constraints: ${job.brief.constraints.join("; ")}. Return ONLY JSON {"summary":"audible observations with uncertainty","visual_direction":"one cohesive proposed art direction with a specific palette, materials, lighting and typography; no invented artist face","proposed_start_seconds":number}.`,
-        max_new_tokens: 768,
-        temperature: 0,
-        do_sample: false,
+        ...packExecutionSettings.analysis,
       }),
       { signal: AbortSignal.timeout(90_000) },
     );

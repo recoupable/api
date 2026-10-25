@@ -1,3 +1,4 @@
+import { packExecutionSettings } from "./packExecutionSettings";
 import { generateText } from "ai";
 import { z } from "zod";
 import { LIGHTWEIGHT_MODEL } from "@/lib/const";
@@ -22,14 +23,18 @@ export const inspectPackMedia: PackProductionServices["inspect"] = async ({
       if (!probe.audio || !probe.duration)
         return { passed: false, reason: "No verified music audio/duration" };
       text = (
-        await analyzeVideo({ video_url: url, prompt: instruction, temperature: 0, max_tokens: 600 })
+        await analyzeVideo({
+          video_url: url,
+          prompt: instruction,
+          ...packExecutionSettings.videoInspection,
+        })
       ).text;
     } else {
       const media = await fetchPackMedia(url);
       text = (
         await generateText({
           model: LIGHTWEIGHT_MODEL,
-          maxOutputTokens: 600,
+          ...packExecutionSettings.stillInspection,
           messages: [
             {
               role: "user",

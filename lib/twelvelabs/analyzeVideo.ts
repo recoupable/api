@@ -1,3 +1,5 @@
+export const TWELVELABS_ANALYSIS_MODEL = "pegasus1.5";
+
 const TWELVELABS_ANALYZE_URL = "https://api.twelvelabs.io/v1.3/analyze";
 
 export interface AnalyzeVideoResult {
@@ -31,7 +33,7 @@ export async function analyzeVideo(validated: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model_name: "pegasus1.5",
+      model_name: TWELVELABS_ANALYSIS_MODEL,
       video: { type: "url", url: validated.video_url },
       prompt: validated.prompt,
       temperature: validated.temperature,
