@@ -38,6 +38,8 @@ describe("disabled, unwired chat fence RPC foundation", () => {
     });
   });
   it.each([
+    ["close_unattempted", { epoch: 1, owner }, { closed: true }],
+    ["close_unattempted", { epoch: 1, owner }, { closed: false }],
     ["state", {}, { chat_id: "chat", epoch: 0, phase: "idle", owner: null, run_id: null }],
     [
       "admit",
@@ -205,3 +207,13 @@ describe("disabled, unwired chat fence RPC foundation", () => {
     expect(supabase.rpc).not.toHaveBeenCalled();
   });
 });
+
+it.each([{ owner }, { epoch: 1 }, { epoch: 0, owner }, { epoch: 1, owner, run_id: "newer" }])(
+  "rejects invalid close identity before transport: %j",
+  async payload => {
+    expect(
+      (await executeChatFenceCommand("chat", account, { action: "close_unattempted", payload })).ok,
+    ).toBe(false);
+    expect(supabase.rpc).not.toHaveBeenCalled();
+  },
+);
