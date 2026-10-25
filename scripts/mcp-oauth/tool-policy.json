@@ -707,5 +707,14 @@
     ],
     "status": "excluded until delegated workspace-retention audit",
     "authorizationWork": "Keep excluded from delegated OAuth, including generic Context action expansion. Before enablement bind actor and selected workspace to current grants, preserve revision and exact-key replay checks, and recheck retained source access for current and historical snapshots. Partial withdrawal projections cannot be saved as full state. Stored customer assertions grant no provider, registration, claim or financial authority."
+  },
+  {
+    "name": "validate_application_registration",
+    "file": "lib/mcp/tools/applications/registerValidateApplicationRegistrationTool.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "excluded until application/OAuth contract review",
+    "authorizationWork": "Keep excluded from delegated OAuth. Before enablement review selected-workspace grant binding, current membership and revocation checks, and the read-only registration preflight contract. Validation does not persist an application, verify origin ownership, create fan identities, issue credentials or authorize spending."
   }
 ]
