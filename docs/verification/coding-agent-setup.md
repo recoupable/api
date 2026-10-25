@@ -7,7 +7,7 @@ This successor addresses the documentation portions of existing [API #273](https
 | Original documentation requirement | Current source / treatment |
 | --- | --- |
 | Recoup setup and build commands | `package.json` and the Node 22 compatibility workflow; README uses repository-root commands |
-| SDK platforms, webhook URLs and initialization | `lib/coding-agent/bot.ts`, `app/api/coding-agent/[platform]/route.ts`, `lib/agents/createPlatformRoutes.ts`; eager module effects remain explicit |
+| SDK platforms, webhook URLs and initialization | `lib/coding-agent/bot.ts`, `app/api/coding-agent/[platform]/route.ts`, `lib/agents/createPlatformRoutes.ts`, and the concrete GitHub route/handler; static route precedence, fixed mention name, event subscriptions and eager module effects remain explicit |
 | Required configuration and callback-secret matching | `lib/coding-agent/validateEnv.ts`, `handleCodingAgentCallback.ts`; exact names, no credential values |
 | Optional WhatsApp setup | `whatsApp/isWhatsAppConfigured.ts` and locked adapter; all four or none, Meta GET/POST distinction |
 | Callback destination / payload | API wrappers pass `callbackThreadId`; validator requires `threadId` and status; API has no `TRIGGER_CALLBACK_URL` consumer |

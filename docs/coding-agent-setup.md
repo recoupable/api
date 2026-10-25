@@ -4,7 +4,7 @@ This guide describes API source at `018779985065557367e60e7622206995747c8783` (O
 
 ## Configuration
 
-The [bot factory](../lib/coding-agent/bot.ts) registers Slack and GitHub adapters and conditionally adds WhatsApp. [Environment validation](../lib/coding-agent/validateEnv.ts) requires these six nonempty values even when you intend to use only one platform:
+The [bot factory](../lib/coding-agent/bot.ts) registers Slack and GitHub adapters and conditionally adds WhatsApp. [Environment validation](../lib/coding-agent/validateEnv.ts) requires these six nonempty values whenever this bot is constructed, including the dynamic platform and callback routes. The separate static GitHub ingress does not call that validator, but its eventual callback still needs the configured bot:
 
 | API variable | Meaning |
 | --- | --- |
@@ -15,7 +15,7 @@ The [bot factory](../lib/coding-agent/bot.ts) registers Slack and GitHub adapter
 | `REDIS_URL` | Redis connection URL for thread and shared PR state |
 | `CODING_AGENT_CALLBACK_SECRET` | Secret expected in the worker's `x-callback-secret` header |
 
-`GITHUB_BOT_USERNAME` is optional and defaults to `recoup-coding-agent`. Set it to the GitHub identity the adapter should recognize for mentions. Variable presence checks do not verify permissions, provider installation or credential validity.
+`GITHUB_BOT_USERNAME` configures the SDK adapter and defaults to `recoup-coding-agent`, but it does **not** change the public GitHub webhook's mention parser. That endpoint currently requires the literal `@recoup-coding-agent` in comments. Variable presence checks do not verify permissions, provider installation or credential validity.
 
 Use your approved secret configuration for real values; do not commit them. The [Redis connection](../lib/redis/connection.ts) currently parses host, port and password from `REDIS_URL`; it does not forward a URL username or configure TLS from a `rediss:` scheme. Confirm compatibility with the existing Redis deployment rather than assuming every Redis URL works.
 
@@ -41,7 +41,7 @@ Replace `api.example.com` with the intended API host. These URLs are placeholder
 | Platform | Method and destination | Verification |
 | --- | --- | --- |
 | Slack | `POST https://api.example.com/api/coding-agent/slack` | App-specific Slack signature; signed setup challenge |
-| GitHub | `POST https://api.example.com/api/coding-agent/github` | Adapter validates `x-hub-signature-256` with `GITHUB_WEBHOOK_SECRET` |
+| GitHub | `POST https://api.example.com/api/coding-agent/github` | Static GitHub route validates `x-hub-signature-256` with `GITHUB_WEBHOOK_SECRET` |
 | WhatsApp | `GET` and `POST https://api.example.com/api/coding-agent/whatsapp` | GET verify-token challenge; POST app-secret signature |
 | Worker callback | `POST https://api.example.com/api/coding-agent/callback` | `x-callback-secret` matching `CODING_AGENT_CALLBACK_SECRET` |
 
@@ -53,7 +53,11 @@ The setup challenge must carry Slack's signature and timestamp. [Challenge verif
 
 ### GitHub
 
-Configure the intended repository webhook with the GitHub destination, JSON content type and the matching `GITHUB_WEBHOOK_SECRET`. The locked adapter handles newly created `issue_comment` events on pull requests and `pull_request_review_comment` events, as well as signed `ping` requests. Token repository access and the bot identity must match the intended integration; package installation alone does not establish them.
+Configure the intended repository webhook with the GitHub destination, JSON content type and the matching `GITHUB_WEBHOOK_SECRET`. In the webhook event selection, explicitly enable **Issue comments** (`issue_comment`) and **Pull request review comments** (`pull_request_review_comment`); leaving the default push-only selection will not deliver PR feedback.
+
+The concrete [GitHub route](../app/api/coding-agent/github/route.ts) takes precedence over `[platform]` and calls [handleGitHubWebhook](../lib/coding-agent/handleGitHubWebhook.ts), not the generic SDK webhook. Its [comment parser](../lib/coding-agent/extractPRComment.ts) accepts only newly created PR comments containing the literal `@recoup-coding-agent`, regardless of `GITHUB_BOT_USERNAME`. Signed unsupported events, including `ping` and `push`, return `status: ignored`.
+
+This endpoint updates existing work; it does not start a new coding-agent task. It looks up shared PR state by repository and branch, fetching the PR branch through GitHub when an issue-comment event omits it. Missing state/snapshot/PRs returns `no_state`; running/updating state returns `busy`. Eligible feedback marks shared state updating and triggers `update-pr`, restoring the prior state if the trigger fails. Its acknowledgement is best effort after the trigger. Token repository access and pre-existing shared PR state must therefore be verified by the integration owner.
 
 ### WhatsApp
 
@@ -63,9 +67,9 @@ Meta verifies the URL with GET parameters `hub.mode=subscribe`, `hub.verify_toke
 
 ## Initialization limits
 
-The [shared platform helper](../lib/agents/createPlatformRoutes.ts) resolves GET handlers without calling `bot.initialize()`. POST checks for a registered platform, then initializes the bot before delegating ordinary events. A signed Slack setup challenge can return before that helper calls `getBot()`.
+For the dynamic Slack/WhatsApp route, the [shared platform helper](../lib/agents/createPlatformRoutes.ts) resolves GET handlers without calling `bot.initialize()`. POST checks for a registered platform, then initializes the bot before delegating ordinary events. A signed Slack setup challenge can return before that helper calls `getBot()`.
 
-However, the [coding-agent route](../app/api/coding-agent/[platform]/route.ts) eagerly imports the bot and registered handlers at this source revision. Bot construction validates configuration, creates Redis state and may start a connection during module loading. An early challenge branch does **not** guarantee credential-free or Redis-free cold startup. This guide does not claim the separately owned lazy-module fix is merged. The callback route also initializes the bot before its handler validates the callback secret/body.
+However, the [coding-agent route](../app/api/coding-agent/[platform]/route.ts) eagerly imports the bot and registered handlers at this source revision. Bot construction validates configuration, creates Redis state and may start a connection during module loading. An early challenge branch does **not** guarantee credential-free or Redis-free cold startup. This guide does not claim the separately owned lazy-module fix is merged. The callback route also initializes the bot before its handler validates the callback secret/body. The separate static GitHub route imports shared Redis helpers, so it is not guaranteed to load without Redis configuration either.
 
 ## Worker callback contract
 
