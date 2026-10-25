@@ -951,12 +951,288 @@
           "error": "Internal server error"
         }
       }
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 200,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "chat_id",
+          "from_message_id"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success"
+            ],
+            "description": "Status of the request",
+            "example": "success"
+          },
+          "chat_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The chat UUID where deletion was applied."
+          },
+          "from_message_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The message UUID used as the trailing deletion boundary."
+          }
+        }
+      },
+      "examples": {
+        "statementSuccess": {
+          "status": "success",
+          "chat_id": "11111111-1111-4111-8111-111111111111",
+          "from_message_id": "22222222-2222-4222-8222-222222222222"
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 400,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong."
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of missing or invalid parameter fields (when validation fails)."
+          }
+        }
+      },
+      "examples": {}
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 401,
+      "mediaType": "application/json",
+      "schema": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "description": "Human-readable error message or documented error code.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "description": "Human-readable authentication error message.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      },
+      "examples": {}
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 403,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong."
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of missing or invalid parameter fields (when validation fails)."
+          }
+        }
+      },
+      "examples": {}
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 404,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong."
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of missing or invalid parameter fields (when validation fails)."
+          }
+        }
+      },
+      "examples": {}
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 409,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong."
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of missing or invalid parameter fields (when validation fails)."
+          }
+        }
+      },
+      "examples": {
+        "occupiedSlot": {
+          "status": "error",
+          "error": "Chat has an active workflow reservation; retry after it clears"
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong."
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of missing or invalid parameter fields (when validation fails)."
+          }
+        }
+      },
+      "examples": {}
     }
   ],
   "sourceHashes": {
     "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
     "content/docs/source/api-reference/openapi/content.json": "a59fa965788414731d19e031ec4b44f4a83319bdc651cb0aa49fba5a534317b0",
-    "content/docs/source/api-reference/openapi/research.json": "053556fdeec5379fbaf6cfdbd37c721cd0793f08fa728b82c281e0c6af249457",
+    "content/docs/source/api-reference/openapi/research.json": "19100841a55ed3a793ce4ebc04038916f431150c529d54d38ddb1958484fbfdd",
     "content/docs/source/api-reference/openapi/releases.json": "7bfbdee327e8b3e27ba39cea3fcfe1fe930997d2ea05cb19a707f926ae3bdba2",
     "content/docs/source/api-reference/openapi/social.json": "5bd167a78cf6a17c46724486e2921882be20969ea32f3c0297f5b7e7ba9a30aa",
     "content/docs/source/api-reference/openapi/context.json": "2d28305aa357b3771a12bc1fbc26df78e2b9bbacd459642e31b1b1e13a314875",
@@ -4091,6 +4367,60 @@
           "example": "explicit-stop-v1"
         }
       ]
+    }
+  },
+  "chatTrailingDelete": {
+    "method": "DELETE",
+    "path": "/api/chats/{id}/messages/trailing",
+    "description": "Delete one persisted Workflow chat message and its inclusive suffix, ordered by `created_at` then `id`. The anchor must belong to the owned Workflow chat; legacy chat memories are not read or deleted. Authenticate with exactly one of `x-api-key` or `Authorization: Bearer`. Ownership is checked against the chat session's effective account, including an authorized `account_id` query override.\n\nThe caller must ensure there are no concurrent or outstanding message writers, including queued persistence and other edits. Any observed nonnull workflow slot returns `409` without cancelling work or clearing the slot. A null slot or a successful Stop does not prove that outstanding writers have finished. Concurrent edit/resend is unsupported.\n\nThe delete is scoped to this chat and includes the anchor, messages with a later timestamp, and messages at the same timestamp whose UUID sorts at or after the anchor UUID. Earlier UUIDs at the same timestamp survive; timestamp precision is preserved.\n\n`200` means the delete statement succeeded, possibly affecting zero rows. It does not report a deleted-row count or guarantee durable absence or prevent later message recreation. A transport failure can leave the commit outcome unknown: refresh authoritative history before deciding what to do next, rather than blindly resending a turn.",
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "description": "UUID of the owned Workflow chat.",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "from_message_id",
+        "in": "query",
+        "description": "UUID of the persisted message in this Workflow chat to use as the inclusive created_at, id boundary. Any persisted message role is eligible.",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "account_id",
+        "in": "query",
+        "required": false,
+        "description": "Optional effective account override, accepted only when current authentication authorizes access to that account. It does not grant access by itself.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "security": [
+      {
+        "apiKeyAuth": []
+      },
+      {
+        "bearerAuth": []
+      }
+    ],
+    "responseDescriptions": {
+      "200": "Delete statement succeeded, including a possible zero-row result. No deleted count, durable-absence or concurrent edit/resend guarantee.",
+      "400": "Invalid chat UUID or missing/invalid from_message_id query UUID.",
+      "401": "Missing, conflicting or invalid credentials. Authentication errors retain the error or message envelope returned by the selected authentication path.",
+      "403": "Access denied to the requested account_id override or the effective account does not own the Workflow chat session.",
+      "404": "Workflow chat/session is absent, or the anchor is absent from this chat (including a foreign-chat anchor).",
+      "500": "Authentication/storage failure, chat/session/anchor read failure, invalid stored boundary, or delete failure. A transport failure may leave the commit outcome unknown; refresh history before further action.",
+      "409": "An occupied workflow slot was observed. Pending reservations and other nonnull values are rejected without provider calls, cancellation or slot mutation. This check is not a concurrency lock."
     }
   }
 }
