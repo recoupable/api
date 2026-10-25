@@ -35,6 +35,7 @@ export async function executeChatFenceCommand(
           expectedEpoch: p.expected_epoch,
         },
         {
+          dispatch: { status: "never_attempted", attempt_id: null },
           admission_envelope: p.admission_envelope,
           execution_snapshot: p.execution_snapshot,
           admission_canonical: p.admission_canonical,

@@ -1,7 +1,7 @@
 # Chat fence foundation — disabled and unwired
 
 This is the first API foundation for recoupable/chat#636 and draft Database #122
-at `1d19c6c7c026520c3e8d028c51d4f674972fd8f0`. No route, MCP tool, production
+at `61d8b530f8b960b32402f4dd1f0d0a8f4f83d76e`. No route, MCP tool, production
 workflow, enrollment flag or generated database type uses it. Current quiescent
 trailing DELETE and explicit Stop/editor recovery behavior are unchanged.
 
@@ -57,6 +57,20 @@ issuer, subject/account or API-key row/account), effective account, organization
 authorization basis/version/permissions and credential intent. This builder does
 not authenticate. Today's shared auth result lacks these fields; a later reviewed
 adapter must preserve them before account override. No new auth transport is added.
+`content.recoupOrgId` is repository routing derived from `session.clone_url`;
+`credentialPolicy.organizationId` is verified auth resource context. They are
+intentionally not forced equal: a self/null auth context can legitimately route
+to an organization repository. Matching effective accounts and passing this
+schema **does not authorize that repository organization or sandbox**. Before
+admission or reauthentication recovery, the future shared authorization adapter
+must verify the original principal's current authority for the effective account,
+chat/session ownership, the repository/sandbox execution resource (including
+`recoupOrgId`) and intended operations. It must compare that verified resource,
+authorization basis/version/permissions and principal with the original snapshot;
+removed, expanded or changed scope must fail closed. No account/grant lookup or
+such authorization decision is implemented here. The mismatch test preserves
+these separate meanings, not an assertion that access is allowed.
+
 These non-secret identifiers are sensitive metadata, not a secret store or an
 attenuated credential. Arbitrary message strings are not scanned for secrets.
 
@@ -79,7 +93,25 @@ Neither JSONB serialization nor current mutable defaults replace stored API byte
 
 The accepted credential policy is reauthentication only for durably proven
 never-dispatched work. Pending state or null bound-run is never that proof.
-Context owns the separate dispatch-attempt CAS; this pin predates it. No dispatch,
+The pinned SQL now owns the separate one-shot dispatch-attempt CAS. Snapshot
+lookup returns mutable `dispatch` history separately from immutable bytes. A
+`never_attempted` history is not permission; only the first unambiguously received
+`claim_dispatch` response with `claimed:true` authorizes one initial start. Every
+replay (even the same attempt UUID) returns `claimed:false` and original history.
+`bind` requires that original attempt ID separately from writer authority.
+
+`dispatchChatFenceOnce` is disabled adapter orchestration: one injected claim call,
+strict receipt verification, then at most one injected start call. It consumes
+`claimed:true` internally and never returns it as reusable permission. False is
+information-only. Claim loss and thrown/unknown start return ambiguous outcomes;
+there is no retry, post-start promotion, release, cleanup or credential operation.
+The injected claim adapter supplies raw RPC receipt data and must throw on
+transport failure; it must never cache/replay a prior true response. Both adapters
+must disable automatic retries. Future callers must complete the authorization
+prerequisites above; this helper does not perform them. SQL cannot enforce
+external caller behavior or provide provider exactly-once execution.
+
+No production dispatch,
 recovery-to-workflow reconstruction, credential refresh/mint/revoke or raw-secret
 storage is implemented here. Ambiguous or bound work keeps its original identity
 and credential disposition; no blind restart or credential renewal is permitted.
@@ -95,7 +127,7 @@ Run `python3 scripts/chat-fence-fixture/test-sql-golden.py /path/to/database`
 with PostgreSQL 17 installed (`PG_BIN` can select its binaries). The script reads
 SQL and the existing Context test harness directly from the pinned Git commit,
 uses its disposable socket-only cluster and teardown, and tests exact readback,
-tampering, malformed characters, missing lookups and closed originals after a new
+tampering, malformed characters, concurrent claims, lost claim responses, bind-before-start-response, missing lookups and closed originals after a new
 owner. No migration is deployed. This is a local cross-repository qualification;
 the standard CI job runs the generated-vector comparison and compiled fixture.
 Set `CHAT_FENCE_SQL_OUTPUT=/absolute/output.json` on the Python run and then
@@ -117,12 +149,15 @@ compiler root, so application workflow discovery does not register them.
 its direct in-process handlers, real run metadata and durable local journal;
 network transports are blocked before compiler/runtime loading.
 
-The fixture binds in a journaled first step, suspends on a durable hook,
-re-enqueues the **same** run, and verifies completed binding is not repeated. A
-second dispatched run loses before entering winner cleanup. Awaited synthetic
+The fixture races synthetic one-shot claims through the real adapter orchestration,
+then passes the winning attempt ID separately in actual durable workflow input.
+The first journaled step verifies it before binding, then suspends on a durable hook,
+re-enqueues the **same** run, and verifies completed binding is not repeated. An intentionally injected external duplicate
+run loses before entering winner cleanup. Awaited synthetic
 user persistence precedes the provider stub and release. A resolved write failure
-prevents provider/release but permits that bound run's key cleanup. The typed
-foundation authority/receipt parsers execute inside compiled steps.
+prevents provider/release but permits that bound run's key cleanup. The fixture also drops a committed claim response, and drops a start response
+after binding, asserting both replays are information-only with no new start.
+The typed foundation authority/receipt parsers execute inside compiled steps.
 
 This is not the real production agent workflow, SQL-lock enforcement, hosted
 scheduling, provider cancellation, stream drainage, a production credential test,

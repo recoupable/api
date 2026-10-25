@@ -69,6 +69,7 @@ export function snapshotFixture() {
     payload,
     receipt,
     stored: {
+      dispatch: { status: "never_attempted" as const, attempt_id: null },
       receipt,
       admission_envelope: admission.envelope,
       execution_snapshot: execution.snapshot,

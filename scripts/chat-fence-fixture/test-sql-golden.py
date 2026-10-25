@@ -2,6 +2,7 @@
 Usage: python3 scripts/chat-fence-fixture/test-sql-golden.py /path/to/database
 """
 import copy
+import concurrent.futures
 import hashlib
 import json
 import os
@@ -10,7 +11,7 @@ import subprocess
 import sys
 import types
 import unittest
-COMMIT = "1d19c6c7c026520c3e8d028c51d4f674972fd8f0"
+COMMIT = "61d8b530f8b960b32402f4dd1f0d0a8f4f83d76e"
 REPO = Path(sys.argv.pop(1)).resolve()
 PROPOSAL = "proposals/chat-writer-fencing-636"
 
@@ -55,7 +56,7 @@ class Golden(unittest.TestCase):
                 p = self.prepare(vector)
                 receipt = self.cmd("admit", p)
                 result = self.cmd("admission_snapshot", {"request_id": p["request_id"]})
-                self.assertEqual(result, {"receipt": receipt, **{k: p[k] for k in ("admission_envelope", "execution_snapshot", "admission_canonical", "execution_canonical")}})
+                self.assertEqual(result, {"receipt": receipt, "dispatch": {"status":"never_attempted","attempt_id":None}, **{k: p[k] for k in ("admission_envelope", "execution_snapshot", "admission_canonical", "execution_canonical")}})
                 self.assertEqual(hashlib.sha256(result["admission_canonical"].encode()).hexdigest(), p["input_hash"])
                 self.assertEqual(hashlib.sha256(result["execution_canonical"].encode()).hexdigest(), p["admission_envelope"]["executionSnapshot"]["digest"])
                 roundtrips.append({"name": vector["name"], "stored": result})
@@ -83,7 +84,40 @@ class Golden(unittest.TestCase):
                     altered = copy.deepcopy(p); altered["admission_envelope"][invalid] = invalid
                     with self.assertRaises(AssertionError): self.cmd("admit", altered)
                 with self.assertRaises(AssertionError): self.cmd("admission_snapshot", {"request_id": "66666666-6666-4666-8666-666666666666"})
-                self.cmd("release", {"epoch": 1, "owner": p["request_id"], "reason": "confirmed_no_start"})
+                token = {"epoch": 1, "owner": p["request_id"]}
+                attempt_a = "77777777-7777-4777-8777-777777777777"
+                attempt_b = "88888888-8888-4888-8888-888888888888"
+                starts = []  # Synthetic external side effects; SQL cannot enforce provider behavior.
+                if vector["name"] == "normalization":
+                    # Closed never-attempted original: null attempt is history, never permission.
+                    self.cmd("release", {**token, "reason": "confirmed_no_start"})
+                    denied = self.cmd("claim_dispatch", {**token, "attempt_id": attempt_a})
+                    self.assertFalse(denied["claimed"]); self.assertIsNone(denied["attempt_id"])
+                elif vector["name"] == "numeric-keys":
+                    self.cmd("claim_dispatch", {**token, "attempt_id": attempt_a})  # Drop committed response.
+                    replay = self.cmd("claim_dispatch", {**token, "attempt_id": attempt_a})
+                    self.assertFalse(replay["claimed"])
+                    self.assertEqual(starts, [])
+                    self.assertEqual(self.cmd("admission_snapshot", {"request_id":p["request_id"]})["dispatch"], {"status":"claimed","attempt_id":attempt_a})
+                    # This synthetic test knows no start was invoked; no timeout inference.
+                    self.cmd("release", {**token, "reason": "confirmed_no_start"})
+                else:
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+                        claims = list(pool.map(lambda attempt: self.cmd("claim_dispatch", {**token,"attempt_id":attempt}), [attempt_a,attempt_b]))
+                    self.assertEqual(sum(c["claimed"] for c in claims), 1)
+                    winner = next(c for c in claims if c["claimed"])
+                    attempt = winner["attempt_id"]
+                    starts.append("synthetic-run")
+                    wrong = attempt_b if attempt == attempt_a else attempt_a
+                    with self.assertRaises(AssertionError): self.cmd("bind", {**token,"attempt_id":wrong,"run_id":"synthetic-run"})
+                    self.cmd("bind", {**token,"attempt_id":attempt,"run_id":"synthetic-run"})
+                    # Provider binds before the caller observes (or loses) the start response.
+                    replay = self.cmd("claim_dispatch", {**token,"attempt_id":attempt})
+                    self.assertFalse(replay["claimed"])
+                    self.assertEqual(replay["receipt"]["bound_run_id"], "synthetic-run")
+                    self.assertEqual(starts, ["synthetic-run"])
+                    self.cmd("release", {**token,"run_id":"synthetic-run","reason":"workflow_complete"})
+
                 newer = copy.deepcopy(p)
                 newer["request_id"] = "55555555-5555-4555-8555-555555555555"
                 newer["expected_epoch"] = 1
@@ -103,7 +137,11 @@ class Golden(unittest.TestCase):
                 self.assertEqual(old["receipt"]["epoch"], 1)
                 self.assertEqual(old["execution_canonical"], p["execution_canonical"])
                 self.assertEqual(self.cmd("state", {})["owner"], newer["request_id"])
-                print(f"PASS {vector['name']}: roundtrip, tampering, invalid chars, closed original/new owner", flush=True)
+                old_claim = self.cmd("claim_dispatch", {**token, "attempt_id": attempt_a})
+                self.assertFalse(old_claim["claimed"])
+                self.assertEqual(old_claim["receipt"], old["receipt"])
+                self.assertEqual(self.cmd("state", {})["owner"], newer["request_id"])
+                print(f"PASS {vector['name']}: roundtrip, tampering, invalid chars, one-shot dispatch, closed original/new owner", flush=True)
 
 if __name__ == "__main__":
     print(f"Pinned Context SQL/harness: {COMMIT}; synthetic API vectors only", flush=True)

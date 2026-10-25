@@ -113,3 +113,30 @@ it.each([
     }),
   ).toThrow();
 });
+
+it("preserves distinct repository routing and auth contexts without asserting resource authorization", () => {
+  const result = buildChatExecutionSnapshot({
+    id: "snapshot",
+    requestId,
+    credentialPolicy: policy,
+    workflowInput: {
+      ...workflowInput,
+      agentContext: { ...workflowInput.agentContext, recoupOrgId: requestId },
+    },
+  });
+  expect(result.snapshot.content.recoupOrgId).toBe(requestId);
+  expect(result.snapshot.content.credentialPolicy.organizationId).toBeNull();
+  // Structural/integrity acceptance is not a permission check. No dispatch capability is returned.
+  expect(result).not.toHaveProperty("authorized");
+});
+it("rejects a bound original whose dispatch history says never attempted", () => {
+  const { stored } = snapshotFixture();
+  const bound = { ...stored, receipt: { ...stored.receipt, bound_run_id: "original-run" } };
+  expect(() => verifyChatAdmissionSnapshot(scope, bound)).toThrow();
+  expect(
+    verifyChatAdmissionSnapshot(scope, {
+      ...bound,
+      dispatch: { status: "claimed", attempt_id: requestId },
+    }).receipt.bound_run_id,
+  ).toBe("original-run");
+});

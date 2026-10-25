@@ -20,6 +20,7 @@ export function verifyChatAdmissionSnapshot(originalScope: ChatAdmissionScope, i
   const { receipt, admission_envelope: admission, execution_snapshot: execution } = stored;
   const hash = (text: string) => createHash("sha256").update(text, "utf8").digest("hex");
   if (
+    (receipt.bound_run_id !== null && stored.dispatch.status !== "claimed") ||
     receipt.chat_id !== scope.chatId ||
     receipt.request_id !== scope.requestId ||
     receipt.expected_epoch !== scope.expectedEpoch ||

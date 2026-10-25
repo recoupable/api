@@ -26,6 +26,7 @@ export const chatCredentialPolicySchema = z
         .strict(),
     ]),
     effectiveAccountId: z.uuid(),
+    // Verified auth resource context; not a grant to the sandbox repository organization.
     organizationId: z.uuid().nullable(),
     authorization: z
       .object({ version: text, basis: text, permissions: z.array(text).min(1) })
@@ -70,6 +71,7 @@ export const chatExecutionSnapshotSchema = z
               .strict(),
           })
           .strict(),
+        // Repository routing from clone_url; a future adapter must authorize this execution resource.
         recoupOrgId: z.uuid().nullable(),
         skills: z
           .array(

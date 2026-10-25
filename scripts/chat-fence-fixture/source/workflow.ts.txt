@@ -5,6 +5,7 @@ import type { ChatFenceAuthority } from "@/lib/chat/fence/chatFenceSchemas";
 /** Compiled offline fixture only; this file is never discovered by the app build. */
 export async function fenceFixture(input: {
   authority: ChatFenceAuthority;
+  attemptId: string;
   hookToken: string;
   failWrite?: boolean;
 }) {

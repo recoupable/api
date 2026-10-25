@@ -62,7 +62,18 @@ export const chatFenceCommandSchema = z.discriminatedUnion("action", [
       payload: z.object({ request_id: z.uuid() }).strict(),
     })
     .strict(),
-  z.object({ action: z.literal("bind"), payload: z.object(writer).strict() }).strict(),
+  z
+    .object({
+      action: z.literal("claim_dispatch"),
+      payload: z.object({ ...token, attempt_id: z.uuid() }).strict(),
+    })
+    .strict(),
+  z
+    .object({
+      action: z.literal("bind"),
+      payload: z.object({ ...writer, attempt_id: z.uuid() }).strict(),
+    })
+    .strict(),
   z.object({ action: z.literal("write"), payload: write }).strict(),
   z.object({ action: z.literal("update_parts"), payload: update }).strict(),
   z
@@ -120,9 +131,25 @@ export const chatFenceReceiptSchemas = {
       .strict(),
   ]),
   admit: admissionReceipt,
+  claim_dispatch: z.discriminatedUnion("claimed", [
+    z
+      .object({ claimed: z.literal(true), attempt_id: z.uuid(), receipt: admissionReceipt })
+      .strict(),
+    z
+      .object({
+        claimed: z.literal(false),
+        attempt_id: z.uuid().nullable(),
+        receipt: admissionReceipt,
+      })
+      .strict(),
+  ]),
   admission_snapshot: z
     .object({
       receipt: admissionReceipt,
+      dispatch: z.discriminatedUnion("status", [
+        z.object({ status: z.literal("never_attempted"), attempt_id: z.null() }).strict(),
+        z.object({ status: z.literal("claimed"), attempt_id: z.uuid() }).strict(),
+      ]),
       admission_envelope: chatAdmissionSchema,
       execution_snapshot: chatExecutionSnapshotSchema,
       admission_canonical: z.string().min(1),

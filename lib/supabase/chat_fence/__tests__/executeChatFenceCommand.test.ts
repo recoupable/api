@@ -7,7 +7,11 @@ vi.mock("@/lib/supabase/serverClient", () => ({ default: { rpc: vi.fn() } }));
 const account = "11111111-1111-4111-8111-111111111111";
 const owner = "22222222-2222-4222-8222-222222222222";
 const authority = { chatId: "chat", effectiveAccount: account, epoch: 1, owner };
-const bind = { action: "bind", payload: { epoch: 1, owner, run_id: "wrun-1" } } as const;
+const writer = { epoch: 1, owner, run_id: "wrun-1" };
+const bind = {
+  action: "bind",
+  payload: { ...writer, attempt_id: "55555555-5555-4555-8555-555555555555" },
+} as const;
 beforeEach(() => vi.clearAllMocks());
 describe("disabled, unwired chat fence RPC foundation", () => {
   it("validates and freezes immutable authority", () => {
@@ -51,7 +55,7 @@ describe("disabled, unwired chat fence RPC foundation", () => {
     [
       "write",
       {
-        ...bind.payload,
+        ...writer,
         id: "u1",
         role: "user",
         mode: "insert",
@@ -61,10 +65,10 @@ describe("disabled, unwired chat fence RPC foundation", () => {
     ],
     [
       "update_parts",
-      { ...bind.payload, id: "a1", parts: { id: "a1", role: "assistant", parts: [] } },
+      { ...writer, id: "a1", parts: { id: "a1", role: "assistant", parts: [] } },
       { updated: false },
     ],
-    ["release", { ...bind.payload, reason: "workflow_complete" }, { released: false }],
+    ["release", { ...writer, reason: "workflow_complete" }, { released: false }],
     [
       "delete",
       { request_id: owner, expected_epoch: 1, anchor_id: "u1" },
@@ -112,7 +116,7 @@ describe("disabled, unwired chat fence RPC foundation", () => {
     const command = {
       action: "write",
       payload: {
-        ...bind.payload,
+        ...writer,
         id: "u",
         role: "user",
         mode: "insert",
@@ -129,7 +133,7 @@ describe("disabled, unwired chat fence RPC foundation", () => {
     const command = {
       action: "write",
       payload: {
-        ...bind.payload,
+        ...writer,
         id: "u",
         role: "user",
         mode: "insert",
@@ -178,11 +182,11 @@ describe("disabled, unwired chat fence RPC foundation", () => {
   });
   it.each([
     { action: "bind", payload: { ...bind.payload, run_id: "pending-owner" } },
-    { action: "release", payload: { ...bind.payload, reason: "terminal" } },
+    { action: "release", payload: { ...writer, reason: "terminal" } },
     {
       action: "write",
       payload: {
-        ...bind.payload,
+        ...writer,
         id: "u1",
         role: "user",
         mode: "upsert",

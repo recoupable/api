@@ -8,7 +8,7 @@ import type { ChatFenceAuthority } from "@/lib/chat/fence/chatFenceSchemas";
 /** Synthetic effects only. This does not model SQL locks or call a provider. */
 export async function fixtureStep(
   action: "bind" | "user" | "provider" | "release" | "key-cleanup",
-  input: { authority: ChatFenceAuthority; failWrite?: boolean },
+  input: { authority: ChatFenceAuthority; attemptId: string; failWrite?: boolean },
   runId: string,
 ) {
   "use step";
@@ -19,8 +19,13 @@ export async function fixtureStep(
   const file = join(dir, `${authority.owner}.json`);
   const payload = { epoch: authority.epoch, owner: authority.owner, run_id: runId };
   if (action === "bind") {
+    const originalAttempt = await readFile(join(dir, `${authority.owner}.claim`), "utf8");
+    if (originalAttempt !== input.attemptId) {
+      await appendFile(join(dir, "events.jsonl"), JSON.stringify({ action: "lost", runId }) + "\n");
+      return { ok: false };
+    }
     try {
-      await writeFile(file, JSON.stringify({ runId, authority }), { flag: "wx" });
+      await writeFile(file, JSON.stringify({ runId, authority, attemptId: input.attemptId }), { flag: "wx" });
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
       if (JSON.parse(await readFile(file, "utf8")).runId !== runId) {
@@ -33,7 +38,7 @@ export async function fixtureStep(
     }
     const result = parseChatFenceReceipt(
       authority.chatId,
-      { action: "bind", payload },
+      { action: "bind", payload: { ...payload, attempt_id: input.attemptId } },
       { bound: true },
     );
     if (!result.ok) throw new FatalError("Invalid bind receipt");
@@ -60,6 +65,6 @@ export async function fixtureStep(
       if (!result.ok) throw new FatalError("Invalid write receipt");
     }
   }
-  await appendFile(join(dir, "events.jsonl"), JSON.stringify({ action, runId, authority }) + "\n");
+  await appendFile(join(dir, "events.jsonl"), JSON.stringify({ action, runId, authority, attemptId: input.attemptId }) + "\n");
   return { ok: true };
 }

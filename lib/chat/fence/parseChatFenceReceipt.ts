@@ -27,6 +27,22 @@ export function parseChatFenceReceipt(
       return invalid;
   }
   if ("chat_id" in value && value.chat_id !== chatId) return invalid;
+  if (command.action === "claim_dispatch") {
+    const claim = chatFenceReceiptSchemas.claim_dispatch.parse(value);
+    const receipt = claim.receipt;
+    if (
+      receipt.chat_id !== chatId ||
+      receipt.request_id !== command.payload.owner ||
+      receipt.epoch !== command.payload.epoch ||
+      receipt.epoch !== receipt.expected_epoch + 1 ||
+      (receipt.bound_run_id !== null && claim.attempt_id === null) ||
+      (claim.claimed &&
+        (claim.attempt_id !== command.payload.attempt_id ||
+          receipt.closed ||
+          receipt.bound_run_id !== null))
+    )
+      return invalid;
+  }
   if (command.action === "admit") {
     const receipt = chatFenceReceiptSchemas.admit.parse(value);
     if (
