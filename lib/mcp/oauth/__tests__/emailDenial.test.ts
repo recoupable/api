@@ -5,6 +5,7 @@ import { registerFullOAuthTools } from "../registerFullOAuthTools";
 import { prepareFullOAuthTool } from "../prepareFullOAuthTool";
 
 const mocks = vi.hoisted(() => ({ payment: vi.fn(), emails: vi.fn(), send: vi.fn() }));
+vi.mock("@/lib/const", () => ({ RECOUP_FROM_EMAIL: "Fixture <sender@example.test>" }));
 // Register the real email callback without importing unrelated tools or their providers.
 vi.mock("../../tools", async () => {
   const { registerSendEmailTool } = await import("../../tools/registerSendEmailTool");
