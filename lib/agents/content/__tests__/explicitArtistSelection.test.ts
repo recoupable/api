@@ -145,6 +145,23 @@ describe("explicit authorized content artist selection", () => {
     expectNoWork();
   });
 
+  it.each([
+    "../Other",
+    "North/Other",
+    "North\\Other",
+    "%2e%2e%2fOther",
+    "North?ref=other",
+    "North#other",
+    ".",
+    "..",
+  ])("rejects names that can alter downstream file paths: %s", async name => {
+    mocks.parse.mockResolvedValue({ ...flags, artistNames: [name] });
+    mocks.roster.mockResolvedValue([{ id: artistId, name }]);
+    mocks.slug.mockResolvedValue(name.toLowerCase());
+    await mention({ text: `Generate a video for ${name}` });
+    expectNoWork();
+  });
+
   it("fails closed when roster loading fails", async () => {
     mocks.roster.mockRejectedValue(new Error("database unavailable"));
     await mention();

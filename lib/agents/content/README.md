@@ -40,6 +40,8 @@ Example: `Make two videos for North Star using the song Example Song.`
 - Duplicate display names or colliding content-directory slugs are rejected; duplicate
   ownership rows for the same artist are not a second artist. Resolve roster ambiguity
   before retrying. A model-extracted request for multiple artists is also rejected.
+- Directory names containing path separators, percent escapes or URL modifiers,
+  and the dot/dot-dot segments, are rejected before they can redirect worker file lookups.
 - Roster errors or server-truncated results fail closed instead of selecting from a
   partial list. Very large rosters beyond the database response cap need a separately
   verified pagination change before this bot can use them.
