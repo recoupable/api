@@ -75,7 +75,13 @@ it("returns matching HTTP and SDK MCP preflight contracts", async () => {
   }
 });
 it("returns 400 for malformed bodies and credentials in the input", async () => {
-  expect((await POST(request(null))).status).toBe(400);
+  const invalid = await POST(request(null));
+  expect(invalid.status).toBe(400);
+  expect(await invalid.json()).toEqual({
+    status: "error",
+    error: "Invalid application registration input",
+  });
+  expect(invalid.headers.get("cache-control")).toBe("private, no-store");
   expect((await POST(request({ ...input, client_secret: "not-accepted" }))).status).toBe(400);
 });
 it("returns 403 for another workspace and sanitizes infrastructure failures", async () => {

@@ -1,3 +1,4 @@
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
@@ -16,6 +17,8 @@ export async function validateApplicationRegistrationHandler(request: NextReques
     return NextResponse.json(result, { headers });
   } catch (error) {
     const failure = registrationErrorResponse(error);
-    return NextResponse.json({ error: failure.error }, { status: failure.status, headers });
+    const response = errorResponse(failure.error, failure.status);
+    response.headers.set("Cache-Control", "private, no-store");
+    return response;
   }
 }
