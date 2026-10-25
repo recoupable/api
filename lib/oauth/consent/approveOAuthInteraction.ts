@@ -1,4 +1,5 @@
 import { oauthPersistentExpiry } from "../oauthPersistentExpiry";
+import { OAuthStorageUnavailableError } from "../OAuthStorageUnavailableError";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AdapterFactory, Provider } from "oidc-provider";
 import type { OAuthConsentBinding } from "./createOAuthConsentTickets";
@@ -46,8 +47,9 @@ export async function approveOAuthInteraction(
       },
       { mergeWithLastSubmission: false },
     );
-  } catch {
+  } catch (error) {
     await adapter("Grant").revokeByGrantId(grantId);
+    if (error instanceof OAuthStorageUnavailableError) throw error;
     throw new Error("OAuth approval unavailable");
   }
 }

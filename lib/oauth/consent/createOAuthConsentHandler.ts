@@ -7,6 +7,7 @@ import { readOAuthConsentBody } from "./readOAuthConsentBody";
 import { getOAuthConsentRequest } from "./getOAuthConsentRequest";
 import { setOAuthConsentCors } from "./setOAuthConsentCors";
 import { approveOAuthInteraction } from "./approveOAuthInteraction";
+import { OAuthStorageUnavailableError } from "../OAuthStorageUnavailableError";
 
 /** Handle browser-bound consent; call only behind the canonical issuer Node boundary. */
 export function createOAuthConsentHandler(options: {
@@ -105,7 +106,12 @@ export function createOAuthConsentHandler(options: {
         requested,
       );
       reply(200, { redirectUrl });
-    } catch {
+    } catch (error) {
+      if (error instanceof OAuthStorageUnavailableError) {
+        console.error("OAuth consent storage unavailable", {
+          event: "oauth_consent_storage_unavailable",
+        });
+      }
       reply(400, { error: "invalid_or_expired_interaction" });
     }
   };
