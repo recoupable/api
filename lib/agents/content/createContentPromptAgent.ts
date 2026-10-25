@@ -8,6 +8,12 @@ import { songsSchema } from "@/lib/content/songsSchema";
 const templateNames = CONTENT_TEMPLATES.map(t => t.name) as [string, ...string[]];
 
 export const contentPromptFlagsSchema = z.object({
+  artistNames: z
+    .array(z.string())
+    .optional()
+    .describe(
+      "Full artist names explicitly selected as the subjects of this request. Copy names verbatim from the prompt; never infer or default an artist. Return [] if none is specified, or every requested artist if multiple are selected. Do not include song names, style references, or negated artists.",
+    ),
   lipsync: z
     .boolean()
     .describe(
@@ -58,6 +64,7 @@ ${templateDescriptions}
 
 If no template is specified, default to "${DEFAULT_CONTENT_PROMPT_FLAGS.template}".
 If a parameter is not mentioned, use the default value.
+There is no default artist. Extract artistNames only from an explicit artist selection in this request, never from a song title or inferred context. Preserve multiple requested artists so the caller can reject ambiguity.
 
 Defaults: lipsync=${DEFAULT_CONTENT_PROMPT_FLAGS.lipsync}, batch=${DEFAULT_CONTENT_PROMPT_FLAGS.batch}, captionLength="${DEFAULT_CONTENT_PROMPT_FLAGS.captionLength}", upscale=${DEFAULT_CONTENT_PROMPT_FLAGS.upscale}, template="${DEFAULT_CONTENT_PROMPT_FLAGS.template}"`;
 
