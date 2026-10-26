@@ -1,0 +1,251 @@
+{
+  "account": "11111111-1111-4111-8111-111111111111",
+  "admissions": [
+    {
+      "request_id": "77777777-7777-4777-8777-777777777777",
+      "expected_epoch": 0,
+      "input_hash": "97b9eec31a031d05f0f9eee3855ea857f342f420f8eca44c26780b7748490ee9",
+      "admission_envelope": {
+        "contractVersion": "chat-admission/v1",
+        "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+        "sessionId": "session",
+        "chatId": "chat",
+        "expectedEpoch": 0,
+        "messages": [
+          {
+            "id": "user-1",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "hello"
+              }
+            ]
+          }
+        ],
+        "options": {
+          "modelId": "synthetic-model",
+          "artistId": null,
+          "interactive": true,
+          "devSurface": null
+        },
+        "executionSnapshot": {
+          "id": "delete-0",
+          "digest": "16c3deac8991338626c56e27add73c802ec18f95d326f7e25114208d6324fcf8"
+        }
+      },
+      "execution_snapshot": {
+        "contractVersion": "chat-execution/v1",
+        "id": "delete-0",
+        "requestId": "77777777-7777-4777-8777-777777777777",
+        "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+        "chatId": "chat",
+        "sessionId": "session",
+        "content": {
+          "options": {
+            "modelId": "synthetic-model",
+            "artistId": null,
+            "interactive": true,
+            "devSurface": null
+          },
+          "sessionTitle": null,
+          "repoOwner": null,
+          "repoName": null,
+          "sandbox": {
+            "workingDirectory": "/workspace",
+            "currentBranch": null,
+            "state": {
+              "sandboxName": "synthetic-sandbox",
+              "sandboxId": null,
+              "snapshotId": null,
+              "expiresAt": null,
+              "source": null
+            }
+          },
+          "recoupOrgId": null,
+          "skills": [],
+          "credentialPolicy": {
+            "policyVersion": "chat-credential/v1",
+            "credentialIntentId": "33333333-3333-4333-8333-333333333333",
+            "principal": {
+              "mechanism": "recoup_api_key",
+              "accountId": "11111111-1111-4111-8111-111111111111",
+              "keyId": "44444444-4444-4444-8444-444444444444"
+            },
+            "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+            "organizationId": null,
+            "authorization": {
+              "version": "synthetic/v1",
+              "basis": "self",
+              "permissions": [
+                "chat:execute"
+              ]
+            },
+            "recovery": "reauthenticate_proven_never_dispatched"
+          }
+        }
+      },
+      "admission_canonical": "{\"chatId\":\"chat\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"16c3deac8991338626c56e27add73c802ec18f95d326f7e25114208d6324fcf8\",\"id\":\"delete-0\"},\"expectedEpoch\":0,\"messages\":[{\"id\":\"user-1\",\"parts\":[{\"text\":\"hello\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session\"}",
+      "execution_canonical": "{\"chatId\":\"chat\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"delete-0\",\"requestId\":\"77777777-7777-4777-8777-777777777777\",\"sessionId\":\"session\"}"
+    },
+    {
+      "request_id": "88888888-8888-4888-8888-888888888888",
+      "expected_epoch": 2,
+      "input_hash": "9909a3947574987d0488b13fd5d1254303f8658e2e89b4a04358cecd196837c5",
+      "admission_envelope": {
+        "contractVersion": "chat-admission/v1",
+        "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+        "sessionId": "session",
+        "chatId": "chat",
+        "expectedEpoch": 2,
+        "messages": [
+          {
+            "id": "user-1",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "hello"
+              }
+            ]
+          }
+        ],
+        "options": {
+          "modelId": "synthetic-model",
+          "artistId": null,
+          "interactive": true,
+          "devSurface": null
+        },
+        "executionSnapshot": {
+          "id": "delete-1",
+          "digest": "bd6f23bb371ea634b84519e3515d2f96b18541ea8bc4ef2327c581766e6162dc"
+        }
+      },
+      "execution_snapshot": {
+        "contractVersion": "chat-execution/v1",
+        "id": "delete-1",
+        "requestId": "88888888-8888-4888-8888-888888888888",
+        "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+        "chatId": "chat",
+        "sessionId": "session",
+        "content": {
+          "options": {
+            "modelId": "synthetic-model",
+            "artistId": null,
+            "interactive": true,
+            "devSurface": null
+          },
+          "sessionTitle": null,
+          "repoOwner": null,
+          "repoName": null,
+          "sandbox": {
+            "workingDirectory": "/workspace",
+            "currentBranch": null,
+            "state": {
+              "sandboxName": "synthetic-sandbox",
+              "sandboxId": null,
+              "snapshotId": null,
+              "expiresAt": null,
+              "source": null
+            }
+          },
+          "recoupOrgId": null,
+          "skills": [],
+          "credentialPolicy": {
+            "policyVersion": "chat-credential/v1",
+            "credentialIntentId": "33333333-3333-4333-8333-333333333333",
+            "principal": {
+              "mechanism": "recoup_api_key",
+              "accountId": "11111111-1111-4111-8111-111111111111",
+              "keyId": "44444444-4444-4444-8444-444444444444"
+            },
+            "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
+            "organizationId": null,
+            "authorization": {
+              "version": "synthetic/v1",
+              "basis": "self",
+              "permissions": [
+                "chat:execute"
+              ]
+            },
+            "recovery": "reauthenticate_proven_never_dispatched"
+          }
+        }
+      },
+      "admission_canonical": "{\"chatId\":\"chat\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"bd6f23bb371ea634b84519e3515d2f96b18541ea8bc4ef2327c581766e6162dc\",\"id\":\"delete-1\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"user-1\",\"parts\":[{\"text\":\"hello\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session\"}",
+      "execution_canonical": "{\"chatId\":\"chat\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"delete-1\",\"requestId\":\"88888888-8888-4888-8888-888888888888\",\"sessionId\":\"session\"}"
+    }
+  ],
+  "commands": {
+    "active": {
+      "p_chat": "chat",
+      "p_account": "11111111-1111-4111-8111-111111111111",
+      "p_action": "delete",
+      "p": {
+        "request_id": "22222222-2222-4222-8222-222222222222",
+        "expected_epoch": 1,
+        "anchor_id": "b"
+      }
+    },
+    "stale": {
+      "p_chat": "chat",
+      "p_account": "11111111-1111-4111-8111-111111111111",
+      "p_action": "delete",
+      "p": {
+        "request_id": "33333333-3333-4333-8333-333333333333",
+        "expected_epoch": 0,
+        "anchor_id": "b"
+      }
+    },
+    "delete": {
+      "p_chat": "chat",
+      "p_account": "11111111-1111-4111-8111-111111111111",
+      "p_action": "delete",
+      "p": {
+        "request_id": "44444444-4444-4444-8444-444444444444",
+        "expected_epoch": 1,
+        "anchor_id": "b"
+      }
+    },
+    "changed": {
+      "p_chat": "chat",
+      "p_account": "11111111-1111-4111-8111-111111111111",
+      "p_action": "delete",
+      "p": {
+        "request_id": "44444444-4444-4444-8444-444444444444",
+        "expected_epoch": 1,
+        "anchor_id": "c"
+      }
+    },
+    "rollback": {
+      "p_chat": "chat",
+      "p_account": "11111111-1111-4111-8111-111111111111",
+      "p_action": "delete",
+      "p": {
+        "request_id": "55555555-5555-4555-8555-555555555555",
+        "expected_epoch": 1,
+        "anchor_id": "b"
+      }
+    },
+    "foreignAnchor": {
+      "p_chat": "chat",
+      "p_account": "11111111-1111-4111-8111-111111111111",
+      "p_action": "delete",
+      "p": {
+        "request_id": "66666666-6666-4666-8666-666666666666",
+        "expected_epoch": 1,
+        "anchor_id": "foreign-message"
+      }
+    },
+    "wrongAccount": {
+      "p_chat": "chat",
+      "p_account": "22222222-2222-4222-8222-222222222222",
+      "p_action": "delete",
+      "p": {
+        "request_id": "99999999-9999-4999-8999-999999999999",
+        "expected_epoch": 1,
+        "anchor_id": "b"
+      }
+    }
+  }
+}
