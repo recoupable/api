@@ -14,6 +14,8 @@ import { selectConceptStep } from "./selectConceptStep";
 import { reviseStep } from "./reviseStep";
 import type { CreativeDirection } from "@/lib/sites/production/schema";
 import type { SiteAsset } from "@/lib/sites/schema";
+import type { SiteSnapshot } from "@/lib/sites/schema";
+import type { CreativeReview } from "@/lib/sites/production/schema";
 import type { Site } from "@/lib/sites/schema";
 import { collectContextStep } from "./collectContextStep";
 import { directionStep } from "./directionStep";
@@ -31,6 +33,8 @@ export async function siteProductionWorkflow(
 ) {
   "use workflow";
   let stage = "context";
+  let completed: SiteSnapshot | undefined;
+  const reviews: CreativeReview[] = [];
   try {
     await ensureSiteExistsStep(site.id);
     if (approvedConcept) conceptPitchSchema.parse(approvedConcept);
@@ -145,9 +149,13 @@ export async function siteProductionWorkflow(
       accountId,
     );
     await revealBuildStep(direction.concept, assets, snapshot).catch(() => undefined);
+    completed = {
+      ...snapshot,
+      production: { version: 1, context, direction, reviews, status: "needs-review" },
+    };
     stage = "review";
     await ensureSiteExistsStep(site.id);
-    const reviews = [await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill)];
+    reviews.push(await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill));
     while (
       reviews.at(-1)!.verdict === "revise" &&
       !reviews.at(-1)!.blocked &&
@@ -171,6 +179,10 @@ export async function siteProductionWorkflow(
         reviews.at(-1)!,
         accountId,
       ));
+      completed = {
+        ...snapshot,
+        production: { version: 1, context, direction, reviews, status: "needs-review" },
+      };
       await revealBuildStep(direction.concept, assets, snapshot).catch(() => undefined);
       stage = "review";
       await ensureSiteExistsStep(site.id);
@@ -193,6 +205,22 @@ export async function siteProductionWorkflow(
       accountId,
     );
   } catch (error) {
+    // A failed later pass must not discard the last complete generated candidate.
+    // Keep the normal authorization and revision checks: never overwrite a newer edit.
+    if (completed && (stage === "review" || stage === "implementation repair")) {
+      reviews.push({
+        verdict: "revise",
+        issues: [],
+        summary: `Site production was interrupted during ${stage}. The latest complete candidate is saved but has not passed review. Retry to continue from this draft.`,
+      });
+      try {
+        return await saveSiteStep(site, completed, accountId);
+      } catch {
+        return {
+          error: "The recovered candidate could not be saved. Your existing draft is unchanged.",
+        };
+      }
+    }
     if (error instanceof Error && error.message === "SITE_BUILD_OUTPUT_LIMIT")
       return {
         error:
