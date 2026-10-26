@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { chatFenceIdentitySchema, chatFenceAdmissionCommandSchema } from "./chatFenceInputSchemas";
+import { chatEditMaterialSchema } from "./edit/chatEditMaterialSchema";
 import { chatAdmissionSchema } from "./chatAdmissionSchema";
 import { chatExecutionSnapshotSchema } from "./chatExecutionSnapshotSchema";
 
@@ -7,8 +9,8 @@ const runId = z
   .string()
   .min(1)
   .refine(value => !value.startsWith("pending-"));
-const identity = z.object({ chatId: z.string().min(1), effectiveAccount: z.uuid() }).strict();
-export const chatFenceIdentitySchema = identity;
+const identity = chatFenceIdentitySchema;
+export { chatFenceIdentitySchema };
 export const chatFenceAuthoritySchema = identity
   .extend({ epoch: epoch.min(1), owner: z.uuid() })
   .strict();
@@ -42,23 +44,27 @@ const update = z
   .strict()
   .refine(p => p.id === p.parts.id);
 export const chatFenceCommandSchema = z.discriminatedUnion("action", [
-  z.object({ action: z.literal("close_unattempted"), payload: z.object(token).strict() }).strict(),
-  z.object({ action: z.literal("state"), payload: z.object({}).strict() }).strict(),
   z
     .object({
-      action: z.literal("admit"),
+      action: z.literal("delete_edit"),
       payload: z
         .object({
           ...retry,
-          input_hash: digest,
-          admission_envelope: chatAdmissionSchema,
-          execution_snapshot: chatExecutionSnapshotSchema,
-          admission_canonical: z.string().min(1),
-          execution_canonical: z.string().min(1),
+          anchor_id: z.string().min(1),
+          edit_material: chatEditMaterialSchema,
         })
         .strict(),
     })
     .strict(),
+  z
+    .object({
+      action: z.literal("deletion_snapshot"),
+      payload: z.object({ request_id: z.uuid() }).strict(),
+    })
+    .strict(),
+  z.object({ action: z.literal("close_unattempted"), payload: z.object(token).strict() }).strict(),
+  z.object({ action: z.literal("state"), payload: z.object({}).strict() }).strict(),
+  chatFenceAdmissionCommandSchema,
   z
     .object({
       action: z.literal("admission_snapshot"),
@@ -107,6 +113,13 @@ const admissionReceipt = z
     epoch: epoch.min(1),
     bound_run_id: runId.nullable(),
     closed: z.boolean(),
+  })
+  .strict();
+const deletionReceipt = z
+  .object({
+    epoch,
+    deleted: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+    request_id: z.uuid(),
   })
   .strict();
 export const chatFenceReceiptSchemas = {
@@ -169,12 +182,10 @@ export const chatFenceReceiptSchemas = {
     .strict(),
   update_parts: z.object({ updated: z.boolean() }).strict(),
   release: z.object({ released: z.boolean() }).strict(),
-  delete: z
-    .object({
-      epoch,
-      deleted: z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
-      request_id: z.uuid(),
-    })
+  delete: deletionReceipt,
+  delete_edit: deletionReceipt,
+  deletion_snapshot: z
+    .object({ receipt: deletionReceipt, edit_material: chatEditMaterialSchema.nullable() })
     .strict(),
 };
 export type ChatFenceSuccess = {
