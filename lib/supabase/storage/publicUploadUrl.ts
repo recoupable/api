@@ -5,8 +5,8 @@ import { PUBLIC_UPLOADS_BUCKET } from "@/lib/supabase/storage/const";
  *
  * Built rather than stored: the bucket is public and its URL shape is stable,
  * so persisting a full URL per row would duplicate the host and break every
- * stored row if the project ever moves. Access control comes from the row that
- * owns the key, not from the URL.
+ * stored row if the project ever moves. Anyone with the URL can read the object;
+ * resource-row authorization does not make public bytes private.
  *
  * @param storageKey - Key inside the bucket.
  * @returns The public URL for that object.

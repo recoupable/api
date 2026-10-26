@@ -485,6 +485,15 @@ export function registerToolNameTool(server: McpServer): void {
 - `getToolResultError(message)` - Wrap error responses
 - `resolveAccountId({ authInfo, accountIdOverride })` - Resolve account from auth
 
+## Upload storage policy
+
+Use Supabase Storage for new media/file writes; do not add Arweave uploads or
+restore the Arweave wallet dependency. Keep existing `ar://` and gateway URL
+read compatibility. Preserve visibility: `public-uploads` objects are public to
+anyone with the URL; private Files and release-pack audio must retain their
+private storage and authorized/signed delivery paths. Upload authentication and
+uploader attribution come from verified server context, never caller-supplied IDs.
+
 ## Constants (`lib/const.ts`)
 
 All shared constants live in `lib/const.ts`:
