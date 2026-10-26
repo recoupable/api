@@ -13,11 +13,14 @@ type SelectCatalogSongsParams = {
   artistName?: string;
   page?: number;
   limit?: number;
+  /** Opt-in internal provenance; legacy callers keep their numeric fallback. */
+  observeCount?: boolean;
 };
 
 type CatalogSongsWithPagination = {
   songs: CatalogSongWithArtists[];
   total_count: number;
+  observed_total_count?: number | null;
 };
 
 type SongArtistWithAccount = {
@@ -116,5 +119,6 @@ export async function selectCatalogSongsWithArtists(
   return {
     songs: catalogSongs,
     total_count: count ?? 0,
+    ...(params.observeCount ? { observed_total_count: count } : {}),
   };
 }
