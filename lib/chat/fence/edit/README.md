@@ -95,3 +95,69 @@ accepted public protocol and original-intent persistence/authorization design.
 This is preparation after deletion, not an atomic delete-plus-send transaction.
 Existing enrollment/drain, backfill, ancillary-effect and resource/credential gates
 remain; no database apply or current legacy wire behavior changes follow from this PR.
+
+## Atomic edited-delete boundary — internal, not connected to SQL yet
+
+The accepted follow-up contract uses existing `chat_fence.deletions` with immutable
+edit material and two draft RPC actions. This API slice defines that typed boundary;
+Context owns the separate offline SQL extension. No public route, App producer,
+client storage, auto-admission, workflow dispatch, SQL apply or resource/credential
+activation is added. Historical issue636 is a provenance reference, not a reopened
+backlog item; current work remains in the existing Intelligent UI/Context scope.
+
+`createFencedAtomicEdit(scope, material, execute)` captures one strict command.
+`scope` contains the currently authorized effective account, chat, session and
+original deletion request ID. The caller must authenticate/reauthorize through the
+existing API ownership composition on every invocation; these fields are not proof
+of authorization and must never be copied from browser authority assertions.
+
+`material` has exactly `capture`, `user_intent_canonical`, and `history_witness`.
+Capture is the complete pure `.read()` result. The caller supplies a strict canonical
+normalized intent `{anchor_id, edited_user_message, requested_options}`; the edited
+message retains the anchor ID, and omitted requested options stay omitted. The
+witness is every original saved message in database `(created_at,id)` order as
+`{id,role,message}`, with full UIMessage envelopes. It must come from the same trusted
+DB-history read used to build capture; this adapter cannot prove source provenance
+or current database equality. The future SQL boundary verifies the witness under lock.
+
+`.delete()` issues only the captured `delete_edit` payload
+`{request_id,expected_epoch,anchor_id,edit_material}`. It requires the original flat
+`{request_id,epoch,deleted}` receipt and epoch+1. Explicit repetitions send identical
+bytes; transport loss, errors and malformed/unknown replies fail closed without
+reconciliation, reminting, epoch adoption or additional effects.
+
+`.read()` explicitly calls `deletion_snapshot` with only the original request ID and
+requires a valid non-null original edit plus equal normalized user intent. This lets
+a caller deliberately read a competing winner with different generated candidate
+IDs after a write conflict. SQL still requires exact whole-material equality for
+write replay; equal user intent never permits overwriting the winner. Returned
+copies cannot change subsequent reads/writes. `readOriginalFencedEdit(scope, execute)`
+supports reconstruction from original scope/key alone and returns verified stored
+material. No automatic reads or retry loops are provided. The typed RPC accepts a
+legacy delete-only snapshot with `edit_material:null`; edited recovery rejects it.
+
+Validation checks strict keys, current supplied scope, original deletion/admission
+identity and epoch relation, witness IDs/roles/unique user anchor, exact surviving
+prefix plus replacement, requested/resolved options, exact canonical strings and
+digests using the existing snapshot verifier. Raw-to-parsed comparisons reject silent
+schema defaults. Stored policy metadata is not a credential grant. No caller-supplied
+receipt or latest owner substitutes for original-key recovery.
+
+New-edit-only limits: material8MiB, history witness4MiB, each canonical string1MiB,
+1000 witness/admission messages,10000 total original-plus-replacement parts,512UTF-8
+bytes for message/chat/session/snapshot identities. Early count gates and bounded
+strict encoding run before deep schemas/hashes at write and recovery boundaries.
+The existing encoder's100-level ceiling still applies to every encoded container,
+including the enclosing command/response; material is checked as a complete object.
+SQL separately measures JSONB text size, so its formatting may reject an object that
+fits the API byte measurement. Neither limit truncates history. Original admit/delete
+limits and vectors remain unchanged. Encoder byte budgets are opt-in; default output
+and validation semantics are unchanged.
+
+Mocked boundary tests cover immutable input/output, exact command replay, explicit
+same-intent winner read, corruption/scope/options/intent/witness failures, ambiguous
+responses, legacy-null handling, early resource rejection, exact limits and UTF-8
+budget accounting. They do not prove atomic deletion persistence or SQL concurrency.
+Actual SQL integration awaits Context's exact implementation revision; no transaction
+claim is based on mocked receipts. Fresh auth, original-snapshot continuation, eventual
+one-shot dispatch and current credential/resource gates remain separate requirements.

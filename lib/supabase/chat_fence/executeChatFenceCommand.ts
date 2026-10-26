@@ -1,3 +1,5 @@
+import { preflightFencedEditMaterial } from "@/lib/chat/fence/edit/preflightFencedEditMaterial";
+import { verifyFencedEditMaterial } from "@/lib/chat/fence/edit/verifyFencedEditMaterial";
 import supabase from "@/lib/supabase/serverClient";
 import {
   chatFenceCommandSchema,
@@ -22,8 +24,39 @@ export async function executeChatFenceCommand(
   if (!identity.success) return classifyChatFenceError("22023");
   let command;
   try {
-    encodeStrictJson(input);
+    if (
+      input &&
+      typeof input === "object" &&
+      Object.getOwnPropertyDescriptor(input, "action")?.value === "delete_edit"
+    ) {
+      const payload = Object.getOwnPropertyDescriptor(input, "payload")?.value;
+      preflightFencedEditMaterial(
+        payload && typeof payload === "object"
+          ? Object.getOwnPropertyDescriptor(payload, "edit_material")?.value
+          : undefined,
+      );
+    }
+    const originalBytes = encodeStrictJson(input);
     command = chatFenceCommandSchema.parse(input);
+    if (command.action === "delete_edit") {
+      if (encodeStrictJson(command) !== originalBytes)
+        throw new Error("Edited command must already be normalized");
+      const p = command.payload;
+      const material = verifyFencedEditMaterial(
+        {
+          chatId,
+          effectiveAccount,
+          sessionId: p.edit_material.capture.admission.payload.execution_snapshot.sessionId,
+          requestId: p.request_id,
+        },
+        p.edit_material,
+      );
+      if (
+        material.capture.deletion.expectedEpoch !== p.expected_epoch ||
+        material.capture.deletion.anchorId !== p.anchor_id
+      )
+        throw new Error("Edited deletion binding mismatch");
+    }
     if (command.action === "admit") {
       const p = command.payload;
       verifyChatAdmissionSnapshot(
@@ -68,7 +101,7 @@ export async function executeChatFenceCommand(
       } as never,
     );
     if (error) return classifyChatFenceError(error.code);
-    return parseChatFenceReceipt(chatId, command, data);
+    return parseChatFenceReceipt(chatId, command, data, effectiveAccount);
   } catch {
     // Transport loss can occur after commit. No automatic retries or new owner.
     return { ok: false, error: { kind: "transport_ambiguous", retrySameCommand: false } };
