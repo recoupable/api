@@ -130,3 +130,26 @@ describe("catalog artist filtering through the real Supabase query client", () =
     );
   });
 });
+
+it("preserves unavailable count provenance for internal observations without changing legacy zero fallback", async () => {
+  fixtureFetch.mockResolvedValue(
+    new Response("[]", { status: 200, headers: { "content-type": "application/json" } }),
+  );
+  const observed = await selectCatalogSongsWithArtists({
+    catalogId: "catalog-fixture",
+    page: 1,
+    limit: 50,
+    observeCount: true,
+  });
+  expect(observed).toEqual({ songs: [], total_count: 0, observed_total_count: null });
+  fixtureFetch.mockClear();
+  fixtureFetch.mockResolvedValue(
+    new Response("[]", { status: 200, headers: { "content-type": "application/json" } }),
+  );
+  const legacy = await selectCatalogSongsWithArtists({
+    catalogId: "catalog-fixture",
+    page: 1,
+    limit: 50,
+  });
+  expect(legacy).toEqual({ songs: [], total_count: 0 });
+});
