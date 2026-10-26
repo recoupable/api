@@ -29,7 +29,7 @@ export type ValidatedCatalogSongsQuery = CatalogSongsQuery & { accountId: string
  * Validates a catalog songs read: credentials, then query shape, then that the
  * catalog belongs to the caller.
  *
- * The order is the contract (chat#1912 row 6, recoupable/docs#282). Auth runs
+ * The order is the contract (chat#1912 row 6, recoupable/docs-legacy#282). Auth runs
  * before the query is parsed so a caller with no credentials gets 401 rather
  * than a validation 400 — a 400 without credentials is precisely what proved
  * this endpoint had no auth layer at all.

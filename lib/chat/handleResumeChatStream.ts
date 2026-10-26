@@ -21,7 +21,7 @@ import { createNothingToResumeResponse } from "@/lib/chat/createNothingToResumeR
  * the existing run without submitting another turn; startIndex resumes at
  * the requested absolute chunk position.
  *
- * Contract (docs#286): 200 SSE + `x-workflow-run-id`. When there is
+ * Contract (docs-legacy#286): 200 SSE + `x-workflow-run-id`. When there is
  * nothing to resume, 400 malformed `startIndex`, 401/403/404 from auth
  * and ownership.
  *

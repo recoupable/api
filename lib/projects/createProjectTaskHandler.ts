@@ -10,7 +10,7 @@ import { insertProjectTask } from "@/lib/supabase/project_tasks/insertProjectTas
  *
  * Create a task. New tasks are always incomplete; completion moves through the
  * PATCH endpoint so the server owns the timestamp and the actor.
- * Contract: recoupable/docs#326.
+ * Contract: recoupable/docs-legacy#326.
  *
  * @param request - The incoming request.
  * @param projectId - The project to add the task to.

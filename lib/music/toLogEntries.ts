@@ -8,7 +8,7 @@ const MAX_LOG_ENTRIES = 200;
 
 /**
  * Normalize fal's queue logs onto the documented `{ at, message }` shape
- * (recoupable/docs#308).
+ * (recoupable/docs-legacy#308).
  *
  * fal returns `{ timestamp, message, labels }`; only the first two are
  * contractual. Anything malformed is dropped rather than surfaced, because

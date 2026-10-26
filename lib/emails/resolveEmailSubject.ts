@@ -12,7 +12,7 @@ const MAX_DERIVED_SUBJECT_LENGTH = 120;
  * subject, but `POST /api/emails` lets the caller omit it (recoupable/chat#1815):
  * use the provided subject when present, else derive one from the body's first
  * heading/line (text preferred, then HTML), else fall back to a generic default.
- * Mirrors the documented contract in docs#252.
+ * Mirrors the documented contract in docs-legacy#252.
  */
 export function resolveEmailSubject({
   subject,
