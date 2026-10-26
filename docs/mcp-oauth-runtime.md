@@ -43,6 +43,12 @@ Access tokens last five minutes and refresh tokens rotate. New approvals have no
 
 Chat and API should use same-site HTTPS domains. Arbitrary Vercel preview URLs may be cross-site and lose interaction cookies under browser third-party-cookie restrictions; use coordinated same-site preview domains for live browser validation. Do not weaken cookie protections as a workaround.
 
+## Agent-registration failure correlation
+
+The agent-registration handler adds a fresh server-generated UUID to each unexpected infrastructure failure as the `X-Request-ID` response header and the diagnostic `request_id`. The `agent_registration_unavailable` event also carries a fixed dispatch stage: `identity`, `token` or `discovery`. These stages describe which handler branch failed, not the underlying backend cause. The ID links that single 503 response to its one diagnostic; it is not an account, client, grant, retry or cross-lifecycle identifier. Caller request/correlation headers are ignored, and neither exceptions nor request fields are logged.
+
+The existing `temporarily_unavailable` response body, 503 status and no-store policy are unchanged. Expected validation/authentication errors, successful responses and unrelated requests receive no diagnostic ID from this handler. This does not expose the header to cross-origin browser JavaScript, add persistence/retention/access controls, or verify hosted log delivery. Local synthetic tests verify concurrent response-to-log isolation, malicious header/payload/backend-error exclusion and quiet expected errors; the loopback HTTP test verifies the header reaches the response. Broader [Mono #214](https://github.com/recoupable/mono/issues/214) acceptance remains open.
+
 ## Consent storage diagnostics
 
 As of October 25, 2026, the consent handler emits the fixed `oauth_consent_storage_unavailable` event through the existing server error-log convention when an adapter storage boundary throws `OAuthStorageUnavailableError`. The payload contains only the event name; it includes no exception, cause, stack, request fields, account/client identifiers or credentials. Approval still attempts grant cleanup before reporting a storage failure. The public response remains HTTP 400 with `invalid_or_expired_interaction`.

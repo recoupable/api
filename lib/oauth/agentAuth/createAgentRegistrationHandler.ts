@@ -1,4 +1,5 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
+import { randomUUID } from "node:crypto";
 import { ZodError } from "zod";
 import type { AgentRegistrationHandlerOptions } from "./AgentRegistrationHttp";
 import { AgentRegistrationError } from "./AgentRegistrationError";
@@ -33,8 +34,12 @@ export function createAgentRegistrationHandler(options: AgentRegistrationHandler
       if (error instanceof AgentRegistrationError) reply(error.status, { error: error.error });
       else if (error instanceof ZodError) reply(400, { error: "invalid_request" });
       else {
+        const requestId = randomUUID();
+        res.setHeader("X-Request-ID", requestId);
         console.error("Agent registration unavailable", {
           event: "agent_registration_unavailable",
+          stage: formPath ? "token" : path === "/auth.md" ? "discovery" : "identity",
+          request_id: requestId,
         });
         reply(503, { error: "temporarily_unavailable" });
       }
