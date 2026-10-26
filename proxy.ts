@@ -39,15 +39,19 @@ const imageGenerateOutputSchema = {
     },
     arweaveResult: {
       type: "object" as const,
-      description: "Arweave transaction result (nullable)",
+      description: "Deprecated compatibility field; always null (media uses public storage)",
     },
     moment: {
       type: "object" as const,
       description: "In Process moment creation result (nullable)",
     },
+    uploadError: {
+      type: "string" as const,
+      description: "Error message if public media storage failed (optional)",
+    },
     arweaveError: {
       type: "string" as const,
-      description: "Error message if Arweave upload failed (optional)",
+      description: "Deprecated alias of uploadError (optional)",
     },
   },
 };
