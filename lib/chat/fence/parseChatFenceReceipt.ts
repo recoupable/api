@@ -1,3 +1,6 @@
+import { preflightFencedEditMaterial } from "./edit/preflightFencedEditMaterial";
+import { verifyFencedEditMaterial } from "./edit/verifyFencedEditMaterial";
+import { encodeStrictJson } from "./encodeStrictJson";
 import {
   chatFenceReceiptSchemas,
   type ChatFenceCommand,
@@ -10,7 +13,22 @@ export function parseChatFenceReceipt(
   chatId: string,
   command: ChatFenceCommand,
   input: unknown,
+  effectiveAccount?: string,
 ): ChatFenceSuccess | ChatFenceFailure {
+  if (command.action === "delete_edit" || command.action === "deletion_snapshot") {
+    try {
+      if (command.action === "deletion_snapshot") {
+        const material =
+          input && typeof input === "object"
+            ? Object.getOwnPropertyDescriptor(input, "edit_material")?.value
+            : undefined;
+        if (material !== null) preflightFencedEditMaterial(material);
+      }
+      encodeStrictJson(input);
+    } catch {
+      return { ok: false, error: { kind: "invalid_receipt", retrySameCommand: false } };
+    }
+  }
   const parsed = chatFenceReceiptSchemas[command.action].safeParse(input);
   const invalid: ChatFenceFailure = {
     ok: false,
@@ -18,6 +36,8 @@ export function parseChatFenceReceipt(
   };
   if (!parsed.success) return invalid;
   const value = parsed.data;
+  if (command.action === "deletion_snapshot" && encodeStrictJson(value) !== encodeStrictJson(input))
+    return invalid;
   if (command.action === "admission_snapshot") {
     const snapshot = chatFenceReceiptSchemas.admission_snapshot.parse(value);
     if (
@@ -25,6 +45,27 @@ export function parseChatFenceReceipt(
       snapshot.receipt.request_id !== command.payload.request_id
     )
       return invalid;
+  }
+  if (command.action === "deletion_snapshot") {
+    const saved = chatFenceReceiptSchemas.deletion_snapshot.parse(value);
+    if (saved.receipt.request_id !== command.payload.request_id) return invalid;
+    if (saved.edit_material !== null) {
+      const material = saved.edit_material;
+      try {
+        verifyFencedEditMaterial(
+          {
+            chatId,
+            effectiveAccount: effectiveAccount ?? material.capture.deletion.effectiveAccount,
+            sessionId: material.capture.admission.payload.execution_snapshot.sessionId,
+            requestId: command.payload.request_id,
+          },
+          material,
+        );
+        if (saved.receipt.epoch !== material.capture.deletion.expectedEpoch + 1) return invalid;
+      } catch {
+        return invalid;
+      }
+    }
   }
   if ("chat_id" in value && value.chat_id !== chatId) return invalid;
   if (command.action === "claim_dispatch") {
@@ -53,7 +94,7 @@ export function parseChatFenceReceipt(
     )
       return invalid;
   }
-  if (command.action === "delete") {
+  if (command.action === "delete" || command.action === "delete_edit") {
     const receipt = chatFenceReceiptSchemas.delete.parse(value);
     if (
       receipt.request_id !== command.payload.request_id ||
