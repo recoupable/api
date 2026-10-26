@@ -29,7 +29,12 @@ export async function handleContextToolOperation(
       args &&
       typeof args === "object" &&
       "action" in args &&
-      ["save_catalog_case", "read_catalog_case", "list_catalog_cases"].includes(String(args.action))
+      [
+        "prepare_catalog_audit",
+        "save_catalog_case",
+        "read_catalog_case",
+        "list_catalog_cases",
+      ].includes(String(args.action))
     )
       return {
         ...getToolResultError("Catalog case operations are unavailable for delegated OAuth."),
