@@ -7,8 +7,7 @@ import { mapInstagramPostsToRows } from "@/lib/apify/instagram/mapInstagramPosts
 import { upsertSocialsWithSnapshot } from "@/lib/socials/upsertSocialsWithSnapshot";
 import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
-import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
-import { getFetchableUrl } from "@/lib/arweave/getFetchableUrl";
+import { mirrorPublicImage } from "@/lib/files/mirrorPublicImage";
 import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
 import type { ApifyInstagramProfileResult } from "@/lib/apify/types";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
@@ -19,7 +18,7 @@ import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookReques
  *    bio, follower/following counts, plus a follower snapshot — this is
  *    how a commenter batch (`origin: "fan"`) enriches every fan, not
  *    just `dataset[0]`.
- *  - Only an `origin: "artist"` run continues: Arweave-mirrored avatar,
+ *  - Only an `origin: "artist"` run continues: storage-mirrored avatar,
  *    posts with engagement, `social_posts` links, and — only when the
  *    profile is linked to an account — the comments follow-up run.
  *  - A fan batch, or a legacy payload with no `origin`, stops after the
@@ -37,14 +36,14 @@ export async function handleInstagramProfileScraperResults(parsed: ApifyWebhookP
   const isArtistRun = parsed.origin === "artist";
   const [firstResult] = profiles;
 
-  // Artists get their avatar mirrored to Arweave; fans keep the CDN URL —
+  // Artists get their avatar mirrored to durable public storage; fans keep the CDN URL —
   // one upload per commenter batch would be cost without product.
   let artistAvatar: string | null | undefined;
   if (isArtistRun) {
-    const arweaveTx = await uploadLinkToArweave(
+    const mirroredUrl = await mirrorPublicImage(
       firstResult.profilePicUrlHD || firstResult.profilePicUrl,
     );
-    if (arweaveTx) artistAvatar = getFetchableUrl(`ar://${arweaveTx}`) ?? firstResult.profilePicUrl;
+    if (mirroredUrl) artistAvatar = mirroredUrl;
   }
 
   const upserted = await upsertSocialsWithSnapshot(

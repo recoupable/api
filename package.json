@@ -51,7 +51,6 @@
     "ai": "6.0.190",
     "ai-evaluation": "npm:ai@7.0.105",
     "apify-client": "^2.20.0",
-    "arweave": "^1.15.7",
     "autoevals": "^0.0.129",
     "braintrust": "^0.4.9",
     "chat": "^4.15.0",

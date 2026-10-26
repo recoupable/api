@@ -7,7 +7,7 @@ import { handleInstagramProfileFollowUpRuns } from "../handleInstagramProfileFol
 import { upsertSocialsWithSnapshot } from "@/lib/socials/upsertSocialsWithSnapshot";
 import { upsertSocialPosts } from "@/lib/supabase/social_posts/upsertSocialPosts";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
-import { uploadLinkToArweave } from "@/lib/arweave/uploadLinkToArweave";
+import { mirrorPublicImage } from "@/lib/files/mirrorPublicImage";
 import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
 
 vi.mock("@/lib/apify/client", () => ({ default: { dataset: vi.fn() } }));
@@ -27,7 +27,7 @@ vi.mock("@/lib/supabase/social_posts/upsertSocialPosts", () => ({ upsertSocialPo
 vi.mock("@/lib/supabase/account_socials/selectAccountSocials", () => ({
   selectAccountSocials: vi.fn(),
 }));
-vi.mock("@/lib/arweave/uploadLinkToArweave", () => ({ uploadLinkToArweave: vi.fn() }));
+vi.mock("@/lib/files/mirrorPublicImage", () => ({ mirrorPublicImage: vi.fn() }));
 
 // Trimmed from real run If5ejeh2vftXWObwa (2026-08-27, a commenter profile).
 const profile = (username: string, extra: Record<string, unknown> = {}) => ({
@@ -74,7 +74,7 @@ describe("handleInstagramProfileScraperResults", () => {
     );
     vi.mocked(upsertPosts).mockResolvedValue({ data: null, error: null } as never);
     vi.mocked(getPosts).mockResolvedValue([]);
-    vi.mocked(uploadLinkToArweave).mockResolvedValue(null);
+    vi.mocked(mirrorPublicImage).mockResolvedValue(null);
     vi.mocked(selectAccountSocials).mockResolvedValue([{ account_id: "a1" }] as never);
   });
 
@@ -87,7 +87,7 @@ describe("handleInstagramProfileScraperResults", () => {
     expect(upsertSocialsWithSnapshot).not.toHaveBeenCalled();
   });
 
-  it("fan batch: enriches EVERY profile in the dataset (avatar, bio, counts) and is terminal — no posts, no follow-ups, no Arweave", async () => {
+  it("fan batch: enriches EVERY profile in the dataset (avatar, bio, counts) and is terminal — no posts, no follow-ups, no mirror upload", async () => {
     const names = Array.from({ length: 12 }, (_, i) => `fan${i}`);
     mockDataset(names.map(n => profile(n)));
 
@@ -105,7 +105,7 @@ describe("handleInstagramProfileScraperResults", () => {
       followingCount: 6577,
       postCount: 236,
     });
-    expect(uploadLinkToArweave).not.toHaveBeenCalled();
+    expect(mirrorPublicImage).not.toHaveBeenCalled();
     expect(upsertPosts).not.toHaveBeenCalled();
     expect(handleInstagramProfileFollowUpRuns).not.toHaveBeenCalled();
     expect(result).toEqual({ posts: [], social: null, socials: 12 });
@@ -126,10 +126,10 @@ describe("handleInstagramProfileScraperResults", () => {
     expect(upsertPosts).not.toHaveBeenCalled();
   });
 
-  it("artist run linked to an account: Arweave avatar, posts with engagement, social_posts, follow-ups with lineage", async () => {
+  it("artist run linked to an account: storage avatar, posts with engagement, social_posts, follow-ups with lineage", async () => {
     const p = profile("alice");
     mockDataset([p]);
-    vi.mocked(uploadLinkToArweave).mockResolvedValue("tx123");
+    vi.mocked(mirrorPublicImage).mockResolvedValue("https://storage.example/tx123");
     const posts = [
       { id: "p1", post_url: "https://www.instagram.com/p/alice1", updated_at: "t" },
     ] as never;
@@ -137,7 +137,7 @@ describe("handleInstagramProfileScraperResults", () => {
 
     const result = await handleInstagramProfileScraperResults(artistPayload);
 
-    expect(uploadLinkToArweave).toHaveBeenCalledWith("https://cdn/alice-hd.jpg");
+    expect(mirrorPublicImage).toHaveBeenCalledWith("https://cdn/alice-hd.jpg");
     const [rows] = vi.mocked(upsertSocialsWithSnapshot).mock.calls[0];
     expect(rows[0]).toMatchObject({
       profile_url: "instagram.com/alice",
