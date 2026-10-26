@@ -1,3 +1,4 @@
+import { isCatalogManagementJson } from "./isCatalogManagementJson";
 import type { CatalogScheduleRpcResult } from "@/lib/supabase/catalog_report_schedules/CatalogScheduleRpc";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { disabledCatalogScheduleStateSchema } from "./disabledCatalogScheduleState";
@@ -19,7 +20,10 @@ export function parseCatalogScheduleRpcResult(
             : 500;
     return errorResponse("Catalog schedule management failed", status);
   }
-  const parsed = disabledCatalogScheduleStateSchema.safeParse(result?.data);
+  if (!isCatalogManagementJson(result?.data)) {
+    return errorResponse("Invalid catalog schedule storage response", 502);
+  }
+  const parsed = disabledCatalogScheduleStateSchema.safeParse(result.data);
   if (
     !parsed.success ||
     parsed.data.catalog_id !== scope.catalog_id ||

@@ -53,3 +53,13 @@ Tests use mocked authority observations and injected RPC results. Existing autho
 tests cover the shared resolver; no real credential, hosted PostgREST/DB, SQL apply,
 provider or production behavior is exercised. No whole-catalog coverage or scheduling
 grant follows. The App unavailable guard remains unchanged.
+
+Context compatibility reconciliation: exact two-RPC translation, canonical UUID/full-string
+cadence grammar, explicit null workspace, narrow timezone shape (SQL membership remains
+authoritative), original request UUID, historical receipt binding, and SQLSTATE sanitization
+are enforced. Plain object/scalar JSON is checked before schema cloning: undefined,
+nonfinite numbers, NUL/lone-surrogate strings, cycles, accessors, hidden/symbol keys and
+non-plain objects fail rather than being serialized lossily. Arrays are outside this
+contract. No JSON byte-canonicalization claim: receipt matching remains SQL JSONB semantic
+equality. Valid Unicode pairs are preserved. Unsupported SQLSTATE values (including
+isolation/deadlock/constraint failures) remain generic failures, with no automatic retry.

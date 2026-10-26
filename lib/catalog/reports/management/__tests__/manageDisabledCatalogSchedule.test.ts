@@ -247,3 +247,80 @@ describe("unwired disabled catalog management", () => {
     expect(JSON.stringify(body)).not.toContain("secret");
   });
 });
+
+describe("exact SQL serialization boundary", () => {
+  it.each(["\n", "\r", "\u2028", "\u2029"])(
+    "rejects trailing line terminator %j before auth",
+    async suffix => {
+      const operation = {
+        ...create,
+        command: {
+          ...create.command,
+          payload: { ...create.command.payload, schedule: state.schedule + suffix },
+        },
+      };
+      await status(await manageDisabledCatalogSchedule(request, scope, operation, transport), 400);
+      expect(resolveCatalogReportScope).not.toHaveBeenCalled();
+      expect(rpc).not.toHaveBeenCalled();
+    },
+  );
+  it.each(["America/Port-au-Prince", "Etc/GMT+5", "EST", "UTC\n"])(
+    "rejects SQL-incompatible timezone %s",
+    async timezone => {
+      await status(
+        await manageDisabledCatalogSchedule(
+          request,
+          scope,
+          {
+            ...create,
+            command: { ...create.command, payload: { ...create.command.payload, timezone } },
+          },
+          transport,
+        ),
+        400,
+      );
+      expect(rpc).not.toHaveBeenCalled();
+    },
+  );
+  it.each(["bad\u0000value", "bad\ud800value", "bad\udc00value"])(
+    "rejects unrepresentable principal %j",
+    async subject => {
+      observation.principal = {
+        mechanism: "privy",
+        actorAccountId: actor,
+        appId: "app",
+        issuer: "issuer",
+        subject,
+      };
+      await status(await manageDisabledCatalogSchedule(request, scope, create, transport), 401);
+      expect(rpc).not.toHaveBeenCalled();
+    },
+  );
+  it("rejects lossy non-enumerable fields instead of dropping their meaning", async () => {
+    const input = { ...create };
+    Object.defineProperty(input, "actor_account_id", { value: actor, enumerable: false });
+    await status(await manageDisabledCatalogSchedule(request, scope, input, transport), 400);
+    expect(rpc).not.toHaveBeenCalled();
+  });
+  it("preserves reordered receipt commands and original request identity", async () => {
+    const command = {
+      payload: {
+        timezone: "UTC",
+        schedule: state.schedule,
+        organization_id: null,
+        catalog_id: catalog,
+      },
+      action: "create",
+    };
+    rpc.mockResolvedValue({ data: { ...state, replayed: true }, error: null });
+    expect(
+      await manageDisabledCatalogSchedule(
+        request,
+        scope,
+        { command, request_id: requestId },
+        transport,
+      ),
+    ).toEqual({ ...state, replayed: true });
+    expect(rpc.mock.calls[0][1]).toMatchObject({ p_request: requestId, p_command: create.command });
+  });
+});

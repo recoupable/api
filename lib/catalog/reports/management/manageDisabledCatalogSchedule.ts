@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isCatalogManagementJson } from "./isCatalogManagementJson";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/networking/errorResponse";
@@ -19,6 +20,9 @@ export async function manageDisabledCatalogSchedule(
   operationInput: unknown,
   transport: CatalogScheduleRpc,
 ) {
+  if (!isCatalogManagementJson(scopeInput) || !isCatalogManagementJson(operationInput)) {
+    return errorResponse("Invalid disabled catalog operation", 400);
+  }
   const scope = scopeSchema.safeParse(scopeInput);
   const parsed = disabledCatalogScheduleOperationSchema.safeParse(operationInput);
   if (!scope.success || !parsed.success)
@@ -55,7 +59,8 @@ export async function manageDisabledCatalogSchedule(
         ? { mechanism: p.mechanism, key_id: p.keyId }
         : { mechanism: p.mechanism, app_id: p.appId, issuer: p.issuer, subject: p.subject },
     );
-    if (!principal.success) return errorResponse("Original management identity unavailable", 401);
+    if (!principal.success || !isCatalogManagementJson(principal.data))
+      return errorResponse("Original management identity unavailable", 401);
     const identity = { p_actor: actor.data, p_principal: principal.data };
     const id =
       "id" in operation
