@@ -16,7 +16,7 @@ import type { AuthContext } from "@/lib/auth/validateAuthContext";
  * the URL itself via `ensurePersonalRepo` and only `vercel` sandboxes
  * are supported (hard-coded in `SandboxState`).
  * `repoOwner`/`repoName`/`isNewBranch` were never accepted (Zod
- * silently dropped them); cleaned up alongside in recoupable/docs#226.
+ * silently dropped them); cleaned up alongside in recoupable/docs-legacy#226.
  */
 export const createSessionBodySchema = z.object({
   title: z.string().optional(),

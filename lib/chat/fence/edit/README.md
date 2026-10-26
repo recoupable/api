@@ -6,6 +6,22 @@ trailing-delete adapter and existing execution snapshot/admission canonicalizers
 No route, App producer, shared SQL/schema change, enrollment, credential recovery,
 resource grant, admission/dispatch or provider call is added.
 
+`captureFencedEditedTurn(input)` is the pure preflight boundary. It takes no executor
+and performs no deletion, admission, dispatch or storage. Its frozen handle exposes
+only `.read()`, returning an independent strict-JSON copy of `{deletion, admission,
+turn:{kind:"new"}}`. The existing v1 envelope, execution snapshot, exact canonical
+strings and hash are available before any destructive work. It retains projected
+credential-policy metadata, not raw workflow credential context. A caller can mutate
+a returned copy without changing later reads; a copy is not an authorization grant,
+delete acknowledgement or proof that its original epoch remains current.
+
+The existing preparation helper reuses this capture and the original delete adapter.
+Both consume the same exported deletion-intent schema; canonicalization has a single
+implementation. Receipt validation and prepared output bytes remain unchanged.
+This extraction does not implement atomic persistence with DELETE. A future reviewed
+SQL extension must bind saved edit material and its receipt in the same transaction;
+no route, App producer or durable browser locator is introduced here.
+
 `createFencedEditedTurn(input, executeChatFenceCommand)` captures one original edit.
 The trusted caller supplies original deletion intent, complete original message
 history, edited user envelope retaining the anchor ID, already allocated replacement

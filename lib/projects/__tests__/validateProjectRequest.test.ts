@@ -14,7 +14,7 @@ const url = "https://api.recoupable.dev/api/projects/not-a-uuid";
 /**
  * A malformed `projectId` must be answered before the request reaches auth or
  * Postgres, where it becomes `invalid input syntax for type uuid` and surfaces
- * as a 500 (recoupable/docs#326 documents a 400).
+ * as a 500 (recoupable/docs-legacy#326 documents a 400).
  */
 describe("validateProjectRequest", () => {
   it("rejects a malformed projectId with 400", async () => {

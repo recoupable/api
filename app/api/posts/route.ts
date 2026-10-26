@@ -16,7 +16,7 @@ export async function OPTIONS() {
  * POST /api/posts
  *
  * Publishes a video with its copy to one connected social account (contract:
- * recoupable/docs#375, tracking recoupable/app#2241), now or at `publish_at`.
+ * recoupable/docs-legacy#375, tracking recoupable/app#2241), now or at `publish_at`.
  *
  * @param request - JSON body `{ platform, video_url, cover_url?, title?,
  *   description?, privacy?, tags?, sub_account_id?, publish_at?, account_id? }`.

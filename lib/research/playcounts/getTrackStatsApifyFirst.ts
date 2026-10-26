@@ -17,7 +17,7 @@ import { deductCredits } from "@/lib/research/deductCredits";
  * is zod-validated once here — downstream transforms are fully typed — and a
  * non-conforming payload (shape drift) passes through unlabeled rather than
  * failing the response. Every stat entry carries `data_source` provenance per
- * the contract (docs#238).
+ * the contract (docs-legacy#238).
  */
 export async function getTrackStatsApifyFirst(
   params: GetResearchTrackStatsParams,

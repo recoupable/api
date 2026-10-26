@@ -16,6 +16,7 @@ const intentSchema = chatFenceIdentitySchema
     anchorId: z.string().min(1),
   })
   .strict();
+export { intentSchema as fencedTrailingDeleteIntentSchema };
 export type FencedTrailingDeleteIntent = Readonly<z.infer<typeof intentSchema>>;
 
 /**
