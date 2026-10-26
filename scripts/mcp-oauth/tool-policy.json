@@ -682,6 +682,15 @@
     "authorizationWork": "Import only explicitly selected attachment bytes or signed download URLs into the authorized private workspace. Enforce DNS, redirects, byte and MIME bounds; bind signed upload finalization to the owner and never export account OAuth credentials or read unrelated files."
   },
   {
+    "name": "prepare_catalog_audit",
+    "file": "lib/mcp/tools/context/registerCatalogCaseTools.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "excluded until delegated workspace-retention audit",
+    "authorizationWork": "Read-effect classification only, not a delegated permission grant. Keep excluded from delegated discovery and generic Context action expansion until selected-workspace grants and retained-evidence access are audited. Standard calls authorize the actor and recheck membership and all saved-brief source versions after asynchronous reads. Preparation returns an unsaved revision-0 workpaper, never persistence, provider execution, rights verification or collection authority."
+  },
+  {
     "name": "list_catalog_cases",
     "file": "lib/mcp/tools/context/registerCatalogCaseTools.ts",
     "scopes": [
