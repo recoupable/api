@@ -173,16 +173,48 @@ no mocked SQL receipts are used. Eight cases pass on PostgreSQL 15 and 17:
 - Legacy delete/null snapshot compatibility and cross-mode replay rejection.
 - Stale database history rejection without mutation.
 
-The newer-owner state is fixture setup, not an exercised admission transition. The
-transport allowlist contains only delete/edit/read/state operations; no admission,
-start or dispatch is invoked. The draft SQL remains unmerged and unapplied. This
-qualification does not exercise HTTP/PostgREST, public authorization composition,
-concurrency, providers or deployment. Fresh auth, original-snapshot continuation,
-eventual one-shot dispatch and current credential/resource gates remain separate.
+The original eight cases use synthetic newer-owner setup and do not exercise an
+admission transition. Their recorded results remain sealed separately. The focused
+admission extension below uses the same pinned SQL. The draft SQL remains unmerged
+and unapplied. This qualification does not exercise HTTP/PostgREST, public
+authorization composition, concurrency, providers or deployment. Fresh auth,
+original-snapshot continuation, eventual one-shot dispatch and current credential/resource gates remain separate.
 
 ```sh
 PG_BIN=/path/to/postgresql/bin CHAT_EDIT_SQL_RESULTS=/tmp/atomic-edit-results.json python3 scripts/chat-fence-edit/test-atomic-sql.py /path/to/database
 ```
 
-Without the disposable runner environment, the eight integration cases are skipped
+Without the disposable runner environment, all integration cases are skipped
 in ordinary Vitest runs. The runner accepts no remote DSN and tears down its cluster.
+
+### Explicit saved-original admission qualification
+
+Three additional offline cases exercise existing `admit` and `admission_snapshot`
+actions using the command returned by explicit original-edit recovery. They add no
+production continuation helper, route, authorization grant or dispatch policy.
+
+1. Submit the saved original command, recover its actual admission snapshot with
+   `verifyChatAdmissionSnapshot`, and replay exactly. Canonical strings, request,
+   snapshot and replacement IDs remain original. State becomes pending at epoch 2;
+   message history is unchanged, one turn exists, and dispatch is never attempted.
+2. Commit admission but discard its acknowledgement. The executor returns an
+   ambiguous result with no automatic retry/read. An explicit original-request
+   snapshot read recovers and verifies the committed admission without changing state.
+3. Admit a competing captured command first, creating a real pending newer owner.
+   Replaying the original deletion and recovering its saved edit preserves original
+   bytes. The saved original admission conflicts at its original epoch; its admission
+   snapshot remains absent, and the competing owner/state remain unchanged.
+
+The third case supplements the original synthetic-owner case with an actual
+sequential admission transition; it is not a concurrent race test. The test transport
+allows only delete/edit/read/state/admit/admission-snapshot operations. No claim,
+workflow start, dispatch, provider, credential recovery or production operation runs.
+A verified open receipt is not permission to dispatch; production continuation and
+current authorization remain separate work.
+
+```sh
+PG_BIN=/path/to/postgresql/bin CHAT_EDIT_SQL_RESULTS=/tmp/atomic-admission-results.json python3 scripts/chat-fence-edit/test-atomic-sql.py /path/to/database --admission-only
+```
+
+The focused command selects only the three new cases (all passed on PG15 and PG17),
+leaving the prior eight skipped. Omitting the flag runs all eleven offline cases.
