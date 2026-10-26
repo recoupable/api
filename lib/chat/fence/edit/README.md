@@ -96,7 +96,7 @@ This is preparation after deletion, not an atomic delete-plus-send transaction.
 Existing enrollment/drain, backfill, ancillary-effect and resource/credential gates
 remain; no database apply or current legacy wire behavior changes follow from this PR.
 
-## Atomic edited-delete boundary — internal, not connected to SQL yet
+## Atomic edited-delete boundary — internal, offline SQL qualified
 
 The accepted follow-up contract uses existing `chat_fence.deletions` with immutable
 edit material and two draft RPC actions. This API slice defines that typed boundary;
@@ -118,7 +118,7 @@ message retains the anchor ID, and omitted requested options stay omitted. The
 witness is every original saved message in database `(created_at,id)` order as
 `{id,role,message}`, with full UIMessage envelopes. It must come from the same trusted
 DB-history read used to build capture; this adapter cannot prove source provenance
-or current database equality. The future SQL boundary verifies the witness under lock.
+or current database equality. The pinned draft SQL boundary verifies the witness under lock.
 
 `.delete()` issues only the captured `delete_edit` payload
 `{request_id,expected_epoch,anchor_id,edit_material}`. It requires the original flat
@@ -158,6 +158,31 @@ Mocked boundary tests cover immutable input/output, exact command replay, explic
 same-intent winner read, corruption/scope/options/intent/witness failures, ambiguous
 responses, legacy-null handling, early resource rejection, exact limits and UTF-8
 budget accounting. They do not prove atomic deletion persistence or SQL concurrency.
-Actual SQL integration awaits Context's exact implementation revision; no transaction
-claim is based on mocked receipts. Fresh auth, original-snapshot continuation, eventual
-one-shot dispatch and current credential/resource gates remain separate requirements.
+The opt-in integration runner loads SQL and its disposable PostgreSQL harness directly
+from Database commit `aeb346cc53bf8c45031fe56b7bf64659329161b2` using `git show`.
+It passes actual pure API captures, normalized intent and DB-read witnesses through
+`executeChatFenceCommand` to socket-only PostgreSQL, then returns actual SQL receipts
+through the API parser and edit adapters. The Supabase transport is replaced by psql;
+no mocked SQL receipts are used. Eight cases pass on PostgreSQL 15 and 17:
+
+- Atomic saved capture, original canonical byte recovery (including Unicode and numeric keys), and exact replay.
+- Committed acknowledgement loss with explicit original-key recovery and no automatic read.
+- Changed capture rejection and explicit same-intent competing-winner recovery.
+- Wrong account/chat/session and missing original key rejection.
+- Replay preservation after synthetic newer-owner fixture setup.
+- Legacy delete/null snapshot compatibility and cross-mode replay rejection.
+- Stale database history rejection without mutation.
+
+The newer-owner state is fixture setup, not an exercised admission transition. The
+transport allowlist contains only delete/edit/read/state operations; no admission,
+start or dispatch is invoked. The draft SQL remains unmerged and unapplied. This
+qualification does not exercise HTTP/PostgREST, public authorization composition,
+concurrency, providers or deployment. Fresh auth, original-snapshot continuation,
+eventual one-shot dispatch and current credential/resource gates remain separate.
+
+```sh
+PG_BIN=/path/to/postgresql/bin CHAT_EDIT_SQL_RESULTS=/tmp/atomic-edit-results.json python3 scripts/chat-fence-edit/test-atomic-sql.py /path/to/database
+```
+
+Without the disposable runner environment, the eight integration cases are skipped
+in ordinary Vitest runs. The runner accepts no remote DSN and tears down its cluster.
