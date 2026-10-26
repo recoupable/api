@@ -1,3 +1,4 @@
+import { packCostAccounting } from "@/lib/const";
 import { createSignedFileUrlByKey } from "@/lib/supabase/storage/createSignedFileUrlByKey";
 import { getPackBriefReadiness } from "./getPackBriefReadiness";
 import type { PackSnapshot } from "./packTypes";
@@ -31,7 +32,11 @@ export async function readPackSnapshot(snapshot: PackSnapshot) {
   }
   const readiness = getPackBriefReadiness(snapshot.job.brief);
   return {
-    job,
+    job: {
+      ...job,
+      // Explain legacy amounts on read without rewriting stored approval or receipts.
+      quote: job.quote ? { ...job.quote, cost_accounting: { ...packCostAccounting } } : null,
+    },
     assets,
     readiness,
     next_action: readiness.ready

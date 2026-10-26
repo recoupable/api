@@ -362,6 +362,30 @@ describe("new-buyer pack acceptance fixture", () => {
       expect(result.job.brief.reference_image_urls).toEqual([]);
     },
   );
+  it("labels a targeted retry quote without funding additional refinements", async () => {
+    const prepared = await prepareWorld({
+      ...proposedWorld,
+      selection: { direction_id: "paper", selected_by: "customer", decision_note: "Selected" },
+    });
+    await processPackOperation("owner", "estimate", { job_id: prepared.job.id });
+    const asset = fixture.saved.assets[0];
+    asset.id = crypto.randomUUID();
+    asset.status = "failed";
+    const retried = (await processPackOperation("owner", "estimate", {
+      job_id: prepared.job.id,
+      asset_id: asset.id,
+    })) as any;
+    expect(retried.job.quote.retry_asset_id).toBe(asset.id);
+    expect(retried.job.quote.cost_accounting).toMatchObject({
+      amount_basis: "customer_charge",
+      provider_cost_usd: null,
+      concepts: "not_budgeted",
+      contingency: "not_budgeted",
+      refinements: "not_budgeted",
+    });
+    expect(retried.job.quote.maximum_usd).toBe(asset.maximum_usd);
+    expect(start).not.toHaveBeenCalled();
+  });
   it("prepares, quotes, runs and reads a reviewed song-backed video without an artist or repository", async () => {
     const prepared = (await processPackOperation("owner", "prepare", {
       idempotency_key: "first-use",
@@ -386,6 +410,13 @@ describe("new-buyer pack acceptance fixture", () => {
     const estimated = (await processPackOperation("owner", "estimate", {
       job_id: prepared.job.id,
     })) as any;
+    expect(estimated.job.quote.cost_accounting).toMatchObject({
+      amount_basis: "customer_charge",
+      provider_cost_usd: null,
+      refinements: "not_budgeted",
+    });
+    // Existing compatible approvals remain usable even when stored before labels existed.
+    delete fixture.saved.job.quote.cost_accounting;
     await processPackOperation("owner", "generate", {
       job_id: prepared.job.id,
       quote_id: estimated.job.quote.id,
@@ -394,6 +425,11 @@ describe("new-buyer pack acceptance fixture", () => {
     });
     const read = (await processPackOperation("owner", "get", { job_id: prepared.job.id })) as any;
     expect(read.job.status).toBe("completed");
+    expect(read.job.quote.cost_accounting.provider_cost_usd).toBeNull();
+    const exported = (await processPackOperation("owner", "export", {
+      job_id: prepared.job.id,
+    })) as any;
+    expect(exported.job.quote.cost_accounting).toEqual(estimated.job.quote.cost_accounting);
     expect(read.assets[0].usable).toBe(true);
     expect(read.assets[0].caption).toContain("First Song");
     expect(read.assets[0].files[0].url).toContain("signed=fixture");

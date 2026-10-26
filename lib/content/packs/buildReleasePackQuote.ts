@@ -1,3 +1,4 @@
+import { packCostAccounting } from "@/lib/const";
 import { getPackExecutionConfiguration } from "./getPackExecutionConfiguration";
 import { getPackConfigurationDigest } from "./getPackConfigurationDigest";
 import { createHash } from "node:crypto";
@@ -45,6 +46,7 @@ export function buildReleasePackQuote(
   const stills = assets.reduce((sum, a) => sum + a.files, 0);
   const maximum_usd = Number(assets.reduce((sum, a) => sum + a.maximum_usd, 0).toFixed(6));
   return {
+    cost_accounting: { ...packCostAccounting },
     pricing_version: execution_config.pricing_version,
     execution_config,
     execution_config_digest,

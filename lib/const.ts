@@ -122,3 +122,14 @@ export const packExecutionSettings = {
   videoInspection: { temperature: 0, max_tokens: 600 },
   analysis: { max_new_tokens: 768, temperature: 0, do_sample: false },
 } as const;
+
+/** Quote amounts are customer charges; provider expenses are not measured by pack receipts. */
+export const packCostAccounting = {
+  amount_basis: "customer_charge",
+  included_services: "no_additional_customer_charge",
+  provider_cost_usd: null,
+  provider_cost_status: "not_measured",
+  concepts: "not_budgeted",
+  contingency: "not_budgeted",
+  refinements: "not_budgeted",
+} as const;
