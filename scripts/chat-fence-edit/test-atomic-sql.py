@@ -1,6 +1,7 @@
 """Run actual API adapters against pinned Context SQL on disposable socket-only PG15/17.
-Usage: PG_BIN=/path/to/bin python3 scripts/chat-fence-edit/test-atomic-sql.py DATABASE
-No remote DSN, production migration, admission, provider or workflow invocation.
+Usage: PG_BIN=/path/to/bin python3 scripts/chat-fence-edit/test-atomic-sql.py DATABASE [--admission-only]
+Optional focused admission qualification remains offline: no dispatch, claims, providers or workflows.
+No remote DSN or production migration.
 """
 import os
 from pathlib import Path
@@ -10,6 +11,9 @@ import types
 
 COMMIT = "aeb346cc53bf8c45031fe56b7bf64659329161b2"
 REPO = Path(sys.argv[1]).resolve()
+if sys.argv[2:] not in ([], ["--admission-only"]):
+    raise SystemExit("Only --admission-only is supported")
+FILTER = ["-t", "explicit saved-original admission"] if sys.argv[2:] else []
 PROPOSAL = "proposals/chat-writer-fencing-636"
 
 def source(path):
@@ -29,7 +33,7 @@ print("Pinned SQL " + COMMIT, flush=True)
 try:
     Protocol.setUpClass()
     env = dict(os.environ, CHAT_EDIT_SQL_SOCKET=str(Protocol.sock), CHAT_EDIT_SQL_PSQL=str(context.BIN / "psql"), CHAT_EDIT_SQL_PIN=COMMIT)
-    result = subprocess.run(["pnpm", "exec", "vitest", "run", "lib/chat/fence/edit/__tests__/atomicEditSqlIntegration.test.ts"], env=env)
+    result = subprocess.run(["pnpm", "exec", "vitest", "run", "lib/chat/fence/edit/__tests__/atomicEditSqlIntegration.test.ts"] + FILTER, env=env)
     sys.exit(result.returncode)
 except subprocess.CalledProcessError as error:
     print(error.stderr, file=sys.stderr)

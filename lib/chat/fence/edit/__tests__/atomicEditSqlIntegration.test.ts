@@ -8,6 +8,7 @@ import { createFencedAtomicEdit } from "../createFencedAtomicEdit";
 import { readOriginalFencedEdit } from "../readOriginalFencedEdit";
 import { createFencedTrailingDelete } from "../../deletion/createFencedTrailingDelete";
 import { encodeStrictJson } from "../../encodeStrictJson";
+import { verifyChatAdmissionSnapshot } from "../../verifyChatAdmissionSnapshot";
 import { editFixture } from "./editFixture";
 
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
@@ -43,7 +44,16 @@ function transport(
   _name: string,
   command: { p_chat: string; p_account: string; p_action: string; p: unknown },
 ) {
-  if (!["delete_edit", "deletion_snapshot", "delete", "state"].includes(command.p_action))
+  if (
+    ![
+      "delete_edit",
+      "deletion_snapshot",
+      "delete",
+      "state",
+      "admit",
+      "admission_snapshot",
+    ].includes(command.p_action)
+  )
     throw new Error("Unexpected effect in integration transport");
   const text = `SELECT public.chat_fence_command(${quote(command.p_chat)},${quote(command.p_account)},${quote(command.p_action)},${quote(JSON.stringify(command.p))}::jsonb);`;
   const response = spawnSync(process.env.CHAT_EDIT_SQL_PSQL!, [...args(), "-U", "service_role"], {
@@ -121,6 +131,30 @@ function inventory(chat: string) {
     ),
   );
 }
+async function readAdmission(
+  scope: ReturnType<typeof fixture>["scope"],
+  command: ReturnType<ReturnType<typeof captureFencedEditedTurn>["read"]>["admission"],
+) {
+  const result = await executeChatFenceCommand(scope.chatId, scope.effectiveAccount, {
+    action: "admission_snapshot",
+    payload: { request_id: command.payload.request_id },
+  });
+  if (!result.ok || result.action !== "admission_snapshot")
+    throw new Error("Expected original admission snapshot");
+  const verified = verifyChatAdmissionSnapshot(
+    {
+      chatId: scope.chatId,
+      sessionId: scope.sessionId,
+      effectiveAccountId: scope.effectiveAccount,
+      requestId: command.payload.request_id,
+      expectedEpoch: command.payload.expected_epoch,
+    },
+    result.value,
+  );
+  expect(verified.admission_canonical).toBe(command.payload.admission_canonical);
+  expect(verified.execution_canonical).toBe(command.payload.execution_canonical);
+  return verified;
+}
 describe.runIf(!!process.env.CHAT_EDIT_SQL_SOCKET)(
   "actual API boundary against pinned atomic SQL",
   () => {
@@ -135,6 +169,195 @@ describe.runIf(!!process.env.CHAT_EDIT_SQL_SOCKET)(
           JSON.stringify({ sqlPin: pin, postgres: sql("SHOW server_version;"), results }, null, 2) +
             "\n",
         );
+    });
+    it("explicit saved-original admission preserves canonical bytes and original identities on replay", async () => {
+      const { scope, material, edit } = fixture();
+      await edit.delete();
+      const saved = await readOriginalFencedEdit(scope, executeChatFenceCommand);
+      const command = saved.edit_material.capture.admission;
+      const originalBytes = encodeStrictJson(material.capture.admission);
+      expect(encodeStrictJson(command)).toBe(originalBytes);
+      const before = inventory(scope.chatId);
+      const admitted = await executeChatFenceCommand(scope.chatId, scope.effectiveAccount, command);
+      expect(admitted).toMatchObject({
+        ok: true,
+        action: "admit",
+        value: {
+          chat_id: scope.chatId,
+          request_id: command.payload.request_id,
+          expected_epoch: 1,
+          epoch: 2,
+          input_hash: command.payload.input_hash,
+          closed: false,
+          bound_run_id: null,
+        },
+      });
+      const snapshot = await readAdmission(scope, command);
+      expect(snapshot.receipt).toEqual(admitted.ok && admitted.value);
+      expect(snapshot.admission_canonical).toBe(command.payload.admission_canonical);
+      expect(snapshot.execution_canonical).toBe(command.payload.execution_canonical);
+      expect(snapshot.execution_snapshot.id).toBe(command.payload.execution_snapshot.id);
+      expect(snapshot.admission_envelope.messages.at(-1)?.id).toBe(
+        command.payload.admission_envelope.messages.at(-1)?.id,
+      );
+      expect(snapshot.dispatch).toEqual({ status: "never_attempted", attempt_id: null });
+      const state = inventory(scope.chatId);
+      expect(state).toMatchObject({
+        turns: 1,
+        deletions: 1,
+        tombstones: 2,
+        state: { epoch: 2, phase: "pending", owner: command.payload.request_id, run_id: null },
+        slot: "pending-" + command.payload.request_id,
+      });
+      expect(state.messages).toEqual(before.messages);
+      expect(await executeChatFenceCommand(scope.chatId, scope.effectiveAccount, command)).toEqual(
+        admitted,
+      );
+      expect(inventory(scope.chatId)).toEqual(state);
+      expect(encodeStrictJson((await edit.read()).edit_material.capture.admission)).toBe(
+        originalBytes,
+      );
+      expect(rpc.mock.calls.map(([, c]) => c.p_action)).toEqual([
+        "delete_edit",
+        "deletion_snapshot",
+        "admit",
+        "admission_snapshot",
+        "admit",
+        "deletion_snapshot",
+      ]);
+      results.push({
+        case: "explicit-admission-original-bytes",
+        scope,
+        command,
+        admitted,
+        snapshot,
+        state,
+      });
+    });
+    it("explicit saved-original admission recovers a lost committed acknowledgement without retry or dispatch", async () => {
+      const { scope, edit } = fixture();
+      await edit.delete();
+      const command = (await edit.read()).edit_material.capture.admission;
+      const before = inventory(scope.chatId);
+      const count = rpc.mock.calls.length;
+      rpc.mockImplementationOnce((name, wire) => {
+        const result = transport(name, wire);
+        expect(result.error).toBeNull();
+        throw new Error("discard committed admission response");
+      });
+      const lost = await executeChatFenceCommand(scope.chatId, scope.effectiveAccount, command);
+      expect(lost).toEqual({
+        ok: false,
+        error: { kind: "transport_ambiguous", retrySameCommand: false },
+      });
+      expect(rpc).toHaveBeenCalledTimes(count + 1);
+      const committed = inventory(scope.chatId);
+      expect(committed).toMatchObject({
+        turns: 1,
+        state: { epoch: 2, phase: "pending", owner: command.payload.request_id, run_id: null },
+      });
+      expect(committed.messages).toEqual(before.messages);
+      const snapshot = await readAdmission(scope, command);
+      expect(snapshot.receipt).toMatchObject({
+        request_id: command.payload.request_id,
+        expected_epoch: 1,
+        epoch: 2,
+        input_hash: command.payload.input_hash,
+        closed: false,
+        bound_run_id: null,
+      });
+      expect(snapshot.dispatch).toEqual({ status: "never_attempted", attempt_id: null });
+      expect(inventory(scope.chatId)).toEqual(committed);
+      expect(rpc.mock.calls.map(([, c]) => c.p_action)).toEqual([
+        "delete_edit",
+        "deletion_snapshot",
+        "admit",
+        "admission_snapshot",
+      ]);
+      results.push({
+        case: "explicit-admission-lost-ack-recovery",
+        scope,
+        command,
+        lost,
+        snapshot,
+        state: committed,
+      });
+    });
+    it("explicit saved-original admission conflicts after actual competing admission without adopting its owner", async () => {
+      const { input, scope, material, edit } = fixture();
+      const receipt = await edit.delete();
+      const original = (await edit.read()).edit_material.capture.admission;
+      const originalBytes = encodeStrictJson(original);
+      input.admissionRequestId = randomUUID();
+      input.replacementUserId += "-competing";
+      input.snapshotId += "-competing";
+      const competing = captureFencedEditedTurn(input).read().admission;
+      const admitted = await executeChatFenceCommand(
+        scope.chatId,
+        scope.effectiveAccount,
+        competing,
+      );
+      expect(admitted).toMatchObject({
+        ok: true,
+        action: "admit",
+        value: {
+          request_id: competing.payload.request_id,
+          expected_epoch: 1,
+          epoch: 2,
+          closed: false,
+          bound_run_id: null,
+        },
+      });
+      const winner = await readAdmission(scope, competing);
+      expect(winner.dispatch).toEqual({ status: "never_attempted", attempt_id: null });
+      const before = inventory(scope.chatId);
+      expect(before).toMatchObject({
+        turns: 1,
+        state: {
+          epoch: 2,
+          phase: "pending",
+          owner: competing.payload.request_id,
+          run_id: null,
+        },
+        slot: "pending-" + competing.payload.request_id,
+      });
+      expect(await edit.delete()).toEqual(receipt);
+      const recovered = await edit.read();
+      expect(recovered.edit_material).toEqual(material);
+      expect(encodeStrictJson(recovered.edit_material.capture.admission)).toBe(originalBytes);
+      const conflict = await executeChatFenceCommand(
+        scope.chatId,
+        scope.effectiveAccount,
+        recovered.edit_material.capture.admission,
+      );
+      expect(conflict).toMatchObject({ ok: false, error: { kind: "conflict" } });
+      const missing = await executeChatFenceCommand(scope.chatId, scope.effectiveAccount, {
+        action: "admission_snapshot",
+        payload: { request_id: original.payload.request_id },
+      });
+      expect(missing).toMatchObject({ ok: false, error: { kind: "not_found" } });
+      expect(inventory(scope.chatId)).toEqual(before);
+      expect(rpc.mock.calls.map(([, c]) => c.p_action)).toEqual([
+        "delete_edit",
+        "deletion_snapshot",
+        "admit",
+        "admission_snapshot",
+        "delete_edit",
+        "deletion_snapshot",
+        "admit",
+        "admission_snapshot",
+      ]);
+      results.push({
+        case: "explicit-admission-newer-owner-conflict",
+        scope,
+        original,
+        competing,
+        admitted,
+        winner,
+        conflict,
+        missing,
+        state: before,
+      });
     });
     it("stores actual capture/witness atomically and roundtrips original canonical bytes without admission", async () => {
       const { scope, material, edit } = fixture();
