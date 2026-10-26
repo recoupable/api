@@ -1,12 +1,13 @@
-import { uploadToArweave } from "./uploadToArweave";
-import { isSafeHttpUrl } from "./isSafeHttpUrl";
+import { uploadPublicAsset } from "./uploadPublicAsset";
+import { validatePublicUploadBytes } from "./validatePublicUploadBytes";
+import { isSafeHttpUrl } from "@/lib/arweave/isSafeHttpUrl";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const FETCH_TIMEOUT_MS = 10_000;
 
 /**
- * Fetches the image at `imageUrl` and uploads its bytes to Arweave.
- * Returns the Arweave transaction id (without the `ar://` prefix) on
+ * Fetches the image at `imageUrl` and stores its bytes in public media storage.
+ * Returns the public HTTPS URL on
  * success, or `null` if fetch / upload fails — callers should fall
  * back to the original URL in that case.
  *
@@ -17,12 +18,12 @@ const FETCH_TIMEOUT_MS = 10_000;
  *
  * @param imageUrl - Remote image URL.
  */
-export async function uploadLinkToArweave(
+export async function mirrorPublicImage(
   imageUrl: string | null | undefined,
 ): Promise<string | null> {
   if (!imageUrl) return null;
   if (!isSafeHttpUrl(imageUrl)) {
-    console.error("[ERROR] uploadLinkToArweave: rejected unsafe url");
+    console.error("[ERROR] mirrorPublicImage: rejected unsafe url");
     return null;
   }
   try {
@@ -30,13 +31,22 @@ export async function uploadLinkToArweave(
       redirect: "error",
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
-    if (!res.ok || !res.body) return null;
+    if (!res.ok || !res.body) {
+      await res.body?.cancel();
+      return null;
+    }
 
     const contentType = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
-    if (!contentType.startsWith("image/")) return null;
+    if (!["image/jpeg", "image/png", "image/gif", "image/webp"].includes(contentType)) {
+      await res.body.cancel();
+      return null;
+    }
 
     const contentLength = Number(res.headers.get("content-length") ?? 0);
-    if (contentLength > MAX_IMAGE_BYTES) return null;
+    if (contentLength > MAX_IMAGE_BYTES) {
+      await res.body.cancel();
+      return null;
+    }
 
     const reader = res.body.getReader();
     const chunks: Uint8Array[] = [];
@@ -55,10 +65,11 @@ export async function uploadLinkToArweave(
 
     const buffer = Buffer.concat(chunks.map(c => Buffer.from(c)));
 
-    const transaction = await uploadToArweave(buffer, contentType);
-    return transaction?.id ?? null;
+    if (!validatePublicUploadBytes(buffer, contentType)) return null;
+    const { url } = await uploadPublicAsset({ data: buffer, contentType });
+    return url;
   } catch (err) {
-    console.error("[ERROR] uploadLinkToArweave:", err);
+    console.error("[ERROR] mirrorPublicImage:", err);
     return null;
   }
 }

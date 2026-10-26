@@ -1,16 +1,17 @@
-import uploadJsonToArweave from "@/lib/arweave/uploadJsonToArweave";
+import { uploadPublicAsset } from "@/lib/files/uploadPublicAsset";
 import { createMoment, type CreateMomentResponse } from "./createMoment";
 
 export interface CreateImageMomentParams {
   prompt: string;
   account: string;
-  arweaveUri: string;
+  imageUri: string;
+  uploaderAccountId?: string;
   mediaType: string;
 }
 
 /**
  * Creates a moment on the In Process protocol from an image generation result.
- * This includes creating and uploading contract metadata to Arweave.
+ * This includes creating and storing contract metadata in public storage.
  *
  * @param params - Parameters for creating the image moment.
  * @returns Promise resolving to the moment creation response, or null if creation fails.
@@ -18,7 +19,7 @@ export interface CreateImageMomentParams {
 export async function createImageMoment(
   params: CreateImageMomentParams,
 ): Promise<CreateMomentResponse | null> {
-  const { prompt, account, arweaveUri, mediaType } = params;
+  const { prompt, account, imageUri, mediaType, uploaderAccountId } = params;
 
   try {
     const contractName = prompt.substring(0, 100);
@@ -26,16 +27,19 @@ export async function createImageMoment(
     const contractMetadata = {
       name: contractName,
       description: prompt,
-      image: arweaveUri,
-      animation_url: arweaveUri,
+      image: imageUri,
+      animation_url: imageUri,
       content: {
         mime: mediaType,
-        uri: arweaveUri,
+        uri: imageUri,
       },
     };
 
-    const contractMetadataResult = await uploadJsonToArweave(contractMetadata);
-    const contractMetadataUri = `ar://${contractMetadataResult.id}`;
+    const { url: contractMetadataUri } = await uploadPublicAsset({
+      data: JSON.stringify(contractMetadata),
+      contentType: "application/json",
+      uploaderAccountId,
+    });
 
     const momentResult = await createMoment({
       contract: {

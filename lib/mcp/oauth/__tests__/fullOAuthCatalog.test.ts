@@ -11,7 +11,6 @@ vi.hoisted(() => {
   process.env.SPOTIFY_CLIENT_ID = "test";
   process.env.SPOTIFY_CLIENT_SECRET = "test";
 });
-vi.mock("@/lib/arweave/client", () => ({ arweave: {}, ARWEAVE_KEY: {} }));
 vi.mock("@/lib/telegram/client", () => ({ default: {} }));
 vi.mock("@/lib/apify/client", () => ({ default: {}, apifyClient: {} }));
 vi.mock("@/lib/privy/client", () => ({ default: {} }));

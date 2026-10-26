@@ -1,3 +1,7 @@
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
+import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { generateAndStoreTxtFile } from "@/lib/files/generateAndStoreTxtFile";
@@ -13,7 +17,7 @@ type GenerateTxtFileArgs = z.infer<typeof generateTxtFileSchema>;
 
 /**
  * Registers the "generate_txt_file" tool on the MCP server.
- * Creates a downloadable TXT file from provided contents and stores it on Arweave.
+ * Creates a downloadable TXT file from provided contents and stores it in public media storage.
  *
  * @param server - The MCP server instance to register the tool on.
  */
@@ -22,38 +26,39 @@ export function registerGenerateTxtFileTool(server: McpServer): void {
     "generate_txt_file",
     {
       description:
-        "Create a downloadable TXT file from provided contents. The file will be stored onchain with Arweave and metadata will be created.",
+        "Create a downloadable TXT file from provided contents. The file and metadata are stored publicly and returned as durable HTTPS URLs.",
       inputSchema: generateTxtFileSchema,
     },
-    async (args: GenerateTxtFileArgs) => {
+    async (
+      args: GenerateTxtFileArgs,
+      extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
+    ) => {
+      const { accountId: uploaderAccountId, error: authError } = await resolveAccountId({
+        authInfo: extra.authInfo as McpAuthInfo | undefined,
+        accountIdOverride: undefined,
+      });
+      if (authError || !uploaderAccountId)
+        return getToolResultError(authError || "Authentication required");
+
       try {
-        const result = await generateAndStoreTxtFile(args.contents);
+        const result = await generateAndStoreTxtFile(args.contents, uploaderAccountId);
 
         const arweaveUrl = getFetchableUrl(result.arweave || null);
 
         const response = {
           success: true,
+          txtUrl: result.txtUrl,
+          metadataUrl: result.metadataUrl,
+          // Deprecated aliases for existing clients.
           arweaveUrl,
           metadataArweave: result.metadataArweave ? getFetchableUrl(result.metadataArweave) : null,
-          message: "TXT file successfully generated and stored on Arweave.",
+          message: "TXT file successfully generated and stored.",
         };
 
         return getToolResultSuccess(response);
       } catch (error) {
         console.error("Error generating TXT file:", error);
-
-        // Format helpful error messages based on common issues
-        let errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
-
-        if (errorMessage.includes("API key")) {
-          errorMessage = "API key is missing or invalid. Please check your environment variables.";
-        } else if (errorMessage.includes("content policy")) {
-          errorMessage = "Your contents may violate content policy. Please try different contents.";
-        } else if (errorMessage.includes("rate limit")) {
-          errorMessage = "Rate limit exceeded. Please try again later.";
-        }
-
-        return getToolResultError(`Failed to generate TXT file. ${errorMessage}`);
+        return getToolResultError("Failed to generate TXT file");
       }
     },
   );
