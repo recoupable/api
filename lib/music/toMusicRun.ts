@@ -11,7 +11,7 @@ export type MusicRun = {
 
 /**
  * Map a generation row onto the generic run resource (contract:
- * recoupable/docs#308).
+ * recoupable/docs-legacy#308).
  *
  * Storage values never reach the contract, the same discipline
  * `toValuationRun` applies. An unrecognized status reads as `generating`

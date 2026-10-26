@@ -15,7 +15,7 @@ export async function OPTIONS() {
  * GET /api/projects/{projectId}
  *
  * A client project with its tasks and collaborators (app#2048, contract:
- * recoupable/docs#326). Access is a `project_collaborators` row; a caller
+ * recoupable/docs-legacy#326). Access is a `project_collaborators` row; a caller
  * without one gets 404, never 403.
  *
  * @param request - The incoming request, carrying the Bearer credential.

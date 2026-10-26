@@ -11,7 +11,7 @@ import { selectAllUsageEvents } from "./selectAllUsageEvents";
  *
  * Returns the top accounts by total credits deducted over the selected
  * period, joined with `accounts.name` and the most-recent `account_emails.email`
- * for human-readable rows. See the OpenAPI contract on the recoupable/docs
+ * for human-readable rows. See the OpenAPI contract on the recoupable/docs-legacy
  * site for the full request/response shape.
  *
  * @param request - The incoming Next.js request.
