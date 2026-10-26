@@ -2,7 +2,7 @@ import { TrackStatsPayload } from "@/lib/research/playcounts/trackStatsPayloadSc
 
 /**
  * Label every Songstats-sourced stat entry with its provenance
- * (`data_source: "songstats"`), per the contract in docs#238. Pure typed
+ * (`data_source: "songstats"`), per the contract in docs-legacy#238. Pure typed
  * transform — the payload is validated once at the orchestrator boundary
  * ({@link trackStatsPayloadSchema}).
  *

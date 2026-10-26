@@ -2,7 +2,7 @@ import { HistoricStatsPayload } from "@/lib/research/playcounts/historicStatsPay
 
 /**
  * Label every history point of every Songstats-sourced entry with its
- * provenance (`data_source: "songstats"`), per the contract in docs#238.
+ * provenance (`data_source: "songstats"`), per the contract in docs-legacy#238.
  * Pure typed transform — the payload is validated once at the orchestrator
  * boundary ({@link historicStatsPayloadSchema}).
  *

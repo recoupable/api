@@ -13,7 +13,7 @@ import { toProjectCollaborator } from "@/lib/projects/toProjectCollaborator";
  * GET /api/projects/{projectId}/tasks/{taskId}
  *
  * One task with its comment feed and the project's collaborators.
- * Contract: recoupable/docs#326.
+ * Contract: recoupable/docs-legacy#326.
  */
 export async function getProjectTaskHandler(
   request: NextRequest,

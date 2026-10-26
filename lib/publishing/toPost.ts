@@ -1,7 +1,7 @@
 import type { Tables } from "@/types/database.types";
 
 /**
- * The public `Post` shape (contract: recoupable/docs#375). Internal handles
+ * The public `Post` shape (contract: recoupable/docs-legacy#375). Internal handles
  * (`workflow_run_id`, `created_by_account_id`) stay out of the response.
  *
  * @param row - A scheduled_posts row.

@@ -14,7 +14,7 @@ export async function OPTIONS() {
 /**
  * GET /api/music/{generationId}
  *
- * One generation and its workflow timeline (contract: recoupable/docs#308).
+ * One generation and its workflow timeline (contract: recoupable/docs-legacy#308).
  * This is what a client polls while a song renders.
  *
  * @param request - The incoming request.

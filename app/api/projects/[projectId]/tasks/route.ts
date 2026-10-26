@@ -14,7 +14,7 @@ export async function OPTIONS() {
 /**
  * POST /api/projects/{projectId}/tasks
  *
- * Add a task to a client project (app#2048, contract: recoupable/docs#326).
+ * Add a task to a client project (app#2048, contract: recoupable/docs-legacy#326).
  *
  * @param request - The incoming request, carrying the Bearer credential.
  * @param root0 - The route context.
