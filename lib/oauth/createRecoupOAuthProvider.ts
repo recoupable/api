@@ -102,6 +102,10 @@ export function createRecoupOAuthProvider(
     findAccount: async (_ctx, id) =>
       (await accountExists(id)) ? { accountId: id, claims: async () => ({ sub: id }) } : undefined,
   });
+  // The provider handles these failures internally, before the outer route catch.
+  provider.on("server_error", () => {
+    console.error("OAuth provider unavailable", { event: "oauth_provider_unavailable" });
+  });
   configureAgentRegistrationDiscovery(provider, config);
   provider.proxy = true;
   return provider;
