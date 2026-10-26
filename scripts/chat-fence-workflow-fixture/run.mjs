@@ -367,6 +367,68 @@ try {
     traces.push({ name, runId: run.runId, trace });
     console.log(`PASS actual compiled workflow: ${name}`);
   }
+  // Actual prepared edited-turn bytes; no public producer or real credential seam.
+  const editVector = JSON.parse(
+    await readFile(join(root, "scripts/chat-fence-edit/vectors.json"), "utf8"),
+  )[0];
+  const prepared = editVector.prepared;
+  const editPayload = prepared.admission.payload;
+  const editedInvocation = {
+    kind: "internal-fenced/v1",
+    input: {
+      ...structuredClone(input),
+      chatId: editPayload.admission_envelope.chatId,
+      sessionId: editPayload.admission_envelope.sessionId,
+      messages: structuredClone(editPayload.admission_envelope.messages),
+      modelId: editPayload.execution_snapshot.content.options.modelId,
+      artistId: editPayload.execution_snapshot.content.options.artistId ?? undefined,
+      interactive: editPayload.execution_snapshot.content.options.interactive,
+      sessionTitle: editPayload.execution_snapshot.content.sessionTitle ?? undefined,
+      repoOwner: editPayload.execution_snapshot.content.repoOwner ?? undefined,
+      repoName: editPayload.execution_snapshot.content.repoName ?? undefined,
+      agentContext: {
+        sandbox: structuredClone(editPayload.execution_snapshot.content.sandbox),
+        skills: structuredClone(editPayload.execution_snapshot.content.skills),
+      },
+    },
+    fence: {
+      authority: {
+        chatId: editPayload.admission_envelope.chatId,
+        effectiveAccount: editPayload.admission_envelope.effectiveAccountId,
+        epoch: editPayload.expected_epoch + 1,
+        owner: editPayload.request_id,
+      },
+      attemptId: "77777777-7777-4777-8777-777777777777",
+      turn: prepared.turn,
+    },
+  };
+  await writeFile(join(effects, "events.jsonl"), "");
+  await writeFile(join(effects, "scenario.json"), JSON.stringify({ fail: "edited-turn" }));
+  const editedRun = await start(runAgentWorkflow, [editedInvocation]);
+  await bounded(editedRun.returnValue);
+  const editedTrace = await events();
+  const editedCommands = editedTrace.filter(x => x.action === "rpc").map(x => x.data);
+  // This prepared snapshot selects a concrete model and no repository: no routing/commit writes.
+  assert.deepEqual(
+    editedCommands.map(x => x.p_action),
+    ["bind", "write", "write", "release"],
+  );
+  assert.deepEqual(editedCommands[1].p.parts, editPayload.admission_envelope.messages.at(-1));
+  const freshObject = editedTrace.find(x => x.action === "provider").data.original[0];
+  assert.equal(freshObject.id, "fresh-assistant");
+  assert.equal(freshObject.role, "assistant");
+  assert.deepEqual(freshObject.parts, []);
+  assert.equal(freshObject.metadata?.origin, undefined);
+  assert(!editVector.initial.admission_envelope.messages.some(m => m.id === freshObject.id));
+  assert(
+    !editedTrace.some(x =>
+      ["legacy-write", "legacy-clear", "key-delete", "legacy-parts"].includes(x.action),
+    ),
+  );
+  traces.push({ name: "edited-turn", runId: editedRun.runId, trace: editedTrace });
+  console.log(
+    "PASS actual compiled workflow: edited-turn prepared input and fresh assistant isolation",
+  );
   assert.equal(networkAttempts, 0);
   const { build } = await import("esbuild");
   await build({
