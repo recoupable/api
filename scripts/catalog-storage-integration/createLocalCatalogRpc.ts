@@ -32,9 +32,10 @@ export function createLocalCatalogRpc(setup: LocalSetup) {
   ) {
     throw new Error("Disposable catalog cluster marker required");
   }
-  const env = Object.fromEntries(
-    Object.entries(process.env).filter(([key]) => !key.startsWith("PG")),
-  );
+  const env = { ...process.env };
+  for (const key of Object.keys(env)) {
+    if (key.startsWith("PG")) delete env[key];
+  }
   const execute = (sql: string) =>
     spawnSync(
       path.join(setup.pg_bin, "psql"),
