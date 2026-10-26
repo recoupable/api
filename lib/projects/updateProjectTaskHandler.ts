@@ -11,7 +11,7 @@ import { updateProjectTask } from "@/lib/supabase/project_tasks/updateProjectTas
  *
  * Update a task, including the completion toggle. Any collaborator may close or
  * reopen any task, the client included; the row records which one did.
- * Contract: recoupable/docs#326.
+ * Contract: recoupable/docs-legacy#326.
  *
  * @param request - The incoming request.
  * @param projectId - The project the task belongs to.

@@ -26,7 +26,7 @@ export type ValidatedCatalogSongsRequest = CatalogSongsRequest & { accountId: st
  * Validates a catalog songs write (POST and DELETE share it): credentials,
  * then body shape, then that every catalog named belongs to the caller.
  *
- * The order is the contract (chat#1912 row 6, recoupable/docs#282). Auth runs
+ * The order is the contract (chat#1912 row 6, recoupable/docs-legacy#282). Auth runs
  * before the body is read so a caller with no credentials gets 401 rather than
  * a validation 400 — a 400 without credentials is precisely what proved this
  * endpoint had no auth layer at all. A write can name several catalogs, and

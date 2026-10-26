@@ -15,7 +15,7 @@ export async function OPTIONS() {
 /**
  * GET /api/posts/{id}
  *
- * One post, polled while it publishes (contract: recoupable/docs#375).
+ * One post, polled while it publishes (contract: recoupable/docs-legacy#375).
  *
  * @param request - The incoming request.
  * @param context - Route params carrying the post id.

@@ -9,7 +9,7 @@ import { deleteProjectTask } from "@/lib/supabase/project_tasks/deleteProjectTas
  * DELETE /api/projects/{projectId}/tasks/{taskId}
  *
  * Permanently delete a task and, by cascade, its comments. No soft delete.
- * Contract: recoupable/docs#326.
+ * Contract: recoupable/docs-legacy#326.
  *
  * @param request - The incoming request.
  * @param projectId - The project the task belongs to.

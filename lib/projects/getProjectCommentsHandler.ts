@@ -10,7 +10,7 @@ import { toProjectComment } from "@/lib/projects/toProjectComment";
 /**
  * GET /api/projects/{projectId}/tasks/{taskId}/comments
  *
- * A task's comments, oldest first. Contract: recoupable/docs#326.
+ * A task's comments, oldest first. Contract: recoupable/docs-legacy#326.
  *
  * @param request - The incoming request.
  * @param projectId - The project the task belongs to.

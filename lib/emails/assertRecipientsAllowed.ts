@@ -8,7 +8,7 @@ export type RecipientCheckResult = { allowed: true } | { allowed: false; disallo
  * on file, an account may only send to its own email address(es). Once a card
  * is on file (a prior subscription or credits top-up), any recipient is allowed.
  *
- * Matches the documented contract (docs#251): `to`/`cc` are "restricted to the
+ * Matches the documented contract (docs-legacy#251): `to`/`cc` are "restricted to the
  * account's own email unless a payment method is on file".
  *
  * @param accountId The authenticated account (validated UUID upstream).

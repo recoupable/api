@@ -16,7 +16,7 @@ export async function OPTIONS() {
  * POST /api/music
  *
  * Starts a music generation with MiniMax Music 3 (contract:
- * recoupable/docs#308). Body is validated by `validateCreateMusicBody` in
+ * recoupable/docs-legacy#308). Body is validated by `validateCreateMusicBody` in
  * `lib/music/`.
  *
  * Organizations are accounts, so an organization generation is scoped by
@@ -37,7 +37,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
  * GET /api/music
  *
  * The account's music generations, newest first (contract:
- * recoupable/docs#308).
+ * recoupable/docs-legacy#308).
  *
  * @param request - Query params `account_id?`, `status?`, `limit?`, `offset?`.
  * @returns 200 with the generations, 400 on a bad query, 401 unauthenticated,
