@@ -86,7 +86,7 @@ These are reviewable engineering defaults, not commercial or provider commitment
 | Challenge lifetime | 1 hour from server issuance | Reject at `now >= expires_at`; retry needs a fresh nonce |
 | Observation freshness | At most 60 seconds at commit; queried after issuance | Old answers cannot extend a new challenge |
 | Verification lease | 7 days from successful commit | Authorization checks reject at `now >= verified_until` |
-| Renewal window | Start 24 hours before lease expiry | Owner publishes a new nonce; retained old TXT never auto-renews |
+| Renewal scheduling | Recommend starting 24 hours before lease expiry; early renewal allowed | Advisory scheduling, not an eligibility boundary; owner publishes a new nonce and retained old TXT never auto-renews |
 | Renewal failure | Keep only the unexpired old lease | No extension for timeout, missing record, or invalid answer |
 | Security revocation | Immediate committed invalidation | Overrides a valid lease and any in-flight challenge |
 
