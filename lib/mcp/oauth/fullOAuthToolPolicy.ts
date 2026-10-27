@@ -101,13 +101,13 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
     readOnly: false,
     destructive: true,
     notice:
-      "Publishes text permanently to public Arweave. Use only for content explicitly approved for permanent public publication; never confidential material.",
+      "Publishes text to public media storage. Use only for content explicitly approved for public publication; never confidential material.",
   },
   generate_txt_file: {
     readOnly: false,
     destructive: true,
     notice:
-      "Publishes text permanently to public Arweave. Use only for content explicitly approved for permanent public publication; never confidential material.",
+      "Publishes text to public media storage. Use only for content explicitly approved for public publication; never confidential material.",
   },
   contact_team: {
     readOnly: false,
