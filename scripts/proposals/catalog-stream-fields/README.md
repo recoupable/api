@@ -35,13 +35,28 @@ latest retained rows, run-range linkage, version immutability, withdrawal histor
 or consistency during concurrent reads. Those are source-boundary responsibilities.
 Context separately owns retention writer/CAS/retry/rollback/current-source enforcement.
 
-The adopted source contract is [retained-stream-evidence-2207](../../../docs/contracts/retained-stream-evidence-2207.md).
-Implementation starts from reviewed local API1188 head
-`8ef93a0d007ad5058fb748328a05788f3f43e4d5`; reported merge
-`d9683853c8471423c5aa763bf60270bee5b89ff7` was not locally available.
-The exact Catalog31 files are restored from reviewed local API1187 head
-`b185ea9ded070cd6d621d2bf13843bf9df6e5a8f`; they are not regenerated.
-No source fetch was performed.
+The source contract used here is the reviewed
+[API1188 retained-stream evidence document](https://github.com/recoupable/api/blob/8ef93a0d007ad5058fb748328a05788f3f43e4d5/docs/contracts/retained-stream-evidence-2207.md),
+paired with the reviewed
+[Database127 protocol](https://github.com/recoupable/database/blob/6560ca76b048c4964335d2a8a282b34e59001bfc/proposals/stream-evidence-binding-2207/PROTOCOL.md)
+and its [executable SQL proposal](https://github.com/recoupable/database/blob/6560ca76b048c4964335d2a8a282b34e59001bfc/proposals/stream-evidence-binding-2207/proposal.sql).
+These immutable links identify the exact reviewed sources underlying root's adoption;
+Database repository access is required for the protocol and SQL. Adoption is limited
+to the evidence contract, not live source mapping or this field evaluator.
+
+Root reported merges [API1188](https://github.com/recoupable/api/pull/1188)
+(`d9683853c8471423c5aa763bf60270bee5b89ff7`) and
+[Database127](https://github.com/recoupable/database/pull/127)
+(`7160086321f16db8a1d4f09c721d3928ade042f6`). The reviewed source commits above
+were locally available; the API merge object was not. This branch was replayed onto
+locally available main `08f62b7474e52b2bd0114d2d2c62c642c17ef6bf`, which does not
+contain the API1188 document. No source fetch was performed.
+
+The [Catalog31 fixture file](../../../docs/contracts/catalog-stream-evidence-2207/vectors.json)
+is unchanged from API1187 head `b185ea9ded070cd6d621d2bf13843bf9df6e5a8f`.
+Its historical design-only status and accompanying recommendation remain intact;
+they are test inputs, not the authority for adoption. The source documents linked
+above define the evidence envelope consumed by this offline qualification.
 
 ## Field semantics
 
