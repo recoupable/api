@@ -29,7 +29,7 @@ const cases = [
 beforeEach(() => vi.clearAllMocks());
 
 it.each(cases)(
-  "$name describes its saved-profile result in direct and OAuth registration",
+  "$name keeps accurate direct descriptions and stays absent from OAuth",
   ({ name, limit, register }) => {
     for (const oauth of [false, true]) {
       const registerTool = vi.fn();
@@ -39,7 +39,12 @@ it.each(cases)(
       } else {
         register(server);
       }
-      const config = registerTool.mock.calls.find(([tool]) => tool === name)![1];
+      const registration = registerTool.mock.calls.find(([tool]) => tool === name);
+      if (oauth) {
+        expect(registration).toBeUndefined();
+        continue;
+      }
+      const config = registration![1];
       expect(config.description).toContain("saved social profiles");
       expect(config.description).toContain(`page 1, up to ${limit}`);
       expect(config.description).toContain("this tool has no page input");
@@ -64,8 +69,6 @@ it.each(cases)(
       expect(config.inputSchema.safeParse({ artist_account_id: "" }).success).toBe(
         name === "artist_deep_research",
       );
-      if (oauth)
-        expect(config.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     }
     expect(mocks.socials).not.toHaveBeenCalled();
   },
