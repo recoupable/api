@@ -33,6 +33,6 @@ Before accepting persistence, hold the adopted durable session/chat/fence locks 
 
 ## Evidence and next gate
 
-The Database proposal's fifteen disposable PostgreSQL 15/17 tests exercise existing migrations with synthetic parent/evidence rows. They cover exact joins, expanded members, current membership revocation, stale corrections/provider changes, explicit corrected versions, missing/removed lineage, source withdrawal and concurrent lock waits. This is a read/lock proof; fixture inserts do not implement a production writer.
+The Database proposal's sixteen disposable PostgreSQL 15/17 tests exercise existing migrations with synthetic parent/evidence rows. They cover exact joins, expanded members, current membership revocation, stale corrections/provider changes, explicit corrected versions, missing/removed lineage, source withdrawal and concurrent lock waits. This is a read/lock proof; fixture inserts do not implement a production writer.
 
 Still required: Catalog's independent semantic review, root adoption, executable trusted retention writer with concurrent first-create/CAS/retry/rollback tests, withdrawn-source resurrection refusal, provider-history conflict reconciliation, strict API envelopes/byte limits, participating-writer enforcement and durable chat composition. Root reviews those changes before any shared runtime integration.
