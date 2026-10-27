@@ -26,22 +26,23 @@ describe("ensureSongstatsPaymentMethod", () => {
     expect(createCardOnFileSession).not.toHaveBeenCalled();
   });
 
-  it("402s with a free-tier checkout link when there is no Stripe customer", async () => {
+  it("returns an entitlement failure without creating checkout when there is no customer", async () => {
     vi.mocked(findStripeCustomerForAccount).mockResolvedValue(null);
     vi.mocked(createCardOnFileSession).mockResolvedValue({ url: "https://checkout/free" } as never);
 
     const r = await ensureSongstatsPaymentMethod("acc_1");
 
     expect(findDefaultPaymentMethodForCustomer).not.toHaveBeenCalled();
-    expect(createCardOnFileSession).toHaveBeenCalledWith("acc_1", expect.any(String));
+    expect(createCardOnFileSession).not.toHaveBeenCalled();
     expect((r as Response).status).toBe(402);
     expect(await (r as Response).json()).toMatchObject({
       status: "error",
-      checkoutUrl: "https://checkout/free",
+      error: "payment_method_required",
+      message: "This research feature is unavailable with the account's current entitlements.",
     });
   });
 
-  it("402s with a checkout link when the customer exists but has no card", async () => {
+  it("returns no checkout or upgrade link when an existing customer has no card", async () => {
     vi.mocked(findStripeCustomerForAccount).mockResolvedValue("cus_1");
     vi.mocked(findDefaultPaymentMethodForCustomer).mockResolvedValue(null);
     vi.mocked(createCardOnFileSession).mockResolvedValue({ url: "https://checkout/free" } as never);
@@ -49,6 +50,10 @@ describe("ensureSongstatsPaymentMethod", () => {
     const r = await ensureSongstatsPaymentMethod("acc_1");
 
     expect((r as Response).status).toBe(402);
-    expect(await (r as Response).json()).toMatchObject({ checkoutUrl: "https://checkout/free" });
+    const body = await (r as Response).json();
+    expect(body.error).toBe("payment_method_required");
+    expect(body).not.toHaveProperty("checkoutUrl");
+    expect(body).not.toHaveProperty("billingUrl");
+    expect(createCardOnFileSession).not.toHaveBeenCalled();
   });
 });

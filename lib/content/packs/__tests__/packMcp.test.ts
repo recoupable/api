@@ -3,6 +3,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { registerFullOAuthTools } from "@/lib/mcp/oauth/registerFullOAuthTools";
+import { registerAllPackTools } from "@/lib/mcp/tools/packs";
+import { processPackOperation } from "../processPackOperation";
+vi.mock("@/lib/mcp/resolveAccountId", () => ({
+  resolveAccountId: vi.fn(async () => ({ accountId: "owner" })),
+}));
 vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
 vi.mock("@/lib/mcp/tools", async () => ({
   registerAllTools: (await import("@/lib/mcp/tools/packs")).registerAllPackTools,
@@ -21,6 +26,33 @@ vi.mock("@/lib/content/packs/processPackOperation", async () => {
       export: s.releasePackLocatorSchema,
     },
   };
+});
+
+it("returns a saved-pack credit failure without a purchase or billing destination", async () => {
+  vi.mocked(processPackOperation).mockRejectedValueOnce(
+    new Error("Insufficient credits; your brief and quote are saved"),
+  );
+  const server = new McpServer({ name: "pack-commerce-test", version: "1" });
+  registerAllPackTools(server);
+  const client = new Client({ name: "test", version: "1" });
+  const [ct, st] = InMemoryTransport.createLinkedPair();
+  await server.connect(st);
+  await client.connect(ct);
+  try {
+    const result = await client.callTool({
+      name: "get_release_pack",
+      arguments: { job_id: "a1111111-1111-4111-8111-111111111111" },
+    });
+    expect(result.isError).toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      success: false,
+      error: expect.stringContaining("brief and quote are saved"),
+    });
+    expect(JSON.stringify(result)).not.toMatch(/billingUrl|checkoutUrl|https?:/);
+  } finally {
+    await client.close();
+    await server.close();
+  }
 });
 it("discovers seven pack operations with explicit schemas through delegated OAuth registration", async () => {
   const server = new McpServer({ name: "pack-test", version: "1" });

@@ -49,7 +49,7 @@ describe("assertTaskWithinPlan", () => {
       current_task_count: 1,
     });
     expect((err as PlanLimitError).message).toBe(
-      "Free includes 1 task. Starter includes 3, Pro is unlimited.",
+      "This task is unavailable with the account's current entitlements.",
     );
   });
 
