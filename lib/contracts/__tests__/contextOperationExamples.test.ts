@@ -3,6 +3,7 @@ import { writeFileSync } from "node:fs";
 import { NextRequest, NextResponse } from "next/server";
 import { POST } from "@/app/api/context/route";
 import { handleContextToolOperation } from "@/lib/mcp/tools/context/handleContextToolOperation";
+import { compileContextBrief } from "@/lib/context/compileContextBrief";
 import { contextOperationSchema } from "@/lib/context/processContextOperation";
 import {
   contextResponseReferences,
@@ -20,6 +21,14 @@ const mocks = vi.hoisted(() => ({
   dispatch: vi.fn(),
   release: vi.fn(),
   tracks: vi.fn(),
+  retainedSources: vi.fn(),
+}));
+vi.mock("node:crypto", async importOriginal => ({
+  ...(await importOriginal<typeof import("node:crypto")>()),
+  randomUUID: () => "00000000-0000-4000-8000-000000000008",
+}));
+vi.mock("@/lib/supabase/context_source_versions/readRetainedContextSourceVersions", () => ({
+  readRetainedContextSourceVersions: mocks.retainedSources,
 }));
 vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: mocks.auth }));
 vi.mock("@/lib/mcp/resolveAccountId", () => ({ resolveAccountId: mocks.resolve }));
@@ -358,6 +367,28 @@ function storage(name: string, params: Record<string, unknown>): unknown {
       superseded: false,
       brief: params.p_snapshot,
     };
+  if (name === "read_context_brief" && activeAction === "prepare_catalog_audit")
+    return {
+      id: record,
+      created_at: when,
+      purpose: "company_onboarding",
+      state: "saved",
+      superseded: false,
+      brief: compileContextBrief({
+        ownerId: owner,
+        requests: [{ id: requestId, subjectIds: [subject] }],
+        documents: [
+          {
+            ...savedDocument,
+            status: "accepted",
+            evidenceKind: "observation",
+            coverage: "partial",
+          },
+        ],
+        purpose: "company_onboarding",
+        maxCharacters: 12000,
+      }),
+    };
   if (name === "read_context_brief")
     return {
       id: record,
@@ -381,6 +412,7 @@ beforeEach(() => {
   vi.stubEnv("CONTEXT_SPOTIFY_RELEASE_VERIFY_ENABLED", "true");
   vi.stubEnv("CONTEXT_SPOTIFY_RELEASE_TRACK_ISRC_ENABLED", "true");
   mocks.rpc.mockImplementation(storage);
+  mocks.retainedSources.mockResolvedValue([{ id: version, fingerprint: "a".repeat(64) }]);
   mocks.auth.mockResolvedValue({ accountId: actor });
   mocks.resolve.mockResolvedValue({ accountId: actor });
   mocks.access.mockResolvedValue(true);
@@ -434,9 +466,12 @@ it.each(contextOperationExampleInputs)(
     const result = await handleContextToolOperation(input, {
       authInfo: {
         extra: {
-          oauth: !["save_catalog_case", "read_catalog_case", "list_catalog_cases"].includes(
-            parsed.action,
-          ),
+          oauth: ![
+            "prepare_catalog_audit",
+            "save_catalog_case",
+            "read_catalog_case",
+            "list_catalog_cases",
+          ].includes(parsed.action),
         },
       },
     } as unknown as Parameters<typeof handleContextToolOperation>[1]);

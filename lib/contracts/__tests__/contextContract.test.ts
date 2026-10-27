@@ -62,6 +62,7 @@ describe("published Context request catalog", () => {
       "attach_evidence",
       "read_evidence_attachment",
       "list_evidence_attachments",
+      "prepare_catalog_audit",
       "save_catalog_case",
       "read_catalog_case",
       "list_catalog_cases",

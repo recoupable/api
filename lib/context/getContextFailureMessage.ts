@@ -1,5 +1,7 @@
 /** Give evidence callers actionable retry guidance while preserving legacy Context messages. */
 export function getContextFailureMessage(action: string) {
+  if (action === "prepare_catalog_audit")
+    return "Catalog audit preparation could not complete. Select a current saved company-onboarding brief and check workspace access and retained evidence. No catalog case was saved.";
   if (action === "save_catalog_case")
     return "Catalog case save could not complete. Check workspace, retained sources and expected revision. Retry an uncertain save only with the same idempotency key and unchanged payload; read the current revision before editing.";
   if (action === "read_catalog_case" || action === "list_catalog_cases")

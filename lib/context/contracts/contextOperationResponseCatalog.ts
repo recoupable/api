@@ -1,3 +1,4 @@
+import { catalogAuditPreparationResponseSchema } from "../catalogAuditPreparationResponseSchema";
 import { catalogCaseReceiptSchema, catalogCasePageSchema } from "../catalogCaseResponseSchemas";
 import { z } from "zod";
 import type { contextOperationSchema } from "../processContextOperation";
@@ -26,6 +27,7 @@ import {
 
 /** Source-described responses only: this registry is not runtime validation or permission. */
 export const contextResponseSchemas = {
+  catalogAuditPreparation: catalogAuditPreparationResponseSchema,
   catalogCase: catalogCaseReceiptSchema,
   catalogCases: catalogCasePageSchema,
   catalogPlanning: catalogPlanningResponseSchema,
@@ -65,6 +67,7 @@ type Reference =
   | "#/evidenceSchemas/receipt"
   | "#/evidenceSchemas/page";
 export const contextResponseReferences = {
+  prepare_catalog_audit: "#/responseSchemas/catalogAuditPreparation",
   save_catalog_case: "#/responseSchemas/catalogCase",
   read_catalog_case: "#/responseSchemas/catalogCase",
   list_catalog_cases: "#/responseSchemas/catalogCases",
