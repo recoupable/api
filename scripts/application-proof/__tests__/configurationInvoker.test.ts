@@ -150,6 +150,31 @@ describe("registration-shaped offline configuration invocation", () => {
     expect(result.bootstrap_enabled).toBe(false);
     expect(result.access_activated).toBe(false);
   });
+  it("projects both affected origins once, including an empty return destination list", async () => {
+    const deps = adapters();
+    const result = await rehearseConfigurationInvocation(
+      account,
+      application,
+      { ...input(), allowed_origins: [second, origin], return_urls: [second + "/new"] },
+      deps,
+    );
+    expect(deps.invokeFixture).toHaveBeenCalledOnce();
+    expect(result.plan.expected_snapshot).toEqual(snapshot());
+    expect(result.plan.changes).toEqual([
+      {
+        origin,
+        expected: { config_revision: 4, proof_revision: 7, cas_revision: 12 },
+        next: { config_revision: 5, proof_revision: 7, cas_revision: 13 },
+        return_urls: [],
+      },
+      {
+        origin: second,
+        expected: { config_revision: 2, proof_revision: 3, cas_revision: 5 },
+        next: { config_revision: 3, proof_revision: 3, cas_revision: 6 },
+        return_urls: [second + "/new"],
+      },
+    ]);
+  });
   it("treats reordered sets as no change and never invokes an empty mutation", async () => {
     const deps = adapters();
     const result = await rehearseConfigurationInvocation(
