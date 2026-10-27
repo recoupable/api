@@ -5,6 +5,6 @@ export async function requireFanEntitlement(ownerId: string) {
   if (!(await hasPaidSiteSubscription(ownerId)))
     throw new SiteError(
       402,
-      "An active paid Recoup subscription is required for this site's workspace",
+      "Fan connection is unavailable with this workspace's current entitlements.",
     );
 }

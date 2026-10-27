@@ -10,6 +10,7 @@ import {
 import { TASK_ACCESS_DENIED_MESSAGE, updateTask } from "@/lib/tasks/updateTask";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
+import { PlanLimitError } from "@/lib/plans/PlanLimitError";
 
 const TASK_NOT_FOUND_MESSAGE = "Task not found";
 
@@ -53,6 +54,8 @@ Omitting a field leaves the existing value unchanged.`,
         });
         return getToolResultSuccess(result);
       } catch (error) {
+        if (error instanceof PlanLimitError)
+          return { ...getToolResultError(error.message), isError: true };
         if (
           error instanceof Error &&
           [TASK_NOT_FOUND_MESSAGE, TASK_ACCESS_DENIED_MESSAGE].includes(error.message)
