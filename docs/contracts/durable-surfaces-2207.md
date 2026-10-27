@@ -93,3 +93,7 @@ Focused acceptance additions beyond App #2373:
 7. Strict model projection rejects hidden/private/extra fields and unsupported live refs. Local filters and every read/replay cause zero external effects. Intended- actor, two-device authenticated readback remains separately gated and unrun.
 
 The local SQL proof uses actual 636 SQL with synthetic authorization. It is not a full typed API implementation, production policy proof, live storage rollout or UI acceptance. Retention duration/backup expiry, artifact identity, source withdrawal and live mapping need actual owner facts; CAS placement and pending-save semantics are resolved here without asking Sidney to design them. No operation on a denied live actor is retried as part of this proposal.
+
+## Retained field consumer contract delta
+
+The [one-metric retained field consumer proposal](./catalog-field-consumer-2207.md) specifies the exact missing selection/response companion for the existing catalog preparation callsite, plus its replay/history and source-family enforcement gates. It is a design delta for root/UI review, not a registered or activated field reader.
