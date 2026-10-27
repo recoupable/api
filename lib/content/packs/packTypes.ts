@@ -15,6 +15,7 @@ export type PackAsset = {
   ordinal: number;
   status: "pending" | "running" | "completed" | "failed" | "uncertain";
   attempt: number;
+  completed_at?: string | null;
   credits: number;
   maximum_usd: number;
   provider_state: Record<string, unknown>;
