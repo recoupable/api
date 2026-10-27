@@ -25,6 +25,7 @@ function asset(overrides: Partial<PackAsset> = {}): PackAsset {
     ordinal: 0,
     status: "completed",
     attempt: 1,
+    completed_at: timestamp,
     credits: 1,
     maximum_usd: 0.01,
     provider_state: {},
@@ -56,6 +57,16 @@ function snapshot(assets: PackAsset[], job: Record<string, unknown> = {}): PackS
   };
 }
 describe("pack progress readback", () => {
+  it("does not attribute an earlier rejected asset milestone to a later usable asset", async () => {
+    const invalid = asset({ caption: " ", completed_at: timestamp });
+    const valid = asset({ id: "asset-2", kind: "carousel", completed_at: "2026-10-26T12:01:00Z" });
+    const result = await readPackSnapshot(
+      snapshot([invalid, valid], { first_usable_asset_at: timestamp }),
+    );
+    expect(result.progress.counts.usable_pieces).toBe(1);
+    expect(result.progress.milestones.first_usable_asset_at).toBeNull();
+  });
+
   it("prefers the final failed inspection over a stale staged receipt", async () => {
     const result = await readPackSnapshot(
       snapshot([

@@ -60,6 +60,11 @@ export function getPackProgress({ job, assets }: PackSnapshot) {
     typeof job[key] === "string" && Number.isFinite(Date.parse(job[key] as string))
       ? (job[key] as string)
       : null;
+  const firstUsableAt = timestamp("first_usable_asset_at");
+  const verifiedFirstUsableAt =
+    firstUsableAt && usable.some(asset => asset.completed_at === firstUsableAt)
+      ? firstUsableAt
+      : null;
   return {
     job_id: job.id,
     revision: job.revision,
@@ -86,7 +91,7 @@ export function getPackProgress({ job, assets }: PackSnapshot) {
       intake_ready_at: timestamp("sufficient_brief_at"),
       approved_at: timestamp("approved_at"),
       running_at: timestamp("running_at"),
-      first_usable_asset_at: usable.length ? timestamp("first_usable_asset_at") : null,
+      first_usable_asset_at: verifiedFirstUsableAt,
       full_pack_completed_at: complete ? timestamp("completed_at") : null,
       last_exported_at: timestamp("exported_at"),
     },
