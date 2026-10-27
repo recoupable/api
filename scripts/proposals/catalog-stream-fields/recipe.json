@@ -1,0 +1,23 @@
+{
+  "id": "catalog-retained-stream-fields/1",
+  "scope": "offline_computational_contract",
+  "fields": {
+    "previous_streams": "streams",
+    "current_streams": "streams",
+    "absolute_growth": "streams",
+    "percentage_growth": "percent"
+  },
+  "metric": "daily_streams",
+  "platform": "all_dsps",
+  "territory": "worldwide",
+  "timezone": "UTC",
+  "period": "two equal completed periods of 1..366 UTC days; end exclusive",
+  "missing": "absent and stored-null dates remain distinct; either makes all fields unknown",
+  "zero": "zero is observed; zero previous sum makes percentage unknown",
+  "overflow": "nonnegative safe integer observations and safe integer period sums required",
+  "rounding": "none; canonical binary64 percentage preserved",
+  "helper": "lib/catalog/compareSpotifyDailyStreams.ts",
+  "helperSha256": "91dcca66c8dec0851c1f6e110257a63b730e9b7ae33a60bceb0e9ffcf318dd81",
+  "binding": "exact owner, subject, request, catalog, result, revision, topic, single source version and query",
+  "authority": "supplied qualified boundary only; no live authorization or latest-row proof"
+}
