@@ -65,7 +65,7 @@ Suggested normalized domain outcomes, to be adopted before public schema work:
 - unsupported (`0A000`/`55000`): prerequisite/adapter unavailable, no fallback write;
 - transport ambiguity: explicit unknown outcome, original-identity reconciliation.
 
-These are service-internal SQL categories; final user-facing status/error projection must not expose database internals or distinguish inaccessible private identities. No success boolean is inferred from stream finish, void helper return or UI render.
+These are service-internal SQL categories; final caller-facing status/error projection must not expose database internals or distinguish inaccessible private identities. No success boolean is inferred from stream finish, void helper return or UI render.
 
 ## Preserve newer edits while a save is pending
 
@@ -92,4 +92,4 @@ Focused acceptance additions beyond App #2373:
 6. UI A pending → edit B → ack A leaves B unsaved; reversed acknowledgements do not lower current revision; account/workspace switch invalidates captured completion; unknown outcome and reconciling old receipt cannot resurrect deleted/latest work.
 7. Strict model projection rejects hidden/private/extra fields and unsupported live refs. Local filters and every read/replay cause zero external effects. Intended- actor, two-device authenticated readback remains separately gated and unrun.
 
-The local SQL proof uses actual 636 SQL with synthetic authorization. It is not a full typed API implementation, production policy proof, live storage rollout or UI acceptance. Retention duration/backup expiry, artifact identity, source withdrawal and live mapping need actual owner facts; CAS placement and pending-save semantics are resolved here without asking the user to design them. No operation on a denied live actor is retried as part of this proposal.
+The local SQL proof uses actual 636 SQL with synthetic authorization. It is not a full typed API implementation, production policy proof, live storage rollout or UI acceptance. Retention duration/backup expiry, artifact identity, source withdrawal and live mapping need actual owner facts; CAS placement and pending-save semantics are resolved here without asking Sidney to design them. No operation on a denied live actor is retried as part of this proposal.
