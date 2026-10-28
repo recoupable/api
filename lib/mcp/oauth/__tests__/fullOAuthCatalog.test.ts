@@ -42,7 +42,13 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
     expect(tools.map(tool => tool.name).sort()).toEqual(
       [
         ...Object.keys(fullOAuthToolPolicy).filter(
-          name => !["get_pulses", "update_pulse"].includes(name),
+          name =>
+            ![
+              "get_pulses",
+              "update_pulse",
+              "artist_deep_research",
+              "spotify_deep_research",
+            ].includes(name),
         ),
         "get_daily_email_status",
         "set_daily_email_status",
@@ -52,7 +58,10 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
-    expect(tools).toHaveLength(91);
+    expect(tools).toHaveLength(89);
+    expect(tools.map(tool => tool.name)).toContain("get_artist_socials");
+    expect(tools.map(tool => tool.name)).not.toContain("artist_deep_research");
+    expect(tools.map(tool => tool.name)).not.toContain("spotify_deep_research");
     for (const [action, operation] of Object.entries(contextToolOperations)) {
       if (standardOnlyContextActions.includes(action)) {
         expect(tools.map(tool => tool.name)).not.toContain(operation.name);
