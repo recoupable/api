@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { parseContextUrl } from "./parseContextUrl";
+import { describeContextIngestFailure } from "./describeContextIngestFailure";
 import type { SpotifyContext } from "./fetchSpotifyContext";
 
 export interface ContextRequestRecord {
@@ -52,8 +53,7 @@ export async function runContextRequest(
       p_owner: owner,
       p_request: requestId,
       p_token: token,
-      p_error:
-        "Context extraction failed. Retry this request after checking provider access or identity conflicts.",
+      p_error: describeContextIngestFailure(error),
     });
     throw error;
   }
