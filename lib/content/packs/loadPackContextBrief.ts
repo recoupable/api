@@ -46,6 +46,7 @@ export async function loadPackContextBrief(
   const documents = snapshot.brief.documents.filter(
     doc =>
       doc.ownerId === owner &&
+      doc.text.trim().length > 0 &&
       ["song_summary", "artwork_branding", "artist_research"].includes(doc.topic),
   );
   const attributed = documents.map(doc => {

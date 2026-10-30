@@ -105,6 +105,15 @@ describe("saved pack context attribution", () => {
     expect(edited).toEqual(first);
   });
 
+  it("does not turn attribution for an empty document into a usable creative direction", async () => {
+    vi.mocked(callContextRpc).mockResolvedValue(
+      saved([{ ...document, topic: "artwork_branding", text: "" }]),
+    );
+    const result = await loadPackContextBrief({ accountId: owner }, brief());
+    expect(result.creative_direction).toBeUndefined();
+    expect(result.evidence).toEqual([]);
+  });
+
   it("preserves current customer direction and evidence while excluding another workspace", async () => {
     vi.mocked(callContextRpc).mockResolvedValue(
       saved([
