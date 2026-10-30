@@ -16,7 +16,7 @@ const analysisText = z
   .refine(
     value =>
       value.trim().length > 0 &&
-      !/^(?:n\/a|none|unknown|unavailable|not available)$/i.test(value.trim()),
+      !/^(?:n\/a|none|unknown|unavailable|not available|not applicable)$/i.test(value.trim()),
     "Audio analysis must contain descriptive observations and direction, not placeholder text",
   );
 const contextSchema = z.object({

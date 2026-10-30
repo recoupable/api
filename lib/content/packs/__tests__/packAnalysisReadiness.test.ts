@@ -82,9 +82,14 @@ describe("pack analysis readiness", () => {
     } as never);
   });
 
-  const invalid = ["   ", "N/A", "unknown", "Not available"].flatMap(text =>
-    ["summary", "visual_direction"].map(field => ({ field, text })),
-  );
+  const invalid = [
+    "   ",
+    "N/A",
+    "unknown",
+    "Not available",
+    "Not applicable",
+    "  NOT APPLICABLE  ",
+  ].flatMap(text => ["summary", "visual_direction"].map(field => ({ field, text })));
   it.each(invalid)(
     "rejects fresh placeholder $field: $text before saving completed context",
     async ({ field, text }) => {
@@ -122,6 +127,25 @@ describe("pack analysis readiness", () => {
     expect(runPackCommand).toHaveBeenCalledWith(expect.anything(), "context", "job", {
       value: expect.objectContaining({ state: "complete", summary: analysis.summary }),
     });
+  });
+  it("preserves meaningful observations containing the words not applicable", async () => {
+    const descriptive = {
+      ...analysis,
+      summary:
+        "Vocal analysis is not applicable to this instrumental; sparse piano and soft percussion dominate.",
+      visual_direction:
+        "Lyric typography is not applicable; use cream paper and restrained abstract motion.",
+    };
+    vi.mocked(callFlamingoGenerate).mockResolvedValue({
+      response: JSON.stringify(descriptive),
+    } as never);
+    expect(
+      (await preparePackProduction({ accountId: "owner" }, job())).brief.song_summary,
+    ).toContain(descriptive.summary);
+    expect(
+      (await preparePackProduction({ accountId: "owner" }, job({ ...complete, ...descriptive })))
+        .brief.song_summary,
+    ).toContain(descriptive.summary);
   });
   it("reuses valid saved analysis and does not repeat an uncertain analysis", async () => {
     expect(
