@@ -58,13 +58,20 @@ describe.skipIf(!process.env.RECOUP_PROOF_BRIDGE_SOCKET)(
         issueReceipt.challenge_id,
         [[txt.slice(0, 20), txt.slice(20)]],
       );
-      expect(flow.replay(verified)).toMatchObject({
+      // Commit, then deliberately discard the response; the retained request predates dispatch.
+      flow.replay(verified);
+      const original = JSON.parse(
+        fixtureSql(
+          "SELECT result FROM application_proof_proposal.receipts WHERE operation='verify';",
+        ),
+      );
+      const recovered = flow.replay(verified);
+      expect(recovered).toEqual(original);
+      expect(recovered).toMatchObject({
         operation: "verify",
         access_activated: false,
         bootstrap_enabled: false,
       });
-      const original = flow.replay(verified);
-      expect(flow.replay(verified)).toEqual(original);
       expect(flow.status(target).receipts).toHaveLength(2);
       flow.replay(flow.prepareRevoke(target, "revoke-1"));
       const status = flow.status(target);

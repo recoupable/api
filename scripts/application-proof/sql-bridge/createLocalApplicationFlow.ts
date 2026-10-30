@@ -3,6 +3,7 @@ import { z } from "zod";
 import { validateApplicationRegistration } from "../../../lib/applications/validateApplicationRegistration";
 import { transition } from "../contractModel";
 import { fixtureSql } from "./fixtureSql";
+import { quoteFixtureSqlLiteral as quote } from "./quoteFixtureSqlLiteral";
 
 const targetSchema = z
   .object({
@@ -44,7 +45,6 @@ const receiptSchema = z
     evidence_kind: z.literal("synthetic_observation"),
   })
   .passthrough();
-const quote = (value: string) => "'" + value.replaceAll("'", "''") + "'";
 
 /** Disposable fixture caller only. No production caller, resolver, credential or network adapter. */
 export function createLocalApplicationFlow(syntheticActors: readonly string[] = []) {
