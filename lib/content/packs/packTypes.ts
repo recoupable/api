@@ -1,6 +1,8 @@
 import type { ReleasePackBrief, ReleasePackDeliverables } from "./releasePackSchema";
 import type { buildReleasePackQuote, PackAssetKind } from "./buildReleasePackQuote";
-export type PackQuote = ReturnType<typeof buildReleasePackQuote> & {
+export type PackQuote = Omit<ReturnType<typeof buildReleasePackQuote>, "cost_accounting"> & {
+  /** Older saved quotes predate these explanatory labels. */
+  cost_accounting?: ReturnType<typeof buildReleasePackQuote>["cost_accounting"];
   id: string;
   revision: number;
   expires_at: string;
@@ -15,6 +17,7 @@ export type PackAsset = {
   ordinal: number;
   status: "pending" | "running" | "completed" | "failed" | "uncertain";
   attempt: number;
+  completed_at?: string | null;
   credits: number;
   maximum_usd: number;
   provider_state: Record<string, unknown>;

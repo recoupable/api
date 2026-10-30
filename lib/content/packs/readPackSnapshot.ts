@@ -1,3 +1,6 @@
+import { getPackProgress } from "./getPackProgress";
+import { isPackAssetUsable } from "./isPackAssetUsable";
+import { packCostAccounting } from "@/lib/const";
 import { createSignedFileUrlByKey } from "@/lib/supabase/storage/createSignedFileUrlByKey";
 import { getPackBriefReadiness } from "./getPackBriefReadiness";
 import type { PackSnapshot } from "./packTypes";
@@ -26,14 +29,19 @@ export async function readPackSnapshot(snapshot: PackSnapshot) {
     assets.push({
       ...visible,
       files,
-      usable: asset.status === "completed" && asset.qa?.passed === true && !!asset.caption,
+      usable: isPackAssetUsable(asset),
     });
   }
   const readiness = getPackBriefReadiness(snapshot.job.brief);
   return {
-    job,
+    job: {
+      ...job,
+      // Explain legacy amounts on read without rewriting stored approval or receipts.
+      quote: job.quote ? { ...job.quote, cost_accounting: { ...packCostAccounting } } : null,
+    },
     assets,
     readiness,
+    progress: getPackProgress(snapshot),
     next_action: readiness.ready
       ? snapshot.job.status === "awaiting_approval"
         ? "Review this complete quote and approve its budget before generation."
