@@ -42,7 +42,8 @@ export function selectContextDocuments(
       request.subjectIds.includes(doc.subjectId) &&
       request.topics.includes(doc.topic) &&
       doc.status === "accepted" &&
-      doc.text.trim().length > 0 &&
+      // Check substance without changing format characters inside retained claims.
+      /[^\s\p{Cf}\p{Default_Ignorable_Code_Point}]/u.test(doc.text) &&
       doc.evidenceKind !== "creative_proposal" &&
       doc.sourceVersionIds.length > 0 &&
       !doc.sourceVersionIds.some(id => withdrawn.has(id)) &&

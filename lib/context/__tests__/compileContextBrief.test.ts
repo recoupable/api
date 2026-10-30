@@ -186,7 +186,15 @@ it.each(Object.keys(purposeTopics) as (keyof typeof purposeTopics)[])(
   "%s excludes blank claims from coverage and the input manifest",
   purpose => {
     const topics = purposeTopics[purpose];
-    for (const text of ["", " \t\r\n", "\u00a0\u2003"]) {
+    for (const text of [
+      "",
+      " \t\r\n",
+      "\u00a0\u2003",
+      "\u200b",
+      "\u200c",
+      "\u2060",
+      " \u200d\u2066\u2069\u00ad\ufe0f\u034f\n",
+    ]) {
       const result = compileContextBrief({
         ownerId: "owner",
         requests: [{ id: "first", subjectIds: ["subject"] }],
@@ -226,4 +234,30 @@ it("retains complete nonempty evidence verbatim beside blank evidence", () => {
   expect(result.missingTopics).not.toContain("song_summary");
   expect(result.text).toContain("The final qualifier remains unconfirmed.");
   expect(result.text.length).toBeLessThanOrEqual(1000);
+});
+
+it.each([
+  "فارسی\u200cمتن",
+  "क्\u200dष",
+  "👩\u200d🎤",
+  "音楽の解釈",
+  "e\u0301",
+  "\u2066A qualified claim.\u2069",
+])("preserves substantive Unicode evidence verbatim: %s", text => {
+  const result = compileContextBrief({
+    ownerId: "owner",
+    requests: [{ id: "first", subjectIds: ["subject"] }],
+    documents: purposeTopics.creative_direction.map(topic => ({
+      ...document("subject", topic),
+      text,
+    })),
+    purpose: "creative_direction",
+    maxCharacters: 12000,
+  });
+  expect(result.readiness).toBe("ready");
+  expect(result.missingTopics).toEqual([]);
+  expect(result.documents).toHaveLength(purposeTopics.creative_direction.length);
+  expect(result.documents.every(doc => doc.text === text)).toBe(true);
+  expect(result.input_manifest.documents).toHaveLength(result.documents.length);
+  expect(result.text).toContain(text);
 });
