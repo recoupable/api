@@ -75,33 +75,49 @@ export function compileContextBrief(input: {
     withdrawnSourceVersionIds: [],
   });
   const documents = [...selection.documents];
-  const render = () =>
-    header +
-    documents
-      .map(
-        doc =>
-          `\n## ${doc.topic.replaceAll("_", " ")} — ${doc.subjectId}\nCoverage: ${doc.coverage}; evidence: ${doc.evidenceKind}\n\n${doc.text
-            .split("\n")
-            .map(line => `> ${line}`)
-            .join("\n")}\n\nSources: ${doc.sourceVersionIds.join(", ")}\n`,
-      )
-      .join("");
+  const getRequestCoverage = () =>
+    input.requests.map(request => {
+      const matching = documents.filter(doc => request.subjectIds.includes(doc.subjectId));
+      const missingTopics = recipe.topics.filter(
+        topic => !matching.some(doc => doc.topic === topic),
+      );
+      return {
+        requestId: request.id,
+        readiness:
+          missingTopics.length || matching.some(doc => doc.coverage !== "full")
+            ? "partial"
+            : "ready",
+        missingTopics,
+      };
+    });
+  const render = () => {
+    const partialRequests = getRequestCoverage().filter(
+      request => request.readiness === "partial",
+    ).length;
+    const coverageSummary = partialRequests
+      ? `${partialRequests} of ${input.requests.length} saved requests have missing topics or partial evidence. Gaps may reflect unavailable evidence or the size limit.`
+      : "All selected saved requests have the required topics with full coverage.";
+    return (
+      header +
+      `\nIncluded evidence: ${documents.length} documents. ${coverageSummary}\n` +
+      documents
+        .map(
+          doc =>
+            `\n## ${doc.topic.replaceAll("_", " ")} — ${doc.subjectId}\nCoverage: ${doc.coverage}; evidence: ${doc.evidenceKind}\n\n${doc.text
+              .split("\n")
+              .map(line => `> ${line}`)
+              .join("\n")}\n\nSources: ${doc.sourceVersionIds.join(", ")}\n`,
+        )
+        .join("")
+    );
+  };
   // Keep complete evidence and attribution together; never cut a document mid-claim.
   let text = render();
   while (text.length > input.maxCharacters && documents.length) {
     documents.pop();
     text = render();
   }
-  const requestCoverage = input.requests.map(request => {
-    const matching = documents.filter(doc => request.subjectIds.includes(doc.subjectId));
-    const missingTopics = recipe.topics.filter(topic => !matching.some(doc => doc.topic === topic));
-    return {
-      requestId: request.id,
-      readiness:
-        missingTopics.length || matching.some(doc => doc.coverage !== "full") ? "partial" : "ready",
-      missingTopics,
-    };
-  });
+  const requestCoverage = getRequestCoverage();
   const missingTopics = recipe.topics.filter(topic => !documents.some(doc => doc.topic === topic));
   const gaps = input.requests.flatMap(request =>
     recipe.topics.flatMap(topic => {

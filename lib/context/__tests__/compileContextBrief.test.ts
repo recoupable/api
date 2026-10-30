@@ -98,3 +98,57 @@ it("excludes unrelated workspace evidence and creative proposals", () => {
   expect(brief.text).not.toMatch(/PRIVATE|PROPOSAL/);
   expect(brief.documents).toEqual([]);
 });
+
+it.each(["company_onboarding", "creative_direction", "playlist_pitch"] as const)(
+  "explains empty evidence in bounded readable %s output",
+  purpose => {
+    const brief = compileContextBrief({ ...input, purpose, documents: [], maxCharacters: 1000 });
+    expect(brief.text).toContain("Included evidence: 0 documents.");
+    expect(brief.text).toContain("2 of 2 saved requests have missing topics or partial evidence.");
+    expect(brief.text.length).toBeLessThanOrEqual(1000);
+  },
+);
+
+it("keeps readable coverage aligned with each request rather than global topic coverage", () => {
+  const brief = compileContextBrief({
+    ...input,
+    purpose: "playlist_pitch",
+    documents: documents.filter(doc => doc.subjectId !== "song-b"),
+  });
+  expect(brief.missingTopics).toEqual([]);
+  expect(brief.text).toContain("1 of 2 saved requests have missing topics or partial evidence.");
+  expect(brief.text).toContain(`Included evidence: ${brief.documents.length} documents.`);
+});
+
+it("reports partial evidence even when every required topic is included", () => {
+  const brief = compileContextBrief({
+    ...input,
+    purpose: "playlist_pitch",
+    documents: documents.map(doc => ({ ...doc, coverage: "partial" })),
+  });
+  expect(brief.missingTopics).toEqual([]);
+  expect(brief.text).toContain("2 of 2 saved requests have missing topics or partial evidence.");
+});
+
+it("summarizes full coverage without claiming completeness beyond the selected requests", () => {
+  const brief = compileContextBrief({ ...input, purpose: "creative_direction" });
+  expect(brief.text).toContain(
+    "All selected saved requests have the required topics with full coverage.",
+  );
+  expect(brief.text).toContain(`Included evidence: ${brief.documents.length} documents.`);
+});
+
+it("updates the summary after complete evidence is removed to fit the rendered text", () => {
+  const compactInput = {
+    ...input,
+    purpose: "playlist_pitch" as const,
+    documents: [{ ...document("song-a", "song_summary"), text: "e".repeat(500) }],
+  };
+  expect(compileContextBrief({ ...compactInput, maxCharacters: 2000 }).documents).toHaveLength(1);
+  const brief = compileContextBrief({ ...compactInput, maxCharacters: 1000 });
+  expect(brief.documents).toEqual([]);
+  expect(brief.text).toContain("Included evidence: 0 documents.");
+  expect(brief.text).toContain("Gaps may reflect unavailable evidence or the size limit.");
+  expect(brief.text).not.toContain("e".repeat(50));
+  expect(brief.text.length).toBeLessThanOrEqual(1000);
+});
