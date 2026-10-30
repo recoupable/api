@@ -1,6 +1,10 @@
-# MCP OAuth architecture and compatibility spike
+# MCP OAuth architecture and compatibility spike (historical)
 
-Status: implementation decision proposed by [Mono #208](https://github.com/recoupable/mono/issues/208), under [epic #207](https://github.com/recoupable/mono/issues/207). Read and write access are both required at launch. This document does not declare OAuth ready for production.
+This is the October 5, 2026 design and spike record against API `4797fc39`, retained for the reasoning behind [Mono #208](https://github.com/recoupable/mono/issues/208). The sections below describe that initial proposal and its then-outstanding gates; they are not current deployment instructions or authorization policy.
+
+For current source behavior, use [OAuth runtime and consent](mcp-oauth-runtime.md), [login and Node boundaries](mcp-oauth-login-boundary.md), and the executable provider, scope and tool-policy sources linked there. In particular, the runtime now mounts the durable provider, consent and connection management; new approvals last until disconnected, limited grants coexist with separately approved `mcp:tools`, and bounded network CIMD is implemented. The proposed 30-day default, action-specific scope taxonomy, unmounted runtime and fixed tool inventory below must not be applied as today's contract.
+
+The original selected-organization, action/retry, observability and named-client acceptance criteria remain tracked in [epic #207](https://github.com/recoupable/mono/issues/207). Neither this historical record nor the current source guide establishes complete production acceptance.
 
 ## Decision
 
