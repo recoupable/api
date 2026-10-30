@@ -104,7 +104,7 @@ it.each(["company_onboarding", "creative_direction", "playlist_pitch"] as const)
   purpose => {
     const brief = compileContextBrief({ ...input, purpose, documents: [], maxCharacters: 1000 });
     expect(brief.text).toContain("Included evidence: 0 documents.");
-    expect(brief.text).toContain("2 of 2 saved requests have missing topics or partial evidence.");
+    expect(brief.text).toContain("Requests with missing topics or partial evidence: 2 of 2.");
     expect(brief.text.length).toBeLessThanOrEqual(1000);
   },
 );
@@ -116,7 +116,7 @@ it("keeps readable coverage aligned with each request rather than global topic c
     documents: documents.filter(doc => doc.subjectId !== "song-b"),
   });
   expect(brief.missingTopics).toEqual([]);
-  expect(brief.text).toContain("1 of 2 saved requests have missing topics or partial evidence.");
+  expect(brief.text).toContain("Requests with missing topics or partial evidence: 1 of 2.");
   expect(brief.text).toContain(`Included evidence: ${brief.documents.length} documents.`);
 });
 
@@ -127,7 +127,7 @@ it("reports partial evidence even when every required topic is included", () => 
     documents: documents.map(doc => ({ ...doc, coverage: "partial" })),
   });
   expect(brief.missingTopics).toEqual([]);
-  expect(brief.text).toContain("2 of 2 saved requests have missing topics or partial evidence.");
+  expect(brief.text).toContain("Requests with missing topics or partial evidence: 2 of 2.");
 });
 
 it("summarizes full coverage without claiming completeness beyond the selected requests", () => {

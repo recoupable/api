@@ -95,11 +95,11 @@ export function compileContextBrief(input: {
       request => request.readiness === "partial",
     ).length;
     const coverageSummary = partialRequests
-      ? `${partialRequests} of ${input.requests.length} saved requests have missing topics or partial evidence. Gaps may reflect unavailable evidence or the size limit.`
+      ? `Requests with missing topics or partial evidence: ${partialRequests} of ${input.requests.length}. Gaps may reflect unavailable evidence or the size limit.`
       : "All selected saved requests have the required topics with full coverage.";
     return (
       header +
-      `\nIncluded evidence: ${documents.length} documents. ${coverageSummary}\n` +
+      `\nIncluded evidence: ${documents.length} ${documents.length === 1 ? "document" : "documents"}. ${coverageSummary}\n` +
       documents
         .map(
           doc =>
