@@ -4,7 +4,8 @@
     "scripts/application-proof/rehearseConfigurationInvocation.ts": "0b6a23a988905d955627a9a15454ddaa5c044942e543f9dc5b916ce793aa6b5c",
     "lib/applications/applicationRegistrationSchema.ts": "5bfb55ded25eae323bea02b535d6fb010eec5b2a767b891a13b86e4c91427a30",
     "lib/applications/validateApplicationRegistration.ts": "b842cd312e0123a65ec1dd872c54474f77872b337ef5285ecedff1dad96ac0c6",
-    "lib/applications/ApplicationRegistrationError.ts": "56e8764fb3d17ac023c6c51f7ecbda3c5da82aa11076152abf32e5c407b5e7d3"
+    "lib/applications/ApplicationRegistrationError.ts": "56e8764fb3d17ac023c6c51f7ecbda3c5da82aa11076152abf32e5c407b5e7d3",
+    "scripts/application-proof/contractModel.ts": "48c9bef3d1a83f31703f091aa7771e33a4db14cedd530ffff783fbb6e8ec25d2"
   },
   "database_commit": "372de990156739dda1b605d18a40333cd6f1bdba",
   "database_files": {

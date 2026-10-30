@@ -7,11 +7,11 @@ runtime adapter, endpoint, management policy, migration or activation path.
 
 ## Actual code and source pins
 
-`sources.json` pins four API modules at merge commit
+`sources.json` pins five API modules at merge commit
 `959d30bf19f28ae6a8c75031f424831923403374` and five Database fixture/protocol files at
 `372de990156739dda1b605d18a40333cd6f1bdba`, each by SHA-256. The runner verifies API
 working-file bytes, then the dedicated Vitest loader hashes and freezes those bytes
-again and executes that same cache. Its shutdown check requires all four pinned
+again and executes that same cache. Its shutdown check requires all five pinned
 modules to have passed through the loader. The runner obtains Database bytes with local
 `git show <pinned-commit>:<file>`. It does not fetch during qualification, copy the
 SQL into this repository, or recreate its schema or transaction logic. The actual
@@ -108,7 +108,11 @@ misconfiguration guard, not a security credential.
 
 The dedicated CI workflow runs PostgreSQL 15 and 17. Normal unit runs skip these
 integration cases when no runner-created socket exists; a skipped suite is not a
-passing integration result. The runner supplies the socket and runs all ten cases:
+passing integration result. The runner supplies the socket and runs the original ten bridge cases:
 API/default SQL denial, full successful mapping, quoted URL round-trip, absent
 transport, real snapshot conflict, real authority revocation, committed-response
 loss/recovery, receipt tampering rejection, and actual preflight rejection.
+
+## Composed local lifecycle
+
+See [LOCAL-FLOW.md](LOCAL-FLOW.md) for the additional synthetic personal-account registration, proof and status flow. The same runner also executes its six integration scenarios serially against the disposable cluster. The existing TXT contract model is the fifth frozen API module.

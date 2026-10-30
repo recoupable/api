@@ -1,6 +1,7 @@
 import { isDeepStrictEqual } from "node:util";
 import { z } from "zod";
 import type { rehearseConfigurationInvocation } from "../rehearseConfigurationInvocation";
+import { quoteFixtureSqlLiteral as quote } from "./quoteFixtureSqlLiteral";
 
 type Plan = Awaited<ReturnType<typeof rehearseConfigurationInvocation>>["plan"];
 const receiptSchema = z
@@ -31,7 +32,6 @@ export async function invokeConfigurationSqlFixture(
   z.string().min(1).max(128).parse(originalKey);
   if (!executeFixtureSql) throw new Error("Fixture SQL transport unavailable");
   const plan = structuredClone(originalPlan);
-  const quote = (value: string) => "'" + value.replaceAll("'", "''") + "'";
   const scope = plan.scope;
   const parameters = [
     scope.actor_id,
