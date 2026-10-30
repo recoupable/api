@@ -76,7 +76,10 @@ Use `playlist_pitch` for the second consumer. Creative direction prioritizes son
 summary, lyrics and artwork; playlist pitching prioritizes catalog/audio metadata
 and song summary. Both include relevant artist/release evidence. Shared subjects
 are included once. Each request has its own missing-topic/partial-coverage report,
-so evidence for one song cannot make another request look complete.
+so evidence for one song cannot make another request look complete. The readable
+text also reports the final included document count and how many selected requests
+have missing topics or partial evidence, including when no evidence fits. This
+summary counts toward the rendered-text limit.
 
 The response retains `documents`, `characters`, `missingTopics`, `gaps`, `guidance`
 and `readiness`, and adds bounded Markdown `text`, `text_characters`, `request_ids`,
