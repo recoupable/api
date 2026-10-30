@@ -39,7 +39,8 @@ export default mergeConfig(
       },
     ],
     test: {
-      include: [resolve(root, "scripts/application-proof/sql-bridge/bridge.integration.test.ts")],
+      include: [resolve(root, "scripts/application-proof/sql-bridge/*.integration.test.ts")],
+      fileParallelism: false,
     },
   }),
 );
