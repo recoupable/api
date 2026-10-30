@@ -1,0 +1,782 @@
+{
+  "schema": "catalog-stream-binding-review-vectors/1",
+  "status": "synthetic_design_only_not_runtime_contract",
+  "pins": {
+    "api": "c1298deb6bb981543bf442d26a32def889e60d71",
+    "database": "6ae03a0cc71dc2ad3955594c9cfcb6156c3fb8b8",
+    "appDescriptor": "f6092fd5f65ccc247b6bf3d1ec1af9b5f584712e"
+  },
+  "interpretation": "Each case is independent. Shallow replace named top-level base fields; arrays/objects replace entirely. Row keys resolve through retainedRows. All facts, UUIDs and authority booleans are invented test setup, never caller authority. For accepted cases assume the proposed intake already validated/persisted precisely that isolated bundle; version UUIDs are placeholders, not derived from hashes. Expected outcomes apply only after root adopts and Context implements this proposal. Current live-source outcome remains unsupported for every case. Refused comparison/ref are null; do not expose private reasons to unauthorized callers. This is a fixture description, not an executable patch API. Only the rows selected by a case exist in that isolated fixture; dictionary alternatives sharing a primary key are never inserted together.",
+  "ids": {
+    "workspace": "00000000-0000-4000-8000-000000000001",
+    "catalog": "00000000-0000-4000-8000-000000000002",
+    "recording": "00000000-0000-4000-8000-000000000003",
+    "request": "00000000-0000-4000-8000-000000000004",
+    "source": "00000000-0000-4000-8000-000000000005",
+    "version1": "00000000-0000-4000-8000-000000000006",
+    "version2": "00000000-0000-4000-8000-000000000007",
+    "result1": "00000000-0000-4000-8000-000000000008",
+    "result2": "00000000-0000-4000-8000-000000000009",
+    "document": "00000000-0000-4000-8000-000000000010",
+    "run1": "00000000-0000-4000-8000-000000000011",
+    "run2": "00000000-0000-4000-8000-000000000012",
+    "foreignWorkspace": "00000000-0000-4000-8000-000000000013",
+    "unrelatedVersion": "00000000-0000-4000-8000-000000000014"
+  },
+  "retainedRows": {
+    "d1": {
+      "catalog_id": "00000000-0000-4000-8000-000000000002",
+      "isrc": "USAAA2600001",
+      "date": "2026-10-19",
+      "run_id": "00000000-0000-4000-8000-000000000011",
+      "provider_recording_id": "synthetic-luminate-A",
+      "streams": 10,
+      "source_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "retrieved_at": "2026-10-21T12:00:00Z"
+    },
+    "d2": {
+      "catalog_id": "00000000-0000-4000-8000-000000000002",
+      "isrc": "USAAA2600001",
+      "date": "2026-10-20",
+      "run_id": "00000000-0000-4000-8000-000000000011",
+      "provider_recording_id": "synthetic-luminate-A",
+      "streams": 20,
+      "source_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "retrieved_at": "2026-10-21T12:00:00Z"
+    },
+    "d2_corrected": {
+      "catalog_id": "00000000-0000-4000-8000-000000000002",
+      "isrc": "USAAA2600001",
+      "date": "2026-10-20",
+      "run_id": "00000000-0000-4000-8000-000000000012",
+      "provider_recording_id": "synthetic-luminate-A",
+      "streams": 25,
+      "source_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "retrieved_at": "2026-10-22T12:00:00Z"
+    },
+    "d2_null": {
+      "catalog_id": "00000000-0000-4000-8000-000000000002",
+      "isrc": "USAAA2600001",
+      "date": "2026-10-20",
+      "run_id": "00000000-0000-4000-8000-000000000012",
+      "provider_recording_id": "synthetic-luminate-A",
+      "streams": null,
+      "source_hash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "retrieved_at": "2026-10-22T12:00:00Z"
+    },
+    "d1_zero": {
+      "catalog_id": "00000000-0000-4000-8000-000000000002",
+      "isrc": "USAAA2600001",
+      "date": "2026-10-19",
+      "run_id": "00000000-0000-4000-8000-000000000011",
+      "provider_recording_id": "synthetic-luminate-A",
+      "streams": 0,
+      "source_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "retrieved_at": "2026-10-21T12:00:00Z"
+    },
+    "d2_zero": {
+      "catalog_id": "00000000-0000-4000-8000-000000000002",
+      "isrc": "USAAA2600001",
+      "date": "2026-10-20",
+      "run_id": "00000000-0000-4000-8000-000000000011",
+      "provider_recording_id": "synthetic-luminate-A",
+      "streams": 0,
+      "source_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "retrieved_at": "2026-10-21T12:00:00Z"
+    },
+    "d2_other_provider": {
+      "catalog_id": "00000000-0000-4000-8000-000000000002",
+      "isrc": "USAAA2600001",
+      "date": "2026-10-20",
+      "run_id": "00000000-0000-4000-8000-000000000012",
+      "provider_recording_id": "synthetic-luminate-B",
+      "streams": 20,
+      "source_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "retrieved_at": "2026-10-22T12:00:00Z"
+    },
+    "d1_other_provider": {
+      "catalog_id": "00000000-0000-4000-8000-000000000002",
+      "isrc": "USAAA2600001",
+      "date": "2026-10-19",
+      "run_id": "00000000-0000-4000-8000-000000000012",
+      "provider_recording_id": "synthetic-luminate-B",
+      "streams": 10,
+      "source_hash": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "retrieved_at": "2026-10-22T12:00:00Z"
+    },
+    "d2_unsafe": {
+      "catalog_id": "00000000-0000-4000-8000-000000000002",
+      "isrc": "USAAA2600001",
+      "date": "2026-10-20",
+      "run_id": "00000000-0000-4000-8000-000000000011",
+      "provider_recording_id": "synthetic-luminate-A",
+      "streams": 9007199254740992,
+      "source_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "retrieved_at": "2026-10-21T12:00:00Z"
+    },
+    "d1_null": {
+      "catalog_id": "00000000-0000-4000-8000-000000000002",
+      "isrc": "USAAA2600001",
+      "date": "2026-10-19",
+      "run_id": "00000000-0000-4000-8000-000000000011",
+      "provider_recording_id": "synthetic-luminate-A",
+      "streams": null,
+      "source_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "retrieved_at": "2026-10-21T12:00:00Z"
+    }
+  },
+  "base": {
+    "operation": "read_bound_field",
+    "actorAuthorized": true,
+    "catalogMembershipCurrent": true,
+    "recordingIdentityConfirmed": true,
+    "sourceOwner": "00000000-0000-4000-8000-000000000001",
+    "sourceWithdrawn": false,
+    "versionRemoved": false,
+    "withdrawalHistory": false,
+    "sourceKeyMatches": true,
+    "tupleLookupAvailable": true,
+    "tuplesStable": true,
+    "versionsExactlyBound": true,
+    "fieldBindingMatches": true,
+    "casMatches": true,
+    "sourceVersion": "00000000-0000-4000-8000-000000000006",
+    "currentSourceVersion": "00000000-0000-4000-8000-000000000006",
+    "documentRevision": 1,
+    "currentDocumentRevision": 1,
+    "bundleRows": [
+      "d1",
+      "d2"
+    ],
+    "latestRows": [
+      "d1",
+      "d2"
+    ],
+    "providerId": "synthetic-luminate-A",
+    "previousAcceptedProviderId": "synthetic-luminate-A",
+    "window": {
+      "since": "2026-10-20",
+      "days": 1,
+      "timezone": "UTC"
+    },
+    "currentWindow": {
+      "since": "2026-10-20",
+      "days": 1,
+      "timezone": "UTC"
+    },
+    "trackingEnabled": true,
+    "resultStatus": "accepted",
+    "currentEvidenceKind": "observation"
+  },
+  "cases": [
+    {
+      "id": "exact_bound_bundle",
+      "replaceBaseFields": {},
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "accepted",
+        "reason": "Exact current field and retained tuples",
+        "ref": {
+          "workspaceId": "00000000-0000-4000-8000-000000000001",
+          "authority": "context",
+          "kind": "recording",
+          "id": "00000000-0000-4000-8000-000000000003",
+          "sourceVersionIds": [
+            "00000000-0000-4000-8000-000000000006"
+          ]
+        },
+        "comparison": {
+          "state": "comparable",
+          "previous_streams": 10,
+          "current_streams": 20,
+          "absolute_growth": 10,
+          "percentage_growth": 100.0,
+          "zero_baseline": false
+        }
+      }
+    },
+    {
+      "id": "identical_collection_no_new_rows",
+      "replaceBaseFields": {
+        "latestRunHasNewerRetrievalButNoStoredChange": true
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "accepted",
+        "reason": "No invented version or retrieval refresh",
+        "ref": {
+          "workspaceId": "00000000-0000-4000-8000-000000000001",
+          "authority": "context",
+          "kind": "recording",
+          "id": "00000000-0000-4000-8000-000000000003",
+          "sourceVersionIds": [
+            "00000000-0000-4000-8000-000000000006"
+          ]
+        },
+        "comparison": {
+          "state": "comparable",
+          "previous_streams": 10,
+          "current_streams": 20,
+          "absolute_growth": 10,
+          "percentage_growth": 100.0,
+          "zero_baseline": false
+        }
+      }
+    },
+    {
+      "id": "disabled_tracking_retains_evidence",
+      "replaceBaseFields": {
+        "trackingEnabled": false
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "accepted",
+        "reason": "Collection pause is not Context withdrawal",
+        "ref": {
+          "workspaceId": "00000000-0000-4000-8000-000000000001",
+          "authority": "context",
+          "kind": "recording",
+          "id": "00000000-0000-4000-8000-000000000003",
+          "sourceVersionIds": [
+            "00000000-0000-4000-8000-000000000006"
+          ]
+        },
+        "comparison": {
+          "state": "comparable",
+          "previous_streams": 10,
+          "current_streams": 20,
+          "absolute_growth": 10,
+          "percentage_growth": 100.0,
+          "zero_baseline": false
+        }
+      }
+    },
+    {
+      "id": "known_zero_baseline",
+      "replaceBaseFields": {
+        "bundleRows": [
+          "d1_zero",
+          "d2_zero"
+        ],
+        "latestRows": [
+          "d1_zero",
+          "d2_zero"
+        ]
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "accepted",
+        "reason": "Synthetic version1 in this isolated case binds these exact zero rows",
+        "ref": {
+          "workspaceId": "00000000-0000-4000-8000-000000000001",
+          "authority": "context",
+          "kind": "recording",
+          "id": "00000000-0000-4000-8000-000000000003",
+          "sourceVersionIds": [
+            "00000000-0000-4000-8000-000000000006"
+          ]
+        },
+        "comparison": {
+          "state": "comparable",
+          "previous_streams": 0,
+          "current_streams": 0,
+          "absolute_growth": 0,
+          "percentage_growth": null,
+          "zero_baseline": true
+        }
+      }
+    },
+    {
+      "id": "null_correction_bound",
+      "replaceBaseFields": {
+        "bundleRows": [
+          "d1",
+          "d2_null"
+        ],
+        "latestRows": [
+          "d1",
+          "d2_null"
+        ],
+        "sourceVersion": "00000000-0000-4000-8000-000000000007",
+        "currentSourceVersion": "00000000-0000-4000-8000-000000000007",
+        "documentRevision": 2,
+        "currentDocumentRevision": 2
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "accepted_partial",
+        "reason": "Null remains unknown; no partial sums",
+        "ref": {
+          "workspaceId": "00000000-0000-4000-8000-000000000001",
+          "authority": "context",
+          "kind": "recording",
+          "id": "00000000-0000-4000-8000-000000000003",
+          "sourceVersionIds": [
+            "00000000-0000-4000-8000-000000000007"
+          ]
+        },
+        "comparison": {
+          "state": "incomplete",
+          "previous_streams": null,
+          "current_streams": null,
+          "absolute_growth": null,
+          "percentage_growth": null,
+          "zero_baseline": false
+        }
+      }
+    },
+    {
+      "id": "absent_date_bound",
+      "replaceBaseFields": {
+        "bundleRows": [
+          "d1"
+        ],
+        "latestRows": [
+          "d1"
+        ],
+        "absentDates": [
+          "2026-10-20"
+        ]
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "accepted_partial",
+        "reason": "Retained evidence exists; absent date is recorded separately, not a synthetic tuple",
+        "ref": {
+          "workspaceId": "00000000-0000-4000-8000-000000000001",
+          "authority": "context",
+          "kind": "recording",
+          "id": "00000000-0000-4000-8000-000000000003",
+          "sourceVersionIds": [
+            "00000000-0000-4000-8000-000000000006"
+          ]
+        },
+        "comparison": {
+          "state": "incomplete",
+          "previous_streams": null,
+          "current_streams": null,
+          "absolute_growth": null,
+          "percentage_growth": null,
+          "zero_baseline": false
+        }
+      }
+    },
+    {
+      "id": "entirely_absent",
+      "replaceBaseFields": {
+        "bundleRows": [],
+        "latestRows": []
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "No retained observation to bind",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "new_correction_bound",
+      "replaceBaseFields": {
+        "bundleRows": [
+          "d1",
+          "d2_corrected"
+        ],
+        "latestRows": [
+          "d1",
+          "d2_corrected"
+        ],
+        "sourceVersion": "00000000-0000-4000-8000-000000000007",
+        "currentSourceVersion": "00000000-0000-4000-8000-000000000007",
+        "documentRevision": 2,
+        "currentDocumentRevision": 2
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "accepted",
+        "reason": "New current version binds correction; old bytes unchanged",
+        "ref": {
+          "workspaceId": "00000000-0000-4000-8000-000000000001",
+          "authority": "context",
+          "kind": "recording",
+          "id": "00000000-0000-4000-8000-000000000003",
+          "sourceVersionIds": [
+            "00000000-0000-4000-8000-000000000007"
+          ]
+        },
+        "comparison": {
+          "state": "comparable",
+          "previous_streams": 10,
+          "current_streams": 25,
+          "absolute_growth": 15,
+          "percentage_growth": 150.0,
+          "zero_baseline": false
+        }
+      }
+    },
+    {
+      "id": "old_version_after_correction",
+      "replaceBaseFields": {
+        "latestRows": [
+          "d1",
+          "d2_corrected"
+        ],
+        "currentSourceVersion": "00000000-0000-4000-8000-000000000007",
+        "currentDocumentRevision": 2
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Old ref must not silently upgrade to corrected version",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "correction_not_yet_context_bound",
+      "replaceBaseFields": {
+        "latestRows": [
+          "d1",
+          "d2_corrected"
+        ]
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Even matching Context document is stale against retained tuples",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "late_writer_cas_lost",
+      "replaceBaseFields": {
+        "operation": "accept_binding",
+        "casMatches": false
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Late completion cannot overwrite current result",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "mixed_provider_ids",
+      "replaceBaseFields": {
+        "bundleRows": [
+          "d1",
+          "d2_other_provider"
+        ],
+        "latestRows": [
+          "d1",
+          "d2_other_provider"
+        ]
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Mixed provider IDs including all retained rows; no convenient subset",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "all_dates_changed_provider",
+      "replaceBaseFields": {
+        "bundleRows": [
+          "d1_other_provider",
+          "d2_other_provider"
+        ],
+        "latestRows": [
+          "d1_other_provider",
+          "d2_other_provider"
+        ],
+        "providerId": "synthetic-luminate-B"
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Changed identity vs prior accepted binding needs owning disposition",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "workspace_revoked",
+      "replaceBaseFields": {
+        "actorAuthorized": false
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Redacted unavailable; old reference grants no access",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "member_removed",
+      "replaceBaseFields": {
+        "catalogMembershipCurrent": false
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Historical expansion edge cannot restore current membership",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "unresolved_recording",
+      "replaceBaseFields": {
+        "recordingIdentityConfirmed": false
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "No synthetic or inferred recording UUID",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "cross_owner_version",
+      "replaceBaseFields": {
+        "sourceOwner": "00000000-0000-4000-8000-000000000013"
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Owner/source relation fails; no existence disclosure",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "unrelated_metadata_version",
+      "replaceBaseFields": {
+        "sourceVersion": "00000000-0000-4000-8000-000000000014",
+        "versionsExactlyBound": false
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Same recording metadata is not stream evidence",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "unsupported_field_relabel",
+      "replaceBaseFields": {
+        "fieldBindingMatches": false,
+        "requestedField": "spotify_annual_royalties"
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "No annualization, Spotify-only relabel or financial claim",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "source_withdrawn",
+      "replaceBaseFields": {
+        "sourceWithdrawn": true,
+        "currentResultPointer": null
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Context withdrawal withholds ref; retained provider rows unchanged",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "version_removed",
+      "replaceBaseFields": {
+        "versionRemoved": true
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Removed version never substituted or omitted from lineage",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "attempted_recreation_after_withdrawal",
+      "replaceBaseFields": {
+        "operation": "accept_binding",
+        "withdrawalHistory": true,
+        "sourceWithdrawn": false
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "New active source at same key cannot bypass withdrawal history",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "different_current_window",
+      "replaceBaseFields": {
+        "currentWindow": {
+          "since": "2026-10-19",
+          "days": 1,
+          "timezone": "UTC"
+        },
+        "currentDocumentRevision": 2
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "One-current-window limitation; no silent period substitution",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "unstable_chunked_read",
+      "replaceBaseFields": {
+        "tuplesStable": false
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "No atomic/current claim from a changing tuple set",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "storage_failure",
+      "replaceBaseFields": {
+        "tupleLookupAvailable": false
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Unknown read failure is not empty success",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "arbitrary_caller_tuple",
+      "replaceBaseFields": {
+        "sourceKeyMatches": false
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Exact retained catalog/run/recording linkage required",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "unsafe_retained_count",
+      "replaceBaseFields": {
+        "bundleRows": [
+          "d1",
+          "d2_unsafe"
+        ],
+        "latestRows": [
+          "d1",
+          "d2_unsafe"
+        ]
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Unsafe count cannot become a field",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "all_stored_nulls",
+      "replaceBaseFields": {
+        "bundleRows": [
+          "d1_null",
+          "d2_null"
+        ],
+        "latestRows": [
+          "d1_null",
+          "d2_null"
+        ]
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "accepted_partial",
+        "reason": "Stored null evidence exists; all numeric comparisons unknown",
+        "ref": {
+          "workspaceId": "00000000-0000-4000-8000-000000000001",
+          "authority": "context",
+          "kind": "recording",
+          "id": "00000000-0000-4000-8000-000000000003",
+          "sourceVersionIds": [
+            "00000000-0000-4000-8000-000000000006"
+          ]
+        },
+        "comparison": {
+          "state": "incomplete",
+          "previous_streams": null,
+          "current_streams": null,
+          "absolute_growth": null,
+          "percentage_growth": null,
+          "zero_baseline": false
+        }
+      }
+    },
+    {
+      "id": "result_not_accepted",
+      "replaceBaseFields": {
+        "resultStatus": "stale"
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "An unaccepted/stale result cannot supply current field authority",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "forged_hash_only",
+      "replaceBaseFields": {
+        "versionsExactlyBound": false,
+        "callerSuppliedHashAsVersion": true
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "A hash is neither a stored UUID nor exact evidence authority",
+        "ref": null,
+        "comparison": null
+      }
+    },
+    {
+      "id": "customer_correction_blocks_refresh",
+      "replaceBaseFields": {
+        "operation": "accept_binding",
+        "currentEvidenceKind": "customer_assertion"
+      },
+      "currentImplementation": "unsupported_live_source",
+      "expectedUnderAdoptedProposal": {
+        "state": "refused",
+        "reason": "Do not overwrite explicit customer correction with provider projection",
+        "ref": null,
+        "comparison": null
+      }
+    }
+  ]
+}

@@ -4,30 +4,17 @@ import { getArtistSocials } from "@/lib/artist/getArtistSocials";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 
-const SPOTIFY_DEEP_RESEARCH_REQUIREMENTS = `
-  - popularity info (MANDATORY):
-    * Track popularity scores (0-100) for all tracks
-    * Average popularity across all tracks
-    * Most popular tracks ranked by popularity
-    * Popularity trends over time (if available)
-  - Spotify follower metrics (MANDATORY):
-    * Current total follower count for the artist on Spotify
-  - engagement info
-  - tracklist
-  - collaborators
-  - album art
-  - album name
-  `;
-
 const artistDeepResearchSchema = z.object({
-  artist_account_id: z.string().describe("Artist account ID to research"),
+  artist_account_id: z
+    .string()
+    .describe("Recoup artist account ID whose saved social profiles to read; not a Spotify ID"),
 });
 
 type ArtistDeepResearchArgs = z.infer<typeof artistDeepResearchSchema>;
 
 /**
  * Registers the "artist_deep_research" tool on the MCP server.
- * Conducts comprehensive research on an artist across multiple platforms.
+ * Reads the first page of saved social profiles under a compatibility tool name.
  *
  * @param server - The MCP server instance to register the tool on.
  */
@@ -36,20 +23,14 @@ export function registerArtistDeepResearchTool(server: McpServer): void {
     "artist_deep_research",
     {
       description:
-        "Conducts comprehensive research on an artist across multiple platforms and generates a detailed report. " +
-        `Spotify research requirements: ${SPOTIFY_DEEP_RESEARCH_REQUIREMENTS} ` +
-        "Other research requirements: " +
-        "- Socials: Follower counts, engagement rates, top content, branding, posting consistency " +
-        "- Website: Branding, layout, contact info, mailing list " +
-        "- YouTube: Consistency, video quality, viewership, contact info " +
-        "- Marketing: Campaign ideas, revenue streams, collaboration opportunities, brand partnerships",
+        "Read the artist's currently saved social profiles using a Recoup artist_account_id, not a Spotify ID. Returns page 1, up to 100 profiles, with saved follower counts and updated_at timestamps. This compatibility tool does not refresh metrics or generate a research report. Pagination metadata is nested in artistSocials; this tool has no page input.",
       inputSchema: artistDeepResearchSchema,
     },
     async (args: ArtistDeepResearchArgs) => {
       try {
         const { artist_account_id } = args;
 
-        // Fetch all artist socials (high limit to get comprehensive data)
+        // Read the first page of saved profiles; no provider refresh or report generation.
         const artistSocials = await getArtistSocials({
           artist_account_id,
           page: 1,

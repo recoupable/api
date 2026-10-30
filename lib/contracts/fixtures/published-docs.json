@@ -1232,14 +1232,14 @@
   "sourceHashes": {
     "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
     "content/docs/source/api-reference/openapi/content.json": "5b205e9fe31c1ee04e3d310ea09c59d362608c6e2963f6a91f788fac0c06a86f",
-    "content/docs/source/api-reference/openapi/research.json": "6559809afceb26786f697b53f6d92b09d55eecd5a592edad9a1da32ba595507d",
+    "content/docs/source/api-reference/openapi/research.json": "f301a714e994e99b1dbcfc63ee18824537cf42813d8df3906ac7c2436a481ae0",
     "content/docs/source/api-reference/openapi/releases.json": "d8e37689800283d88c02f0a728e5678c75873aec1b2da49df1ce8388e09a5e93",
     "content/docs/source/api-reference/openapi/social.json": "5bd167a78cf6a17c46724486e2921882be20969ea32f3c0297f5b7e7ba9a30aa",
     "content/docs/source/api-reference/openapi/context.json": "2d28305aa357b3771a12bc1fbc26df78e2b9bbacd459642e31b1b1e13a314875",
     "content/docs/source/api-reference/openapi/projects.json": "b059cf8baa83a7f73a3c15db19f54fa56e46a3840e91bd42979b83550f543ace",
     "content/docs/source/api-reference/openapi/sessions.json": "85af56cc150374b28c25541c45db15849c71fdeb6288cf90dc2beb08f494e83e",
-    "content/docs/source/api-reference/sites/overview.mdx": "b3ff0526f1e7aee0a5bfc3e96539f8b329c3339c729c1e6c9bf9d7ff8440276f",
-    "content/docs/source/credits.mdx": "cfb803d4f9c4bb66ae015496f1d89de2b7c856c7949b89536945b7384bfe22c6",
+    "content/docs/source/api-reference/sites/overview.mdx": "1430730142df476e6cec9ea40aab751b0a48373d1479254da70bd8a545ae51b2",
+    "content/docs/source/credits.mdx": "0da77f081d8246fbd6925dac796817c4e9ade746b1221ef981df13d534ff37d3",
     "content/docs/source/api-reference/admins/agent-signups.mdx": "a6b65f3ad1b0ead873b83cdccf2254cdd3afa1556ae94738502c9b1fc46954bc"
   },
   "examples": {
@@ -2844,7 +2844,7 @@
     "upgrade": {
       "status": 402,
       "body": {
-        "error": "An active paid Recoup subscription is required to publish a site. Subscribe in this site\u2019s workspace, then publish again."
+        "error": "Site publishing is unavailable with this workspace's current entitlements. The draft is preserved."
       }
     },
     "documentedOperations": [

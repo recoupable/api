@@ -71,10 +71,13 @@ export function registerAllPackTools(server: McpServer) {
           );
         } catch (error) {
           const failure = getPackOperationError(error);
+          // Keep REST recovery separate from the plugin's existing-entitlement flow.
+          const body = { ...failure.body };
+          delete body.billingUrl;
           return {
             isError: true,
-            content: [{ type: "text" as const, text: JSON.stringify(failure.body) }],
-            structuredContent: failure.body,
+            content: [{ type: "text" as const, text: JSON.stringify(body) }],
+            structuredContent: body,
           };
         }
       },

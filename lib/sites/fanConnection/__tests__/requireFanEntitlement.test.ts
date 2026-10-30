@@ -15,5 +15,8 @@ it("rejects free and past-due subscriptions", async () => {
     { status: "active", items: { data: [{ price: { unit_amount: 0 } }] } },
     { status: "past_due", items: { data: [{ price: { unit_amount: 100 } }] } },
   ]);
-  await expect(requireFanEntitlement("unpaid-owner")).rejects.toMatchObject({ status: 402 });
+  await expect(requireFanEntitlement("unpaid-owner")).rejects.toMatchObject({
+    status: 402,
+    message: "Fan connection is unavailable with this workspace's current entitlements.",
+  });
 });

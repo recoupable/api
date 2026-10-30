@@ -10,6 +10,7 @@ import {
 } from "@/lib/tasks/createTaskSchemas";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
+import { PlanLimitError } from "@/lib/plans/PlanLimitError";
 
 /**
  * Registers the "create_task" tool on the MCP server.
@@ -46,6 +47,8 @@ export function registerCreateTaskTool(server: McpServer): void {
         const result = await createTask({ ...args, account_id: accountId });
         return getToolResultSuccess(result);
       } catch (error) {
+        if (error instanceof PlanLimitError)
+          return { ...getToolResultError(error.message), isError: true };
         const message = error instanceof Error ? error.message : "Failed to create task";
         return getToolResultError(message);
       }
