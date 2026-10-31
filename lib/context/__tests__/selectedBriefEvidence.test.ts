@@ -233,3 +233,108 @@ it("propagates storage failure instead of reporting available", async () => {
   f.rpc.mockRejectedValue(Error("storage failure"));
   await expect(f.run()).rejects.toThrow("storage failure");
 });
+it("requires a selection for opt-in explanations, but permits false without one", async () => {
+  const f = setup();
+  await expect(
+    processContextOperation(
+      id(1),
+      { action: "read_brief", brief_id: id(7), explain_evidence_validation: true },
+      { rpc: f.rpc, authorize: f.authorize, dispatch: f.dispatch },
+    ),
+  ).rejects.toThrow();
+  expect(f.rpc).not.toHaveBeenCalled();
+  expect(
+    await processContextOperation(
+      id(1),
+      { action: "read_brief", brief_id: id(7), explain_evidence_validation: false },
+      { rpc: f.rpc, authorize: f.authorize, dispatch: f.dispatch },
+    ),
+  ).toEqual({ snapshot: f.snapshot });
+});
+for (const reason of [
+  "saved_assessment_unavailable",
+  "selection_mismatch",
+  "current_evidence_unavailable",
+  "identity_unconfirmed",
+  "validation_limit_exceeded",
+]) {
+  it(`explains ${reason} only when explicitly requested`, async () => {
+    const f = setup();
+    if (reason === "saved_assessment_unavailable") f.snapshot.superseded = true;
+    if (reason === "selection_mismatch") f.input.selected_evidence[0].topic = "other";
+    if (reason === "current_evidence_unavailable") f.current.length = 0;
+    if (reason === "identity_unconfirmed") f.targets[0].identityConfirmed = false;
+    if (reason === "validation_limit_exceeded")
+      f.snapshot.brief.input_manifest.requestIds = Array.from({ length: 11 }, (_, i) => id(i + 20));
+    const legacy = await f.run();
+    expect(legacy).toMatchObject({ evidence_validation: { state: "unavailable" } });
+    expect((legacy as { evidence_validation: unknown }).evidence_validation).toEqual({
+      state: "unavailable",
+    });
+    Object.assign(f.input, { explain_evidence_validation: false });
+    expect(((await f.run()) as { evidence_validation: unknown }).evidence_validation).toEqual({
+      state: "unavailable",
+    });
+    Object.assign(f.input, { explain_evidence_validation: true });
+    const result = await f.run();
+    expect((result as { evidence_validation: unknown }).evidence_validation).toEqual({
+      state: "unavailable",
+      reason,
+    });
+    expect(contextBriefSnapshotSchema.parse(result)).toEqual(result);
+  });
+}
+it("never adds a reason to available, and does not turn opt-in access/storage failures into diagnostics", async () => {
+  const f = setup();
+  const legacy = await f.run();
+  Object.assign(f.input, { explain_evidence_validation: true });
+  expect(await f.run()).toEqual(legacy);
+  const denied = setup();
+  Object.assign(denied.input, { explain_evidence_validation: true });
+  denied.authorize.mockRejectedValueOnce(Error("denied"));
+  await expect(denied.run()).rejects.toThrow("denied");
+  expect(denied.rpc).not.toHaveBeenCalled();
+  const revoked = setup();
+  Object.assign(revoked.input, { explain_evidence_validation: true });
+  revoked.targets[0].identityConfirmed = false;
+  revoked.authorize
+    .mockResolvedValueOnce({ accountId: id(1), ownerId: id(1), organizationId: null })
+    .mockRejectedValueOnce(Error("revoked"));
+  await expect(revoked.run()).rejects.toThrow("revoked");
+  const storage = setup();
+  Object.assign(storage.input, { explain_evidence_validation: true });
+  storage.rpc.mockRejectedValueOnce(Error("private storage detail"));
+  await expect(storage.run()).rejects.toThrow("private storage detail");
+});
+it.each(["documents", "targets"])("explains %s overflow without adding reads", async kind => {
+  const f = setup();
+  Object.assign(f.input, { explain_evidence_validation: true });
+  if (kind === "documents") f.current.push(...Array(1000).fill(f.current[0]));
+  else f.targets.push(...Array(100).fill(f.targets[0]));
+  expect(await f.run()).toMatchObject({
+    evidence_validation: { state: "unavailable", reason: "validation_limit_exceeded" },
+  });
+  expect(f.rpc).toHaveBeenCalledTimes(kind === "documents" ? 2 : 3);
+});
+it.each(["missing", "ambiguous"])(
+  "reports %s target as unconfirmed without details",
+  async kind => {
+    const f = setup();
+    Object.assign(f.input, { explain_evidence_validation: true });
+    if (kind === "missing") f.targets.length = 0;
+    else f.targets.push({ ...f.targets[0], kind: "material" });
+    expect(((await f.run()) as { evidence_validation: unknown }).evidence_validation).toEqual({
+      state: "unavailable",
+      reason: "identity_unconfirmed",
+    });
+  },
+);
+it("rechecks owner even when an explained saved-assessment failure returns early", async () => {
+  const f = setup();
+  Object.assign(f.input, { explain_evidence_validation: true });
+  f.snapshot.superseded = true;
+  f.authorize
+    .mockResolvedValueOnce({ accountId: id(1), ownerId: id(1), organizationId: null })
+    .mockResolvedValueOnce({ accountId: id(1), ownerId: id(9), organizationId: null });
+  await expect(f.run()).rejects.toThrow("Context owner changed");
+});

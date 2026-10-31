@@ -381,3 +381,21 @@ not dispatch work, save evidence, infer rights or interpret UI revisions as data
 versions. Available describes the scoped reads, not an atomic cross-request snapshot
 or a guarantee that evidence cannot change after the response. The host must disable
 capture while pending and discard responses after its snapshot or scope changes.
+
+To request a coarse explanation, add `explain_evidence_validation: true` alongside
+`selected_evidence`; true without a selection is invalid. When omitted or false,
+unavailable remains exactly `{ "state": "unavailable" }`. Available responses are
+unchanged. Only an opted-in unavailable result adds `reason`:
+
+- `saved_assessment_unavailable`: the saved assessment fails the existing snapshot checks.
+- `selection_mismatch`: a selected reference does not match the saved assessment.
+- `current_evidence_unavailable`: current request documents cannot validate the selection;
+  this does not prove withdrawal.
+- `identity_unconfirmed`: the matching request target lacks unambiguous confirmation;
+  this includes absent or conflicting target confirmation, not a guessed identity.
+- `validation_limit_exceeded`: the existing request, document or target bound was exceeded.
+
+The reason describes the first failed validation check, not every possible cause.
+It uses only existing authorized reads, exposes no raw records or internal errors,
+and adds no logging. Authorization, final owner rechecks and storage errors retain
+their existing behavior; they are not converted into diagnostic reasons.

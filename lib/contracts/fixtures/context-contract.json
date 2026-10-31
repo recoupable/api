@@ -1,6 +1,6 @@
 {
   "evidence": "Provider-free request syntax and static contract claims only. URLs are placeholders; no provider, payment or customer workflow is exercised.",
-  "sourceHash": "2971cfa14dd1cd7b97b2a2f179511e83ed39129f72c818c541cb5dbc8e597c2d",
+  "sourceHash": "7784ee1d8c4b6753cc47bf518f468effa58d50fb9d0289009edf0caad3d05a67",
   "requestSchemas": [
     {
       "type": "object",
@@ -1557,6 +1557,10 @@
             "additionalProperties": false
           },
           "description": "Pending API #1208 release; reviewed source 1de332ebeae6b74c6f21866482175d33cd843009. Copy 1\u20138 exact six-field rows from this saved company assessment. Duplicate document IDs and repeated source version IDs are rejected before storage reads. Source versions compare as exact unique sets regardless of order; no labels, inferred kind, owner or UI revision are accepted."
+        },
+        "explain_evidence_validation": {
+          "type": "boolean",
+          "description": "Pending API #1209 release; reviewed source 97eb158f7634a856adafdcf99a127421068d4799. Optional read_brief explanation flag. true requires selected_evidence (an additional runtime validation rule, not encoded by this exported JSON Schema). Only an unavailable evidence_validation gains a coarse reason. Omitted or false preserves the exact existing response, including no reason; available is unchanged and never includes reason. false without a selection remains a normal snapshot read. Authorization/storage failures remain errors."
         }
       },
       "required": [
@@ -4809,6 +4813,17 @@
                 "state": {
                   "type": "string",
                   "const": "unavailable"
+                },
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "saved_assessment_unavailable",
+                    "selection_mismatch",
+                    "current_evidence_unavailable",
+                    "identity_unconfirmed",
+                    "validation_limit_exceeded"
+                  ],
+                  "description": "Pending API #1209 release. Present only when read_brief has selected_evidence and explain_evidence_validation: true and validation is unavailable. Reports the first existing failed check, not a complete diagnosis or proof of withdrawal, factual falsity or lost rights. No underlying identity or storage-error details are exposed. Absent for omitted/false explanations; never returned on available."
                 }
               },
               "required": [
@@ -4888,7 +4903,7 @@
               "additionalProperties": false
             }
           ],
-          "description": "Pending API #1208 release; reviewed source 1de332ebeae6b74c6f21866482175d33cd843009. Returned only for read_brief with selected_evidence. Omitted for historical calls without a selection. available confirms the whole selection during scoped saved/current evidence reads; unavailable returns no attributed rows. It is not a grant, future guarantee or atomic cross-request snapshot. Authorization/storage failures retain their existing errors."
+          "description": "Pending API #1208 release; reviewed source 1de332ebeae6b74c6f21866482175d33cd843009. Returned only for read_brief with selected_evidence. Omitted for historical calls without a selection. available confirms the whole selection during scoped saved/current evidence reads; unavailable returns no attributed rows. It is not a grant, future guarantee or atomic cross-request snapshot. Authorization/storage failures retain their existing errors. Pending API #1209 adds an optional unavailable-only reason when explain_evidence_validation is true; existing omitted/false and available responses remain unchanged."
         }
       },
       "required": [
