@@ -125,3 +125,14 @@ export const packExecutionSettings = {
   videoInspection: { temperature: 0, max_tokens: 600 },
   analysis: { max_new_tokens: 768, temperature: 0, do_sample: false },
 } as const;
+
+// Unwired candidate adapters: these are NOT approved quote/execution configuration.
+export const packCandidateAdapterSettings = {
+  audio: { modelId: "gemini-3.8-flash", provider: "google.generative-ai", maxOutputTokens: 2048 },
+  text: {
+    modelId: "gpt-6-luna",
+    provider: "openai.chat",
+    captionTokens: 350,
+    inspectionTokens: 600,
+  },
+} as const;

@@ -1,6 +1,6 @@
 {
   "evidence": "Provider-free request syntax and static contract claims only. URLs are placeholders; no provider, payment or customer workflow is exercised.",
-  "sourceHash": "2d28305aa357b3771a12bc1fbc26df78e2b9bbacd459642e31b1b1e13a314875",
+  "sourceHash": "172acdf520a53e2377a0646a48a2557c94043516622f9e4d80534f8e9d745145",
   "requestSchemas": [
     {
       "type": "object",
@@ -4603,7 +4603,8 @@
                             "documentsWithoutRetrievalDate",
                             "documents"
                           ],
-                          "additionalProperties": false
+                          "additionalProperties": false,
+                          "description": "Pending API #1003 release; reviewed source 4212e41b62e56fd68deb9edbed7bcd09773b18bf. New compilation reports retrieval times for selected evidence. Historical snapshots may omit this field. These are retrieval dates, not publication dates or proof that evidence is current; no age limit is enforced."
                         },
                         "documents": {
                           "type": "array",
@@ -6771,7 +6772,8 @@
                 "documentsWithoutRetrievalDate",
                 "documents"
               ],
-              "additionalProperties": false
+              "additionalProperties": false,
+              "description": "Pending API #1003 release; reviewed source 4212e41b62e56fd68deb9edbed7bcd09773b18bf. New compilation reports retrieval times for selected evidence. Historical snapshots may omit this field. These are retrieval dates, not publication dates or proof that evidence is current; no age limit is enforced."
             },
             "documents": {
               "type": "array",
