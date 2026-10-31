@@ -95,3 +95,39 @@ it("discovers seven pack operations with explicit schemas through delegated OAut
     await server.close();
   }
 });
+
+it.each(["get_release_pack", "export_release_pack"])(
+  "preserves saved progress through %s MCP",
+  async name => {
+    const progress = {
+      counts: { usable_pieces: 0 },
+      milestones: { first_usable_asset_at: null },
+      timings: { remaining_ms: null },
+    };
+    vi.mocked(processPackOperation).mockResolvedValueOnce({
+      job: { id: "saved" },
+      assets: [],
+      progress,
+    } as never);
+    const server = new McpServer({ name: "pack-progress-test", version: "1" });
+    registerAllPackTools(server);
+    const client = new Client({ name: "test", version: "1" });
+    const [ct, st] = InMemoryTransport.createLinkedPair();
+    await server.connect(st);
+    await client.connect(ct);
+    try {
+      const result = await client.callTool({
+        name,
+        arguments: { job_id: "a1111111-1111-4111-8111-111111111111" },
+      });
+      expect(result.isError).not.toBe(true);
+      const content = result.content as { type: string; text: string }[];
+      expect(JSON.parse(content.find(item => item.type === "text")!.text)).toMatchObject({
+        progress,
+      });
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  },
+);
