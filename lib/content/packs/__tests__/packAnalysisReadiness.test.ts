@@ -89,6 +89,11 @@ describe("pack analysis readiness", () => {
     "Not available",
     "Not applicable",
     "  NOT APPLICABLE  ",
+    "\u200b",
+    "\u200c",
+    "\u2060",
+    "\ufe0f",
+    " \u200d\u2066\u2069\u00ad\ufe0f\u034f\n",
   ].flatMap(text => ["summary", "visual_direction"].map(field => ({ field, text })));
   it.each(invalid)(
     "rejects fresh placeholder $field: $text before saving completed context",
@@ -146,6 +151,34 @@ describe("pack analysis readiness", () => {
       (await preparePackProduction({ accountId: "owner" }, job({ ...complete, ...descriptive })))
         .brief.song_summary,
     ).toContain(descriptive.summary);
+  });
+  it.each([
+    "فارسی\u200cمتن",
+    "क्\u200dष",
+    "👩\u200d🎤",
+    "音楽の解釈",
+    "e\u0301",
+    "\u2066A qualified claim.\u2069",
+  ])("preserves substantive Unicode analysis verbatim: %s", async text => {
+    const descriptive = { ...analysis, summary: text, visual_direction: text };
+    vi.mocked(callFlamingoGenerate).mockResolvedValue({
+      response: JSON.stringify(descriptive),
+    } as never);
+    const fresh = await preparePackProduction({ accountId: "owner" }, job());
+    expect(fresh.brief.song_summary).toContain(text);
+    expect(fresh.brief.creative_direction).toBe(`Proposed from supplied recording: ${text}`);
+    expect(runPackCommand).toHaveBeenCalledWith(expect.anything(), "context", "job", {
+      value: expect.objectContaining({ state: "complete", summary: text, visual_direction: text }),
+    });
+    vi.clearAllMocks();
+    const saved = await preparePackProduction(
+      { accountId: "owner" },
+      job({ ...complete, ...descriptive }),
+    );
+    expect(saved.brief.song_summary).toContain(text);
+    expect(saved.brief.creative_direction).toBe(`Proposed from supplied recording: ${text}`);
+    expect(callFlamingoGenerate).not.toHaveBeenCalled();
+    expect(runPackCommand).not.toHaveBeenCalled();
   });
   it("reuses valid saved analysis and does not repeat an uncertain analysis", async () => {
     expect(

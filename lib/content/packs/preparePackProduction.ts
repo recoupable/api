@@ -11,14 +11,13 @@ import { runPackCommand } from "@/lib/supabase/release_pack_jobs/runPackCommand"
 import { resolvePackCreativeContext } from "./resolvePackCreativeContext";
 import { createSignedFileUrlByKey } from "@/lib/supabase/storage/createSignedFileUrlByKey";
 import type { PackActor, PackJob } from "./packTypes";
-const analysisText = z
-  .string()
-  .refine(
-    value =>
-      value.trim().length > 0 &&
-      !/^(?:n\/a|none|unknown|unavailable|not available|not applicable)$/i.test(value.trim()),
-    "Audio analysis must contain descriptive observations and direction, not placeholder text",
-  );
+const analysisText = z.string().refine(
+  value =>
+    // Match Context evidence substance without rewriting Unicode claims.
+    /[^\s\p{Cf}\p{Default_Ignorable_Code_Point}]/u.test(value) &&
+    !/^(?:n\/a|none|unknown|unavailable|not available|not applicable)$/i.test(value.trim()),
+  "Audio analysis must contain descriptive observations and direction, not placeholder text",
+);
 const contextSchema = z.object({
   state: z.literal("complete"),
   audio: z.object({ storage_key: z.string() }),
