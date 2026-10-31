@@ -1,3 +1,5 @@
+import { selectedBriefEvidenceSchema } from "./selectedBriefEvidenceSchema";
+import { validateSelectedBriefEvidence } from "./validateSelectedBriefEvidence";
 import { catalogCaseOperationSchemas } from "./catalogCaseOperationSchemas";
 import { processCatalogCaseOperation } from "./processCatalogCaseOperation";
 import { releaseCaseOperationSchemas } from "./releaseCaseOperationSchemas";
@@ -43,6 +45,7 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
   z.strictObject({
     action: z.literal("read_brief"),
     brief_id: z.uuid(),
+    selected_evidence: selectedBriefEvidenceSchema.optional(),
     organization_id: z.uuid().optional(),
   }),
   z.strictObject({
@@ -242,8 +245,17 @@ export async function processContextOperation(
       p_owner: ownerId,
       p_brief: args.brief_id,
     });
+    const evidence_validation = args.selected_evidence
+      ? await validateSelectedBriefEvidence({
+          ownerId,
+          briefId: args.brief_id,
+          snapshot,
+          selected: args.selected_evidence,
+          rpc: deps.rpc,
+        })
+      : undefined;
     await recheckOwner();
-    return { snapshot };
+    return { snapshot, ...(evidence_validation ? { evidence_validation } : {}) };
   }
   if (args.action === "plan") {
     const { planStoredContextModules } = await import("./planning/planStoredContextModules");
