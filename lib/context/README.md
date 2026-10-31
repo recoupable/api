@@ -360,3 +360,24 @@ responses without inventing evidence. Database PR #109 requires separate migrati
 approval; releasing these types does not activate its projection. Applying that
 migration changes every case fingerprint and makes prior reviews stale, even when
 the underlying evidence has not changed.
+
+### Selected saved assessment evidence
+
+`read_brief` optionally accepts `selected_evidence`: one to eight exact six-key
+`input_manifest.documents` references from the same saved `brief_id`. Source UUID
+sets contain one to 32 unique IDs; document IDs must be unique. These are document
+references, not inferred recording identities or portable UI selection state.
+
+Only this optional consumer requires a non-superseded `company_onboarding` snapshot.
+It compares each selected reference with both saved evidence and current authorized
+request documents, and resolves an unambiguous confirmed subject kind from targets
+in the same request. It returns additive `evidence_validation` with `state: available`
+and attributed documents, or `state: unavailable`. Existing calls omit that field
+and keep historical snapshot behavior. Authorization/storage errors remain errors.
+
+Validation reads at most ten server-derived requests, with at most 100 targets and
+1,000 returned documents per request; exceeding a bound yields unavailable. It does
+not dispatch work, save evidence, infer rights or interpret UI revisions as database
+versions. Available describes the scoped reads, not an atomic cross-request snapshot
+or a guarantee that evidence cannot change after the response. The host must disable
+capture while pending and discard responses after its snapshot or scope changes.

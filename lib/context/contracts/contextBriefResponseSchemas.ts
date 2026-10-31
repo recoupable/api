@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { briefEvidenceValidationSchema } from "../selectedBriefEvidenceSchema";
 
 const purpose = z.enum(["creative_direction", "playlist_pitch", "company_onboarding"]);
 const retrievalDate = z.iso.datetime().nullable();
@@ -91,6 +92,7 @@ export const contextBriefResponseSchema = z.strictObject({
   }),
 });
 export const contextBriefSnapshotSchema = z.strictObject({
+  evidence_validation: briefEvidenceValidationSchema.optional(),
   snapshot: z.discriminatedUnion("state", [
     z.strictObject({
       id: z.uuid(),

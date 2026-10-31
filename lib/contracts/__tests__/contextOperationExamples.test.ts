@@ -1,3 +1,4 @@
+import { compileContextBrief } from "@/lib/context/compileContextBrief";
 import { afterAll, afterEach, beforeEach, expect, it, vi } from "vitest";
 import { writeFileSync } from "node:fs";
 import { NextRequest, NextResponse } from "next/server";
@@ -619,3 +620,83 @@ it("does not advertise unreachable public modules or excluded brief evidence", a
     ).toBe(false);
   noUnexpectedDispatch("");
 });
+
+const selectionExamples: unknown[] = [];
+afterAll(() => {
+  if (process.env.RECOUP_SELECTED_EVIDENCE_EXAMPLES_OUTPUT)
+    writeFileSync(
+      process.env.RECOUP_SELECTED_EVIDENCE_EXAMPLES_OUTPUT,
+      JSON.stringify(selectionExamples, null, 2) + "\n",
+    );
+});
+it.each([false, true])(
+  "validates selected saved evidence through HTTP and MCP (superseded=%s)",
+  async superseded => {
+    const doc = {
+      ...savedDocument,
+      topic: "company_input",
+      status: "accepted" as const,
+      evidenceKind: "observation" as const,
+      coverage: "partial" as const,
+    };
+    const brief = compileContextBrief({
+      ownerId: owner,
+      requests: [{ id: requestId, subjectIds: [subject] }],
+      documents: [doc],
+      purpose: "company_onboarding",
+      maxCharacters: 12000,
+    });
+    const snapshot = {
+      id: record,
+      created_at: when,
+      purpose: "company_onboarding",
+      state: "saved",
+      superseded,
+      brief,
+    };
+    mocks.rpc.mockImplementation(async (name: string) => {
+      if (name === "read_context_brief") return snapshot;
+      if (name === "read_context_documents") return [doc];
+      if (name === "list_context_request_targets")
+        return [
+          {
+            subjectId: subject,
+            kind: "company",
+            identityConfirmed: true,
+            availableFields: [],
+            reusableModules: [],
+          },
+        ];
+      throw Error(name);
+    });
+    const input = {
+      action: "read_brief",
+      brief_id: record,
+      organization_id: owner,
+      selected_evidence: brief.input_manifest.documents,
+    };
+    const response = await POST(
+      new NextRequest("https://fixture.invalid/api/context", {
+        method: "POST",
+        body: JSON.stringify(input),
+      }),
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(contextResponseSchemas.briefSnapshot.parse(body)).toEqual(body);
+    expect(body.evidence_validation.state).toBe(superseded ? "unavailable" : "available");
+    const mcp = await handleContextToolOperation(input, {
+      authInfo: { extra: { oauth: true } },
+    } as unknown as Parameters<typeof handleContextToolOperation>[1]);
+    expect("isError" in mcp ? mcp.isError : false).not.toBe(true);
+    expect(JSON.parse(mcp.content[0].text)).toEqual(body);
+    noUnexpectedDispatch("read_brief");
+    selectionExamples.push({
+      name: superseded ? "read_brief_selected_unavailable" : "read_brief_selected_available",
+      request: input,
+      status: response.status,
+      responseReference: "#/responseSchemas/briefSnapshot",
+      response: body,
+    });
+  },
+);

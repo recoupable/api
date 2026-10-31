@@ -1,6 +1,6 @@
 {
   "evidence": "Provider-free request syntax and static contract claims only. URLs are placeholders; no provider, payment or customer workflow is exercised.",
-  "sourceHash": "172acdf520a53e2377a0646a48a2557c94043516622f9e4d80534f8e9d745145",
+  "sourceHash": "2971cfa14dd1cd7b97b2a2f179511e83ed39129f72c818c541cb5dbc8e597c2d",
   "requestSchemas": [
     {
       "type": "object",
@@ -1496,6 +1496,67 @@
           "format": "uuid",
           "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
           "description": "Optional organization workspace. Current membership and ownership are checked; omitting it uses personal scope."
+        },
+        "selected_evidence": {
+          "minItems": 1,
+          "maxItems": 8,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "documentId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "resultId": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "uuid",
+                    "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "subjectId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "topic": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "version": {
+                "type": "number"
+              },
+              "sourceVersionIds": {
+                "minItems": 1,
+                "maxItems": 32,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "description": "1\u201332 unique source-version UUIDs, copied exactly from the captured saved manifest row; order does not affect set equality. Runtime uniqueness is an additional semantic rule."
+              }
+            },
+            "required": [
+              "documentId",
+              "resultId",
+              "subjectId",
+              "topic",
+              "version",
+              "sourceVersionIds"
+            ],
+            "additionalProperties": false
+          },
+          "description": "Pending API #1208 release; reviewed source 1de332ebeae6b74c6f21866482175d33cd843009. Copy 1\u20138 exact six-field rows from this saved company assessment. Duplicate document IDs and repeated source version IDs are rejected before storage reads. Source versions compare as exact unique sets regardless of order; no labels, inferred kind, owner or UI revision are accepted."
         }
       },
       "required": [
@@ -4739,6 +4800,95 @@
               "additionalProperties": false
             }
           ]
+        },
+        "evidence_validation": {
+          "oneOf": [
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "const": "unavailable"
+                }
+              },
+              "required": [
+                "state"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "state": {
+                  "type": "string",
+                  "const": "available"
+                },
+                "documents": {
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "documentId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "subjectId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "artist",
+                          "songwriter",
+                          "company",
+                          "campaign",
+                          "release",
+                          "recording",
+                          "composition",
+                          "catalog",
+                          "material",
+                          "video"
+                        ]
+                      },
+                      "identityConfirmed": {
+                        "type": "boolean",
+                        "const": true
+                      },
+                      "sourceVersionIds": {
+                        "minItems": 1,
+                        "maxItems": 32,
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        }
+                      }
+                    },
+                    "required": [
+                      "documentId",
+                      "subjectId",
+                      "kind",
+                      "identityConfirmed",
+                      "sourceVersionIds"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "state",
+                "documents"
+              ],
+              "additionalProperties": false
+            }
+          ],
+          "description": "Pending API #1208 release; reviewed source 1de332ebeae6b74c6f21866482175d33cd843009. Returned only for read_brief with selected_evidence. Omitted for historical calls without a selection. available confirms the whole selection during scoped saved/current evidence reads; unavailable returns no attributed rows. It is not a grant, future guarantee or atomic cross-request snapshot. Authorization/storage failures retain their existing errors."
         }
       },
       "required": [
