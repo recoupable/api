@@ -8,6 +8,7 @@ Part of recoupable/app#2116. Spotify metadata now flows through shared authentic
 
 - `ingest`: provide `url`, client-generated `idempotency_key`, optional `organization_id` and topics. Returns a saved request with HTTP 202. Retry the same input/key after dispatch failure. A changed input/key pair is rejected.
 - `read`: provide `request_id` and the same optional organization scope. Returns progress, subject IDs, gaps and error state.
+- For a supporting-text request over HTTP or standard MCP, `read` also returns `material_evidence`: the current document/result IDs, document version, exact `source_version_ids`, `evidence_kind: "customer_assertion"`, and `draft_origin: { state: "not_recorded" }`. It returns metadata only, never submitted text, source locations, storage paths or signed access. Current material/lineage checks and a final workspace-access check precede return. Cancelled/not-ready requests or absent current documents withhold version references with `state: "unavailable"`; scope or material-target lookup failures retain the ordinary redacted error response. Authenticated HTTP `read` results and domain failures use `Cache-Control: private, no-store`. Delegated OAuth and other request kinds keep their existing response. This uses existing supporting-text/document RPCs with no new migration and makes no provider call. See [draft-origin dependency](DRAFT-TEXT-ORIGIN.md) for the separate capture boundary.
 - `plan`: provide a saved `request_id` and optional organization scope. Returns a read-only module plan for confirmed Spotify track or catalog subjects, with blocked reasons; it never grants provider collection or spends credits. Requires database PR77 to be deployed before use.
 - `list_executions`: provide a saved `request_id` and optional organization scope. Returns that request's execution IDs, policy versions, creation times, and planned/saved node counts; open an ID with `read_execution`. Requires database PR77.
 - `list_catalog_members`: provide a saved catalog `request_id`, its catalog `subject_id`, optional organization scope, `after_isrc` cursor and `limit` (1–100). Returns an owner-checked page of ISRCs from the current catalog membership. Membership does not assert roster, artist identity or rights. This is a read-only expansion primitive; it does not create recording subjects or run enrichment. Requires database PR77.
@@ -25,6 +26,8 @@ Part of recoupable/app#2116. Spotify metadata now flows through shared authentic
 - `brief`: provide `request_id`, `purpose` (`creative_direction`, `playlist_pitch` or `company_onboarding`), optional organization scope and `max_characters` (1000–32000). Returns attributed current documents, result/version references, missing topics and readiness. This selects evidence; it does not write a creative concept or playlist pitch.
 
 Account identity always comes from authentication. Both transports use the same authorization. Background execution rechecks access before acceptance. Private context never becomes public Site content automatically.
+
+See [retained evidence associations](EVIDENCE-ASSOCIATIONS.md) for the version-specific linking contract and release prerequisites.
 
 ## Persistence and identity
 
@@ -73,7 +76,10 @@ Use `playlist_pitch` for the second consumer. Creative direction prioritizes son
 summary, lyrics and artwork; playlist pitching prioritizes catalog/audio metadata
 and song summary. Both include relevant artist/release evidence. Shared subjects
 are included once. Each request has its own missing-topic/partial-coverage report,
-so evidence for one song cannot make another request look complete.
+so evidence for one song cannot make another request look complete. The readable
+text also reports the final included document count and how many selected requests
+have missing topics or partial evidence, including when no evidence fits. This
+summary counts toward the rendered-text limit.
 
 The response retains `documents`, `characters`, `missingTopics`, `gaps`, `guidance`
 and `readiness`, and adds bounded Markdown `text`, `text_characters`, `request_ids`,
@@ -89,6 +95,9 @@ documents, the documents with no dated source, and each selected document's own
 `unknown`) and never a source location. Freshness is reported, not enforced: no age
 limit drops evidence yet. `compilerVersion` remains `context-brief-v1` because `save_context_brief`
 pins that value and compares the document manifest exactly; freshness is additive.
+The response contract makes `freshness` optional so historical snapshots remain readable
+without adding dates or recompiling their saved text. New compilations include the field;
+unknown retrieval bounds are null, and retrieval times are not publication/event dates.
 
 These are attributed evidence briefs for downstream work, not generated creative
 proposals or finished outreach. `brief` is read-only and recompilation can reflect
@@ -150,10 +159,16 @@ request's capped subject list, which remains unchanged. Automatic member plannin
 provider collection are still unconnected.
 
 Authenticated `action: plan_catalog_members` takes the same request, catalog subject,
-optional cursor and page limit, plus one module (`musicbrainz`, `mlc_recording`, or
-`songstats`). It returns only expanded recordings still present in the selected
+optional cursor and page limit, plus one module: `recording_candidates` for unconfirmed
+recording matches, `recording_work_candidates` for candidate linked works (not ownership),
+or `platform_metadata` for available platform track information (not growth metrics).
+The existing names `musicbrainz`, `mlc_recording`, and `songstats` remain accepted.
+Inputs normalize before planning; returned modules, executors, and node keys retain
+their existing identities. No migration or removal date is introduced.
+It returns only expanded recordings still present in the selected
 workspace's catalog and a review-only plan for that page. Every new collection node
-remains blocked until a server spending policy permits it. Removed catalog members
+remains blocked and the response retains `collectionPermitted: false`. This action
+never connects a collector, claims an execution, or grants spending permission. Removed catalog members
 and members not yet expanded are not offered as current planning targets.
 The server also has a read-only resolver for one expanded recording's ISRC. It
 rechecks current membership and access, but the existing enrichment claim still
@@ -215,6 +230,8 @@ reviewed. All cases remain `partial` or `blocked`: cross-source reconciliation,
 composition, writer/publisher, contract and approved-master linkage are not built.
 `distribute`, `register_rights` and `collect_royalties` are explicitly `unsupported`.
 Provider/model calls are zero; infrastructure cost is `unmeasured`, not free.
+
+- `release_format` (`20261010213900_context_release_format_observation.sql`) is projected in the database from the saved Spotify album observation and passed through by the API without reinterpretation: `format_state` is `single`, `album` or `compilation` only when Spotify reports exactly that type, otherwise `unknown`; `disc_count` and `multi_disc` come from the observed disc numbers of the whole track array, and `track_coverage` (`full`, `partial` or `uncollected`) says whether every reported slot was collected: with a partial list (page limit or a failed later page) `disc_count` stays `null` and `multi_disc` is `true` only when disc 2 or higher was already seen, otherwise `null`; `upc` is present only when the provider reported one (`upc_state` is `observed`, `not_observed` or `uncollected`); `reissue` and `physical_format` are the literal `unknown` because Spotify metadata cannot establish them; `state` is `uncollected` before any observation is saved. Replacing the read function changes every case fingerprint even though no evidence changed, so every earlier saved review reads `stale: true` after release and operators must re-review those cases.
 
 The companion Chat `/releases` page in [App PR2172](https://github.com/recoupable/app/pull/2172)
 is implemented on its feature branch, not yet merged or production-verified. It uses these operations through its authenticated Context
@@ -284,3 +301,62 @@ withdrawal, replay and history behavior applies.
 
 This requires the database company-assessment purpose migration before API release.
 Local fixtures cover compile/save/reopen; they do not prove a hosted Records trial.
+
+## Catalog case artifacts (CATD-29)
+
+`POST /api/context` and standard MCP expose `save_catalog_case`,
+`read_catalog_case` and `list_catalog_cases` through the same scoped processor.
+Dedicated MCP tools use those exact names; the combined `context` tool accepts
+an `action`. These operations persist **customer assertions** and bounded portable
+workflow artifacts. They do not verify rights, execute provider operations, send
+correspondence or establish that a royalty reached a bank. `external_actions` is
+always `unsupported`. No artist, recording identifier or ingestion request is required.
+
+Save accepts `case_id` (UUID), `expected_revision` (zero for first save),
+`idempotency_key`, optional `organization_id`, and the portable `schema_version: 1`
+snapshot. The snapshot's case ID and revision must match the request; its workspace
+ID must match the authenticated owner. Omit local `history`: hosted revisions are
+server-maintained and unknown fields are rejected, never silently dropped. The scope
+is a string and sources/assessments/findings/actions/attempts/outcomes are dictionaries
+keyed by stable record IDs. Each collection is bounded to 1,000 records and the snapshot
+to 1 MiB. Structured stage workpapers live in each record's `data`; preserve unsupported
+formats privately rather than coercing them into a false complete record. Action payloads
+require nonempty provider, operation, account and party strings; nonempty subject IDs;
+a nonempty scope object; and explicit disclosure/cost arrays. Expired historical
+authorization assertions can be retained and grant no present authority.
+
+A successful save returns the next revision. Retrying an uncertain save uses the same
+key, expected revision and unchanged snapshot; changing any of these is a new proposal,
+not a safe replay. Re-read before editing after a conflict. This preserves concurrent
+writers and makes continuation independent of the chat. The artifact's action authorization
+field records a customer assertion; it grants no API or provider permission.
+
+Read accepts `case_id` and an optional saved `revision` (at least one). Current workspace
+access and retention are rechecked. Optional source `context_source_version_id` values
+are scoped retained Context versions validated by storage. Withdrawal redacts the linked
+source and dependent records, including transitive dependencies, from historical reads.
+The response reports `state: partial`, `withheld_record_ids` and
+`snapshot_usable_for_save: false`. A redacted projection is not a write snapshot: explicitly
+reassemble from permitted current evidence rather than resaving it and deleting history.
+Stale records may retain a prior source version to explain invalidation; they remain stale.
+Storage requires an earlier same-case binding for that version. An imported stale record
+without a retained historical source cannot be saved as if its provenance were known.
+
+List accepts optional `after_id`, `limit` (1–100, default 50) and `organization_id`.
+Follow `next_id` while `has_more` is true. Storage orders by creation time and ID
+descending; the UUID cursor is an opaque case reference, not a sortable boundary by itself. HTTP responses use private/no-store caching;
+errors omit raw storage/provider details. These actions are excluded from delegated
+OAuth until that permission and retention surface is audited; standard authenticated
+MCP remains available under the same owner checks as HTTP.
+
+Deployment depends on the corresponding catalog-case database migration and scoped RPCs.
+Unit/transport tests prove the source contract, not that migrations are deployed, provider
+registrations accepted, or financial results verified. Database lifecycle/RLS tests belong
+to the owning migration. Capability claims must preserve these separate evidence states.
+
+Release-format rollout: `release_format` is optional on live projections as well as
+immutable historical snapshots. The API passes through both old and new database
+responses without inventing evidence. Database PR #109 requires separate migration
+approval; releasing these types does not activate its projection. Applying that
+migration changes every case fingerprint and makes prior reviews stale, even when
+the underlying evidence has not changed.

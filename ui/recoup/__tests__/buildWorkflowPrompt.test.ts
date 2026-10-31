@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { buildWorkflowPrompt } from "../buildWorkflowPrompt";
 const feature = {
-  title: "Make cover art",
+  title: "Create cover art",
   skill: "recoup-content-make-graphics",
   mode: "cover",
   outputs: ["Square cover"],
@@ -22,4 +22,15 @@ it("uses a complete request for noun-based feature titles", () => {
   expect(buildWorkflowPrompt({ ...feature, title: "Content pack" }, "A new single")).toContain(
     'Help me use the Recoup "Content pack" workflow.',
   );
+});
+
+it("starts song analysis from chat attachments and defaults to a focused overview", () => {
+  const prompt = buildWorkflowPrompt({
+    ...feature,
+    skill: "recoup-song-analyze-audio",
+    mode: "overview",
+  });
+  expect(prompt).toContain("attach your song");
+  expect(prompt).toContain("catalog_metadata");
+  expect(prompt).toContain("Do not ask the user to host");
 });

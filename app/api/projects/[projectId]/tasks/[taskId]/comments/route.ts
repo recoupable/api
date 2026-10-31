@@ -15,7 +15,7 @@ export async function OPTIONS() {
 /**
  * GET /api/projects/{projectId}/tasks/{taskId}/comments
  *
- * A task's comments, oldest first (app#2048, contract: recoupable/docs#326).
+ * A task's comments, oldest first (app#2048, contract: recoupable/docs-legacy#326).
  *
  * @param request - The incoming request, carrying the Bearer credential.
  * @param root0 - The route context.

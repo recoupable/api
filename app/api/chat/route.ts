@@ -21,9 +21,9 @@ export async function OPTIONS() {
  * POST /api/chat
  *
  * Canonical path for the sandbox-driven agent loop (Vercel Workflow).
- * Delegates to the same handler as `POST /api/chat/workflow`, which is
- * retained as a backward-compatible alias while consumers (chat,
- * open-agents, API-key callers) migrate to `/api/chat`.
+ * New turns are admitted only when no workflow owns the chat slot.
+ * Reconnection uses GET /api/chat/{chatId}/stream. The exact
+ * streamLifecycle=explicit-stop-v1 query opts into explicit server Stop.
  *
  * Contract: https://docs.recoupable.dev/api-reference/chat/workflow
  *

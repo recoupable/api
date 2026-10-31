@@ -6,6 +6,8 @@ import { SpotifyAlbumPlayCounts } from "@/lib/apify/spotify/fetchSpotifyAlbumPla
 import { SpotifyRateLimitError } from "@/lib/spotify/SpotifyRateLimitError";
 import { getSpotifyArtists } from "@/lib/songs/getSpotifyArtists";
 import { linkSongsToArtists } from "@/lib/songs/linkSongsToArtists";
+import { formatTrackNotes } from "@/lib/songs/formatTrackNotes";
+import { getSpotifyArtistNames } from "@/lib/songs/getSpotifyArtistNames";
 import { SongWithSpotify } from "@/lib/songs/getSongsByIsrc";
 
 /**
@@ -47,6 +49,7 @@ export async function mapUnmappedAlbumTracks(
       if (!isrc || !context) return [];
       return [
         {
+          track,
           trackId: track.id,
           isrc,
           name: track.name,
@@ -68,6 +71,7 @@ export async function mapUnmappedAlbumTracks(
           isrc: r.isrc,
           name: r.name ?? null,
           album: r.albumName ?? null,
+          notes: formatTrackNotes(r.track, getSpotifyArtistNames(r.track.artists ?? [])) || null,
           spotifyArtists: r.spotifyArtists,
         },
       ]),
@@ -90,7 +94,7 @@ export async function mapUnmappedAlbumTracks(
       ]),
     );
 
-    // Link artists synchronously so captured tracks appear in the catalog.
+    // Notes use fetched metadata; keep artist linkage synchronous without the retired queue.
     await linkSongsToArtists(songs);
 
     return new Map(resolved.map(r => [r.trackId, r.isrc]));

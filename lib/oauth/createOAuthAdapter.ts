@@ -1,4 +1,5 @@
 import { oauthPersistentExpiry } from "./oauthPersistentExpiry";
+import { OAuthStorageUnavailableError } from "./OAuthStorageUnavailableError";
 import { hashOAuthIdentifier } from "./hashOAuthIdentifier";
 import type { AdapterFactory, AdapterPayload } from "oidc-provider";
 import type { OAuthStore } from "./OAuthStore";
@@ -21,7 +22,7 @@ export function createOAuthAdapter(options: {
     try {
       return await operation();
     } catch {
-      throw new Error("OAuth storage unavailable");
+      throw new OAuthStorageUnavailableError();
     }
   };
   return model => {

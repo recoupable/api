@@ -5,8 +5,11 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { validationErrorResponse } from "@/lib/zod/validationErrorResponse";
 
+import { catalogSurfaceRequestSchema } from "@/lib/intelligent-ui/catalogSurfaceRequest";
+
 export const chatWorkflowBodySchema = z.object({
   messages: z.array(z.any()),
+  devCatalogSurface: catalogSurfaceRequestSchema.optional(),
   chatId: z.string().min(1, "chatId is required"),
   sessionId: z.string().min(1, "sessionId is required"),
   context: z
@@ -56,6 +59,9 @@ export async function validateChatWorkflow(
     const firstError = parsed.error.issues[0];
     return validationErrorResponse(firstError.message, firstError.path);
   }
+
+  if (parsed.data.devCatalogSurface && process.env.NODE_ENV !== "development")
+    return errorResponse("Catalog surfaces are development-only", 400);
 
   const auth = await validateAuthContext(request);
   if (auth instanceof NextResponse) return auth;

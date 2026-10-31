@@ -1,23 +1,11 @@
-const SONGSTATS_ARTIST_METRIC_SOURCE_BY_PLATFORM: Record<string, string> = {
-  bandsintown: "bandsintown_followers",
-  deezer: "deezer_fans",
-  facebook: "facebook_likes",
-  instagram: "instagram_followers",
-  line: "line_followers",
-  melon: "melon_followers",
-  soundcloud: "soundcloud_followers",
-  spotify: "spotify_streams",
-  tiktok: "tiktok_followers",
-  twitch: "twitch_followers",
-  twitter: "twitter_followers",
-  wikipedia: "wikipedia_views",
-  youtube_artist: "youtube_artist_subscribers",
-  youtube_channel: "youtube_channel_subscribers",
-};
+import {
+  RESEARCH_AUDIENCE_PLATFORM_SOURCES,
+  type ResearchAudiencePlatform,
+} from "../researchAudiencePlatforms";
 
-/**
- * Maps a legacy audience platform to its SongStats audience metric source.
- */
+/** Maps known audience aliases while leaving other internal source names unchanged. */
 export function mapArtistAudienceSource(source: string): string {
-  return SONGSTATS_ARTIST_METRIC_SOURCE_BY_PLATFORM[source] || source;
+  return Object.hasOwn(RESEARCH_AUDIENCE_PLATFORM_SOURCES, source)
+    ? RESEARCH_AUDIENCE_PLATFORM_SOURCES[source as ResearchAudiencePlatform]
+    : source;
 }

@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "strict": true, "incremental": false },
+  "include": ["lib/context/__tests__/releaseFormat.typecheck.ts"]
+}

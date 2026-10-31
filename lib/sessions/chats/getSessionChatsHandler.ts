@@ -1,3 +1,4 @@
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { DEFAULT_MODEL } from "@/lib/const";
@@ -26,6 +27,8 @@ export async function getSessionChatsHandler(
     sessionId,
     accountId: validated.auth.accountId,
   });
+
+  if (chats === null) return errorResponse("Failed to load chats", 500);
 
   return NextResponse.json(
     { chats, defaultModelId: DEFAULT_MODEL },

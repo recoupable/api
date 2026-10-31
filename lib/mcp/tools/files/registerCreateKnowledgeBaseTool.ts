@@ -1,3 +1,7 @@
+import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
+import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
+import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { createKnowledgeBase } from "@/lib/artist/createKnowledgeBase";
@@ -21,7 +25,7 @@ type CreateKnowledgeBaseArgs = z.infer<typeof createKnowledgeBaseSchema>;
 
 /**
  * Registers the "create_knowledge_base" tool on the MCP server.
- * Adds a knowledge base file to an artist by uploading text to Arweave and appending it to the artist's knowledges.
+ * Adds a knowledge base file to an artist by storing text publicly and appending it to the artist's knowledges.
  *
  * @param server - The MCP server instance to register the tool on.
  */
@@ -29,12 +33,26 @@ export function registerCreateKnowledgeBaseTool(server: McpServer): void {
   server.registerTool(
     "create_knowledge_base",
     {
-      description: `Saves a plain-text knowledge base entry to the artist's permanent storage on Arweave. Use ONLY for general reference notes, bios, or background context — NOT for releases, tracks, marketing plans, or any structured data.`,
+      description: `Saves a plain-text knowledge base entry to the artist's public media storage. Use ONLY for general reference notes, bios, or background context — NOT for releases, tracks, marketing plans, or any structured data.`,
       inputSchema: createKnowledgeBaseSchema,
     },
-    async (args: CreateKnowledgeBaseArgs) => {
+    async (
+      args: CreateKnowledgeBaseArgs,
+      extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
+    ) => {
+      const { accountId: uploaderAccountId, error: authError } = await resolveAccountId({
+        authInfo: extra.authInfo as McpAuthInfo | undefined,
+        accountIdOverride: undefined,
+      });
+      if (authError || !uploaderAccountId)
+        return getToolResultError(authError || "Authentication required");
+
       try {
-        const knowledge = await createKnowledgeBase(args.artistId, args.knowledgeBaseText);
+        const knowledge = await createKnowledgeBase(
+          args.artistId,
+          args.knowledgeBaseText,
+          uploaderAccountId,
+        );
 
         const response = {
           success: true,
@@ -45,9 +63,7 @@ export function registerCreateKnowledgeBaseTool(server: McpServer): void {
         return getToolResultSuccess(response);
       } catch (error) {
         console.error("Error creating knowledge base:", error);
-        return getToolResultError(
-          error instanceof Error ? error.message : "Failed to create knowledge base",
-        );
+        return getToolResultError("Failed to create knowledge base");
       }
     },
   );

@@ -5,9 +5,10 @@ import { mapToPaymentMethodError } from "@/lib/billing/mapToPaymentMethodError";
 import { findStripeCustomerForAccount } from "@/lib/stripe/findStripeCustomerForAccount";
 import { findDefaultCardForCustomer } from "@/lib/stripe/findDefaultCardForCustomer";
 import { detachPaymentMethod } from "@/lib/stripe/detachPaymentMethod";
+import { disableAutoTopUp } from "@/lib/supabase/credits_usage/disableAutoTopUp";
 
 /**
- * `DELETE /api/accounts/{id}/payment-method`: detach the account's default card.
+ * `DELETE /api/accounts/{id}/payment-method`: disable top-ups and detach the selected card.
  * 204 on success; 404 when there is no customer or no card to detach.
  */
 export async function deletePaymentMethodHandler(
@@ -30,6 +31,9 @@ export async function deletePaymentMethodHandler(
       );
     }
 
+    // Persist the stop first: a settings failure must not detach the card and report success.
+    // If Stripe subsequently fails, leave top-ups off rather than restoring automatic charges.
+    await disableAutoTopUp(validated);
     await detachPaymentMethod(paymentMethodId);
     return new NextResponse(null, { status: 204, headers: getCorsHeaders() });
   } catch (error) {

@@ -80,6 +80,7 @@ it.each([false, true])(
           "get_tasks",
           "list_artists",
           "open_recoup_workflows",
+          "open_recoup_workflows_sidebar",
         ]);
         const result = await client.callTool({ name: "get_tasks", arguments: {} });
         expect(result.isError).not.toBe(true);

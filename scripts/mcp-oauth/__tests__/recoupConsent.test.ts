@@ -16,6 +16,10 @@ import { loadOAuthConfig } from "../../../lib/oauth/loadOAuthConfig";
 import { createRecoupOAuthProvider } from "../../../lib/oauth/createRecoupOAuthProvider";
 import { createOAuthNodeHandler } from "../../../lib/oauth/createOAuthNodeHandler";
 import { createOAuthConsentHandler } from "../../../lib/oauth/consent/createOAuthConsentHandler";
+import { createOAuthAdapter } from "../../../lib/oauth/createOAuthAdapter";
+import { createOAuthConnections } from "../../../lib/oauth/createOAuthConnections";
+import { createOAuthConnectionsHandler } from "../../../lib/oauth/connections/createOAuthConnectionsHandler";
+import { createPostgresTestStore } from "../fixtures/createPostgresTestStore";
 import { createPostgresTestAdapter } from "../fixtures/createPostgresTestAdapter";
 
 const metadataDocuments = vi.hoisted(() => new Map<string, Record<string, unknown>>());
@@ -56,7 +60,7 @@ function memoryAdapter(): AdapterFactory {
 }
 
 async function verifyConsent(mode: string) {
-  const requestedScopes = mode === "full" ? ["mcp:tools"] : ["mcp:read", "mcp:write"];
+  const requestedScopes = mode.startsWith("full") ? ["mcp:tools"] : ["mcp:read", "mcp:write"];
   const server = createServer();
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
@@ -75,26 +79,40 @@ async function verifyConsent(mode: string) {
       OAUTH_ENCRYPTION_KEYS: JSON.stringify({ test: secret }),
       OAUTH_ACTIVE_ENCRYPTION_KEY: "test",
     });
-    const adapter = process.env.OAUTH_TEST_PG_SOCKET
-      ? createPostgresTestAdapter(config.issuer)
-      : memoryAdapter();
+    const connectionStore = mode.endsWith("connections") ? createPostgresTestStore() : undefined;
+    const adapter = connectionStore
+      ? createOAuthAdapter({
+          namespace: config.issuer,
+          indexKey: config.indexKey,
+          cipher: config.cipher,
+          store: connectionStore,
+          invalidGrant: () => new Error("invalid_grant"),
+        })
+      : process.env.OAUTH_TEST_PG_SOCKET
+        ? createPostgresTestAdapter(config.issuer)
+        : memoryAdapter();
     const accountId = "00000000-0000-4000-8000-000000000001";
     const provider = createRecoupOAuthProvider(config, adapter, async id => id === accountId);
-    const consent = createOAuthConsentHandler({
-      config,
-      provider,
-      adapter,
-      resolveIdentity: async token => {
-        if (token === "alice") return { accountId, subject: "did:privy:alice" };
-        if (token === "bob")
-          return { accountId: "00000000-0000-4000-8000-000000000002", subject: "did:privy:bob" };
-        throw new Error("invalid login");
-      },
-    });
+    const resolveIdentity = async (token: string) => {
+      if (token === "alice") return { accountId, subject: "did:privy:alice" };
+      if (token === "bob")
+        return { accountId: "00000000-0000-4000-8000-000000000002", subject: "did:privy:bob" };
+      throw new Error("invalid login");
+    };
+    const consent = createOAuthConsentHandler({ config, provider, adapter, resolveIdentity });
+    const manageConnections = connectionStore
+      ? createOAuthConnectionsHandler({
+          origin: config.consentOrigin,
+          resolveIdentity,
+          connections: createOAuthConnections(config, connectionStore, adapter),
+        })
+      : undefined;
     const callback = provider.callback();
     const handler = createOAuthNodeHandler(config.issuer, async (req, res) => {
       const match = /^\/interaction\/([^/?]+)$/.exec(req.url ?? "");
-      if (match) await consent(req, res, match[1]);
+      if (manageConnections && /^\/connections(?:\/|\?|$)/.test(req.url ?? ""))
+        await manageConnections(req, res);
+      else if (match) await consent(req, res, match[1]);
       else await callback(req, res);
     });
     const verify = (bearer: string) =>
@@ -373,6 +391,147 @@ async function verifyConsent(mode: string) {
     expect(tokens.refresh_token).toEqual(expect.any(String));
     const delegated = await verify(tokens.access_token);
     expect(delegated).toMatchObject({ accountId, scopes: requestedScopes });
+    if (mode.endsWith("lifecycle") || mode.endsWith("connections")) {
+      // Exercise real consent and token HTTP paths; no vendor host or production identity.
+      const connectClient = async (clientId: string) => {
+        const url = new URL(authorize);
+        url.searchParams.set("client_id", clientId);
+        const started = await browserFetch(url.href);
+        expect(started.status).toBe(303);
+        const interaction = started.headers.get("location")!;
+        expect(interaction).toContain("/interaction/");
+        const request = await (await browserFetch(interaction, { headers })).json();
+        expect(request.permissions.map((p: { scope: string }) => p.scope)).toEqual(requestedScopes);
+        const approval = await browserFetch(interaction, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ decision: "approve", csrf: request.csrf }),
+        });
+        expect(approval.status).toBe(200);
+        const resumed = await browserFetch((await approval.json()).redirectUrl);
+        const callback = new URL(resumed.headers.get("location")!);
+        expect(callback.searchParams.get("iss")).toBe(config.issuer);
+        expect(callback.searchParams.get("error")).toBeNull();
+        const response = await fetch(`${config.issuer}/token`, {
+          method: "POST",
+          body: new URLSearchParams({
+            client_id: clientId,
+            grant_type: "authorization_code",
+            code: callback.searchParams.get("code")!,
+            redirect_uri: "https://agent.example/callback",
+            code_verifier: verifier,
+            resource: config.resource,
+          }),
+        });
+        expect(response.status).toBe(200);
+        return response.json();
+      };
+      const refresh = (clientId: string, refreshToken: string) =>
+        fetch(`${config.issuer}/token`, {
+          method: "POST",
+          body: new URLSearchParams({
+            client_id: clientId,
+            grant_type: "refresh_token",
+            refresh_token: refreshToken,
+            resource: config.resource,
+          }),
+        });
+      const secondRegistration = await registerCallbacks(["https://agent.example/callback"]);
+      expect(secondRegistration.status).toBe(201);
+      const secondClient = await secondRegistration.json();
+      expect(secondClient.client_id).not.toBe(client.client_id);
+      const second = await connectClient(secondClient.client_id);
+      const secondAccess = await verify(second.access_token);
+      expect(secondAccess).toMatchObject({ accountId, scopes: requestedScopes });
+      expect(secondAccess!.grantId).not.toBe(delegated!.grantId);
+
+      // A refresh token is bound to its own client, even when the account is shared.
+      expect((await refresh(client.client_id, second.refresh_token)).status).toBe(400);
+      const rotatedResponse = await refresh(client.client_id, tokens.refresh_token);
+      expect(rotatedResponse.status).toBe(200);
+      const rotated = await rotatedResponse.json();
+      expect(rotated.refresh_token).not.toBe(tokens.refresh_token);
+      if (manageConnections) {
+        const list = async (login = "alice") => {
+          const response = await fetch(`${config.issuer}/connections?account_id=${accountId}`, {
+            headers: { ...headers, Authorization: `Bearer ${login}` },
+          });
+          expect(response.status).toBe(200);
+          expect(response.headers.get("cache-control")).toBe("no-store");
+          return response.json();
+        };
+        const listed = await list();
+        expect(listed.truncated).toBe(false);
+        expect(listed.connections).toHaveLength(2);
+        const ids = listed.connections.map((item: { clientId: string }) => item.clientId);
+        expect(ids.sort()).toEqual([client.client_id, secondClient.client_id].sort());
+        for (const secret of [tokens.access_token, tokens.refresh_token, delegated!.grantId])
+          expect(JSON.stringify(listed)).not.toContain(secret);
+        const selected = listed.connections.find(
+          (item: { clientId: string }) => item.clientId === client.client_id,
+        );
+        expect(selected.id).toMatch(/^[a-f0-9]{64}$/);
+        expect(selected.scopes).toEqual(requestedScopes);
+        // The query cannot make the other first-party account enumerate Alice's grants.
+        expect((await list("bob")).connections).toEqual([]);
+        const remove = (login: string, origin = config.consentOrigin) =>
+          fetch(`${config.issuer}/connections/${selected.id}?account_id=${accountId}`, {
+            method: "DELETE",
+            headers: { Origin: origin, Authorization: `Bearer ${login}` },
+          });
+        const foreign = await remove("bob");
+        expect(foreign.status).toBe(404);
+        expect(await foreign.json()).toEqual({ error: "connection_unavailable" });
+        const delegatedDelete = await remove(tokens.access_token);
+        expect(delegatedDelete.status).toBe(401);
+        expect(await delegatedDelete.json()).toEqual({ error: "login_required" });
+        expect((await remove("alice", "https://evil.example")).status).toBe(403);
+        // Every denied request leaves both grants usable and the listing unchanged.
+        expect(await verify(rotated.access_token)).toMatchObject({ accountId });
+        expect(await verify(second.access_token)).toMatchObject({ accountId });
+        expect(await list()).toEqual(listed);
+        const removed = await remove("alice");
+        expect(removed.status).toBe(204);
+        expect(await removed.text()).toBe("");
+        const remaining = await list();
+        expect(remaining.connections).toHaveLength(1);
+        expect(remaining.connections[0].clientId).toBe(secondClient.client_id);
+        expect((await remove("alice")).status).toBe(204);
+        expect(await list()).toEqual(remaining);
+      } else {
+        await adapter("Grant").revokeByGrantId(delegated!.grantId);
+      }
+      for (const accessToken of [tokens.access_token, rotated.access_token]) {
+        expect(await verify(accessToken)).toBeUndefined();
+        expect(
+          (await fetch(config.resource, { headers: { Authorization: `Bearer ${accessToken}` } }))
+            .status,
+        ).toBe(401);
+      }
+      expect((await refresh(client.client_id, rotated.refresh_token)).status).toBe(400);
+      expect(await verify(second.access_token)).toMatchObject({
+        accountId,
+        clientId: secondClient.client_id,
+      });
+      const secondRefresh = await refresh(secondClient.client_id, second.refresh_token);
+      expect(secondRefresh.status).toBe(200);
+      const secondRenewed = await secondRefresh.json();
+      expect(await verify(secondRenewed.access_token)).toMatchObject({ accountId });
+
+      // Reconnecting the same registration requires consent and creates a fresh grant.
+      const reconnected = await connectClient(client.client_id);
+      const reconnectedAccess = await verify(reconnected.access_token);
+      expect(reconnectedAccess).toMatchObject({ accountId, scopes: requestedScopes });
+      expect(reconnectedAccess!.grantId).not.toBe(delegated!.grantId);
+      expect(await verify(rotated.access_token)).toBeUndefined();
+      expect((await refresh(client.client_id, rotated.refresh_token)).status).toBe(400);
+      await adapter("Grant").revokeByGrantId(reconnectedAccess!.grantId);
+      expect(await verify(reconnected.access_token)).toBeUndefined();
+      expect(await verify(secondRenewed.access_token)).toMatchObject({ accountId });
+      await adapter("Grant").revokeByGrantId(secondAccess!.grantId);
+      expect(await verify(secondRenewed.access_token)).toBeUndefined();
+      return;
+    }
     if (mode === "full") {
       const refreshed = await fetch(`${config.issuer}/token`, {
         method: "POST",
@@ -531,7 +690,13 @@ async function verifyConsent(mode: string) {
   }
 }
 
-it.each(["dcr", "cimd", "legacy", "full"])(
+it.each(["dcr", "cimd", "legacy", "full", "limited-lifecycle", "full-lifecycle"])(
   "requires browser cookie, trusted origin, matching identity, and one-use consent before issuing tokens (%s)",
+  verifyConsent,
+);
+
+// Requires the disposable Unix-socket harness; never substitutes production storage.
+it.skipIf(!process.env.OAUTH_TEST_PG_SOCKET).each(["limited-connections", "full-connections"])(
+  "enforces owner-only HTTP connection revocation and preserves the second client (%s)",
   verifyConsent,
 );

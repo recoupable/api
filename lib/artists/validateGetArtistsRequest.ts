@@ -17,12 +17,11 @@ export type GetArtistsQuery = z.infer<typeof getArtistsQuerySchema>;
  * Validates GET /api/artists request.
  * Handles authentication via x-api-key or Authorization bearer token.
  *
- * For personal keys/Bearer tokens: Returns the authenticated account's artists
- * For org keys: Returns the key owner's artists (can filter by account_id)
- * For Recoup admin key: Returns the key owner's artists (can filter by account_id)
+ * Defaults to the authenticated account's personal artists. Account overrides
+ * are checked by buildGetArtistsParams using the existing canAccessAccount rules.
  *
  * Query parameters:
- * - account_id: Filter to a specific account (org keys only)
+ * - account_id: Filter to a specific account the caller can access
  * - org_id: Filter to artists in a specific organization (omit for personal artists)
  *
  * @param request - The NextRequest object

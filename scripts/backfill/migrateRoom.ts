@@ -114,6 +114,7 @@ export async function migrateRoom(
 
   // Preserve room.id as chat.id so /chat/[roomId] URLs keep working.
   const existingChat = await selectChats({ id: room.id });
+  if (existingChat === null) throw new Error(`Failed to read chat for room ${room.id}`);
   const chatExisted = existingChat.length > 0;
   if (!chatExisted && !dryRun) {
     const chat = await insertChat({

@@ -12,7 +12,7 @@ export type ValidatedGetResearchSearchRequest = {
 };
 
 /**
- * Validates `GET /api/research/search` — auth + required `q` query param, with
+ * Validates `GET /api/research` — auth + required `q` query param, with
  * defaults for `type` ("artists") and `limit` ("10"). Optional `offset` for paging.
  *
  * @param request - The incoming HTTP request.

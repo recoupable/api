@@ -16,6 +16,9 @@ const observer = new IntersectionObserver(
   entries =>
     entries.forEach(entry => {
       const video = entry.target as HTMLVideoElement;
+      // Loop copies must not compete with visible cards for media connections.
+      if (entry.isIntersecting && !video.getAttribute("src") && video.dataset.src)
+        video.src = video.dataset.src;
       if (entry.isIntersecting && !reducedMotion.matches && !previewsPaused && !document.hidden)
         void video.play().catch(() => {});
       else video.pause();
@@ -29,7 +32,7 @@ function renderCards() {
     features
       .map(
         f =>
-          `<button class="card" data-id="${f.id}" aria-label="${escapeHtml(f.title)}"><span class="media"><span aria-hidden="true" class="art art-${f.category.toLowerCase()}"><span>${escapeHtml(f.category)}</span><strong>${escapeHtml(f.title)}</strong></span>${f.video ? `<video muted loop playsinline preload="metadata" aria-hidden="true" src="${escapeHtml(f.video)}"></video>` : ""}<span class="preview-label" aria-hidden="true">EXAMPLE PREVIEW</span><span class="card-arrow" aria-hidden="true">↗</span></span><span class="card-category">${escapeHtml(f.category)}</span><span class="card-title">${escapeHtml(f.title)}</span><span class="card-description">${escapeHtml(f.description)}</span></button>`,
+          `<button class="card" data-id="${f.id}" aria-label="${escapeHtml(f.title)}"><span class="media"><span aria-hidden="true" class="art art-${f.category.toLowerCase()}"><span>${escapeHtml(f.category)}</span><strong>${escapeHtml(f.title)}</strong></span>${f.video ? `<video muted loop playsinline preload="none" aria-hidden="true" data-src="${escapeHtml(f.video)}"></video>` : ""}<span class="preview-label" aria-hidden="true">EXAMPLE PREVIEW</span><span class="card-arrow" aria-hidden="true">↗</span></span><span class="card-category">${escapeHtml(f.category)}</span><span class="card-title">${escapeHtml(f.title)}</span><span class="card-description">${escapeHtml(f.description)}</span></button>`,
       )
       .join("") ||
     `<div class="empty"><p class="eyebrow">LET’S FIND YOUR NEXT MOVE</p><h3>No workflows found</h3><p>Please try again later.</p></div>`;

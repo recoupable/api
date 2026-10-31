@@ -11,7 +11,7 @@ import { toProjectComment } from "@/lib/projects/toProjectComment";
  * POST /api/projects/{projectId}/tasks/{taskId}/comments
  *
  * Post a comment, attributed to the authenticated account. Append-only: there
- * is no edit and no delete. Contract: recoupable/docs#326.
+ * is no edit and no delete. Contract: recoupable/docs-legacy#326.
  *
  * @param request - The incoming request.
  * @param projectId - The project the task belongs to.

@@ -1,0 +1,18 @@
+{
+  "api_commit": "959d30bf19f28ae6a8c75031f424831923403374",
+  "api_files": {
+    "scripts/application-proof/rehearseConfigurationInvocation.ts": "0b6a23a988905d955627a9a15454ddaa5c044942e543f9dc5b916ce793aa6b5c",
+    "lib/applications/applicationRegistrationSchema.ts": "5bfb55ded25eae323bea02b535d6fb010eec5b2a767b891a13b86e4c91427a30",
+    "lib/applications/validateApplicationRegistration.ts": "b842cd312e0123a65ec1dd872c54474f77872b337ef5285ecedff1dad96ac0c6",
+    "lib/applications/ApplicationRegistrationError.ts": "56e8764fb3d17ac023c6c51f7ecbda3c5da82aa11076152abf32e5c407b5e7d3",
+    "scripts/application-proof/contractModel.ts": "48c9bef3d1a83f31703f091aa7771e33a4db14cedd530ffff783fbb6e8ec25d2"
+  },
+  "database_commit": "372de990156739dda1b605d18a40333cd6f1bdba",
+  "database_files": {
+    "proposals/application-proof-2104/fixture.sql": "b4435b1c5546d471c33b758f1ac8a7fd8ca199071b08cc541f4cb199e6412668",
+    "proposals/application-proof-2104/proposal.sql": "2cf96399422cfc1e68b0578b7aeb7b58a97c56303d85b91ee6cf862329f6c86c",
+    "proposals/application-proof-2104/configuration-fixture.sql": "b15593f26c58a856ea4dedf98a7d42f1bbe7cf229f6b15aa8a80bd9d0d598c80",
+    "proposals/application-proof-2104/configuration.sql": "148819c1363929e990bf2cfd67bae02f7567c2e2e2a05732cb17ea2248bad3b1",
+    "proposals/application-proof-2104/fixture-authority.sql": "0a2715a5a4f93c349df06d25a6334d513350f225a36af71ae8694fe1914c4c99"
+  }
+}

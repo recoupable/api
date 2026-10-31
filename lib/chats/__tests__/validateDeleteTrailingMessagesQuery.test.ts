@@ -2,19 +2,19 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { Tables } from "@/types/database.types";
 import { validateDeleteTrailingMessagesQuery } from "@/lib/chats/validateDeleteTrailingMessagesQuery";
-import { validateChatAccess } from "@/lib/chats/validateChatAccess";
-import selectMemories from "@/lib/supabase/memories/selectMemories";
+import { validateChatOwnership } from "@/lib/chat/validateChatOwnership";
+import { selectChatMessages } from "@/lib/supabase/chat_messages/selectChatMessages";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
 }));
 
-vi.mock("@/lib/chats/validateChatAccess", () => ({
-  validateChatAccess: vi.fn(),
+vi.mock("@/lib/chat/validateChatOwnership", () => ({
+  validateChatOwnership: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/memories/selectMemories", () => ({
-  default: vi.fn(),
+vi.mock("@/lib/supabase/chat_messages/selectChatMessages", () => ({
+  selectChatMessages: vi.fn(),
 }));
 
 const chatId = "123e4567-e89b-42d3-a456-426614174000";
@@ -29,7 +29,7 @@ describe("validateDeleteTrailingMessagesQuery", () => {
   });
 
   it("passes through chat access errors", async () => {
-    vi.mocked(validateChatAccess).mockResolvedValue(
+    vi.mocked(validateChatOwnership).mockResolvedValue(
       NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
     );
 
@@ -39,17 +39,10 @@ describe("validateDeleteTrailingMessagesQuery", () => {
   });
 
   it("returns 400 when from_message_id is missing", async () => {
-    vi.mocked(validateChatAccess).mockResolvedValue({
-      roomId: chatId,
-      room: {
-        id: chatId,
-        account_id: "11111111-1111-1111-1111-111111111111",
-        artist_id: null,
-        topic: null,
-        updated_at: null,
-      },
-      accountId: "11111111-1111-1111-1111-111111111111",
-    });
+    vi.mocked(validateChatOwnership).mockResolvedValue({
+      auth: { accountId: "owner" },
+      chat: { id: chatId, active_stream_id: null },
+    } as never);
 
     const result = await validateDeleteTrailingMessagesQuery(createRequest(), chatId);
     expect(result).toBeInstanceOf(NextResponse);
@@ -57,18 +50,11 @@ describe("validateDeleteTrailingMessagesQuery", () => {
   });
 
   it("returns 404 when message does not exist", async () => {
-    vi.mocked(validateChatAccess).mockResolvedValue({
-      roomId: chatId,
-      room: {
-        id: chatId,
-        account_id: "11111111-1111-1111-1111-111111111111",
-        artist_id: null,
-        topic: null,
-        updated_at: null,
-      },
-      accountId: "11111111-1111-1111-1111-111111111111",
-    });
-    vi.mocked(selectMemories).mockResolvedValue([]);
+    vi.mocked(validateChatOwnership).mockResolvedValue({
+      auth: { accountId: "owner" },
+      chat: { id: chatId, active_stream_id: null },
+    } as never);
+    vi.mocked(selectChatMessages).mockResolvedValue([]);
 
     const result = await validateDeleteTrailingMessagesQuery(
       createRequest(`?from_message_id=${fromMessageId}`),
@@ -79,23 +65,16 @@ describe("validateDeleteTrailingMessagesQuery", () => {
   });
 
   it("returns validated payload when query is valid", async () => {
-    vi.mocked(validateChatAccess).mockResolvedValue({
-      roomId: chatId,
-      room: {
-        id: chatId,
-        account_id: "11111111-1111-1111-1111-111111111111",
-        artist_id: null,
-        topic: null,
-        updated_at: null,
-      },
-      accountId: "11111111-1111-1111-1111-111111111111",
-    });
-    vi.mocked(selectMemories).mockResolvedValue([
+    vi.mocked(validateChatOwnership).mockResolvedValue({
+      auth: { accountId: "owner" },
+      chat: { id: chatId, active_stream_id: null },
+    } as never);
+    vi.mocked(selectChatMessages).mockResolvedValue([
       {
         id: fromMessageId,
-        room_id: chatId,
-        updated_at: "2026-03-31T00:00:00.000Z",
-      } as Tables<"memories">,
+        chat_id: chatId,
+        created_at: "2026-03-31T00:00:00.000Z",
+      } as Tables<"chat_messages">,
     ]);
 
     const result = await validateDeleteTrailingMessagesQuery(
@@ -108,5 +87,20 @@ describe("validateDeleteTrailingMessagesQuery", () => {
       fromMessageId,
       fromTimestamp: "2026-03-31T00:00:00.000Z",
     });
+  });
+  it("fails closed on a malformed stored UUID", async () => {
+    vi.mocked(validateChatOwnership).mockResolvedValue({
+      auth: { accountId: "owner" },
+      chat: { id: chatId, active_stream_id: null },
+    } as never);
+    vi.mocked(selectChatMessages).mockResolvedValue([
+      { id: "invalid", created_at: "2026-10-25T12:00:00.123456Z" },
+    ] as never);
+    const result = await validateDeleteTrailingMessagesQuery(
+      createRequest(`?from_message_id=${fromMessageId}`),
+      chatId,
+    );
+    expect(result).toBeInstanceOf(NextResponse);
+    expect((result as NextResponse).status).toBe(500);
   });
 });

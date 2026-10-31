@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import generateImage from "@/lib/ai/generateImage";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { uploadImageAndCreateMoment } from "@/lib/arweave/uploadImageAndCreateMoment";
+import { uploadImageAndCreateMoment } from "@/lib/image/uploadImageAndCreateMoment";
 import { getBuyerAccount } from "@/lib/x402/getBuyerAccount";
 import { parseFilesFromQuery } from "@/lib/files/parseFilesFromQuery";
 
@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
       imageUrl,
       moment: momentResult,
       arweaveError,
+      uploadError,
     } = await uploadImageAndCreateMoment({
       image,
       prompt,
@@ -87,6 +88,8 @@ export async function GET(request: NextRequest) {
         imageUrl,
         arweaveResult,
         moment: momentResult,
+        ...(uploadError && { uploadError }),
+        // Deprecated alias retained until callers migrate.
         ...(arweaveError && { arweaveError }),
       },
       {

@@ -1,5 +1,6 @@
 import type { Tables } from "@/types/database.types";
 import { formatCentsAsUsd } from "@/lib/credits/formatCentsAsUsd";
+import { normalizeUsageTimestamp } from "@/lib/usage/normalizeUsageTimestamp";
 
 /** One line item of `GET /api/accounts/{id}/usage`. */
 export interface UsageEventItem {
@@ -32,7 +33,7 @@ export interface UsageEventItem {
 export function toUsageEvent(row: Tables<"usage_events">): UsageEventItem {
   return {
     id: row.id,
-    created_at: new Date(row.created_at).toISOString(),
+    created_at: normalizeUsageTimestamp(row.created_at),
     source: row.source,
     agent_type: row.agent_type,
     provider: row.provider,

@@ -1,8 +1,9 @@
+import type { CredentialObserver } from "./VerificationEvidence";
 import { NextRequest, NextResponse } from "next/server";
 import { getBearerToken } from "@/lib/auth/getBearerToken";
 import { getAccountIdByApiKey } from "@/lib/auth/getAccountIdByApiKey";
 import { getOrCreateAccountIdByAuthToken } from "@/lib/privy/getOrCreateAccountIdByAuthToken";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { messageErrorResponse } from "@/lib/networking/messageErrorResponse";
 
 /**
  * Extracts and validates the authentication token from the request,
@@ -16,56 +17,48 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
  * user's Privy email (idempotent fetch-or-create, mirroring `POST /api/accounts`).
  *
  * @param request - The NextRequest object
+ * @param options - Set allowAccountCreation false for reads that must not onboard users
  * @returns Either the account ID string, or a NextResponse error if authentication fails
  */
 export async function getAuthenticatedAccountId(
   request: NextRequest,
+  options: { allowAccountCreation?: boolean; onVerified?: CredentialObserver } = {},
 ): Promise<string | NextResponse> {
   const authHeader = request.headers.get("authorization");
   const authToken = getBearerToken(authHeader);
 
   if (!authToken) {
-    return NextResponse.json(
-      {
-        status: "error",
-        message: "Authorization header with Bearer token required",
-      },
-      {
-        status: 401,
-        headers: getCorsHeaders(),
-      },
-    );
+    return messageErrorResponse("Authorization header with Bearer token required", 401);
   }
 
   // A Recoup API key sent as a Bearer token: validate it as an API key instead
   // of attempting (and failing) Privy JWT verification.
   if (authToken.startsWith("recoup_sk_")) {
-    const accountId = await getAccountIdByApiKey(authToken);
+    const accountId = options.onVerified
+      ? await getAccountIdByApiKey(authToken, options.onVerified)
+      : await getAccountIdByApiKey(authToken);
     if (!accountId) {
-      return NextResponse.json(
-        { status: "error", message: "Unauthorized" },
-        { status: 401, headers: getCorsHeaders() },
-      );
+      return messageErrorResponse("Unauthorized", 401);
     }
     return accountId;
   }
 
   try {
-    const accountId = await getOrCreateAccountIdByAuthToken(authToken);
+    let accountId: string | null;
+    if (options.allowAccountCreation === false || options.onVerified) {
+      const { getExistingAccountIdByAuthToken } = await import(
+        "@/lib/privy/getExistingAccountIdByAuthToken"
+      );
+      accountId = options.onVerified
+        ? await getExistingAccountIdByAuthToken(authToken, options.onVerified)
+        : await getExistingAccountIdByAuthToken(authToken);
+    } else {
+      accountId = await getOrCreateAccountIdByAuthToken(authToken);
+    }
+    if (!accountId) return messageErrorResponse("Unauthorized", 401);
     return accountId;
   } catch (error) {
-    console.error("[ERROR] Authentication failed:", error);
-    const message =
-      error instanceof Error ? error.message : "Failed to verify authentication token";
-    return NextResponse.json(
-      {
-        status: "error",
-        message,
-      },
-      {
-        status: 401,
-        headers: getCorsHeaders(),
-      },
-    );
+    if (!options.onVerified) console.error("[ERROR] Authentication failed:", error);
+    return messageErrorResponse("Failed to verify authentication token", 401);
   }
 }

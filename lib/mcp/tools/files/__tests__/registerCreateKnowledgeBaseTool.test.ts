@@ -5,6 +5,7 @@ import { registerCreateKnowledgeBaseTool } from "../registerCreateKnowledgeBaseT
 vi.mock("@/lib/artist/createKnowledgeBase", () => ({
   createKnowledgeBase: vi.fn(),
 }));
+vi.mock("@/lib/mcp/resolveAccountId", () => ({ resolveAccountId: vi.fn() }));
 
 describe("registerCreateKnowledgeBaseTool", () => {
   let mockServer: McpServer;

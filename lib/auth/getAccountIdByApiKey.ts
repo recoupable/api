@@ -1,3 +1,4 @@
+import type { CredentialObserver } from "./VerificationEvidence";
 import { hashApiKey } from "@/lib/keys/hashApiKey";
 import { isApiKeyExpired } from "@/lib/keys/isApiKeyExpired";
 import { PRIVY_PROJECT_SECRET } from "@/lib/const";
@@ -14,7 +15,10 @@ import { selectAccountApiKeys } from "@/lib/supabase/account_api_keys/selectAcco
  *
  * @param apiKey - The raw API key string.
  */
-export async function getAccountIdByApiKey(apiKey: string): Promise<string | null> {
+export async function getAccountIdByApiKey(
+  apiKey: string,
+  onVerified?: CredentialObserver,
+): Promise<string | null> {
   const keyHash = hashApiKey(apiKey, PRIVY_PROJECT_SECRET);
   const apiKeys = await selectAccountApiKeys({ keyHash });
 
@@ -31,5 +35,9 @@ export async function getAccountIdByApiKey(apiKey: string): Promise<string | nul
     return null;
   }
 
+  if (onVerified) {
+    if (!matched?.id) return null;
+    onVerified({ mechanism: "recoup_api_key", keyId: matched.id });
+  }
   return accountId;
 }

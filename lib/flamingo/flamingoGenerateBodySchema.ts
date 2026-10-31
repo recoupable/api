@@ -2,8 +2,8 @@ import { z } from "zod";
 import { PRESET_NAMES } from "@/lib/flamingo/presets";
 
 /**
- * Zod schema for the POST /api/songs/analyze body, shared with the
- * `analyze_music` MCP tool's input schema.
+ * Zod schema for the POST /api/songs/analyze body. The MCP input schema
+ * extends this contract to accept host attachments and normalizes them to audio_url.
  *
  * Callers must provide either a "preset" name OR a custom "prompt" — not both —
  * and always an "audio_url": the model is only useful with audio, and a

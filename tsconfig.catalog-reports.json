@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false,
+    "noEmit": true
+  },
+  "include": [
+    "lib/catalog/reports/**/*.ts",
+    "lib/supabase/catalog_songs/selectCatalogSongsWithArtists.ts",
+    "lib/supabase/catalog_songs/__tests__/selectCatalogSongsWithArtists.test.ts"
+  ],
+  "exclude": ["node_modules"]
+}

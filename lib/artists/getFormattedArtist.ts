@@ -62,11 +62,17 @@ export function getFormattedArtist(row: ArtistQueryRow): FormattedArtist {
     instruction: "",
   };
 
-  const account_socials = (artist.account_socials || []).map((social: AccountSocialWithSocial) => ({
-    ...social.social,
-    link: social.social?.profile_url || "",
-    type: getSocialPlatformByLink(social.social?.profile_url || ""),
-  }));
+  const account_socials = (artist.account_socials || []).flatMap(({ social }) =>
+    social
+      ? [
+          {
+            ...social,
+            link: social.profile_url || "",
+            type: getSocialPlatformByLink(social.profile_url || ""),
+          },
+        ]
+      : [],
+  );
 
   return {
     name: artist.name,

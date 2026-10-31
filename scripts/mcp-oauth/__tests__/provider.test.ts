@@ -1,18 +1,38 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { AdapterFactory } from "oidc-provider";
 import { createHash, randomBytes } from "node:crypto";
 import { startOAuthLab } from "../fixtures/startOAuthLab";
 
 import { createPostgresTestAdapter } from "../fixtures/createPostgresTestAdapter";
 
 const cleanup: Array<() => Promise<void>> = [];
+const destinations: string[] = [];
+beforeEach(() => {
+  // Only this test's loopback fixture may receive network requests. Never follow redirects.
+  const localFetch = globalThis.fetch;
+  destinations.length = 0;
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const url = new URL(input instanceof Request ? input.url : String(input));
+    if (url.protocol !== "http:" || url.hostname !== "127.0.0.1" || url.username || url.password)
+      throw new Error("Non-loopback request rejected by refresh-race fixture");
+    destinations.push(url.origin);
+    return localFetch(input, { ...init, redirect: "manual" });
+  });
+});
 afterEach(async () => {
-  for (const close of cleanup.splice(0)) await close();
+  try {
+    for (const close of cleanup.splice(0)) await close();
+  } finally {
+    vi.restoreAllMocks();
+  }
 });
 
-async function setup() {
-  const lab = await startOAuthLab(
-    process.env.OAUTH_TEST_PG_SOCKET ? createPostgresTestAdapter : undefined,
-  );
+async function setup(
+  createAdapter: ((issuer: string) => AdapterFactory) | undefined = process.env.OAUTH_TEST_PG_SOCKET
+    ? createPostgresTestAdapter
+    : undefined,
+) {
+  const lab = await startOAuthLab(createAdapter);
   cleanup.push(lab.close);
   const discovery = await fetch(`${lab.issuer}/.well-known/openid-configuration`).then(r =>
     r.json(),
@@ -291,6 +311,103 @@ describe("OAuth provider compatibility spike (synthetic identity, isolated MCP t
         .status,
     ).toBe(401);
   });
+  it.skipIf(!process.env.OAUTH_TEST_PG_SOCKET)(
+    "allows only one concurrent PostgreSQL refresh redemption and isolates later replay revocation",
+    async () => {
+      await expect(fetch("https://external.invalid/token")).rejects.toThrow(
+        "Non-loopback request rejected",
+      );
+
+      let armed = false;
+      const contenders: string[] = [];
+      let release!: () => void;
+      const barrier = new Promise<void>(resolve => {
+        release = resolve;
+      });
+      const { lab, discovery, client, authorize, exchange } = await setup(issuer => {
+        const factory = createPostgresTestAdapter(issuer);
+        return model => {
+          const adapter = factory(model);
+          if (model !== "RefreshToken") return adapter;
+          return {
+            ...adapter,
+            async consume(id: string) {
+              if (armed) {
+                contenders.push(id);
+                if (contenders.length === 2) release();
+                let timeout: ReturnType<typeof setTimeout> | undefined;
+                try {
+                  await Promise.race([
+                    barrier,
+                    new Promise<never>((_, reject) => {
+                      timeout = setTimeout(
+                        () => reject(new Error("Second refresh did not reach consume")),
+                        5000,
+                      );
+                    }),
+                  ]);
+                } finally {
+                  clearTimeout(timeout);
+                }
+              }
+              // The real encrypted PostgreSQL adapter, not the barrier, chooses the winner.
+              return adapter.consume(id);
+            },
+          };
+        };
+      });
+      const first = await exchange((await authorize()).searchParams.get("code")!);
+      const second = await exchange((await authorize()).searchParams.get("code")!);
+      expect(first.response.status).toBe(200);
+      expect(second.response.status).toBe(200);
+      const refresh = (token: string) =>
+        fetch(discovery.token_endpoint, {
+          method: "POST",
+          body: new URLSearchParams({
+            grant_type: "refresh_token",
+            client_id: client.client_id,
+            refresh_token: token,
+            resource: lab.resource,
+          }),
+        });
+      armed = true;
+      const responses = await Promise.all([
+        refresh(first.body.refresh_token),
+        refresh(first.body.refresh_token),
+      ]);
+      armed = false;
+      expect(contenders).toHaveLength(2);
+      expect(contenders[0]).toBe(contenders[1]);
+      expect(responses.map(response => response.status).sort()).toEqual([200, 400]);
+      const winner = await responses.find(response => response.status === 200)!.json();
+      const loser = await responses.find(response => response.status === 400)!.json();
+      expect(loser.error).toBe("invalid_grant");
+      expect(loser).not.toHaveProperty("access_token");
+      expect(loser).not.toHaveProperty("refresh_token");
+      expect(winner.refresh_token).not.toBe(first.body.refresh_token);
+      expect((await lab.exerciseMcp(winner.access_token)).writeDenied).toBe(false);
+      const next = await refresh(winner.refresh_token);
+      expect(next.status).toBe(200);
+      const successor = await next.json();
+
+      // Sequential replay sees the consumed marker and invokes the library's grant revocation.
+      expect((await refresh(first.body.refresh_token)).status).toBe(400);
+      expect(
+        (
+          await fetch(lab.resource, {
+            headers: { Authorization: `Bearer ${successor.access_token}` },
+          })
+        ).status,
+      ).toBe(401);
+      expect((await refresh(successor.refresh_token)).status).toBe(400);
+      const independent = await refresh(second.body.refresh_token);
+      expect(independent.status).toBe(200);
+      expect((await lab.exerciseMcp((await independent.json()).access_token)).writeDenied).toBe(
+        false,
+      );
+      expect(new Set(destinations)).toEqual(new Set([lab.issuer]));
+    },
+  );
   it("returns state and issuer on denied consent without issuing a code", async () => {
     const { lab, authorize } = await setup();
     lab.denyConsent();

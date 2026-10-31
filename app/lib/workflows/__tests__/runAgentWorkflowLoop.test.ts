@@ -8,6 +8,11 @@ import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistan
 import { persistAssistantMessageStep } from "@/app/lib/workflows/persistAssistantMessageStep";
 import { CHAT_AGENT_MAX_ITERATIONS } from "@/lib/chat/const";
 
+vi.mock("@/app/lib/workflows/prepareCatalogSurfaceStep", () => ({
+  prepareCatalogSurfaceStep: vi.fn(),
+}));
+vi.mock("@/app/lib/workflows/sendCatalogSurfaceStep", () => ({ sendCatalogSurfaceStep: vi.fn() }));
+
 vi.mock("@/app/lib/workflows/runAgentStep", () => ({ runAgentStep: vi.fn() }));
 vi.mock("@/app/lib/workflows/convertMessagesStep", () => ({ convertMessagesStep: vi.fn() }));
 vi.mock("@/app/lib/workflows/persistAssistantMessageStep", () => ({

@@ -72,6 +72,7 @@ export function loadOAuthConfig(env: Record<string, string | undefined> = proces
       consentUrl: consent.href,
       consentOrigin: consent.origin,
       resource: `${issuer.origin}/mcp`,
+      agentAuthEnabled: env.OAUTH_AGENT_REGISTRATION_ENABLED === "true",
       cookieKeys,
       cipher,
       indexKey: decodeSecret(env.OAUTH_INDEX_KEY!),

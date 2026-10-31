@@ -6,7 +6,7 @@ import { validateGetResearchSearchRequest } from "@/lib/research/validateGetRese
 import { endpointModelId } from "@/lib/credits/endpointModelId";
 
 /**
- * GET /api/research/search
+ * GET /api/research
  *
  * Searches SongStats for artists, tracks, or labels by name.
  *

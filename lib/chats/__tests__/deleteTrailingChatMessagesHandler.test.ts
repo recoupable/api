@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { deleteTrailingChatMessagesHandler } from "@/lib/chats/deleteTrailingChatMessagesHandler";
 import { validateDeleteTrailingMessagesQuery } from "@/lib/chats/validateDeleteTrailingMessagesQuery";
-import deleteMemories from "@/lib/supabase/memories/deleteMemories";
+import { deleteTrailingChatMessages } from "@/lib/supabase/chat_messages/deleteTrailingChatMessages";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({
   getCorsHeaders: vi.fn(() => ({ "Access-Control-Allow-Origin": "*" })),
@@ -12,8 +12,8 @@ vi.mock("@/lib/chats/validateDeleteTrailingMessagesQuery", () => ({
   validateDeleteTrailingMessagesQuery: vi.fn(),
 }));
 
-vi.mock("@/lib/supabase/memories/deleteMemories", () => ({
-  default: vi.fn(),
+vi.mock("@/lib/supabase/chat_messages/deleteTrailingChatMessages", () => ({
+  deleteTrailingChatMessages: vi.fn(),
 }));
 
 const chatId = "123e4567-e89b-42d3-a456-426614174000";
@@ -43,7 +43,7 @@ describe("deleteTrailingChatMessagesHandler", () => {
       fromMessageId,
       fromTimestamp: "2026-03-31T00:00:00.000Z",
     });
-    vi.mocked(deleteMemories).mockResolvedValue(false);
+    vi.mocked(deleteTrailingChatMessages).mockResolvedValue(false);
 
     const response = await deleteTrailingChatMessagesHandler(request, chatId);
     const body = await response.json();
@@ -61,7 +61,7 @@ describe("deleteTrailingChatMessagesHandler", () => {
       fromMessageId,
       fromTimestamp: "2026-03-31T00:00:00.000Z",
     });
-    vi.mocked(deleteMemories).mockResolvedValue(true);
+    vi.mocked(deleteTrailingChatMessages).mockResolvedValue(true);
 
     const response = await deleteTrailingChatMessagesHandler(request, chatId);
     const body = await response.json();

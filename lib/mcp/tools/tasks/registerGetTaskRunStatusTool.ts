@@ -6,7 +6,7 @@ import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
-import { retrieveTaskRun } from "@/lib/trigger/retrieveTaskRun";
+import { readTaskRunForAccount } from "@/lib/tasks/readTaskRunForAccount";
 
 const getTaskRunStatusSchema = z.object({
   runId: z.string().describe("The unique identifier of the task run to check."),
@@ -42,16 +42,16 @@ export function registerGetTaskRunStatusTool(server: McpServer): void {
       }
 
       try {
-        const result = await retrieveTaskRun(args.runId);
+        const result = await readTaskRunForAccount({ runId: args.runId, accountId });
 
         if (!result) {
-          return getToolResultError(`Task run with ID "${args.runId}" not found.`);
+          return getToolResultError("Task run not found");
         }
 
         return getToolResultSuccess(result);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to retrieve task run";
-        return getToolResultError(message);
+        console.error("Error retrieving task run:", error);
+        return getToolResultError("Failed to retrieve task run");
       }
     },
   );

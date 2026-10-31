@@ -54,9 +54,7 @@ export function registerUpdateArtistSocialsTool(server: McpServer): void {
         return getToolResultSuccess(response);
       } catch (error) {
         console.error("Error updating artist socials:", error);
-        const errorMessage =
-          error instanceof Error ? error.message : "Failed to update artist socials.";
-        return getToolResultError(errorMessage);
+        return getToolResultError("Failed to update artist socials.");
       }
     },
   );

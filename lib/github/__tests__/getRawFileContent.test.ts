@@ -129,4 +129,15 @@ describe("getRawFileContent", () => {
       { headers: { Authorization: "Bearer test-token" } },
     );
   });
+  it("encodes literal percent, query and hash characters before URL normalization", async () => {
+    mockFetch.mockResolvedValue({ ok: true, text: async () => "safe" });
+    await getRawFileContent({
+      githubRepo: "https://github.com/user/repo",
+      path: "%2e%2e/file?#.txt",
+    });
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://raw.githubusercontent.com/user/repo/main/%252e%252e/file%3F%23.txt",
+      expect.anything(),
+    );
+  });
 });

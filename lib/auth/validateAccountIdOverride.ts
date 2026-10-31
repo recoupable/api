@@ -1,3 +1,4 @@
+import type { AccountAccessObservation } from "./VerificationEvidence";
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
@@ -10,6 +11,7 @@ export interface ValidateAccountIdOverrideParams {
   currentAccountId: string;
   /** The target account ID to override to */
   targetAccountId: string;
+  onAllowed?: (observation: AccountAccessObservation) => void;
 }
 
 /**
@@ -36,12 +38,14 @@ export async function validateAccountIdOverride(
 
   // Self-access is always allowed
   if (targetAccountId === currentAccountId) {
+    params.onAllowed?.({ basis: "self" });
     return { accountId: targetAccountId };
   }
 
   const hasAccess = await canAccessAccount({
     targetAccountId,
     currentAccountId,
+    ...(params.onAllowed ? { onAllowed: params.onAllowed } : {}),
   });
 
   if (hasAccess) {

@@ -52,6 +52,7 @@ export async function validateChatOwnership(
   }
 
   const chats = await selectChats({ id: parsed.data });
+  if (chats === null) return errorResponse("Failed to load chats", 500);
   const chat = chats[0];
   if (!chat) return errorResponse("Chat not found", 404);
 

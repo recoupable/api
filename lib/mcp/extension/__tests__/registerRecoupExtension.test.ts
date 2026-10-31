@@ -15,7 +15,7 @@ describe("Recoup extension protocol", () => {
     try {
       const { tools } = await client.listTools();
       const open = tools.find(tool => tool.name === "open_recoup_workflows");
-      expect(open?.title).toBe("Open Recoup workflows");
+      expect(open?.title).toBe("Explore Recoup workflows");
       expect(client.getServerVersion()?.icons).toEqual([
         {
           src: "https://api.recoupable.dev/recoup-extension-icon.svg",
@@ -24,17 +24,36 @@ describe("Recoup extension protocol", () => {
         },
       ]);
       expect(open?._meta?.["openai/ui"]).toMatchObject({
-        entrypoints: [{ type: "global" }, { type: "thread" }],
+        entrypoints: [{ type: "thread" }],
       });
+      const sidebar = tools.find(tool => tool.name === "open_recoup_workflows_sidebar");
+      expect(sidebar?.title).toBe("Explore Recoup workflows");
+      expect(sidebar?._meta?.["openai/ui"]).toEqual({ entrypoints: [{ type: "global" }] });
+      expect(sidebar?._meta?.ui).toMatchObject({
+        resourceUri: "ui://recoup/explore.html",
+        visibility: ["app"],
+      });
+      const sidebarResult = await client.callTool({
+        name: "open_recoup_workflows_sidebar",
+        arguments: {},
+      });
+      expect(sidebarResult.structuredContent).toMatchObject({ messageTarget: "new" });
       expect(open?._meta?.ui).toMatchObject({ resourceUri: "ui://recoup/explore.html" });
       const result = await client.callTool({ name: "open_recoup_workflows", arguments: {} });
       expect(result.isError).not.toBe(true);
-      expect(result.structuredContent).toMatchObject({ title: "Recoup", version: 1 });
+      expect(result.structuredContent).toMatchObject({
+        title: "Recoup",
+        version: 1,
+        messageTarget: "active",
+      });
       const resource = await client.readResource({ uri: "ui://recoup/explore.html" });
       expect(resource.contents[0].mimeType).toBe("text/html;profile=mcp-app");
-      expect(resource.contents[0].text).toContain("Make cover art");
+      expect(resource.contents[0].text).toContain("Create cover art");
       expect(resource.contents[0]._meta?.ui).toMatchObject({
-        csp: { connectDomains: [], resourceDomains: ["https://d8j0ntlcm91z4.cloudfront.net"] },
+        csp: {
+          connectDomains: [],
+          resourceDomains: ["https://d8j0ntlcm91z4.cloudfront.net", "https://api.recoupable.dev"],
+        },
       });
     } finally {
       await client.close();

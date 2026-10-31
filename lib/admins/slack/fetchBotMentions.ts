@@ -83,9 +83,7 @@ export async function fetchBotMentions(options: FetchBotMentionsOptions): Promis
       if (!history.ok) break;
 
       for (const msg of history.messages ?? []) {
-        if (msg.bot_id) continue;
-        if (!msg.user) continue;
-
+        // Bot-authored parents can still contain human mentions in their replies.
         if (msg.ts && (msg.reply_count ?? 0) > 0) {
           threadsToScan.push({
             channelId: channel.id,
@@ -94,6 +92,8 @@ export async function fetchBotMentions(options: FetchBotMentionsOptions): Promis
           });
         }
 
+        if (msg.bot_id) continue;
+        if (!msg.user) continue;
         if (!msg.text?.includes(mentionPattern)) continue;
         if (!msg.ts) continue;
 

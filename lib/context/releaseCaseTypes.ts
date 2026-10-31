@@ -4,6 +4,7 @@ import type {
   ReleaseIdentityObservations,
   ReleaseCaseEvidence,
 } from "./releaseCaseEvidenceTypes";
+import type { ReleaseFormatObservation } from "./releaseFormatTypes";
 /** Database projections, deliberately separate from canonical identity and rights. */
 export interface ReleaseCaseProjection {
   contract_version: "release-case-v1";
@@ -12,6 +13,8 @@ export interface ReleaseCaseProjection {
   subject_id: string;
   title: string | null;
   release_url: string | null;
+  /** Absent before the independently approved database projection migration. */
+  release_format?: ReleaseFormatObservation;
   readiness: "partial" | "blocked";
   tracks: ReleaseTrackObservation[];
   track_page: ReleaseTrackPage;
@@ -37,6 +40,7 @@ export interface ReleaseCaseReview {
   policy_version: string;
   state: "saved" | "unavailable";
   stale: boolean | null;
+  /** Immutable; reviews saved before `release_format` was projected do not contain it. */
   snapshot: Omit<ReleaseCaseProjection, "latest_review"> | null;
   note: string | null;
 }

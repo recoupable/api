@@ -7,11 +7,11 @@ import { runs } from "@trigger.dev/sdk/v3";
  * @returns The raw task run from the SDK, or null if not found
  */
 export async function retrieveTaskRun(runId: string) {
-  const run = await runs.retrieve(runId);
-
-  if (!run) {
-    return null;
+  try {
+    return (await runs.retrieve(runId)) ?? null;
+  } catch (error) {
+    // Trigger's ApiError carries the provider HTTP status. Do not echo its body.
+    if (error instanceof Error && "status" in error && error.status === 404) return null;
+    throw error;
   }
-
-  return run;
 }

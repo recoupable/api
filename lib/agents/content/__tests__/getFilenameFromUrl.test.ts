@@ -37,4 +37,10 @@ describe("getFilenameFromUrl", () => {
       ),
     ).toBe("sjfeqG-MFh_3aG213aIU2_final-video.mp4");
   });
+  it("accepts an image-specific fallback without changing the legacy video default", () => {
+    expect(getFilenameFromUrl("https://cdn.example.com/image", "editorial.jpg")).toBe(
+      "editorial.jpg",
+    );
+    expect(getFilenameFromUrl("https://cdn.example.com/image")).toBe("video.mp4");
+  });
 });

@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
+import { OAuthStorageUnavailableError } from "../OAuthStorageUnavailableError";
 import { createOAuthAdapter } from "../createOAuthAdapter";
 import { createOAuthCipher } from "../createOAuthCipher";
 import type { OAuthStore, OAuthStoredRecord } from "../OAuthStore";
@@ -105,3 +106,21 @@ it.each(["Grant", "RefreshToken", "RecoupGrant"])(
     expect(store.upsert.mock.lastCall?.[0].expiresIn).toBe(300);
   },
 );
+
+it("marks storage failures without retaining secret causes or classifying replay as an outage", async () => {
+  const secret = new Error("private backend credential");
+  store.consume.mockRejectedValue(secret);
+  const error = await factory()("AuthorizationCode")
+    .consume("code")
+    .catch(error => error);
+  expect(error).toBeInstanceOf(OAuthStorageUnavailableError);
+  expect(error.message).toBe("OAuth storage unavailable");
+  expect(error.cause).toBeUndefined();
+  expect(error.stack).not.toContain(secret.message);
+  store.consume.mockResolvedValue(false);
+  const replay = await factory()("AuthorizationCode")
+    .consume("code")
+    .catch(error => error);
+  expect(replay).not.toBeInstanceOf(OAuthStorageUnavailableError);
+  expect(replay.error).toBe("invalid_grant");
+});

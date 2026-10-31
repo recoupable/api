@@ -19,7 +19,7 @@ export async function checkOAuthRateLimit(req: IncomingMessage) {
     { key: hash("all"), limit: 1200 },
     { key: hash(`peer:${peer}`), limit: 120 },
   ];
-  if (req.url?.split("?")[0] === "/api/oauth/reg") {
+  if (["/api/oauth/reg", "/api/oauth/agent/identity"].includes(req.url?.split("?")[0] ?? "")) {
     budgets.push(
       { key: hash("registration"), limit: 100 },
       { key: hash(`registration:${peer}`), limit: 10 },

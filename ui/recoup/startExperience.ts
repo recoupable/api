@@ -8,9 +8,11 @@ export function startExperience(
   cards: HTMLElement,
 ) {
   let pending = false;
+  let confirmationTimer: ReturnType<typeof setTimeout> | undefined;
   return async (id: string) => {
     const feature = features.find(item => item.id === id);
     if (!feature || pending) return;
+    clearTimeout(confirmationTimer);
     pending = true;
     cards.setAttribute("aria-busy", "true");
     status.classList.add("handoff-active");
@@ -18,7 +20,11 @@ export function startExperience(
     try {
       const result = await send(buildWorkflowPrompt(feature));
       if (result.isError) throw new Error("The conversation could not accept the request.");
-      status.textContent = `${feature.title} sent. Continue in your conversation.`;
+      status.textContent = "Sent to chat.";
+      confirmationTimer = setTimeout(() => {
+        status.classList.remove("handoff-active");
+        status.textContent = "";
+      }, 3000);
     } catch (error) {
       status.textContent = `${error instanceof Error ? error.message : "Could not start the experience."} Click the card to try again.`;
     } finally {

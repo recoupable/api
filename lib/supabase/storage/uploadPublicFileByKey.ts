@@ -15,11 +15,12 @@ import { PUBLIC_UPLOADS_BUCKET } from "@/lib/supabase/storage/const";
 export async function uploadPublicFileByKey(
   key: string,
   file: File | Blob,
-  options: { contentType?: string; upsert?: boolean } = {},
+  options: { contentType?: string; upsert?: boolean; metadata?: Record<string, string> } = {},
 ): Promise<void> {
   const { error } = await supabase.storage.from(PUBLIC_UPLOADS_BUCKET).upload(key, file, {
     contentType: options.contentType || "application/octet-stream",
     upsert: options.upsert ?? false,
+    ...(options.metadata ? { metadata: options.metadata } : {}),
   });
 
   if (error) {

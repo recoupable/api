@@ -10,7 +10,11 @@ import { selectLatestCatalogStreamRun } from "@/lib/supabase/catalog_stream_runs
 import { compareSpotifyDailyStreams } from "./compareSpotifyDailyStreams";
 
 /** Read source-reported calendar-day streams, keeping provider identities and missing dates separate. */
-export async function getCatalogStreams(accountId: string, input: CatalogStreamHistoryQuery) {
+export async function getCatalogStreams(
+  accountId: string,
+  input: CatalogStreamHistoryQuery,
+  options?: { workspaceId: string; includeLineage: true },
+) {
   const parsed = validateCatalogStreamHistoryQuery(input);
   if (!parsed.success) return { error: "Invalid stream history query", status: 400 } as const;
   const q = parsed.data;
@@ -19,9 +23,12 @@ export async function getCatalogStreams(accountId: string, input: CatalogStreamH
   const until = new Date(boundary + q.days * 86400000).toISOString().slice(0, 10);
   if (until > new Date().toISOString().slice(0, 10))
     return { error: "Comparison requires completed UTC days", status: 400 } as const;
+  const ownerIds = await getCatalogOwnerIds(accountId);
+  if (options && !ownerIds.includes(options.workspaceId))
+    return { error: "Catalog not found", status: 404 } as const;
   if (
     !(await selectAccountCatalog({
-      accountIds: await getCatalogOwnerIds(accountId),
+      accountIds: options ? [options.workspaceId] : ownerIds,
       catalogId: q.catalog_id,
       throwOnError: true,
     }))
@@ -69,6 +76,7 @@ export async function getCatalogStreams(accountId: string, input: CatalogStreamH
       .map(row => ({ date: row.date, streams: row.streams }));
     recordings.push({
       ...song,
+      ...(options?.includeLineage ? { source_observations: [...latest.values()] } : {}),
       latest_attempt:
         coverage && typeof coverage === "object" && !Array.isArray(coverage)
           ? (coverage[song.isrc] ?? null)

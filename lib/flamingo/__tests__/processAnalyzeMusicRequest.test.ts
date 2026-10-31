@@ -91,6 +91,7 @@ describe("processAnalyzeMusicRequest", () => {
       expect(mockExecuteFullReport).toHaveBeenCalledWith(
         "https://example.com/song.mp3",
         "acc_test",
+        true,
       );
     });
   });

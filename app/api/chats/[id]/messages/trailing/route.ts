@@ -18,18 +18,23 @@ export async function OPTIONS() {
 /**
  * DELETE /api/chats/[id]/messages/trailing
  *
- * Removes the selected message and every message that follows it in chat `id`, so the
- * conversation can be resumed from an earlier turn. The caller must own the chat or
- * have organization-level access; authentication uses `x-api-key` or
- * `Authorization: Bearer`.
+ * Deletes the selected Workflow chat message and its inclusive suffix ordered by
+ * created_at, id. Uses current Workflow ownership (including authorized account
+ * overrides); no legacy memories are read or deleted. Any observed occupied
+ * workflow slot returns 409, but a null slot is not proof of writer drainage.
  *
- * @param request - The incoming request. `from_message_id` is read from the JSON body
- *   and identifies the oldest message to delete (that message and all newer ones go).
- * @param context - Route context from Next.js.
- * @param context.params - Promise resolving to `{ id }`, the chat UUID from the URL path.
- * @returns A 200 NextResponse with the count of deleted messages, 400 on a missing
- *   `from_message_id`, 401/403 when the caller cannot access the chat, or 404 when the
- *   chat or message does not exist.
+ * Caller precondition: no concurrent or outstanding message writers. Concurrent
+ * edit/resend is unsupported. Success means the DELETE statement succeeded,
+ * possibly affecting zero rows; it does not promise durable absence. On failure,
+ * refresh history before deciding further action rather than blindly resending.
+ *
+ * @param request - Authenticated request with UUID `from_message_id` in the query.
+ * @param context - Route context.
+ * @param context.params - Promise resolving to the `{ id }` chat UUID.
+ * @returns 200 `{status:"success",chat_id,from_message_id}`; 400 invalid query;
+ *   401/403 access denied; 404 missing chat/anchor; 409 occupied workflow slot;
+ *   500 read, stored-coordinate or delete failure. Transport failure may leave
+ *   the commit outcome unknown.
  */
 export async function DELETE(
   request: NextRequest,

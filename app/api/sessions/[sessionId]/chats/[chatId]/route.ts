@@ -23,7 +23,8 @@ export async function OPTIONS() {
  * streaming state. Authenticates via Privy Bearer token or
  * `x-api-key`; 404s when the session or chat is missing (or the chat
  * lives in a different session) and 403s when the session is owned by
- * a different account.
+ * a different account. Message read failures return 500; a successful empty
+ * history returns 200 with `messages: []`.
  *
  * @param request - The incoming request.
  * @param options - Route options containing the async params.

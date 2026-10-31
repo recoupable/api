@@ -7,6 +7,9 @@ export async function GET() {
   try {
     return Response.json(getOAuthResourceMetadata(process.env.OAUTH_ISSUER!), { headers });
   } catch {
+    console.error("OAuth resource discovery unavailable", {
+      event: "oauth_resource_discovery_unavailable",
+    });
     return Response.json({ error: "oauth_unavailable" }, { status: 503, headers });
   }
 }

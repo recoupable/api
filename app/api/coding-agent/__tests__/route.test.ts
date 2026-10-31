@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
+import { createHmac } from "node:crypto";
 
 vi.mock("next/server", async () => {
   const actual = await vi.importActual("next/server");
@@ -25,12 +26,27 @@ vi.mock("@/lib/coding-agent/handlers/registerHandlers", () => ({}));
 
 const { POST } = await import("../[platform]/route");
 
+function signedHeaders(body: string) {
+  const timestamp = String(Math.floor(Date.now() / 1000));
+  return {
+    "content-type": "application/json",
+    "x-slack-request-timestamp": timestamp,
+    "x-slack-signature": `v0=${createHmac("sha256", "test-secret")
+      .update(`v0:${timestamp}:${body}`)
+      .digest("hex")}`,
+  };
+}
+
 describe("POST /api/coding-agent/[platform]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("SLACK_SIGNING_SECRET", "test-secret");
   });
 
+  afterEach(() => vi.unstubAllEnvs());
+
   it("responds to Slack url_verification challenge", async () => {
+    const timestamp = String(Math.floor(Date.now() / 1000));
     const body = JSON.stringify({
       type: "url_verification",
       challenge: "test_challenge_value",
@@ -39,7 +55,13 @@ describe("POST /api/coding-agent/[platform]", () => {
     const request = new NextRequest("https://example.com/api/coding-agent/slack", {
       method: "POST",
       body,
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        "x-slack-request-timestamp": timestamp,
+        "x-slack-signature": `v0=${createHmac("sha256", "test-secret")
+          .update(`v0:${timestamp}:${body}`)
+          .digest("hex")}`,
+      },
     });
 
     const response = await POST(request, {
@@ -74,7 +96,7 @@ describe("POST /api/coding-agent/[platform]", () => {
     const request = new NextRequest("https://example.com/api/coding-agent/slack", {
       method: "POST",
       body,
-      headers: { "content-type": "application/json" },
+      headers: signedHeaders(body),
     });
 
     const response = await POST(request, {
@@ -85,7 +107,7 @@ describe("POST /api/coding-agent/[platform]", () => {
     expect(mockSlackWebhook).toHaveBeenCalled();
   });
 
-  it("calls initialize before delegating to webhook handler", async () => {
+  it("delegates initialization to the SDK webhook rather than initializing twice", async () => {
     const callOrder: string[] = [];
     mockInitialize.mockImplementation(async () => {
       callOrder.push("initialize");
@@ -103,14 +125,15 @@ describe("POST /api/coding-agent/[platform]", () => {
     const request = new NextRequest("https://example.com/api/coding-agent/slack", {
       method: "POST",
       body,
-      headers: { "content-type": "application/json" },
+      headers: signedHeaders(body),
     });
 
     await POST(request, {
       params: Promise.resolve({ platform: "slack" }),
     });
 
-    expect(callOrder).toEqual(["initialize", "webhook"]);
+    expect(callOrder).toEqual(["webhook"]);
+    expect(mockInitialize).not.toHaveBeenCalled();
   });
 
   it("does not call initialize for url_verification challenges", async () => {
@@ -125,10 +148,11 @@ describe("POST /api/coding-agent/[platform]", () => {
       headers: { "content-type": "application/json" },
     });
 
-    await POST(request, {
+    const response = await POST(request, {
       params: Promise.resolve({ platform: "slack" }),
     });
 
+    expect(response.status).toBe(401);
     expect(mockInitialize).not.toHaveBeenCalled();
   });
 });

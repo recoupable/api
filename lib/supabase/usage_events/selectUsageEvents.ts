@@ -11,6 +11,8 @@ interface SelectUsageEventsParams {
   orderBy?: "created_at" | "credits_deducted";
   /** Keyset for cost paging: rows strictly after this `(credits_deducted, id)` pair. */
   costBefore?: { creditsDeducted: number; id: string };
+  /** Time keyset: rows strictly after this descending (created_at, id) pair. */
+  timeBefore?: { createdAt: string; id: string };
   /** Inclusive zero-indexed range start. */
   from: number;
   /** Inclusive zero-indexed range end. */
@@ -37,6 +39,10 @@ export async function selectUsageEvents(
   if (params.accountId) query = query.eq("account_id", params.accountId);
   if (params.createdAfter) query = query.gte("created_at", params.createdAfter);
   if (params.createdBefore) query = query.lt("created_at", params.createdBefore);
+  if (params.timeBefore) {
+    const { createdAt, id } = params.timeBefore;
+    query = query.or(`created_at.lt.${createdAt},and(created_at.eq.${createdAt},id.lt.${id})`);
+  }
   if (params.costBefore) {
     const { creditsDeducted, id } = params.costBefore;
     query = query.or(

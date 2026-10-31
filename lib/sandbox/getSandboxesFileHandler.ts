@@ -3,6 +3,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetSandboxesFileRequest } from "./validateGetSandboxesFileRequest";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { getRawFileContent } from "@/lib/github/getRawFileContent";
+import { getVersionedFileContent } from "@/lib/github/getVersionedFileContent";
 import { resolveSubmodulePath } from "@/lib/github/resolveSubmodulePath";
 import { isBinaryFile } from "@/lib/github/isBinaryFile";
 
@@ -10,12 +11,13 @@ import { isBinaryFile } from "@/lib/github/isBinaryFile";
  * Handler for retrieving file contents from a sandbox's GitHub repository.
  * Requires authentication via x-api-key header or Authorization bearer token.
  *
- * Resolves the github_repo from the authenticated account's snapshot,
+ * Resolves the github_repo from the authenticated or explicitly authorized account's snapshot,
  * then fetches the raw file content from the repository.
  * Binary files (images, PDFs, fonts, etc.) are automatically returned as base64.
  *
  * Query parameters:
  * - path: The file path within the repository (required)
+ * - account_id: Optional authorized account UUID; echoed on success
  *
  * @param request - The request object.
  * @returns A NextResponse with the file content or error.
@@ -50,7 +52,9 @@ export async function getSandboxesFileHandler(request: NextRequest): Promise<Nex
 
   const resolved = await resolveSubmodulePath({ githubRepo, path });
   const format = isBinaryFile(path) ? ("base64" as const) : undefined;
-  const result = await getRawFileContent({ ...resolved, format });
+  const result = validated.includeRevision
+    ? await getVersionedFileContent({ ...resolved, format })
+    : await getRawFileContent({ ...resolved, format });
 
   if ("error" in result) {
     return NextResponse.json(
@@ -63,6 +67,8 @@ export async function getSandboxesFileHandler(request: NextRequest): Promise<Nex
     {
       status: "success",
       content: result.content,
+      ...(validated.targetAccountId && { account_id: validated.targetAccountId }),
+      ...("sha" in result && { sha: result.sha }),
       ...("encoding" in result && { encoding: result.encoding }),
     },
     { status: 200, headers: getCorsHeaders() },

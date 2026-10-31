@@ -116,6 +116,16 @@ describe("validateAuthContext", () => {
         orgId: null,
         authToken: "valid-token",
       });
+      expect(mockGetAuthenticatedAccountId).toHaveBeenCalledWith(request);
+    });
+
+    it("opts out of onboarding only when explicitly requested", async () => {
+      const request = createMockRequest({ authorization: "Bearer valid-token" });
+      mockGetAuthenticatedAccountId.mockResolvedValue("existing-account");
+      await validateAuthContext(request as never, { allowAccountCreation: false });
+      expect(mockGetAuthenticatedAccountId).toHaveBeenCalledWith(request, {
+        allowAccountCreation: false,
+      });
     });
 
     it("strips Bearer prefix from auth token", async () => {

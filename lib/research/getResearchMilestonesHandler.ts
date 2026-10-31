@@ -27,7 +27,7 @@ export async function getResearchMilestonesHandler(request: NextRequest): Promis
 
     if ("error" in result) return errorResponse(result.error, result.status);
     return successResponse({
-      milestones: (result.data as Record<string, unknown>)?.insights || [],
+      milestones: Array.isArray(result.data) ? result.data : [],
     });
   } catch (error) {
     console.error("[ERROR] getResearchMilestonesHandler:", error);

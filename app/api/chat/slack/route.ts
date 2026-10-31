@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
  * @returns The webhook handler response or url_verification challenge
  */
 export async function POST(request: NextRequest) {
-  const verification = await handleUrlVerification(request);
+  const verification = await handleUrlVerification(request, process.env.SLACK_CHAT_SIGNING_SECRET);
   if (verification) return verification;
 
   await slackChatBot.initialize();

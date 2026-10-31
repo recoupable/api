@@ -140,6 +140,25 @@ export async function selectTableName({
 - All API routes should have JSDoc comments
 - Run `pnpm lint` before committing
 
+### SRP/DRY review checklist
+
+Apply the existing Code Principles before commit/push and when reviewing a changed
+feature. Keep the review focused on that feature and its existing consumers.
+
+- [ ] Keep one exported function per purpose-named file. Put new exported parsers,
+  mappers and type guards in files that describe their responsibility.
+- [ ] Keep re-export barrels free of domain parsing, transforms and I/O. The MCP
+  `index.ts` registration entry points documented below remain responsible for
+  assembling tool registrations.
+- [ ] Reuse the owning domain's Zod schema/validator and business functions when
+  existing API and MCP interfaces expose the same capability.
+- [ ] Check required fields, mutual exclusions, defaults and limits after each
+  interface's input adaptation. Preserve intentional transport differences, such
+  as server-supplied actions, authentication context and grant-specific tool
+  availability.
+- [ ] Reuse an existing parsing/normalization helper, or extract a shared helper
+  when the changed feature repeats the same transform.
+
 ### Terminology
 
 Use **"account"** terminology, never "entity" or "user". All entities in the system (individuals, artists, organizations) are "accounts". When referring to specific types, use the specific name:
@@ -148,6 +167,13 @@ Use **"account"** terminology, never "entity" or "user". All entities in the sys
 - ❌ `entity_id`, "entity", "user"
 
 ### API Response Shapes
+
+The shared error and authentication-message envelopes are typed in
+`lib/networking/errorResponseSchemas.ts`. Use `errorResponse` or
+`messageErrorResponse` while preserving an endpoint's existing wire shape.
+The bounded published response-schema export and coordinated Marketing fixture
+workflow are documented in `lib/contracts/README.md`; run
+`pnpm typecheck:response-contracts` and the contract tests when changing them.
 
 Keep response bodies **flat** — put fields at the root level, not nested inside a `data` wrapper:
 
@@ -244,7 +270,6 @@ Both API keys and Privy access tokens resolve to an `accountId`. Never accept `a
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
 const authResult = await validateAuthContext(request, {
-  accountId: body.account_id,        // Optional: for account_id override
   organizationId: body.organization_id, // Optional: for org context
 });
 
@@ -416,6 +441,7 @@ import { z } from "zod";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 // Import shared domain logic
 import { sharedDomainFunction } from "@/lib/[domain]/sharedDomainFunction";
 
@@ -432,9 +458,10 @@ export function registerToolNameTool(server: McpServer): void {
     },
     async (args, extra: RequestHandlerExtra<ServerRequest, ServerNotification>) => {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
-      const accountId = authInfo?.extra?.accountId;
+      const { accountId, error } = await resolveAccountId({ authInfo, accountIdOverride: undefined });
       const orgId = authInfo?.extra?.orgId ?? null;
 
+      if (error) return getToolResultError(error);
       if (!accountId) {
         return getToolResultError("Authentication required.");
       }
@@ -457,6 +484,15 @@ export function registerToolNameTool(server: McpServer): void {
 - `getToolResultSuccess(data)` - Wrap successful responses
 - `getToolResultError(message)` - Wrap error responses
 - `resolveAccountId({ authInfo, accountIdOverride })` - Resolve account from auth
+
+## Upload storage policy
+
+Use Supabase Storage for new media/file writes; do not add Arweave uploads or
+restore the Arweave wallet dependency. Keep existing `ar://` and gateway URL
+read compatibility. Preserve visibility: `public-uploads` objects are public to
+anyone with the URL; private Files and release-pack audio must retain their
+private storage and authorized/signed delivery paths. Upload authentication and
+uploader attribution come from verified server context, never caller-supplied IDs.
 
 ## Constants (`lib/const.ts`)
 
@@ -482,3 +518,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 Subscription session requests accept optional `fulfillment: "recoup-plugin"`. The verified Stripe checkout completed/async-payment-succeeded webhook links the account and sends a download email only for a paid, active, linked subscription. The destination is fixed to the marketing setup page; no caller-supplied URL enters email. Plugin checkout suppresses the generic new-account welcome. Delivery failures return 500 for Stripe retry; Resend uses a session idempotency key, and the session records `pluginEmailSent` after success. No recurring update email is scheduled. Deploy this API support before enabling the companion marketing checkout.
 
 `POST /api/plugin/download-access` verifies the private checkout-session capability against Stripe (completed, paid, plugin fulfillment, active Starter/Pro). It returns only an access boolean; it never authenticates an account. The payment email and Stripe return carry the same private link fragment so download needs no second sign-in.
+
+## OAuth discovery aliases
+
+`/.well-known/oauth-authorization-server` redirects to the RFC 8414 document
+for the configured path-based issuer (`/.well-known/oauth-authorization-server/api/oauth`).
+The alias uses the same validated issuer as protected-resource metadata, honors
+`OAUTH_ENABLED`, and never derives identity from caller headers. Token issuance,
+scopes and consent remain owned by the existing OAuth provider.

@@ -20,8 +20,8 @@ describe("waitForTerminalRunStatus", () => {
   beforeEach(() => vi.clearAllMocks());
   afterEach(() => vi.useRealTimers());
 
-  it("returns true immediately when the first status is terminal", async () => {
-    statusSequence("cancelled");
+  it.each(["cancelled", "completed", "failed"])("returns true immediately for %s", async status => {
+    statusSequence(status);
     await expect(waitForTerminalRunStatus("run-1")).resolves.toBe(true);
   });
 

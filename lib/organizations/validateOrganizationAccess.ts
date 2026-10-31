@@ -1,8 +1,10 @@
+import type { OrganizationAccessObservation } from "@/lib/auth/VerificationEvidence";
 import { getAccountOrganizations } from "@/lib/supabase/account_organization_ids/getAccountOrganizations";
 
 export interface ValidateOrganizationAccessParams {
   accountId: string;
   organizationId: string;
+  onAllowed?: (observation: OrganizationAccessObservation) => void;
 }
 
 /**
@@ -28,6 +30,7 @@ export async function validateOrganizationAccess(
 
   // Account IS the organization
   if (accountId === organizationId) {
+    params.onAllowed?.({ basis: "self_organization", organizationId });
     return true;
   }
 
@@ -37,5 +40,6 @@ export async function validateOrganizationAccess(
     organizationId,
   });
 
+  if (memberships.length > 0) params.onAllowed?.({ basis: "membership", organizationId });
   return memberships.length > 0;
 }

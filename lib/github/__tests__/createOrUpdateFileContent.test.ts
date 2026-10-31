@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { afterEach, describe, it, expect, vi, beforeEach } from "vitest";
 import { createOrUpdateFileContent } from "../createOrUpdateFileContent";
 import { parseGitHubRepoUrl } from "../parseGitHubRepoUrl";
 
@@ -19,9 +19,12 @@ describe("createOrUpdateFileContent", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(parseGitHubRepoUrl).mockReturnValue({ owner: "owner", repo: "repo" });
     process.env.GITHUB_TOKEN = "test-token";
   });
+
+  afterEach(() => vi.restoreAllMocks());
 
   it("returns error for invalid GitHub URL", async () => {
     vi.mocked(parseGitHubRepoUrl).mockReturnValue(null);
@@ -80,7 +83,8 @@ describe("createOrUpdateFileContent", () => {
 
     const result = await createOrUpdateFileContent(validParams);
 
-    expect(result).toEqual({ error: "Failed to check existing file: 403 Rate limited" });
+    expect(result).toEqual({ error: "Failed to check existing file" });
+    expect(console.error).toHaveBeenCalledWith("[GitHub] File lookup failed:", 403, "Rate limited");
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
@@ -93,7 +97,12 @@ describe("createOrUpdateFileContent", () => {
 
     const result = await createOrUpdateFileContent(validParams);
 
-    expect(result).toEqual({ error: "Failed to upload file: 422 Validation failed" });
+    expect(result).toEqual({ error: "Failed to upload file" });
+    expect(console.error).toHaveBeenCalledWith(
+      "[GitHub] File commit failed:",
+      422,
+      "Validation failed",
+    );
   });
 
   it("returns error on network failure during GET", async () => {
@@ -101,7 +110,7 @@ describe("createOrUpdateFileContent", () => {
 
     const result = await createOrUpdateFileContent(validParams);
 
-    expect(result).toEqual({ error: "Network error checking existing file: Connection refused" });
+    expect(result).toEqual({ error: "Failed to check existing file" });
   });
 
   it("returns error on network failure during PUT", async () => {
@@ -111,7 +120,7 @@ describe("createOrUpdateFileContent", () => {
 
     const result = await createOrUpdateFileContent(validParams);
 
-    expect(result).toEqual({ error: "Network error uploading file: Timeout" });
+    expect(result).toEqual({ error: "Failed to upload file" });
   });
 
   it("encodes path segments in the URL", async () => {

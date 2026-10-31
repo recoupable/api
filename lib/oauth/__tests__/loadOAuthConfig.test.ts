@@ -20,6 +20,13 @@ it("loads only explicit stable secrets and canonical URLs", () => {
   expect(result.resource).toBe("https://api.example.test/mcp");
   expect(result.indexKey.length).toBe(32);
 });
+it.each([undefined, "false", "TRUE", "1", "true"])(
+  "requires an explicit registration opt-in: %s",
+  value => {
+    const config = loadOAuthConfig({ ...environment, OAUTH_AGENT_REGISTRATION_ENABLED: value });
+    expect(config.agentAuthEnabled).toBe(value === "true");
+  },
+);
 it.each([
   { OAUTH_ISSUER: "http://api.example.test/api/oauth" },
   { OAUTH_ISSUER: "https://api.example.test/api/oauth?evil=1" },

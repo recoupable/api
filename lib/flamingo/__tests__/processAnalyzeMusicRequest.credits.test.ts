@@ -66,8 +66,29 @@ describe("processAnalyzeMusicRequest — credits", () => {
       { accountId: "acc_1" },
     );
 
-    expect(executeFullReport).toHaveBeenCalledWith("https://example.com/song.mp3", "acc_1");
+    expect(executeFullReport).toHaveBeenCalledWith("https://example.com/song.mp3", "acc_1", true);
     // The single-call charge must not double up on top of the per-section ones.
     expect(chargeForFlamingoCall).not.toHaveBeenCalled();
+  });
+  it("omits private attachment URLs from single-call usage records", async () => {
+    vi.mocked(callFlamingoGenerate).mockResolvedValue({ response: "jazz", elapsed_seconds: 2.4 });
+    await processAnalyzeMusicRequest(
+      { ...base, preset: "catalog_metadata", audio_url: "https://example.com/audio?token=private" },
+      { accountId: "acc_1", recordAudioUrl: false },
+    );
+    expect(chargeForFlamingoCall).toHaveBeenCalledWith({ accountId: "acc_1", elapsedSeconds: 2.4 });
+  });
+
+  it("passes attachment privacy through to full reports", async () => {
+    vi.mocked(executeFullReport).mockResolvedValue({ report: {}, elapsed_seconds: 12 });
+    await processAnalyzeMusicRequest(
+      { ...base, preset: "full_report", audio_url: "https://example.com/audio?token=private" },
+      { accountId: "acc_1", recordAudioUrl: false },
+    );
+    expect(executeFullReport).toHaveBeenCalledWith(
+      "https://example.com/audio?token=private",
+      "acc_1",
+      false,
+    );
   });
 });

@@ -1,3 +1,4 @@
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { generateUUID } from "@/lib/uuid/generateUUID";
@@ -35,7 +36,9 @@ export async function createSessionChatHandler(
   const requestedChatId = body.id ?? null;
 
   if (requestedChatId) {
-    const existing = (await selectChats({ id: requestedChatId }))[0] ?? null;
+    const chats = await selectChats({ id: requestedChatId });
+    if (chats === null) return errorResponse("Failed to load chats", 500);
+    const existing = chats[0] ?? null;
     if (existing) {
       if (existing.session_id !== sessionId) {
         return NextResponse.json(

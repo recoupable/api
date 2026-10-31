@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isValidTimeZone } from "@/lib/tasks/timezone/isValidTimeZone";
+import { isValidTaskSchedule } from "@/lib/tasks/isValidTaskSchedule";
 
 /**
  * Zod schemas for POST /api/tasks and MCP `create_task`, aligned with `CreateTaskRequest` in OpenAPI.
@@ -17,6 +18,7 @@ const createTaskBodyFields = {
   schedule: z
     .string()
     .min(1, "schedule parameter is required")
+    .refine(isValidTaskSchedule, "schedule must be a valid cron expression without seconds")
     .describe("Cron expression for when the task should run"),
   artist_account_id: z
     .string()

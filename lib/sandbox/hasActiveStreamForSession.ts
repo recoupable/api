@@ -7,9 +7,11 @@ import { selectChats } from "@/lib/supabase/chats/selectChats";
  * served — pausing the sandbox mid-stream would 500 the response.
  *
  * @param sessionId - The session to check.
- * @returns true when at least one chat has an active stream id.
+ * @returns true when a stream exists or its absence cannot be established.
  */
 export async function hasActiveStreamForSession(sessionId: string): Promise<boolean> {
   const chats = await selectChats({ sessionId });
+  // A failed read is not evidence that the sandbox is safe to hibernate.
+  if (chats === null) return true;
   return chats.some(chat => chat.active_stream_id !== null);
 }

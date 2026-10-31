@@ -1,24 +1,6 @@
 import { z } from "zod";
 import { callContextRpc } from "./callContextRpc";
-
-const pageSchema = z.strictObject({
-  catalogId: z.uuid(),
-  catalogSubjectId: z.uuid(),
-  members: z
-    .array(
-      z.strictObject({
-        subjectId: z.uuid(),
-        kind: z.literal("recording"),
-        identityConfirmed: z.literal(true),
-        availableFields: z.tuple([z.literal("isrc")]),
-        reusableModules: z.array(z.string()),
-        isrc: z.string().min(1).max(100),
-      }),
-    )
-    .max(100),
-  nextCursor: z.string().min(1).max(100).nullable(),
-  hasMore: z.boolean(),
-});
+import { catalogMemberTargetPageSchema } from "@/lib/context/catalogMemberTargetPageSchema";
 
 /** Expanded and still-current catalog members only; the database rechecks access. */
 export async function listContextCatalogMemberTargets(
@@ -33,7 +15,7 @@ export async function listContextCatalogMemberTargets(
   z.uuid().parse(subjectId);
   z.number().int().min(1).max(100).parse(limit);
   if (afterIsrc !== undefined) z.string().min(1).max(100).parse(afterIsrc);
-  const page = pageSchema.parse(
+  const page = catalogMemberTargetPageSchema.parse(
     await callContextRpc("list_context_catalog_member_targets", {
       p_owner: owner,
       p_request: requestId,

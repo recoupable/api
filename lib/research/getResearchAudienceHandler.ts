@@ -1,6 +1,6 @@
 import { type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { validateArtistRequest } from "@/lib/research/validateArtistRequest";
+import { validateGetResearchAudienceRequest } from "@/lib/research/validateGetResearchAudienceRequest";
 import { handleArtistResearch } from "@/lib/research/handleArtistResearch";
 import { successResponse } from "@/lib/networking/successResponse";
 import { errorResponse } from "@/lib/networking/errorResponse";
@@ -18,14 +18,13 @@ import { endpointModelId } from "@/lib/credits/endpointModelId";
  */
 export async function getResearchAudienceHandler(request: NextRequest): Promise<NextResponse> {
   try {
-    const validated = await validateArtistRequest(request);
+    const validated = await validateGetResearchAudienceRequest(request);
     if (validated instanceof NextResponse) return validated;
 
-    const { searchParams } = new URL(request.url);
-    const platform = searchParams.get("platform") || "instagram";
+    const { platform, ...artist } = validated;
     const result = await handleArtistResearch({
       modelId: endpointModelId(request, "/api/research/audience"),
-      ...validated,
+      ...artist,
       path: cmId => `/artist/${cmId}/${platform}-audience-stats`,
     });
 

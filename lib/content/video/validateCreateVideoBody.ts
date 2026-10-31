@@ -5,7 +5,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { safeParseJson } from "@/lib/networking/safeParseJson";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 
-export const createVideoBodySchema = z.object({
+export const createVideoBodySchema = z.strictObject({
   prompt: z.string().min(1).max(50000),
   prompt_expansion_mode: z.enum(["balanced", "quality"]).optional().default("balanced"),
   image_url: z.string().url().optional(),
@@ -15,6 +15,18 @@ export const createVideoBodySchema = z.object({
   seed: z.number().int().optional(),
   enable_safety_checker: z.boolean().optional().default(true),
   sync_mode: z.boolean().optional().default(false),
+  audio_url: z
+    .never({
+      error:
+        "audio_url requires POST /api/content/lipsync; hosted presets use POST /api/content/create with lipsync: true",
+    })
+    .optional(),
+  mode: z
+    .never({
+      error:
+        "mode is no longer supported; use image_url/end_image_url for frame control or POST /api/content/lipsync for audio-driven generation",
+    })
+    .optional(),
 });
 
 export type ValidatedCreateVideoBody = { accountId: string } & z.infer<

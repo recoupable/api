@@ -29,11 +29,13 @@ interface SectionResult {
  *
  * @param audioUrl - Public URL to the audio file
  * @param accountId - The account the section calls are charged to
+ * @param recordAudioUrl - False for temporary host attachment URLs
  * @returns Combined report object with all sections + total elapsed time
  */
 export async function executeFullReport(
   audioUrl: string,
   accountId: string,
+  recordAudioUrl = true,
 ): Promise<{
   report: Record<string, unknown>;
   elapsed_seconds: number;
@@ -62,7 +64,7 @@ export async function executeFullReport(
       await chargeForFlamingoCall({
         accountId,
         elapsedSeconds: result.elapsed_seconds,
-        audioUrl,
+        ...(recordAudioUrl ? { audioUrl } : {}),
       });
 
       return {

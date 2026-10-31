@@ -19,10 +19,15 @@ const row: Tables<"usage_events"> = {
 };
 
 describe("toUsageEvent", () => {
+  it("preserves database microseconds when normalizing the timestamp", () => {
+    expect(
+      toUsageEvent({ ...row, created_at: "2026-08-27T13:56:58.123456+02:00" }).created_at,
+    ).toBe("2026-08-27T11:56:58.123456Z");
+  });
   it("maps the row to the documented item", () => {
     expect(toUsageEvent(row)).toEqual({
       id: "3AANn3Ij9uF-zZIlW_zlP",
-      created_at: "2026-08-27T11:56:58.000Z",
+      created_at: "2026-08-27T11:56:58.000000Z",
       source: "api",
       agent_type: "main",
       provider: "fal",

@@ -1,8 +1,17 @@
+import { z } from "zod";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
+
+const getContentValidateQuerySchema = z.object({
+  artist_account_id: z
+    .string({ message: "artist_account_id query parameter is required" })
+    .min(1, "artist_account_id query parameter is required")
+    .uuid("artist_account_id must be a valid UUID"),
+});
 
 export type ValidatedGetContentValidateQuery = {
   accountId: string;
@@ -22,14 +31,14 @@ export async function validateGetContentValidateQuery(
     return authResult;
   }
 
-  const artistAccountId = request.nextUrl.searchParams.get("artist_account_id");
-  if (!artistAccountId) {
-    return NextResponse.json(
-      { status: "error", error: "artist_account_id query parameter is required" },
-      { status: 400, headers: getCorsHeaders() },
-    );
+  const parsed = getContentValidateQuerySchema.safeParse({
+    artist_account_id: request.nextUrl.searchParams.get("artist_account_id") ?? undefined,
+  });
+  if (!parsed.success) {
+    return errorResponse(parsed.error.issues[0].message, 400);
   }
 
+  const artistAccountId = parsed.data.artist_account_id;
   const artistSlug = await resolveArtistSlug(artistAccountId);
   if (!artistSlug) {
     return NextResponse.json(

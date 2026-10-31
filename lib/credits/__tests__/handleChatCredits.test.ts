@@ -204,3 +204,37 @@ describe("handleChatCredits", () => {
     });
   });
 });
+
+describe("tool-call metadata forwarding", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+  it.each([0, 3])(
+    "forwards count %s without changing cost inputs or amount",
+    async toolCallCount => {
+      mockGetCreditUsage.mockResolvedValue(0.05);
+      mockRecordCreditDeduction.mockResolvedValue({ success: true });
+      await handleChatCredits({
+        usage: USAGE,
+        model: "existing-model",
+        accountId: "account",
+        gatewayCostUsd: 0.05,
+        source: "api",
+        resourceUrl: "/sessions/session/chats/chat",
+        toolCallCount,
+      });
+      expect(mockGetCreditUsage).toHaveBeenCalledExactlyOnceWith(USAGE, "existing-model", 0.05);
+      expect(mockRecordCreditDeduction).toHaveBeenCalledExactlyOnceWith({
+        accountId: "account",
+        creditsToDeduct: 50_000,
+        source: "api",
+        modelId: "existing-model",
+        inputTokens: 1000,
+        outputTokens: 500,
+        cachedInputTokens: 0,
+        resourceUrl: "/sessions/session/chats/chat",
+        toolCallCount,
+      });
+    },
+  );
+});

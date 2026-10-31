@@ -2,17 +2,18 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { validateChatAccess } from "@/lib/chats/validateChatAccess";
-import selectMemories from "@/lib/supabase/memories/selectMemories";
+import { validateChatOwnership } from "@/lib/chat/validateChatOwnership";
+import { selectChatMessages } from "@/lib/supabase/chat_messages/selectChatMessages";
+import { buildChatMessageTrailingDeleteFilter } from "@/lib/supabase/chat_messages/buildChatMessageTrailingDeleteFilter";
+import type { ChatMessageTrailingBoundary } from "@/lib/supabase/chat_messages/ChatMessageTrailingBoundary";
+import { errorResponse } from "@/lib/networking/errorResponse";
 
 const deleteTrailingQuerySchema = z.object({
   from_message_id: z.string().uuid("from_message_id must be a valid UUID"),
 });
 
-export interface ValidatedDeleteTrailingMessagesQuery {
+export interface ValidatedDeleteTrailingMessagesQuery extends ChatMessageTrailingBoundary {
   chatId: string;
-  fromMessageId: string;
-  fromTimestamp: string;
 }
 
 /**
@@ -26,9 +27,9 @@ export async function validateDeleteTrailingMessagesQuery(
   request: NextRequest,
   chatId: string,
 ): Promise<NextResponse | ValidatedDeleteTrailingMessagesQuery> {
-  const roomResult = await validateChatAccess(request, chatId);
-  if (roomResult instanceof NextResponse) {
-    return roomResult;
+  const ownership = await validateChatOwnership(request, chatId);
+  if (ownership instanceof NextResponse) {
+    return ownership;
   }
 
   const parsedQuery = deleteTrailingQuerySchema.safeParse({
@@ -47,21 +48,25 @@ export async function validateDeleteTrailingMessagesQuery(
     );
   }
 
-  const [memory] =
-    (await selectMemories(roomResult.room.id, {
-      memoryId: parsedQuery.data.from_message_id,
-      limit: 1,
-    })) ?? [];
-  if (!memory) {
-    return NextResponse.json(
-      { status: "error", error: "Message not found" },
-      { status: 404, headers: getCorsHeaders() },
-    );
+  if (ownership.chat.active_stream_id !== null) {
+    return errorResponse("Chat has an active workflow reservation; retry after it clears", 409);
   }
 
-  return {
-    chatId: roomResult.room.id,
-    fromMessageId: parsedQuery.data.from_message_id,
-    fromTimestamp: memory.updated_at,
-  };
+  const messages = await selectChatMessages({
+    chatId: ownership.chat.id,
+    id: parsedQuery.data.from_message_id,
+    limit: 1,
+  });
+  if (messages === null) return errorResponse("Failed to load messages", 500);
+  const message = messages[0];
+  if (!message) return errorResponse("Message not found", 404);
+
+  const boundary = { fromMessageId: message.id, fromTimestamp: message.created_at };
+  try {
+    buildChatMessageTrailingDeleteFilter(boundary);
+  } catch {
+    return errorResponse("Invalid message boundary", 500);
+  }
+
+  return { chatId: ownership.chat.id, ...boundary };
 }

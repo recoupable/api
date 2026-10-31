@@ -51,6 +51,14 @@ beforeEach(() => {
 });
 
 describe("migrateRoom", () => {
+  it("stops instead of inserting a chat when the existing-chat read fails", async () => {
+    vi.mocked(selectSessions).mockResolvedValue([{ id: "s1" } as never]);
+    vi.mocked(selectChats).mockResolvedValue(null);
+    await expect(migrateRoom(room, { dryRun: false })).rejects.toThrow("Failed to read chat");
+    expect(insertChat).not.toHaveBeenCalled();
+    expect(upsertChatMessages).not.toHaveBeenCalled();
+  });
+
   it("performs NO writes in dry-run mode but still reads + reports stats", async () => {
     const stats = await migrateRoom(room, { dryRun: true });
 

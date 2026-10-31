@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.catalog-reports.json",
+  "include": [
+    "lib/catalog/reports/**/*.ts",
+    "scripts/catalog-storage-integration/**/*.ts",
+    "vitest.catalog-storage.config.ts"
+  ],
+  "exclude": ["node_modules"],
+  "compilerOptions": {
+    "types": ["node", "next"]
+  }
+}

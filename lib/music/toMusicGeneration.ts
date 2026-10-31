@@ -16,7 +16,7 @@ export type MusicGeneration = {
 
 /**
  * Map a stored generation onto the documented resource
- * (recoupable/docs#308).
+ * (recoupable/docs-legacy#308).
  *
  * A whitelist, not a spread: the row also carries the owning account and the
  * handles to fal and the workflow run, none of which a client needs.

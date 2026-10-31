@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "strict": true,
+    "incremental": false
+  },
+  "include": [
+    "lib/networking/errorResponse.ts",
+    "lib/networking/messageErrorResponse.ts",
+    "lib/networking/__tests__/errorResponse.typecheck.ts"
+  ]
+}

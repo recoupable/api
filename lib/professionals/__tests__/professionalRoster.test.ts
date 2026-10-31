@@ -26,6 +26,7 @@ const body = {
 };
 const professional = {
   id,
+  artist_id: "10000000-0000-4000-8000-000000000005",
   organization_id: org,
   name: "Test Writer",
   roles: ["producer", "songwriter"],
@@ -170,7 +171,8 @@ it("MCP list preserves authenticated organization and cursor and returns the pag
     after: id,
   });
   expect(result.isError).not.toBe(true);
-  expect(result.content).toEqual([{ type: "text", text: JSON.stringify(page) }]);
+  expect(result.content[0].type).toBe("text");
+  expect(JSON.parse(result.content[0].text as string)).toEqual(page);
 });
 
 it("rejects delegated OAuth even if a legacy roster handler is invoked directly", async () => {
@@ -199,4 +201,10 @@ it("rejects delegated OAuth even if a legacy roster handler is invoked directly"
   expect(result.isError).toBe(true);
   expect(resolveAccountId).not.toHaveBeenCalled();
   expect(executeProfessionalRoster).not.toHaveBeenCalled();
+});
+
+it("rejects a saved professional without its artist account identity", async () => {
+  const { artist_id: _artistId, ...unlinked } = professional;
+  vi.mocked(executeProfessionalRoster).mockResolvedValue({ professional: unlinked, created: true });
+  expect((await professionalRosterHandler(request())).status).toBe(503);
 });

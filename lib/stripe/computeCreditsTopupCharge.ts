@@ -12,7 +12,7 @@ export interface CreditsTopupCharge {
  * Gross up a credits top-up so the customer covers the Stripe processing fee.
  *
  * Solves `charge - (charge * pct + fixed) = credits` for `charge`, ceil-rounded.
- * For 250 credits at 2.9% + 30¢: charge = ceil((250 + 30) / 0.971) = 289¢
+ * For 2,500,000 credits at 2.9% + 30¢: charge = ceil((250 + 30) / 0.971) = 289¢
  * → customer pays $2.89, Stripe takes ~38¢, business nets ≥ 250¢ (= $2.50).
  */
 export function computeCreditsTopupCharge(credits: number): CreditsTopupCharge {

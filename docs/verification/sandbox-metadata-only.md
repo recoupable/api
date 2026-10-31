@@ -1,0 +1,11 @@
+# Sandbox metadata-only lookup
+
+Existing Mono358 / API215 recorded criterion: `metadata_only=true` skips live sandbox status calls and returns the existing snapshot, repository and filetree fields with an empty `sandboxes` array. Current main `b10c117bbe206cc346d4a2539b1e11e6f1b39c2d` still queries every recorded sandbox's live status.
+
+Original215's current head `8136ce3ce53cadf5621a091ff4a751f214d9c89c` and its two retained commits contain fallback/organization changes, not the metadata-only implementation described in its body. This successor implements the recorded criterion directly on current main. It is not a cherry-pick, proof of the old branch's implementation, or a restoration of its legacy fallback behavior. The current sandbox fallback has separate modern source; no change to it is included.
+
+`GET /api/sandboxes?metadata_only=true` uses the same authentication, account access checks, sandbox record filter and snapshot-account resolution as normal requests. It skips only live `getSandboxStatus` calls; database metadata reads and the existing GitHub filetree lookup still run. Missing metadata remains null, and no metadata field or permission is added. Omitted or explicit `false` retains existing live-status behavior. Values other than literal `true` or `false` return400 through the existing Zod query validation path.
+
+This is opt-in. No worker or client is switched, no Trigger job is added or deployed, and no historical setup410 repair is claimed. The source fixtures demonstrate zero live-status calls for a synthetic100-record account in metadata mode and100calls in the unchanged default path. Authentication401 and target403 deny before metadata retrieval; authorized target and sandbox filters remain enforced. The tests invoke the actual GET entrypoint with mocked external leaves. They establish request-to-handler behavior, not live Vercel reliability, database permissions or customer outcomes.
+
+No actual sandbox/GitHub/provider/customer/database/billing operation, credential inspection, migration, permission or deployment setting change was performed. Public request documentation should receive the same optional-boolean description through the existing maintained Docs publication pipeline; no unrelated OpenAPI fixtures are edited here.

@@ -18,17 +18,16 @@ export async function OPTIONS() {
 /**
  * GET /api/artists
  *
- * Retrieves artists with optional organization filtering.
+ * Retrieves artists for the authenticated account with optional organization filtering.
+ * Authentication: x-api-key header or Authorization Bearer token required.
  *
  * Query parameters:
- * - accountId (required): The account's ID (UUID)
- * - orgId (optional): Filter to artists in a specific organization (UUID)
- * - personal (optional): Set to "true" to show only personal (non-org) artists
+ * - account_id (optional): Target account UUID, subject to the caller's access check
+ * - org_id (optional): Filter to artists in a specific organization (UUID)
  *
  * Filtering behavior:
- * - accountId only: Returns all artists (personal + all organizations)
- * - accountId + orgId: Returns only artists in that specific organization
- * - accountId + personal=true: Returns only personal artists (not in any org)
+ * - org_id omitted: Returns personal artists (not linked to an organization)
+ * - org_id provided: Returns artists in that organization for the resolved account
  *
  * @param request - The request object containing query parameters
  * @returns A NextResponse with artists data

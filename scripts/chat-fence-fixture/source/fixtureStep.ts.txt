@@ -1,0 +1,75 @@
+import { appendFile, readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { getWorkflowMetadata, FatalError } from "workflow";
+import { createFencedMessageWriter } from "@/lib/chat/fence/persistence/createFencedMessageWriter";
+import { classifyChatFenceError } from "@/lib/chat/fence/classifyChatFenceError";
+import { createChatFenceAuthority } from "@/lib/chat/fence/createChatFenceAuthority";
+import { parseChatFenceReceipt } from "@/lib/chat/fence/parseChatFenceReceipt";
+import type { ChatFenceAuthority } from "@/lib/chat/fence/chatFenceSchemas";
+
+/** Synthetic effects only. This does not model SQL locks or call a provider. */
+export async function fixtureStep(
+  action: "bind" | "user" | "assistant" | "update_parts" | "provider" | "release" | "key-cleanup",
+  input: { authority: ChatFenceAuthority; attemptId: string; failWrite?: boolean; failAssistant?: boolean; failUpdateParts?: boolean },
+  runId: string,
+) {
+  "use step";
+  const dir = process.env.CHAT_FENCE_FIXTURE_DIR;
+  if (!dir) throw new FatalError("Offline fixture directory is required");
+  const authority = createChatFenceAuthority(input.authority);
+  if (getWorkflowMetadata().workflowRunId !== runId) throw new FatalError("Metadata run mismatch");
+  const file = join(dir, `${authority.owner}.json`);
+  const payload = { epoch: authority.epoch, owner: authority.owner, run_id: runId };
+  if (action === "bind") {
+    const originalAttempt = await readFile(join(dir, `${authority.owner}.claim`), "utf8");
+    if (originalAttempt !== input.attemptId) {
+      await appendFile(join(dir, "events.jsonl"), JSON.stringify({ action: "lost", runId }) + "\n");
+      return { ok: false };
+    }
+    try {
+      await writeFile(file, JSON.stringify({ runId, authority, attemptId: input.attemptId }), { flag: "wx" });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      if (JSON.parse(await readFile(file, "utf8")).runId !== runId) {
+        await appendFile(
+          join(dir, "events.jsonl"),
+          JSON.stringify({ action: "lost", runId }) + "\n",
+        );
+        return { ok: false };
+      }
+    }
+    const result = parseChatFenceReceipt(
+      authority.chatId,
+      { action: "bind", payload: { ...payload, attempt_id: input.attemptId } },
+      { bound: true },
+    );
+    if (!result.ok) throw new FatalError("Invalid bind receipt");
+  } else {
+    if (JSON.parse(await readFile(file, "utf8")).runId !== runId)
+      throw new FatalError("Wrong bound run");
+    if (action === "user" || action === "assistant" || action === "update_parts") {
+      const writer = createFencedMessageWriter({ ...authority, runId }, async (chatId, account, command) => {
+        await appendFile(join(dir, "writes.jsonl"), JSON.stringify({ chatId, account, command, runId }) + "\n");
+        await new Promise(resolve => setTimeout(resolve, 25));
+        if ((action === "user" && input.failWrite) || (action === "assistant" && input.failAssistant))
+          return classifyChatFenceError("40001");
+        return parseChatFenceReceipt(chatId, command, action === "update_parts"
+          ? { updated: !input.failUpdateParts }
+          : { written: true, outcome: "inserted" });
+      });
+      const message = { id: action === "user" ? "synthetic-user" : "synthetic-assistant",
+        role: action === "user" ? "user" as const : "assistant" as const,
+        parts: [{ type: "text" as const, text: "synthetic" }], metadata: { trace: "preserved" } };
+      try {
+        if (action === "user") await writer.insertUser(message);
+        else if (action === "assistant") await writer.upsertAssistant(message);
+        else await writer.updateAssistantParts(message);
+      } catch {
+        // Required persistence is a terminal/reconciliation boundary, never a workflow retry loop.
+        throw new FatalError(`Required ${action === "user" ? "user" : action === "assistant" ? "assistant" : "parts"} write failed`);
+      }
+    }
+  }
+  await appendFile(join(dir, "events.jsonl"), JSON.stringify({ action, runId, authority, attemptId: input.attemptId }) + "\n");
+  return { ok: true };
+}

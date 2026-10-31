@@ -95,18 +95,15 @@ describe("handleStopChatWorkflow", () => {
     expect(await result.json()).toEqual({ success: true, stopped: true });
   });
 
-  it("releases the slot without cancelling for a pending placeholder", async () => {
+  it("returns retryable 503 and holds a pending slot without claiming cancellation", async () => {
     mockValidated("pending-deterministic-uuid");
 
     const result = await handleStopChatWorkflow(makeRequest(), CHAT_ID);
 
     expect(vi.mocked(getRun)).not.toHaveBeenCalled();
-    expect(vi.mocked(compareAndSetChatActiveStreamId)).toHaveBeenCalledWith(
-      CHAT_ID,
-      "pending-deterministic-uuid",
-      null,
-    );
-    expect(await result.json()).toEqual({ success: true, stopped: true });
+    expect(vi.mocked(compareAndSetChatActiveStreamId)).not.toHaveBeenCalled();
+    expect(result.status).toBe(503);
+    expect(await result.json()).toMatchObject({ error: expect.stringContaining("retry") });
   });
 
   it("returns 502 and does NOT release the slot when run cancellation throws", async () => {
@@ -187,4 +184,20 @@ describe("handleStopChatWorkflow", () => {
       vi.useRealTimers();
     }
   });
+});
+
+it("repeated Stop while start is pending stays retryable and never frees the reservation", async () => {
+  vi.clearAllMocks();
+  mockValidated("pending-delayed-start");
+  const first = await handleStopChatWorkflow(makeRequest(), CHAT_ID);
+  const second = await handleStopChatWorkflow(makeRequest(), CHAT_ID);
+  for (const response of [first, second]) {
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({
+      status: "error",
+      error: expect.stringContaining("retry Stop"),
+    });
+  }
+  expect(getRun).not.toHaveBeenCalled();
+  expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
 });

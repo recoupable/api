@@ -51,6 +51,13 @@ describe("retrieveTaskRun", () => {
     expect(result).toBe(mockRun);
   });
 
+  it("normalizes a provider 404 without exposing its response", async () => {
+    vi.mocked(runs.retrieve).mockRejectedValue(
+      Object.assign(new Error("private provider response"), { status: 404 }),
+    );
+    expect(await retrieveTaskRun("missing")).toBeNull();
+  });
+
   it("throws error when runs.retrieve fails", async () => {
     vi.mocked(runs.retrieve).mockRejectedValue(new Error("API error"));
 

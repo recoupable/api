@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { isValidTimeZone } from "@/lib/tasks/timezone/isValidTimeZone";
+import { isValidTaskSchedule } from "@/lib/tasks/isValidTaskSchedule";
 
 /**
  * PATCH /api/tasks JSON body aligned with OpenAPI `UpdateTaskRequest`:
@@ -11,7 +12,11 @@ export const updateTaskRestBodySchema = z
     id: z.string().uuid("id must be a valid UUID"),
     title: z.string().min(1, "title must be a non-empty string").optional(),
     prompt: z.string().min(1, "prompt must be a non-empty string").optional(),
-    schedule: z.string().min(1, "schedule must be a non-empty string").optional(),
+    schedule: z
+      .string()
+      .min(1, "schedule must be a non-empty string")
+      .refine(isValidTaskSchedule, "schedule must be a valid cron expression without seconds")
+      .optional(),
     account_id: z
       .string()
       .uuid("account_id must be a valid UUID")

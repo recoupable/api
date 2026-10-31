@@ -1,5 +1,6 @@
+import type { CredentialObserver } from "./VerificationEvidence";
 import { NextRequest, NextResponse } from "next/server";
-import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
+import { messageErrorResponse } from "@/lib/networking/messageErrorResponse";
 import { getAccountIdByApiKey } from "@/lib/auth/getAccountIdByApiKey";
 
 /**
@@ -10,23 +11,22 @@ import { getAccountIdByApiKey } from "@/lib/auth/getAccountIdByApiKey";
  * @param request - The NextRequest object
  * @returns Either the account ID string, or a NextResponse error if validation fails
  */
-export async function getApiKeyAccountId(request: NextRequest): Promise<string | NextResponse> {
+export async function getApiKeyAccountId(
+  request: NextRequest,
+  onVerified?: CredentialObserver,
+): Promise<string | NextResponse> {
   const apiKey = request.headers.get("x-api-key");
 
   if (!apiKey) {
-    return NextResponse.json(
-      { status: "error", message: "x-api-key header required" },
-      { status: 401, headers: getCorsHeaders() },
-    );
+    return messageErrorResponse("x-api-key header required", 401);
   }
 
-  const accountId = await getAccountIdByApiKey(apiKey);
+  const accountId = onVerified
+    ? await getAccountIdByApiKey(apiKey, onVerified)
+    : await getAccountIdByApiKey(apiKey);
 
   if (!accountId) {
-    return NextResponse.json(
-      { status: "error", message: "Unauthorized" },
-      { status: 401, headers: getCorsHeaders() },
-    );
+    return messageErrorResponse("Unauthorized", 401);
   }
 
   return accountId;

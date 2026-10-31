@@ -12,6 +12,10 @@ vi.mock("@/lib/trigger/retrieveTaskRun", () => ({
   retrieveTaskRun: (...args: unknown[]) => mockRetrieveTaskRun(...args),
 }));
 
+vi.mock("@/lib/supabase/scheduled_actions/selectScheduledActions", () => ({
+  selectScheduledActions: vi.fn(),
+}));
+
 vi.mock("@/lib/mcp/resolveAccountId", () => ({
   resolveAccountId: (...args: unknown[]) => mockResolveAccountId(...args),
 }));
@@ -113,6 +117,7 @@ describe("registerGetTaskRunStatusTool", () => {
       error: null,
     });
     mockRetrieveTaskRun.mockResolvedValue({
+      payload: { accountId: "acc_123" },
       status: "complete",
       data: null,
       metadata: null,
@@ -137,7 +142,8 @@ describe("registerGetTaskRunStatusTool", () => {
       accountId: "acc_123",
       error: null,
     });
-    mockRetrieveTaskRun.mockResolvedValue({
+    const job = {
+      payload: { accountId: "acc_123" },
       status: "complete",
       data: { output: "done" },
       metadata: { logs: ["step 1", "step 2"] },
@@ -146,7 +152,8 @@ describe("registerGetTaskRunStatusTool", () => {
       startedAt: "2024-01-01T00:00:01.000Z",
       finishedAt: "2024-01-01T00:00:05.000Z",
       durationMs: 4000,
-    });
+    };
+    mockRetrieveTaskRun.mockResolvedValue(job);
 
     const result = await registeredHandler(
       { runId: "run_123" },
@@ -158,8 +165,25 @@ describe("registerGetTaskRunStatusTool", () => {
       content: [
         {
           type: "text",
-          text: expect.stringContaining('"status":"complete"'),
+          text: JSON.stringify(job),
         },
+      ],
+    });
+  });
+
+  it("does not expose a foreign run through the API-key tool", async () => {
+    mockResolveAccountId.mockResolvedValue({ accountId: "acc_123", error: null });
+    mockRetrieveTaskRun.mockResolvedValue({
+      payload: { accountId: "other" },
+      output: "private-output",
+    });
+    const result = await registeredHandler(
+      { runId: "foreign" },
+      createMockExtra({ accountId: "acc_123" }),
+    );
+    expect(result).toEqual({
+      content: [
+        { type: "text", text: JSON.stringify({ success: false, message: "Task run not found" }) },
       ],
     });
   });
@@ -202,7 +226,7 @@ describe("registerGetTaskRunStatusTool", () => {
       content: [
         {
           type: "text",
-          text: expect.stringContaining("Trigger API error"),
+          text: JSON.stringify({ success: false, message: "Failed to retrieve task run" }),
         },
       ],
     });

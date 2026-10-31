@@ -61,16 +61,19 @@ describe("handleResumeChatStream", () => {
     expect(getRun).not.toHaveBeenCalled();
   });
 
-  it("returns a terminal finish stream and clears the stale id when the run is already terminal", async () => {
-    withChat(RUN_ID);
-    withRun("completed");
+  it.each(["cancelled", "completed", "failed"])(
+    "returns terminal finish and clears the stale id for %s",
+    async status => {
+      withChat(RUN_ID);
+      withRun(status);
 
-    const res = await handleResumeChatStream(request(), CHAT_ID);
+      const res = await handleResumeChatStream(request(), CHAT_ID);
 
-    expect(res.status).toBe(200);
-    await expect(new Response(res.body).text()).resolves.toContain('"type":"finish"');
-    expect(compareAndSetChatActiveStreamId).toHaveBeenCalledWith(CHAT_ID, RUN_ID, null);
-  });
+      expect(res.status).toBe(200);
+      await expect(new Response(res.body).text()).resolves.toContain('"type":"finish"');
+      expect(compareAndSetChatActiveStreamId).toHaveBeenCalledWith(CHAT_ID, RUN_ID, null);
+    },
+  );
 
   it("streams the run and advertises the run id when the run is live", async () => {
     withChat(RUN_ID);

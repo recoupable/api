@@ -1,9 +1,11 @@
 import { DEFAULT_MODEL } from "@/lib/const";
 import { NextRequest, NextResponse } from "next/server";
-import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
+import { createUIMessageStreamResponse } from "ai";
 import { start, getRun } from "workflow/api";
 import { validateChatWorkflow } from "@/lib/chat/validateChatWorkflow";
-import { maybeResumeChatStream } from "@/lib/chat/maybeResumeChatStream";
+import { gateChatStreamStart } from "@/lib/chat/gateChatStreamStart";
+import { validateChatStreamLifecycleQuery } from "@/lib/chat/validateChatStreamLifecycleQuery";
+import { getChatWorkflowReadable } from "@/lib/chat/getChatWorkflowReadable";
 import { wrapWorkflowStreamWatcher } from "@/lib/chat/wrapWorkflowStreamWatcher";
 import { selectSessions } from "@/lib/supabase/sessions/selectSessions";
 import { selectChats } from "@/lib/supabase/chats/selectChats";
@@ -24,22 +26,21 @@ import { getSandboxSkillDirectories } from "@/lib/skills/getSandboxSkillDirector
 import generateUUID from "@/lib/uuid/generateUUID";
 
 /**
- * Handles POST /api/chat/workflow.
+ * Handles POST /api/chat.
  *
  * Wires the chat UI to a durable Vercel Workflow agent loop. Flow:
  *
  *   1. Validate auth + body (validateChatWorkflow).
  *   2. Verify session + chat ownership; ensure the session has an active sandbox.
- *   3. If a workflow is already running for this chat, resume / 409 via
- *      maybeResumeChatStream (extracted for OCP).
+ *   3. If a workflow is already running, reject the new turn with 409 via
+ *      gateChatStreamStart (extracted for OCP).
  *   4. **Claim `chats.active_stream_id` BEFORE starting the workflow** using
  *      a `pending-<uuid>` placeholder CAS. Closes the race window where two
  *      concurrent requests could both call `start()` and bill the model
  *      before one loses the CAS.
  *   5. Refresh the session's lifecycle-activity timestamp + fire-and-forget
  *      persist the latest user message.
- *   6. start(runAgentWorkflow). Replace the placeholder with the real run id
- *      (we already own the slot, no CAS needed).
+ *   6. start(runAgentWorkflow). Replace the placeholder with the real run id using CAS.
  *   7. Return the workflow's UIMessage stream with x-workflow-run-id header.
  *
  * If we lost the placeholder CAS in step 4, the slot is already held by
@@ -66,14 +67,15 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
 
   // Chat + ownership
   const chats = await selectChats({ id: validated.chatId });
+  if (chats === null) return errorResponse("Failed to load chats", 500);
   const chat = chats[0];
   if (!chat || chat.session_id !== validated.sessionId) {
     return errorResponse("Chat not found", 404);
   }
 
-  // Resume an in-flight workflow for this chat (or 409) before starting a new one.
-  const resumed = await maybeResumeChatStream(validated.chatId, chat.active_stream_id);
-  if (resumed) return resumed;
+  // Reject an unaccepted new turn rather than returning an older response.
+  const recovery = await gateChatStreamStart(validated.chatId, chat.active_stream_id);
+  if (recovery) return recovery;
 
   // Pre-claim the active_stream_id slot with a placeholder BEFORE starting
   // the workflow. This closes the race where two requests both call start()
@@ -123,6 +125,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   const run = await start(runAgentWorkflow, [
     buildRunAgentInput({
       messages: validated.messages,
+      devCatalogSurface: validated.devCatalogSurface,
       chatId: validated.chatId,
       sessionId: validated.sessionId,
       accountId: validated.accountId,
@@ -151,7 +154,9 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   }
 
   return createUIMessageStreamResponse({
-    stream: wrapWorkflowStreamWatcher(run.runId, run.getReadable<UIMessageChunk>()),
+    stream: wrapWorkflowStreamWatcher(run.runId, getChatWorkflowReadable(run), {
+      cancelOnDisconnect: !validateChatStreamLifecycleQuery(request),
+    }),
     headers: { ...getCorsHeaders(), "x-workflow-run-id": run.runId },
   });
 }

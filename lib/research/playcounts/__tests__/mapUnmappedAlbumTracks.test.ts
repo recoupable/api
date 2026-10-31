@@ -48,7 +48,12 @@ describe("mapUnmappedAlbumTracks", () => {
 
     expect(getTracks).toHaveBeenCalledWith({ ids: ["t_new", "t_noisrc"], accessToken: "tok" });
     expect(upsertSongs).toHaveBeenCalledWith([
-      { isrc: "ISRC_NIKES", name: "Nikes on My Feet", album: "K.I.D.S. (Deluxe)" },
+      {
+        isrc: "ISRC_NIKES",
+        name: "Nikes on My Feet",
+        album: "K.I.D.S. (Deluxe)",
+        notes: "Nikes on My Feet by Unknown Artist - a musical track from Unknown Album.",
+      },
     ]);
     expect(upsertSongIdentifiers).toHaveBeenCalledWith([
       { song: "ISRC_NIKES", platform: "spotify", identifier_type: "track_id", value: "t_new" },

@@ -14,7 +14,7 @@ import { toProjectCollaborator } from "@/lib/projects/toProjectCollaborator";
  * GET /api/projects/{projectId}
  *
  * The project, every task on it oldest first, and its collaborators.
- * Contract: recoupable/docs#326.
+ * Contract: recoupable/docs-legacy#326.
  */
 export async function getProjectHandler(
   request: NextRequest,

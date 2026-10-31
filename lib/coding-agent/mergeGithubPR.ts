@@ -43,6 +43,20 @@ export async function mergeGithubPR(
   console.error(
     `[coding-agent] merge failed for ${repo}#${prNumber}: ${response.status} ${errorBody}`,
   );
-  const error = JSON.parse(errorBody);
-  return { ok: false, message: error.message };
+  let message = `GitHub merge failed (HTTP ${response.status})`;
+  try {
+    const error: unknown = JSON.parse(errorBody);
+    if (
+      error !== null &&
+      typeof error === "object" &&
+      "message" in error &&
+      typeof error.message === "string" &&
+      error.message.trim().length > 0
+    ) {
+      message = error.message;
+    }
+  } catch {
+    // Failed HTTP responses may contain HTML, plain text, or an empty body.
+  }
+  return { ok: false, message };
 }

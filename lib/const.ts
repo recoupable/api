@@ -94,3 +94,34 @@ export const SNAPSHOT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 export const EVAL_ACCOUNT_ID = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
 export const EVAL_ACCESS_TOKEN = process.env.EVAL_ACCESS_TOKEN || "";
 export const EVAL_ARTISTS = ["Gliiico", "Mac Miller", "Wiz Khalifa", "Mod Sun", "Julius Black"];
+
+/** Workflow states that permit terminal stream completion and safe stale-slot release. */
+export const TERMINAL_WORKFLOW_RUN_STATUSES: readonly string[] = Object.freeze([
+  "cancelled",
+  "completed",
+  "failed",
+]);
+
+// Existing Release Pack routes and settings, shared by quotation and execution.
+// Keep Pack migrations independent of the application-wide lightweight alias.
+export const PACK_CAPTION_MODEL = "openai/gpt-4o-mini";
+export const PACK_STILL_INSPECTION_MODEL = "openai/gpt-4o-mini";
+export const HOUSE_VIDEO_MODEL = "minimax/h3-max/image-to-video";
+export const TWELVELABS_ANALYSIS_MODEL = "pegasus1.5";
+
+/** Existing pack settings shared by quote identity and execution. Bump adapter_version for recipe changes. */
+export const packExecutionSettings = {
+  adapter_version: "release-pack-production-v1",
+  pricing_version: "release-pack-house-rates-v1",
+  image: { num_images: 1, output_format: "png", sync_mode: false, aspect_ratio: "9:16" },
+  motion: {
+    resolution: "768P",
+    prompt_expansion_mode: "balanced",
+    enable_safety_checker: true,
+    sync_mode: false,
+  },
+  caption: { maxOutputTokens: 350, maxRetries: 0 },
+  stillInspection: { maxOutputTokens: 600, maxRetries: 0 },
+  videoInspection: { temperature: 0, max_tokens: 600 },
+  analysis: { max_new_tokens: 768, temperature: 0, do_sample: false },
+} as const;

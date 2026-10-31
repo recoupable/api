@@ -1,180 +1,39 @@
-# x402-next Example App
+# Recoup API
 
-This is a Next.js application that demonstrates how to use the `x402-next` middleware to implement paywall functionality in your Next.js routes.
+Next.js 16 API service for Recoup's artist, account, chat and agent workflows. Routes live in `app/api/`; domain logic lives in `lib/`. Database access belongs in `lib/supabase/`.
 
-## Prerequisites
+## Local development
 
-- Node.js v22+ (install via [nvm](https://github.com/nvm-sh/nvm))
-- pnpm v10 (install via [pnpm.io/installation](https://pnpm.io/installation))
-- A valid Ethereum address for receiving payments
+Use Node.js 22 and pnpm 9 (the Node 22 compatibility workflow uses pnpm 9). From this repository:
 
-## Setup
-
-1. Copy `.env.local` to `.env` and add your Ethereum address to receive payments:
-
-```bash
-cp .env.local .env
-```
-
-2. Install and build all packages from the typescript examples root:
-```bash
-cd ../../
-pnpm install
-pnpm build
-cd fullstack/mainnet
-```
-
-2. Install and start the Next.js example:
-```bash
+```sh
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-## Example Routes
+Configure only the services required by your work through an ignored local environment file or your deployment's secret configuration. This repository is an API service, not the old x402 example workspace: no parent-directory build or Ethereum wallet is required just to install dependencies. Starting routes that import service clients can require their configuration and connect to providers.
 
-The app includes protected routes that require payment to access:
+For the coding-agent integration, follow [Coding-agent setup](docs/coding-agent-setup.md) before starting or exposing its routes. That guide covers Slack, GitHub, optional WhatsApp, Redis state and the existing Trigger.dev callback contract.
 
-### Protected Page Route
-The `/protected` route requires a payment of $0.001 to access. The route is protected using the x402-next middleware:
+## Commands
 
-```typescript
-// middleware.ts
-import { paymentMiddleware, Network, Resource } from "x402-next";
-import { facilitator } from "@coinbase/x402";
+These are the scripts in [package.json](package.json):
 
-const payTo = process.env.RESOURCE_WALLET_ADDRESS as Address;
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Build the MCP extension, then start Next.js development mode |
+| `pnpm build` | Build the extension and Next.js, then check the OAuth provider build |
+| `pnpm test` | Build the extension, then run Vitest |
+| `pnpm test:watch` | Build the extension, then start Vitest watch mode |
+| `pnpm lint` / `pnpm lint:check` | Run ESLint with / without fixes |
+| `pnpm format` / `pnpm format:check` | Format / check supported source and Markdown files |
 
-export const middleware = paymentMiddleware(
-  payTo,
-  {
-    "/protected": {
-      price: "$0.001",
-      network: "base",
-      config: {
-        description: "Access to protected content",
-      },
-    },
-  },
-  facilitator
-);
+## Architecture and guides
 
-// Configure which paths the middleware should run on
-export const config = {
-  matcher: ["/protected/:path*"],
-  runtime: "nodejs",
-};
-```
+- [Contributor instructions](AGENTS.md): authentication, validation, database boundaries and PR workflow. New PRs target `main`; the old `test` staging flow is retired.
+- [Coding-agent setup](docs/coding-agent-setup.md): current webhook, callback and shared-state behavior.
+- [MCP OAuth runtime](docs/mcp-oauth-runtime.md): OAuth discovery, consent and delegated access.
+- [Response contracts](lib/contracts/README.md): shared schemas and published contract checks.
+- [proxy.ts](proxy.ts) and [lib/x402/](lib/x402/): request middleware and x402 payment integration. Consult these sources for protected routes and payment behavior.
 
-## Response Format
-
-### Payment Required (402)
-```json
-{
-  "error": "X-PAYMENT header is required",
-  "paymentRequirements": {
-    "scheme": "exact",
-    "network": "base",
-    "maxAmountRequired": "1000",
-    "resource": "http://localhost:3000/protected",
-    "description": "Access to protected content",
-    "mimeType": "",
-    "payTo": "0xYourAddress",
-    "maxTimeoutSeconds": 60,
-    "asset": "0x...",
-    "outputSchema": null,
-    "extra": null
-  }
-}
-```
-
-### Successful Response
-```ts
-// Headers
-{
-  "X-PAYMENT-RESPONSE": "..." // Encoded response object
-}
-```
-
-## Extending the Example
-
-To add more protected routes, update the middleware configuration:
-
-```typescript
-export const middleware = paymentMiddleware(
-  payTo,
-  {
-    "/protected": {
-      price: "$0.001",
-      network: "base",
-      config: {
-        description: "Access to protected content",
-      },
-    },
-    "/api/premium": {
-      price: "$0.01",
-      network: "base",
-      config: {
-        description: "Premium API access",
-      },
-    },
-  }
-);
-
-export const config = {
-  matcher: ["/protected/:path*", "/api/premium/:path*"],
-  runtime: "nodejs",
-};
-```
-
-## Chat SDK Integrations
-
-The API uses the [Chat SDK](https://github.com/vercel/chat) to integrate with external platforms via a unified adapter pattern.
-
-### Architecture
-
-```
-Slack (events/messages)
-  └─▶ POST /api/coding-agent/slack    ← Slack webhook (subscription events + interactivity)
-        └─▶ Chat SDK (SlackAdapter)
-              └─▶ Handler dispatches Trigger.dev task
-                    └─▶ POST /api/coding-agent/callback  ← Trigger.dev callback URL
-                          └─▶ Posts result back to Slack thread
-
-GitHub (webhooks)
-  └─▶ PR events, repo operations
-        └─▶ lib/github/* helpers (file trees, submodules, repo management)
-```
-
-- **Slack adapter** — Receives messages via Slack's Events API, processes them through Chat SDK handlers, and triggers coding agent tasks via Trigger.dev. Results are posted back to the originating Slack thread.
-- **GitHub integration** — Manages repo operations (file trees, submodules, PRs) used by the coding agent to create and update pull requests.
-- **State** — Thread state (status, run IDs, PRs) is stored in Redis via the Chat SDK's ioredis state adapter.
-
-### Updating Testing/Dev URLs
-
-When deploying to a new environment (e.g. preview branches, local dev via ngrok), you need to update callback URLs in two places:
-
-#### Slack — Subscription Events & Interactivity
-
-1. Go to [api.slack.com/apps](https://api.slack.com/apps) → select your app
-2. **Event Subscriptions** → Update the Request URL to:
-   ```
-   https://<your-host>/api/coding-agent/slack
-   ```
-3. **Interactivity & Shortcuts** → Update the Request URL to the same endpoint:
-   ```
-   https://<your-host>/api/coding-agent/slack
-   ```
-4. Slack will send a `url_verification` challenge — the route handles this automatically.
-
-#### Trigger.dev — Callback URL
-
-The coding agent task calls back to the API when it finishes. Update the callback URL environment variable so it points to your current deployment:
-
-```
-TRIGGER_CALLBACK_URL=https://<your-host>/api/coding-agent/callback
-```
-
-Set this in your `.env` (local) or in your hosting provider's environment variables (Vercel, etc.).
-
-## Accessing Mainnet
-
-To access the mainnet facilitator in Next.js, simply install and use the `@coinbase/x402` package. 
+New background/scheduled platform work uses Vercel Workflows inside this API. The coding-agent and update-pr integrations documented here still call existing Trigger.dev tasks; documenting them does not migrate or deploy those workers.

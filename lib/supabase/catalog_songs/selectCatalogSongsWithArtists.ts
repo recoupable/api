@@ -13,22 +13,25 @@ type SelectCatalogSongsParams = {
   artistName?: string;
   page?: number;
   limit?: number;
+  /** Opt-in internal provenance; legacy callers keep their numeric fallback. */
+  observeCount?: boolean;
 };
 
 type CatalogSongsWithPagination = {
   songs: CatalogSongWithArtists[];
   total_count: number;
+  observed_total_count?: number | null;
 };
 
 type SongArtistWithAccount = {
   artist: string;
-  accounts: Tables<"accounts">;
+  accounts: Tables<"accounts"> | null;
 };
 
 type CatalogSongQueryResult = {
   catalog: string;
   songs: Tables<"songs"> & {
-    song_artists: SongArtistWithAccount[];
+    song_artists: SongArtistWithAccount[] | null;
   };
 };
 
@@ -43,6 +46,10 @@ export async function selectCatalogSongsWithArtists(
   params: SelectCatalogSongsParams,
 ): Promise<CatalogSongsWithPagination> {
   const { catalogId, isrcs, artistName, page, limit } = params;
+  // Inner joins let the nested filter restrict parent rows and their exact count.
+  // Unfiltered catalogs retain songs that have no linked creator.
+  const artistRelation = artistName ? "song_artists!inner" : "song_artists";
+  const accountRelation = artistName ? "accounts!inner" : "accounts";
 
   let query = supabase
     .from("catalog_songs")
@@ -55,9 +62,9 @@ export async function selectCatalogSongsWithArtists(
         album,
         notes,
         updated_at,
-        song_artists (
+        ${artistRelation} (
           artist,
-          accounts (
+          ${accountRelation} (
             id,
             name,
             timestamp
@@ -102,12 +109,16 @@ export async function selectCatalogSongsWithArtists(
     return {
       catalog_id: catalog,
       ...songData,
-      artists: song_artists?.map((sa: SongArtistWithAccount) => sa.accounts) || [],
+      artists:
+        song_artists
+          ?.map((sa: SongArtistWithAccount) => sa.accounts)
+          .filter((account): account is Tables<"accounts"> => account !== null) || [],
     };
   });
 
   return {
     songs: catalogSongs,
     total_count: count ?? 0,
+    ...(params.observeCount ? { observed_total_count: count } : {}),
   };
 }

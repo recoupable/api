@@ -1,3 +1,4 @@
+import { errorResponse } from "@/lib/networking/errorResponse";
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
@@ -48,6 +49,7 @@ export async function validateGetSessionChatRequest(
   }
 
   const chatRows = await selectChats({ id: chatId });
+  if (chatRows === null) return errorResponse("Failed to load chats", 500);
   const chat = chatRows[0] ?? null;
 
   if (!chat || chat.session_id !== sessionId) {

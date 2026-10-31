@@ -14,11 +14,11 @@ export async function OPTIONS() {
 /**
  * POST /api/content/video
  *
- * Generates a video from a text prompt, a seed image, or an existing video. Body
+ * Generates a house-model video from a prompt and optional first/last images. Body
  * is validated by `validateCreateVideoBody` in `lib/content/video/`.
  *
- * @param request - The incoming request with JSON body `{ prompt, image_url? |
- *   video_url?, model?, ... }` (see `validateCreateVideoBody` for the full schema).
+ * @param request - JSON body with prompt, optional image_url/end_image_url,
+ *   optional integer duration (5–15) and resolution ("480P" or "768P").
  * @returns A 200 NextResponse with the generated video URL and related metadata,
  *   400 on a bad body, 502 when the upstream returns no video, or 500 on other
  *   generation errors.

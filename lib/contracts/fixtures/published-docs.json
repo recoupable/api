@@ -1,0 +1,4426 @@
+{
+  "evidence": "Provider-free request syntax and static contract claims only. URLs are placeholders; no provider, payment or customer workflow is exercised.",
+  "responseEvidence": "Selected route exports use real request, response and authentication code under dependency mocks. No live provider, customer or hosted route is exercised.",
+  "sourceRepository": "recoupable/marketing",
+  "apiResponseSchemaSha256": "e18d3bfedf61547dd5c28264c3f69d3d4bebb11f62ae15c953a6bac118690bfd",
+  "responseSchemas": [
+    {
+      "specification": "releases.json",
+      "method": "GET",
+      "path": "/api/artists/{id}/profile",
+      "status": 404,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      }
+    },
+    {
+      "specification": "projects.json",
+      "method": "GET",
+      "path": "/api/projects/{projectId}",
+      "status": 401,
+      "mediaType": "application/json",
+      "schema": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "description": "Human-readable error message or documented error code.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "description": "Human-readable authentication error message.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      }
+    },
+    {
+      "specification": "projects.json",
+      "method": "GET",
+      "path": "/api/projects/{projectId}",
+      "status": 404,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat",
+      "status": 409,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "description": "Optional validation path for the first rejected field. String entries identify object/query fields; integer entries identify array positions. An empty path can represent validation of the path value itself. Lookup or workflow errors can omit this field."
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "description": "Optional validation path for the first rejected field. String entries identify object/query fields; integer entries identify array positions. An empty path can represent validation of the path value itself. Lookup or workflow errors can omit this field."
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat",
+      "status": 503,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "description": "Optional validation path for the first rejected field. String entries identify object/query fields; integer entries identify array positions. An empty path can represent validation of the path value itself. Lookup or workflow errors can omit this field."
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "GET",
+      "path": "/api/chat/{chatId}/stream",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": [
+                "string",
+                "integer"
+              ]
+            },
+            "description": "Optional validation path for the first rejected field. String entries identify object/query fields; integer entries identify array positions. An empty path can represent validation of the path value itself. Lookup or workflow errors can omit this field."
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat/{chatId}/stop",
+      "status": 200,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "success",
+          "stopped"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "description": "Always true when the request was processed.",
+            "example": true
+          },
+          "stopped": {
+            "type": "boolean",
+            "description": "True when an in-progress response was cancelled; false when nothing was running.",
+            "example": true
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat/{chatId}/stop",
+      "status": 502,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat/{chatId}/stop",
+      "status": 503,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      },
+      "examples": {
+        "pendingStart": {
+          "status": "error",
+          "error": "Workflow is still starting; retry Stop shortly"
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "POST",
+      "path": "/api/chat/{chatId}/stop",
+      "status": 504,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      }
+    },
+    {
+      "specification": "sessions.json",
+      "method": "GET",
+      "path": "/api/sessions/{sessionId}/chats",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Always `\"error\"` for error responses."
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      }
+    },
+    {
+      "specification": "sessions.json",
+      "method": "POST",
+      "path": "/api/sessions/{sessionId}/chats",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Always `\"error\"` for error responses."
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      }
+    },
+    {
+      "specification": "sessions.json",
+      "method": "GET",
+      "path": "/api/sessions/{sessionId}/chats/{chatId}",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Always `\"error\"` for error responses."
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      }
+    },
+    {
+      "specification": "sessions.json",
+      "method": "PATCH",
+      "path": "/api/sessions/{sessionId}/chats/{chatId}",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Always `\"error\"` for error responses."
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      }
+    },
+    {
+      "specification": "sessions.json",
+      "method": "DELETE",
+      "path": "/api/sessions/{sessionId}/chats/{chatId}",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Always `\"error\"` for error responses."
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      }
+    },
+    {
+      "specification": "sessions.json",
+      "method": "POST",
+      "path": "/api/sessions/{sessionId}/chats/{chatId}/read",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Always `\"error\"` for error responses."
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error message."
+          }
+        }
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "GET",
+      "path": "/api/tasks",
+      "status": 401,
+      "mediaType": "application/json",
+      "schema": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "description": "Human-readable error message or documented error code.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "description": "Human-readable authentication error message.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "POST",
+      "path": "/api/tasks",
+      "status": 401,
+      "mediaType": "application/json",
+      "schema": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "description": "Human-readable error message or documented error code.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "description": "Human-readable authentication error message.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "PATCH",
+      "path": "/api/tasks",
+      "status": 401,
+      "mediaType": "application/json",
+      "schema": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "description": "Human-readable error message or documented error code.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "description": "Human-readable authentication error message.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "DELETE",
+      "path": "/api/tasks",
+      "status": 401,
+      "mediaType": "application/json",
+      "schema": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "description": "Human-readable error message or documented error code.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "description": "Human-readable authentication error message.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "GET",
+      "path": "/api/tasks",
+      "status": 403,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "examples": {
+        "accountOverrideDenied": {
+          "status": "error",
+          "error": "Access denied to specified account_id"
+        }
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "POST",
+      "path": "/api/tasks",
+      "status": 403,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "examples": {
+        "accountOverrideDenied": {
+          "status": "error",
+          "error": "Access denied to specified account_id"
+        }
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "PATCH",
+      "path": "/api/tasks",
+      "status": 403,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "examples": {
+        "accountOverrideDenied": {
+          "status": "error",
+          "error": "Access denied to specified account_id"
+        },
+        "taskAccessDenied": {
+          "status": "error",
+          "error": "Access denied to this task"
+        }
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "DELETE",
+      "path": "/api/tasks",
+      "status": 403,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "examples": {
+        "taskAccessDenied": {
+          "status": "error",
+          "error": "Access denied to this task"
+        }
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "GET",
+      "path": "/api/tasks",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "examples": {
+        "serviceError": {
+          "status": "error",
+          "error": "Task service unavailable"
+        },
+        "unexpectedFailure": {
+          "status": "error",
+          "error": "Internal server error"
+        }
+      }
+    },
+    {
+      "specification": "releases.json",
+      "method": "POST",
+      "path": "/api/tasks",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "examples": {
+        "serviceError": {
+          "status": "error",
+          "error": "Task service unavailable"
+        },
+        "unexpectedFailure": {
+          "status": "error",
+          "error": "Internal server error"
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 200,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "chat_id",
+          "from_message_id"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success"
+            ],
+            "description": "Status of the request",
+            "example": "success"
+          },
+          "chat_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The chat UUID where deletion was applied."
+          },
+          "from_message_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The message UUID used as the trailing deletion boundary."
+          }
+        }
+      },
+      "examples": {
+        "statementSuccess": {
+          "status": "success",
+          "chat_id": "11111111-1111-4111-8111-111111111111",
+          "from_message_id": "22222222-2222-4222-8222-222222222222"
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 400,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong."
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of missing or invalid parameter fields (when validation fails)."
+          }
+        }
+      },
+      "examples": {}
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 401,
+      "mediaType": "application/json",
+      "schema": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "description": "Human-readable error message or documented error code.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "description": "Human-readable authentication error message.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      },
+      "examples": {}
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 403,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong."
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of missing or invalid parameter fields (when validation fails)."
+          }
+        }
+      },
+      "examples": {}
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 404,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong."
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of missing or invalid parameter fields (when validation fails)."
+          }
+        }
+      },
+      "examples": {}
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 409,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong."
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of missing or invalid parameter fields (when validation fails)."
+          }
+        }
+      },
+      "examples": {
+        "occupiedSlot": {
+          "status": "error",
+          "error": "Chat has an active workflow reservation; retry after it clears"
+        }
+      }
+    },
+    {
+      "specification": "research.json",
+      "method": "DELETE",
+      "path": "/api/chats/{id}/messages/trailing",
+      "status": 500,
+      "mediaType": "application/json",
+      "schema": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong."
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of missing or invalid parameter fields (when validation fails)."
+          }
+        }
+      },
+      "examples": {}
+    }
+  ],
+  "sourceHashes": {
+    "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
+    "content/docs/source/api-reference/openapi/content.json": "23499af8e0ae394ddde02275f9e75ab7c9ff059c3368743ec276752609a7e7d5",
+    "content/docs/source/api-reference/openapi/research.json": "f301a714e994e99b1dbcfc63ee18824537cf42813d8df3906ac7c2436a481ae0",
+    "content/docs/source/api-reference/openapi/releases.json": "d8e37689800283d88c02f0a728e5678c75873aec1b2da49df1ce8388e09a5e93",
+    "content/docs/source/api-reference/openapi/social.json": "5bd167a78cf6a17c46724486e2921882be20969ea32f3c0297f5b7e7ba9a30aa",
+    "content/docs/source/api-reference/openapi/context.json": "2d28305aa357b3771a12bc1fbc26df78e2b9bbacd459642e31b1b1e13a314875",
+    "content/docs/source/api-reference/openapi/projects.json": "b059cf8baa83a7f73a3c15db19f54fa56e46a3840e91bd42979b83550f543ace",
+    "content/docs/source/api-reference/openapi/sessions.json": "85af56cc150374b28c25541c45db15849c71fdeb6288cf90dc2beb08f494e83e",
+    "content/docs/source/api-reference/sites/overview.mdx": "1430730142df476e6cec9ea40aab751b0a48373d1479254da70bd8a545ae51b2",
+    "content/docs/source/credits.mdx": "0da77f081d8246fbd6925dac796817c4e9ade746b1221ef981df13d534ff37d3",
+    "content/docs/source/api-reference/admins/agent-signups.mdx": "a6b65f3ad1b0ead873b83cdccf2254cdd3afa1556ae94738502c9b1fc46954bc"
+  },
+  "examples": {
+    "image": {
+      "prompt": "Edit the lighting while preserving this artist.",
+      "image_urls": [
+        "https://example.com/artist.png"
+      ],
+      "num_images": 1
+    },
+    "video": {
+      "prompt": "Slow camera push with natural movement.",
+      "image_url": "https://example.com/artist.png",
+      "duration": 15,
+      "resolution": "768P"
+    },
+    "lipsync": {
+      "prompt": "The artist performs the supplied vocal phrase.",
+      "image_url": "https://example.com/artist.png",
+      "audio_url": "https://example.com/selected-clip.mp3",
+      "duration": 15
+    },
+    "topup": {
+      "credits": 2500000,
+      "successUrl": "https://chat.recoupable.dev?credits=success"
+    },
+    "headless": {
+      "messages": [
+        {
+          "id": "user-1",
+          "role": "user",
+          "parts": [
+            {
+              "type": "text",
+              "text": "Summarize my next release."
+            }
+          ]
+        }
+      ]
+    },
+    "trackStats": {
+      "isrc": "USQY51771120",
+      "source": "spotify"
+    },
+    "historicalMeasurementJob": {
+      "scope": {
+        "isrcs": [
+          "USQY51771120"
+        ]
+      },
+      "source": "historical",
+      "platforms": [
+        "spotify"
+      ]
+    }
+  },
+  "contracts": {
+    "social": {
+      "baseCredits": 50000,
+      "perPostCredits": 10000,
+      "twitterDefaultDepth": 10,
+      "security": [
+        {
+          "apiKeyAuth": []
+        },
+        {
+          "bearerAuth": []
+        }
+      ],
+      "responses": [
+        "200",
+        "400",
+        "401",
+        "402",
+        "403",
+        "404",
+        "500"
+      ],
+      "artistBaseCredits": 50000,
+      "artistPerPostCredits": 10000,
+      "requiredCreditsExample": 250000
+    },
+    "usageEventNullables": [
+      "agent_type",
+      "cached_input_tokens",
+      "input_tokens",
+      "model_id",
+      "output_tokens",
+      "provider",
+      "resource_url",
+      "source",
+      "tool_call_count"
+    ],
+    "usageTimeCursorExample": "v1:WyIyMDI2LTA4LTI3VDExOjU2OjU4LjAwMDAwMFoiLCIzQUFObjNJajl1Ri16WklsV196bFAiXQ",
+    "catalogDaysMaximum": 366,
+    "resumeNoActiveStatus": 200,
+    "chatStartResponses": [
+      "200",
+      "400",
+      "401",
+      "403",
+      "404",
+      "409",
+      "500",
+      "503"
+    ],
+    "chatStartMediaTypes": [
+      "text/event-stream"
+    ],
+    "resumeResponses": [
+      "200",
+      "400",
+      "401",
+      "403",
+      "404",
+      "500",
+      "502"
+    ],
+    "stopResponses": [
+      "200",
+      "400",
+      "401",
+      "403",
+      "404",
+      "500",
+      "502",
+      "503",
+      "504"
+    ],
+    "taskModelType": "string",
+    "taskModelRequired": false,
+    "taskReadResponses": [
+      "200",
+      "400",
+      "401",
+      "402",
+      "403",
+      "500"
+    ],
+    "callbackHeader": "x-callback-secret",
+    "siteDeleteMethods": [
+      "PATCH"
+    ],
+    "siteDeleteExample": {
+      "action": "delete",
+      "revision": 3,
+      "generationToken": "TOKEN_FROM_GENERATION"
+    }
+  },
+  "guardedGitFiles": {
+    "readQuery": {
+      "path": "drafts/notes.txt",
+      "include_revision": "true"
+    },
+    "scopedReadQuery": {
+      "path": "drafts/notes.txt",
+      "include_revision": "true",
+      "account_id": "11111111-1111-4111-8111-111111111111"
+    },
+    "listQuery": {
+      "account_id": "11111111-1111-4111-8111-111111111111",
+      "metadata_only": "true"
+    },
+    "accountScopeParameters": {
+      "list": {
+        "name": "account_id",
+        "in": "query",
+        "description": "Optional target account UUID authorized by the existing account-access policy. Omit for the authenticated account. Successful explicit-target reads echo this value as account_id; this does not grant file-write access.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "example": "11111111-1111-4111-8111-111111111111"
+      },
+      "file": {
+        "name": "account_id",
+        "in": "query",
+        "description": "Optional target account UUID authorized by the existing account-access policy. Omit for the authenticated account. Successful explicit-target reads echo this value as account_id; this does not grant file-write access.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "example": "11111111-1111-4111-8111-111111111111"
+      }
+    },
+    "upload": {
+      "path": "drafts",
+      "message": "Update release notes",
+      "files": [
+        {
+          "name": "notes.txt",
+          "url": "https://example.com/staged/notes.txt",
+          "expected_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        }
+      ]
+    },
+    "uploadSchema": {
+      "type": "object",
+      "required": [
+        "files"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Target directory within the resolved repository; omitted or empty means root. Use a canonical relative path. Dot/traversal segments, backslashes, control characters, malformed Unicode and leading/trailing/doubled slashes return 400. These checks also apply to legacy requests.",
+          "example": "assets/images"
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "url",
+              "name"
+            ],
+            "properties": {
+              "url": {
+                "type": "string",
+                "format": "uri",
+                "description": "The URL of the file to upload",
+                "example": "https://example.com/files/album-cover.png"
+              },
+              "name": {
+                "type": "string",
+                "description": "Nonempty relative file name/path under the target directory. Use a canonical relative path. Dot/traversal segments, backslashes, control characters, malformed Unicode and leading/trailing/doubled slashes return 400. These checks also apply to legacy requests.",
+                "example": "album-cover.png",
+                "minLength": 1
+              },
+              "expected_sha": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{40}$",
+                "description": "Optional observed blob SHA from the matching versioned read. When provided, update the existing file on main only if its current contents still match. Omission retains unguarded legacy create/update behavior; no automatic conflict retry occurs. See the upload operation's missing-target recovery guidance before retrying a failed save.",
+                "example": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+              }
+            }
+          },
+          "description": "Array of files to upload, each with a URL and target filename",
+          "minItems": 1
+        },
+        "message": {
+          "type": "string",
+          "description": "Optional commit message. Defaults to 'Upload files via API'.",
+          "example": "Add new album artwork"
+        }
+      },
+      "example": {
+        "path": "drafts",
+        "message": "Update release notes",
+        "files": [
+          {
+            "name": "notes.txt",
+            "url": "https://example.com/staged/notes.txt",
+            "expected_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          }
+        ]
+      }
+    },
+    "responses": [
+      {
+        "method": "GET",
+        "path": "/api/sandboxes",
+        "status": 200,
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "sandboxes"
+          ],
+          "description": "Response containing sandbox information",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "success",
+                "error"
+              ],
+              "description": "Status of the request"
+            },
+            "sandboxes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "sandboxId",
+                  "sandboxStatus",
+                  "timeout",
+                  "createdAt"
+                ],
+                "description": "A sandbox environment instance",
+                "properties": {
+                  "sandboxId": {
+                    "type": "string",
+                    "description": "Unique identifier for the sandbox",
+                    "example": "sbx_abc123def456"
+                  },
+                  "sandboxStatus": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "running",
+                      "stopping",
+                      "stopped",
+                      "failed"
+                    ],
+                    "description": "Current lifecycle state of the sandbox",
+                    "example": "running"
+                  },
+                  "timeout": {
+                    "type": "integer",
+                    "description": "Milliseconds remaining before the sandbox stops automatically",
+                    "example": 300000
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 timestamp when the sandbox was created",
+                    "example": "2024-01-15T10:30:00.000Z"
+                  },
+                  "runId": {
+                    "type": "string",
+                    "description": "Unique identifier for the command execution run. Only present if a command was provided when creating the sandbox. Use this with [GET /api/tasks/runs](/api-reference/tasks/runs) to check the status and retrieve results.",
+                    "example": "run_xyz789abc123"
+                  }
+                }
+              },
+              "description": "Array of sandbox objects"
+            },
+            "snapshot_id": {
+              "type": "string",
+              "description": "The account's saved snapshot ID used for creating new sandboxes. Null if no snapshot has been saved.",
+              "example": "snap_abc123def456",
+              "nullable": true
+            },
+            "github_repo": {
+              "type": "string",
+              "description": "The GitHub repository URL associated with the account's sandbox environment. Used as the filesystem source when restoring sandboxes.",
+              "example": "https://github.com/username/repo",
+              "nullable": true
+            },
+            "filetree": {
+              "type": "array",
+              "nullable": true,
+              "description": "The recursive file tree of the account's GitHub repository. Null if no github_repo is set or if the fetch fails.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "path",
+                  "type",
+                  "sha"
+                ],
+                "description": "A single entry in a GitHub repository file tree",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "The file or directory path relative to the repository root",
+                    "example": "src/index.ts"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "blob",
+                      "tree"
+                    ],
+                    "description": "The type of entry: blob for files, tree for directories"
+                  },
+                  "sha": {
+                    "type": "string",
+                    "description": "The SHA hash of the entry",
+                    "example": "abc123def456"
+                  },
+                  "size": {
+                    "type": "integer",
+                    "description": "The size of the file in bytes. Only present for blob entries.",
+                    "example": 1024
+                  }
+                }
+              }
+            },
+            "error": {
+              "type": "string",
+              "description": "Error message (only present if status is error)"
+            },
+            "account_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "On successful GET reads only: the explicitly requested, authorized target account UUID. Present even for an explicit self target; absent when account_id was omitted. This is read scope, not write authorization.",
+              "example": "11111111-1111-4111-8111-111111111111"
+            }
+          }
+        },
+        "examples": {
+          "ownMetadata": {
+            "status": "success",
+            "sandboxes": [],
+            "snapshot_id": null,
+            "github_repo": null,
+            "filetree": null
+          },
+          "targetMetadata": {
+            "status": "success",
+            "sandboxes": [],
+            "snapshot_id": null,
+            "github_repo": null,
+            "filetree": null,
+            "account_id": "11111111-1111-4111-8111-111111111111"
+          }
+        }
+      },
+      {
+        "method": "GET",
+        "path": "/api/sandboxes/file",
+        "status": 200,
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "content"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "success"
+              ],
+              "description": "Status of the operation"
+            },
+            "content": {
+              "type": "string",
+              "description": "Text content, or base64 bytes for recognized binary extensions. Decode when encoding is base64. Versioned reads reject unknown non-UTF-8 binary content."
+            },
+            "encoding": {
+              "type": "string",
+              "enum": [
+                "base64"
+              ],
+              "description": "Present for recognized binary extensions, on both legacy and versioned reads. When absent, content is text."
+            },
+            "sha": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{40}$",
+              "description": "Present when include_revision=true; use this reader-observed blob SHA as files[].expected_sha. Absent from legacy reads. It identifies the returned bytes, not an accepted Context source version.",
+              "example": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "account_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "On successful GET reads only: the explicitly requested, authorized target account UUID. Present even for an explicit self target; absent when account_id was omitted. This is read scope, not write authorization.",
+              "example": "11111111-1111-4111-8111-111111111111"
+            }
+          }
+        },
+        "examples": {
+          "legacyText": {
+            "status": "success",
+            "content": "Release notes"
+          },
+          "versionedText": {
+            "status": "success",
+            "content": "Release notes",
+            "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "versionedBinary": {
+            "status": "success",
+            "content": "aGVsbG8=",
+            "encoding": "base64",
+            "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "targetText": {
+            "status": "success",
+            "content": "Release notes",
+            "account_id": "11111111-1111-4111-8111-111111111111"
+          },
+          "targetVersionedText": {
+            "status": "success",
+            "content": "Release notes",
+            "sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "account_id": "11111111-1111-4111-8111-111111111111"
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sandboxes/files",
+        "status": 200,
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "uploaded"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "success"
+              ],
+              "description": "Status of the operation"
+            },
+            "uploaded": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "The full path of the uploaded file in the repository"
+                  },
+                  "sha": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{40}$",
+                    "description": "Blob SHA of the newly saved file. Retain it as the next observed condition when editing these saved bytes.",
+                    "example": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                  }
+                },
+                "required": [
+                  "path",
+                  "sha"
+                ]
+              },
+              "description": "Array of uploaded file details",
+              "minItems": 1
+            },
+            "errors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Per-file failures retained alongside successful receipts. HTTP 200 does not mean every file was saved."
+            },
+            "conflicts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "description": "Submitted names of files rejected because their observed revision no longer matches."
+            }
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sandboxes/files",
+        "status": 409,
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "error",
+            "conflicts"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ]
+            },
+            "error": {
+              "type": "string",
+              "description": "Combined upload failure description."
+            },
+            "conflicts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "description": "Submitted names of files rejected because their observed revision no longer matches."
+            }
+          }
+        }
+      },
+      {
+        "method": "POST",
+        "path": "/api/sandboxes/files",
+        "status": 500,
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "error"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ]
+            },
+            "error": {
+              "type": "string",
+              "description": "Combined upload failure description."
+            },
+            "conflicts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1,
+              "description": "Submitted names of files rejected because their observed revision no longer matches."
+            }
+          }
+        }
+      }
+    ]
+  },
+  "artistFans": {
+    "schema": {
+      "type": "object",
+      "required": [
+        "status",
+        "fans",
+        "pagination"
+      ],
+      "example": {
+        "status": "success",
+        "fans": [
+          {
+            "id": "fan_fixture_known",
+            "username": "example_fan",
+            "last_comment_at": "2026-10-01T12:00:00Z"
+          },
+          {
+            "id": "fan_fixture_unknown",
+            "username": "example_fan_unknown",
+            "last_comment_at": null
+          }
+        ],
+        "pagination": {
+          "total_count": 2,
+          "page": 1,
+          "limit": 20,
+          "total_pages": 1
+        }
+      },
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "success"
+          ],
+          "description": "Status of the request"
+        },
+        "fans": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Unique identifier for the fan's social profile"
+              },
+              "username": {
+                "type": "string",
+                "description": "Username or handle on the platform"
+              },
+              "avatar": {
+                "type": "string",
+                "description": "URL to the fan's avatar/profile image"
+              },
+              "profile_url": {
+                "type": "string",
+                "description": "Full URL to the fan's profile on the platform"
+              },
+              "region": {
+                "type": "string",
+                "description": "Geographic region or location of the fan"
+              },
+              "bio": {
+                "type": "string",
+                "description": "Fan's biography or profile description"
+              },
+              "follower_count": {
+                "type": "integer",
+                "description": "Number of followers the fan has"
+              },
+              "following_count": {
+                "type": "integer",
+                "description": "Number of accounts the fan is following"
+              },
+              "updated_at": {
+                "type": "string",
+                "format": "date-time",
+                "description": "ISO timestamp of when the fan data was last updated"
+              },
+              "last_comment_at": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time",
+                "description": "Timestamp of the latest stored comment linked to this fan relationship, only when the comment author matches this fan. Null means matching stored comment evidence is unavailable, not that the fan never commented. This is not the profile refresh time, a generic engagement time or a live cross-platform history.",
+                "example": "2026-10-01T12:00:00Z"
+              }
+            }
+          },
+          "description": "List of social profiles from fans across all platforms"
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "total_count": {
+              "type": "integer",
+              "description": "Total number of records available"
+            },
+            "page": {
+              "type": "integer",
+              "description": "Current page number"
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Number of records per page"
+            },
+            "total_pages": {
+              "type": "integer",
+              "description": "Total number of pages available"
+            }
+          }
+        }
+      }
+    },
+    "example": {
+      "status": "success",
+      "fans": [
+        {
+          "id": "fan_fixture_known",
+          "username": "example_fan",
+          "last_comment_at": "2026-10-01T12:00:00Z"
+        },
+        {
+          "id": "fan_fixture_unknown",
+          "username": "example_fan_unknown",
+          "last_comment_at": null
+        }
+      ],
+      "pagination": {
+        "total_count": 2,
+        "page": 1,
+        "limit": 20,
+        "total_pages": 1
+      }
+    }
+  },
+  "artistSocials": {
+    "example": {
+      "id": "11111111-1111-4111-8111-111111111111",
+      "username": "river",
+      "profile_url": "https://instagram.com/river",
+      "link": "https://instagram.com/river",
+      "type": "INSTAGRAM"
+    },
+    "responses": {
+      "list": {
+        "method": "GET",
+        "path": "/api/artists",
+        "status": 200,
+        "schema": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "UUID of the social profile"
+              },
+              "username": {
+                "type": "string",
+                "description": "Username on the platform"
+              },
+              "profile_url": {
+                "type": "string",
+                "description": "Full URL to the social media profile"
+              },
+              "link": {
+                "type": "string",
+                "description": "Profile URL mirrored from profile_url; an empty URL remains an empty string."
+              },
+              "type": {
+                "type": "string",
+                "description": "Uppercase platform identifier inferred from the profile URL, for example INSTAGRAM or LINKEDIN. Unrecognized or empty URLs produce NONE."
+              }
+            },
+            "example": {
+              "id": "11111111-1111-4111-8111-111111111111",
+              "username": "river",
+              "profile_url": "https://instagram.com/river",
+              "link": "https://instagram.com/river",
+              "type": "INSTAGRAM"
+            }
+          },
+          "description": "Existing social media profiles linked to the artist. Missing joined profile records are omitted. A profile with an empty URL is retained with link \"\" and type \"NONE\"."
+        }
+      },
+      "update": {
+        "method": "PATCH",
+        "path": "/api/artists/{id}",
+        "status": 200,
+        "schema": {
+          "type": "array",
+          "description": "Social profiles linked to the artist after the update",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "description": "UUID of the underlying social record"
+              },
+              "username": {
+                "type": "string",
+                "nullable": true,
+                "description": "Username on the platform"
+              },
+              "profile_url": {
+                "type": "string",
+                "nullable": true,
+                "description": "Full profile URL on the platform"
+              },
+              "link": {
+                "type": "string",
+                "description": "Profile URL (mirror of profile_url for legacy clients)"
+              },
+              "type": {
+                "type": "string",
+                "description": "Uppercase platform identifier inferred from the profile URL, for example INSTAGRAM or LINKEDIN. Unrecognized or empty URLs produce NONE."
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "storedComments": {
+    "method": "GET",
+    "path": "/api/comments",
+    "security": [
+      {
+        "apiKeyAuth": []
+      },
+      {
+        "bearerAuth": []
+      }
+    ],
+    "parameters": [
+      {
+        "name": "artist_account_id",
+        "in": "query",
+        "description": "Required target creator account UUID, using the retained artist wire name. It never overrides the authenticated caller.",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "example": "11111111-1111-4111-8111-111111111111"
+      },
+      {
+        "name": "post_id",
+        "in": "query",
+        "description": "Optional stored posts.id UUID. Narrows the authorized linked-post set; an unrelated stored post returns an empty page. This is not a post URL.",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "example": "22222222-2222-4222-8222-222222222222"
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "description": "Positive integer page, default 1 for omitted or empty values. page \u00d7 effective_limit must not exceed 2147483647.",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        },
+        "example": 1
+      },
+      {
+        "name": "limit",
+        "in": "query",
+        "description": "Positive requested page size, default 10 for omitted or empty values. Values above 100 are accepted and clamped to 100; the response reports the effective size.",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 10
+        },
+        "example": 10
+      }
+    ],
+    "schemas": {
+      "200": {
+        "type": "object",
+        "required": [
+          "status",
+          "comments",
+          "pagination"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success"
+            ],
+            "description": "Status of the request"
+          },
+          "comments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid",
+                  "description": "UUID of the comment"
+                },
+                "post_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Stored post UUID when present. Saved nullable row shape is retained; ownership is still enforced through the linked post join."
+                },
+                "social_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid",
+                  "description": "Stored commenter social UUID, or null when absent. This is not the creator ownership filter."
+                },
+                "comment": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Saved comment text, or null when unavailable; no text is synthesized."
+                },
+                "commented_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Timestamp with timezone of when the comment was made"
+                }
+              },
+              "required": [
+                "id",
+                "post_id",
+                "social_id",
+                "comment",
+                "commented_at"
+              ],
+              "additionalProperties": false
+            },
+            "description": "Saved comments within the authorized creator\u2019s linked-post set and optional post UUID filter."
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "total_count": {
+                "type": "integer",
+                "description": "Exact total within the same authorized linked-post and optional post filter.",
+                "minimum": 0
+              },
+              "page": {
+                "type": "integer",
+                "description": "Current page number",
+                "minimum": 1
+              },
+              "limit": {
+                "type": "integer",
+                "description": "Effective page size after clamping to 100.",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "total_pages": {
+                "type": "integer",
+                "description": "Ceiling of total_count/effective limit; zero when total_count is zero.",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "total_count",
+              "page",
+              "limit",
+              "total_pages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false,
+        "example": {
+          "status": "success",
+          "comments": [
+            {
+              "id": "33333333-3333-4333-8333-333333333333",
+              "post_id": "22222222-2222-4222-8222-222222222222",
+              "social_id": "44444444-4444-4444-8444-444444444444",
+              "comment": "Saved fixture comment",
+              "commented_at": "2026-10-10T12:00:00Z"
+            },
+            {
+              "id": "55555555-5555-4555-8555-555555555555",
+              "post_id": "22222222-2222-4222-8222-222222222222",
+              "social_id": null,
+              "comment": null,
+              "commented_at": "2026-10-09T12:00:00Z"
+            }
+          ],
+          "pagination": {
+            "total_count": 2,
+            "page": 1,
+            "limit": 10,
+            "total_pages": 1
+          }
+        }
+      },
+      "400": {
+        "type": "object",
+        "required": [
+          "status",
+          "error",
+          "missing_fields"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string"
+          },
+          "missing_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Validation path, possibly empty for unknown query keys."
+          }
+        }
+      },
+      "401": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "description": "Human-readable error message or documented error code.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "error"
+            ],
+            "additionalProperties": {}
+          },
+          {
+            "type": "object",
+            "properties": {
+              "status": {
+                "description": "Always `error`.",
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "message": {
+                "description": "Human-readable authentication error message.",
+                "type": "string"
+              }
+            },
+            "required": [
+              "status",
+              "message"
+            ],
+            "additionalProperties": {}
+          }
+        ]
+      },
+      "403": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      },
+      "500": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "description": "Always `error`.",
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "description": "Human-readable error message or documented error code.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "error"
+        ],
+        "additionalProperties": {}
+      }
+    },
+    "headers": {
+      "200": {
+        "Cache-Control": {
+          "description": "All GET success and error responses disable shared caching.",
+          "schema": {
+            "type": "string",
+            "const": "private, no-store"
+          },
+          "example": "private, no-store"
+        }
+      },
+      "400": {
+        "Cache-Control": {
+          "description": "All GET success and error responses disable shared caching.",
+          "schema": {
+            "type": "string",
+            "const": "private, no-store"
+          },
+          "example": "private, no-store"
+        }
+      },
+      "401": {
+        "Cache-Control": {
+          "description": "All GET success and error responses disable shared caching.",
+          "schema": {
+            "type": "string",
+            "const": "private, no-store"
+          },
+          "example": "private, no-store"
+        }
+      },
+      "403": {
+        "Cache-Control": {
+          "description": "All GET success and error responses disable shared caching.",
+          "schema": {
+            "type": "string",
+            "const": "private, no-store"
+          },
+          "example": "private, no-store"
+        }
+      },
+      "500": {
+        "Cache-Control": {
+          "description": "All GET success and error responses disable shared caching.",
+          "schema": {
+            "type": "string",
+            "const": "private, no-store"
+          },
+          "example": "private, no-store"
+        }
+      }
+    },
+    "queryExample": {
+      "artist_account_id": "11111111-1111-4111-8111-111111111111",
+      "post_id": "22222222-2222-4222-8222-222222222222",
+      "page": 1,
+      "limit": 10
+    },
+    "example": {
+      "status": "success",
+      "comments": [
+        {
+          "id": "33333333-3333-4333-8333-333333333333",
+          "post_id": "22222222-2222-4222-8222-222222222222",
+          "social_id": "44444444-4444-4444-8444-444444444444",
+          "comment": "Saved fixture comment",
+          "commented_at": "2026-10-10T12:00:00Z"
+        },
+        {
+          "id": "55555555-5555-4555-8555-555555555555",
+          "post_id": "22222222-2222-4222-8222-222222222222",
+          "social_id": null,
+          "comment": null,
+          "commented_at": "2026-10-09T12:00:00Z"
+        }
+      ],
+      "pagination": {
+        "total_count": 2,
+        "page": 1,
+        "limit": 10,
+        "total_pages": 1
+      }
+    }
+  },
+  "planBalances": {
+    "credits": {
+      "schema": {
+        "type": "object",
+        "required": [
+          "account_id",
+          "remaining_credits",
+          "total_credits",
+          "used_credits",
+          "is_pro",
+          "timestamp",
+          "plan",
+          "task_limit",
+          "min_cadence_minutes"
+        ],
+        "properties": {
+          "account_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "The unique identifier of the account this balance belongs to.",
+            "example": "11111111-1111-4111-8111-111111111111"
+          },
+          "remaining_credits": {
+            "type": "integer",
+            "description": "Balance in integer micro-dollars. Can exceed the plan allowance after a top-up or be negative. This is a balance, not a lifetime-spend total.",
+            "example": 292450000
+          },
+          "total_credits": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Monthly refill floor in integer micro-dollars: Free 3,330,000; Starter 20,000,000; Pro 300,000,000. Top-ups can put remaining credits above this floor.",
+            "example": 300000000
+          },
+          "used_credits": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "max(0, total_credits - remaining_credits). A balance-derived display, not lifetime or period ledger spend.",
+            "example": 7550000
+          },
+          "is_pro": {
+            "type": "boolean",
+            "description": "True when the account is on a pro plan, directly via an account subscription or via an organization subscription.",
+            "example": true
+          },
+          "timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "ISO 8601 timestamp from the balance record; null when unavailable.",
+            "example": "2026-10-01T12:00:00Z"
+          },
+          "plan": {
+            "type": "string",
+            "enum": [
+              "free",
+              "starter",
+              "pro"
+            ],
+            "example": "pro"
+          },
+          "task_limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Enabled scheduled-task limit; null means unlimited.",
+            "example": null
+          },
+          "min_cadence_minutes": {
+            "type": "integer",
+            "description": "Minimum allowed cadence: Free 10080, Starter 1440, Pro 60.",
+            "example": 60
+          }
+        },
+        "example": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": 292450000,
+          "total_credits": 300000000,
+          "used_credits": 7550000,
+          "is_pro": true,
+          "plan": "pro",
+          "task_limit": null,
+          "min_cadence_minutes": 60,
+          "timestamp": "2026-10-01T12:00:00Z"
+        },
+        "description": "Current plan-derived allowance and balance in integer micro-dollars. Extra credits can exceed the allowance; used_credits is max(0, total_credits - remaining_credits), not ledger spend. The response preserves the signed balance. Null task_limit means unlimited."
+      },
+      "examples": {
+        "free": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": 3330000,
+          "total_credits": 3330000,
+          "used_credits": 0,
+          "is_pro": false,
+          "plan": "free",
+          "task_limit": 1,
+          "min_cadence_minutes": 10080,
+          "timestamp": null
+        },
+        "starter": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": 15000000,
+          "total_credits": 20000000,
+          "used_credits": 5000000,
+          "is_pro": false,
+          "plan": "starter",
+          "task_limit": 3,
+          "min_cadence_minutes": 1440,
+          "timestamp": "2026-10-01T12:00:00Z"
+        },
+        "directPro": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": 292450000,
+          "total_credits": 300000000,
+          "used_credits": 7550000,
+          "is_pro": true,
+          "plan": "pro",
+          "task_limit": null,
+          "min_cadence_minutes": 60,
+          "timestamp": "2026-10-01T12:00:00Z"
+        },
+        "organizationPro": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": 292450000,
+          "total_credits": 300000000,
+          "used_credits": 7550000,
+          "is_pro": true,
+          "plan": "pro",
+          "task_limit": null,
+          "min_cadence_minutes": 60,
+          "timestamp": "2026-10-01T12:00:00Z"
+        },
+        "aboveAllotment": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": 325000000,
+          "total_credits": 300000000,
+          "used_credits": 0,
+          "is_pro": true,
+          "plan": "pro",
+          "task_limit": null,
+          "min_cadence_minutes": 60,
+          "timestamp": "2026-10-01T12:00:00Z"
+        },
+        "negativeBalance": {
+          "account_id": "11111111-1111-4111-8111-111111111111",
+          "remaining_credits": -1000,
+          "total_credits": 3330000,
+          "used_credits": 3331000,
+          "is_pro": false,
+          "plan": "free",
+          "task_limit": 1,
+          "min_cadence_minutes": 10080,
+          "timestamp": "2026-10-01T12:00:00Z"
+        }
+      }
+    },
+    "subscription": {
+      "schema": {
+        "type": "object",
+        "required": [
+          "isPro",
+          "status",
+          "plan",
+          "source",
+          "name",
+          "amountCents",
+          "currency",
+          "interval",
+          "collectionMethod",
+          "currentPeriodEnd"
+        ],
+        "properties": {
+          "isPro": {
+            "type": "boolean",
+            "description": "True only for effective Pro entitlement. A paid Starter account returns false. Use plan for paid-plan decisions."
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "trialing",
+              "canceled",
+              "past_due",
+              "none"
+            ],
+            "description": "Current entitlement view. Resolving to Free returns none and null billing fields, including for an inactive subscription; this is not subscription lifecycle history.",
+            "example": "active"
+          },
+          "plan": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Plan identifier (e.g. `pro`). Null when no subscription currently confers a paid plan.",
+            "example": "pro",
+            "enum": [
+              "starter",
+              "pro",
+              null
+            ]
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "account",
+              "organization",
+              null
+            ],
+            "description": "Origin of the subscription. `account` for direct, `organization` when covered by an organization. Null when no subscription currently confers a paid plan.",
+            "example": "account"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Display name of the plan's Stripe price (nickname) or product. Null when no subscription exists.",
+            "example": "Pro"
+          },
+          "amountCents": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "description": "Recurring amount in the smallest currency unit (cents for USD). Null when no subscription exists.",
+            "example": 9900
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "ISO 4217 currency code, lowercase.",
+            "example": "usd"
+          },
+          "interval": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "day",
+              "week",
+              "month",
+              "year",
+              null
+            ],
+            "description": "Billing interval of the recurring price.",
+            "example": "month"
+          },
+          "collectionMethod": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "charge_automatically",
+              "send_invoice",
+              null
+            ],
+            "description": "`charge_automatically` bills the card on file at renewal; `send_invoice` emails an invoice that is paid manually (enterprise plans). A saved card is never charged for a `send_invoice` plan.",
+            "example": "charge_automatically"
+          },
+          "currentPeriodEnd": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "End of the current billing period: the renewal date, or the next invoice date for invoiced plans.",
+            "example": "2026-10-04T00:00:00Z"
+          }
+        },
+        "description": "Effective subscription details. When status is none, plan, source, name, amountCents, currency, interval, collectionMethod and currentPeriodEnd are all null."
+      },
+      "examples": {
+        "free": {
+          "isPro": false,
+          "status": "none",
+          "plan": null,
+          "source": null,
+          "name": null,
+          "amountCents": null,
+          "currency": null,
+          "interval": null,
+          "collectionMethod": null,
+          "currentPeriodEnd": null
+        },
+        "starter": {
+          "isPro": false,
+          "status": "active",
+          "plan": "starter",
+          "source": "account",
+          "name": null,
+          "amountCents": null,
+          "currency": null,
+          "interval": null,
+          "collectionMethod": null,
+          "currentPeriodEnd": null
+        },
+        "directPro": {
+          "isPro": true,
+          "status": "active",
+          "plan": "pro",
+          "source": "account",
+          "name": null,
+          "amountCents": null,
+          "currency": null,
+          "interval": null,
+          "collectionMethod": null,
+          "currentPeriodEnd": null
+        },
+        "organizationPro": {
+          "isPro": true,
+          "status": "active",
+          "plan": "pro",
+          "source": "organization",
+          "name": null,
+          "amountCents": null,
+          "currency": null,
+          "interval": null,
+          "collectionMethod": null,
+          "currentPeriodEnd": null
+        },
+        "inactive": {
+          "isPro": false,
+          "status": "none",
+          "plan": null,
+          "source": null,
+          "name": null,
+          "amountCents": null,
+          "currency": null,
+          "interval": null,
+          "collectionMethod": null,
+          "currentPeriodEnd": null
+        }
+      }
+    },
+    "guideCreditExample": {
+      "account_id": "11111111-1111-4111-8111-111111111111",
+      "remaining_credits": 292450000,
+      "total_credits": 300000000,
+      "used_credits": 7550000,
+      "is_pro": true,
+      "plan": "pro",
+      "task_limit": null,
+      "min_cadence_minutes": 60,
+      "timestamp": "2026-10-01T12:00:00Z"
+    }
+  },
+  "siteLifecycle": {
+    "examples": {
+      "generation": {
+        "action": "generation",
+        "token": "TOKEN_FROM_GENERATION"
+      },
+      "publishSaved": {
+        "action": "publish",
+        "revision": 3
+      },
+      "publishPreview": {
+        "action": "publish",
+        "revision": 3,
+        "generationToken": "TOKEN_FROM_GENERATION"
+      },
+      "unpublish": {
+        "action": "unpublish",
+        "revision": 3
+      },
+      "delete": {
+        "action": "delete",
+        "revision": 3,
+        "generationToken": "TOKEN_FROM_GENERATION"
+      }
+    },
+    "upgrade": {
+      "status": 402,
+      "body": {
+        "error": "Site publishing is unavailable with this workspace's current entitlements. The draft is preserved."
+      }
+    },
+    "documentedOperations": [
+      "GET /api/sites",
+      "GET /api/sites/apple/config",
+      "GET /api/sites/public/{id}",
+      "GET /api/sites/public/{id}/spotify",
+      "GET /api/sites/spotify/callback",
+      "GET /api/sites/{id}",
+      "GET /api/sites/{id}/activity",
+      "GET /api/sites/{id}/fan-connection",
+      "GET /api/sites/{id}/fans",
+      "GET /api/sites/{id}/signups",
+      "PATCH /api/sites/{id}",
+      "POST /api/sites",
+      "POST /api/sites/assets",
+      "POST /api/sites/public/{id}/activity",
+      "POST /api/sites/public/{id}/signup",
+      "POST /api/sites/public/{id}/spotify",
+      "PUT /api/sites/{id}/fan-connection"
+    ],
+    "callbackOperations": [
+      "GET /api/sites/spotify/callback"
+    ],
+    "preflightExcluded": true
+  },
+  "adminCodingSlack": {
+    "mentions": {
+      "path": "/api/admins/coding/slack",
+      "security": [
+        {
+          "apiKeyAuth": []
+        },
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [
+        {
+          "name": "period",
+          "in": "query",
+          "description": "Time period to filter tags. One of: all (no date filter), daily (last 24 hours), weekly (last 7 days), monthly (last 30 days). Defaults to all.",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "enum": [
+              "all",
+              "daily",
+              "weekly",
+              "monthly"
+            ],
+            "default": "all"
+          }
+        },
+        {
+          "name": "tag",
+          "in": "query",
+          "description": "Optional exact, case-sensitive Slack author ID. Leading/trailing whitespace is trimmed; blank values are rejected. This filters already collected mentions before the totals are computed and does not change access or collection work.",
+          "required": false,
+          "schema": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "example": "U2"
+        }
+      ],
+      "schemas": {
+        "200": {
+          "type": "object",
+          "required": [
+            "status",
+            "total",
+            "total_pull_requests",
+            "tags_with_pull_requests",
+            "tags"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "success"
+              ],
+              "description": "Status of the request"
+            },
+            "total": {
+              "type": "integer",
+              "description": "Number of collected Coding Agent mentions after the requested period and optional author filter.",
+              "example": 134
+            },
+            "total_pull_requests": {
+              "type": "integer",
+              "description": "Number of pull request links across the filtered collected mentions.",
+              "example": 121
+            },
+            "tags_with_pull_requests": {
+              "type": "integer",
+              "description": "Number of filtered collected mentions with at least one pull request link.",
+              "example": 84
+            },
+            "tags": {
+              "type": "array",
+              "description": "List of Slack tag events",
+              "items": {
+                "type": "object",
+                "required": [
+                  "user_id",
+                  "user_name",
+                  "prompt",
+                  "timestamp",
+                  "channel_id",
+                  "channel_name"
+                ],
+                "properties": {
+                  "user_id": {
+                    "type": "string",
+                    "description": "Slack ID of the person who tagged the agent",
+                    "example": "U012AB3CD"
+                  },
+                  "user_name": {
+                    "type": "string",
+                    "description": "Display name of the person who tagged the agent",
+                    "example": "Jane Smith"
+                  },
+                  "user_avatar": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "URL of the Slack avatar",
+                    "example": "https://avatars.slack-edge.com/..."
+                  },
+                  "prompt": {
+                    "type": "string",
+                    "description": "The text of the message sent to the agent",
+                    "example": "add dark mode support to the settings page"
+                  },
+                  "timestamp": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "ISO 8601 timestamp of the tag event",
+                    "example": "2024-01-15T10:30:00.000Z"
+                  },
+                  "channel_id": {
+                    "type": "string",
+                    "description": "Slack channel ID where the tag occurred",
+                    "example": "C012AB3CD"
+                  },
+                  "channel_name": {
+                    "type": "string",
+                    "description": "Human-readable name of the Slack channel",
+                    "example": "dev-team"
+                  },
+                  "pull_requests": {
+                    "type": "array",
+                    "description": "GitHub pull request URLs opened by the Coding Agent in response to this prompt, parsed from bot replies in the Slack thread",
+                    "items": {
+                      "type": "string",
+                      "format": "uri",
+                      "example": "https://github.com/recoupable/api/pull/42"
+                    },
+                    "example": [
+                      "https://github.com/recoupable/api/pull/42"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "401": {
+          "description": "Missing or simultaneous authentication mechanisms return status/error. An invalid API key or Bearer credential returns status/message. Supply exactly one mechanism and authenticate a Recoup admin account.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "status",
+                "error"
+              ],
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "error"
+                  ]
+                },
+                "error": {
+                  "type": "string",
+                  "description": "The first invalid query field or authentication-mechanism error."
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "status",
+                "message"
+              ],
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "error"
+                  ],
+                  "description": "Status of the request"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Error message describing what went wrong"
+                }
+              }
+            }
+          ]
+        },
+        "403": {
+          "type": "object",
+          "required": [
+            "status",
+            "message"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ],
+              "description": "Status of the request"
+            },
+            "message": {
+              "type": "string",
+              "description": "Error message describing what went wrong"
+            }
+          }
+        },
+        "500": {
+          "type": "object",
+          "required": [
+            "status",
+            "message"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ],
+              "description": "Status of the request"
+            },
+            "message": {
+              "type": "string",
+              "description": "Error message describing what went wrong"
+            }
+          }
+        },
+        "400": {
+          "type": "object",
+          "required": [
+            "status",
+            "error"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ]
+            },
+            "error": {
+              "type": "string",
+              "description": "The first invalid query field or authentication-mechanism error."
+            }
+          }
+        }
+      },
+      "examples": {}
+    },
+    "options": {
+      "path": "/api/admins/coding-agent/slack-tags",
+      "security": [
+        {
+          "apiKeyAuth": []
+        },
+        {
+          "bearerAuth": []
+        }
+      ],
+      "parameters": [],
+      "schemas": {
+        "200": {
+          "type": "object",
+          "required": [
+            "status",
+            "total",
+            "tags"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "success"
+              ]
+            },
+            "total": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of distinct author IDs in the collected data."
+            },
+            "tags": {
+              "type": "array",
+              "description": "Distinct authors, deduplicated by ID and sorted by display name with the server localeCompare order. The first collected profile is retained; equal names do not merge distinct IDs.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "name",
+                  "avatar"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "description": "Slack author ID; use it as the analytics tag filter."
+                  },
+                  "name": {
+                    "type": "string",
+                    "description": "Display name from the first collected profile."
+                  },
+                  "avatar": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "description": "Avatar URL from the first collected profile, or null."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "401": {
+          "description": "Missing or simultaneous authentication mechanisms return status/error. An invalid API key or Bearer credential returns status/message. Supply exactly one mechanism and authenticate a Recoup admin account.",
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "status",
+                "error"
+              ],
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "error"
+                  ]
+                },
+                "error": {
+                  "type": "string",
+                  "description": "The first invalid query field or authentication-mechanism error."
+                }
+              }
+            },
+            {
+              "type": "object",
+              "required": [
+                "status",
+                "message"
+              ],
+              "properties": {
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "error"
+                  ],
+                  "description": "Status of the request"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Error message describing what went wrong"
+                }
+              }
+            }
+          ]
+        },
+        "403": {
+          "type": "object",
+          "required": [
+            "status",
+            "message"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ],
+              "description": "Status of the request"
+            },
+            "message": {
+              "type": "string",
+              "description": "Error message describing what went wrong"
+            }
+          }
+        },
+        "500": {
+          "type": "object",
+          "required": [
+            "status",
+            "message"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ],
+              "description": "Status of the request"
+            },
+            "message": {
+              "type": "string",
+              "description": "Error message describing what went wrong"
+            }
+          }
+        }
+      },
+      "examples": {
+        "collectedAuthors": {
+          "status": "success",
+          "total": 2,
+          "tags": [
+            {
+              "id": "U1",
+              "name": "Alice",
+              "avatar": null
+            },
+            {
+              "id": "U2",
+              "name": "Bob",
+              "avatar": null
+            }
+          ]
+        },
+        "noAuthors": {
+          "status": "success",
+          "total": 0,
+          "tags": []
+        }
+      }
+    },
+    "queryExample": {
+      "period": "all",
+      "tag": "U2"
+    }
+  },
+  "agentSignupMetadata": {
+    "path": "/api/admins/agent-signups",
+    "description": "Read API-key record metadata associated with current account emails matching the case-insensitive agent+ prefix. Authenticate with exactly one x-api-key or Authorization: Bearer credential for a Recoup admin account. Admin access is checked before query validation or metadata access.\n\nEach returned record contains only id, name, email and created_at. id identifies an API-key record, not an account or credential; no API key value or hash is selected or returned. email is the first matching current associated email, not necessarily a primary or canonical address. Multiple matching emails do not multiply a key record; multiple keys on one account remain separate records. Deleted keys are absent; expired key records are not excluded. Current email associations can change. This is a current-email metadata selection, not evidence of origin from POST /api/agents/signup, a unique-agent/account count, active-key count, usage or adoption.\n\nperiod defaults to all. Other values use inclusive midnight-UTC calendar boundaries on API-key record created_at: daily is today; weekly includes today and the preceding six calendar days; monthly includes today and the preceding 29 calendar days. Rows are ordered by key-record created_at descending. total is the length of the returned signups array, not a separate database-wide count. Existing database visibility and server row limits apply; no pagination or collection-completeness guarantee is provided. A successful empty read returns total 0 and signups []; a read failure returns a masked 500 instead.\n\nThis is GET /api/admins/agent-signups. The former GET /api/admins/agent/signups remains unavailable. The broader reporting decision in Mono #327 and original API #428 are not closed by this metadata route. Source tests use synthetic credential and storage boundaries; they do not prove production admin access, real data completeness or customer adoption. No UI, automatic caller, polling job, export or account/key creation is added.",
+    "security": [
+      {
+        "apiKeyAuth": []
+      },
+      {
+        "bearerAuth": []
+      }
+    ],
+    "parameters": [
+      {
+        "name": "period",
+        "in": "query",
+        "required": false,
+        "description": "Optional key-record creation window, inclusive from 00:00 UTC: daily = today; weekly = 7 calendar days including today; monthly = 30 calendar days including today; all = no cutoff. Defaults to all when omitted; an explicit empty or unsupported value returns 400. This is not a rolling 24-hour window and does not filter by account or email creation time.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "all",
+            "daily",
+            "weekly",
+            "monthly"
+          ],
+          "default": "all"
+        },
+        "example": "all"
+      }
+    ],
+    "schemas": {
+      "200": {
+        "type": "object",
+        "required": [
+          "status",
+          "total",
+          "signups"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "success"
+            ]
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Number of key records in this returned signups array. Not a separate database-wide count or a count of unique accounts, agents, active keys or adoption."
+          },
+          "signups": {
+            "type": "array",
+            "description": "Returned metadata rows ordered by key-record created_at descending. The retained wire name does not establish signup origin. Multiple keys for one account remain separate rows.",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "id",
+                "name",
+                "email",
+                "created_at"
+              ],
+              "description": "One returned API-key record and the first matching current associated email. No credential value or hash is selected or returned.",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "description": "API-key record ID, not an account ID or a credential."
+                },
+                "name": {
+                  "type": "string",
+                  "description": "Stored name of this API-key record."
+                },
+                "email": {
+                  "type": "string",
+                  "description": "First current associated email matching the case-insensitive agent+ prefix; not necessarily a primary or canonical email."
+                },
+                "created_at": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Creation time of the API-key record, not the account or email."
+                }
+              }
+            }
+          }
+        }
+      },
+      "400": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "error": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      },
+      "401": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "status",
+              "error"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "error"
+                ],
+                "description": "Status of the request"
+              },
+              "error": {
+                "type": "string",
+                "description": "Error message describing what went wrong"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "status",
+              "message"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "error"
+                ],
+                "description": "Status of the request"
+              },
+              "message": {
+                "type": "string",
+                "description": "Error message describing what went wrong"
+              }
+            }
+          }
+        ]
+      },
+      "403": {
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      },
+      "500": {
+        "type": "object",
+        "required": [
+          "status",
+          "message"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ],
+            "description": "Status of the request"
+          },
+          "message": {
+            "type": "string",
+            "description": "Error message describing what went wrong"
+          }
+        }
+      }
+    },
+    "examples": {
+      "multipleKeys": {
+        "status": "success",
+        "total": 2,
+        "signups": [
+          {
+            "id": "11111111-1111-4111-8111-111111111112",
+            "name": "Second agent key",
+            "email": "agent+fixture@example.invalid",
+            "created_at": "2026-10-21T12:00:00Z"
+          },
+          {
+            "id": "11111111-1111-4111-8111-111111111111",
+            "name": "First agent key",
+            "email": "agent+fixture@example.invalid",
+            "created_at": "2026-10-20T12:00:00Z"
+          }
+        ]
+      },
+      "noRecords": {
+        "status": "success",
+        "total": 0,
+        "signups": []
+      }
+    }
+  },
+  "contentCallback": {
+    "path": "/api/content-agent/callback",
+    "security": [
+      {
+        "callbackSecret": []
+      }
+    ],
+    "requestSchema": {
+      "type": "object",
+      "required": [
+        "threadId",
+        "status"
+      ],
+      "properties": {
+        "threadId": {
+          "type": "string",
+          "description": "Chat SDK thread identifier for the originating Slack thread"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "completed",
+            "failed",
+            "timeout"
+          ],
+          "description": "Overall status of the content generation batch"
+        },
+        "results": {
+          "type": "array",
+          "description": "Per-run results",
+          "items": {
+            "type": "object",
+            "required": [
+              "runId",
+              "status"
+            ],
+            "properties": {
+              "runId": {
+                "type": "string",
+                "description": "Trigger.dev run ID"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "completed",
+                  "failed",
+                  "timeout"
+                ]
+              },
+              "videoUrl": {
+                "type": "string",
+                "description": "URL of the generated video (when completed)"
+              },
+              "captionText": {
+                "type": "string",
+                "description": "Generated caption text (when completed)"
+              },
+              "error": {
+                "type": "string",
+                "description": "Error message (when failed)"
+              },
+              "imageUrl": {
+                "type": "string",
+                "description": "Optional editorial-image string associated with this run. Used only when this result is completed and also has videoUrl; not an image-only job. Attachment uses supported reported MIME, with URL fallback on download/MIME failure. No URL syntax validation is added by this field. For an attachment filename, keep the final URL path component when it contains a dot; otherwise use editorial.<reported MIME extension>, with jpg for image/jpeg. Existing dotted filenames are not rewritten to match the MIME extension."
+              }
+            }
+          }
+        },
+        "message": {
+          "type": "string",
+          "description": "Optional human-readable message"
+        }
+      }
+    },
+    "examples": {
+      "withEditorialImages": {
+        "threadId": "slack:C_FIXTURE:T_FIXTURE",
+        "status": "completed",
+        "results": [
+          {
+            "runId": "run-a",
+            "status": "completed",
+            "videoUrl": "https://example.invalid/video-a.mp4",
+            "imageUrl": "https://example.invalid/editorial-a",
+            "captionText": "First fixture caption"
+          },
+          {
+            "runId": "run-b",
+            "status": "completed",
+            "videoUrl": "https://example.invalid/video-b.mp4",
+            "imageUrl": "https://example.invalid/editorial-b",
+            "captionText": "Second fixture caption"
+          }
+        ]
+      },
+      "videoOnly": {
+        "threadId": "slack:C_FIXTURE:T_FIXTURE",
+        "status": "completed",
+        "results": [
+          {
+            "runId": "run-video",
+            "status": "completed",
+            "videoUrl": "https://example.invalid/video.mp4",
+            "captionText": "Fixture caption"
+          }
+        ]
+      }
+    },
+    "responseSchemas": {
+      "200": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "example": "ok",
+            "enum": [
+              "ok"
+            ]
+          },
+          "skipped": {
+            "type": "boolean",
+            "enum": [
+              true
+            ],
+            "description": "Present as true for an already-terminal thread; processing/media posting is skipped. This is not a concurrency-safe delivery guarantee."
+          }
+        },
+        "required": [
+          "status"
+        ]
+      },
+      "400": {
+        "allOf": [
+          {
+            "type": "object",
+            "required": [
+              "status",
+              "error"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "error"
+                ]
+              },
+              "error": {
+                "type": "string",
+                "description": "Human-readable error. Callback-secret denial uses Unauthorized."
+              }
+            }
+          },
+          {
+            "type": "object",
+            "properties": {
+              "missing_fields": {
+                "type": "array",
+                "description": "First schema issue path; omitted for malformed JSON. Path elements can be field names or numeric array positions.",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    }
+                  ]
+                },
+                "example": [
+                  "results",
+                  0,
+                  "imageUrl"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "401": {
+        "type": "object",
+        "required": [
+          "status",
+          "error"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "error"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "description": "Human-readable error. Callback-secret denial uses Unauthorized."
+          }
+        }
+      },
+      "503": {
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "responseExamples": {
+      "200": {
+        "processed": {
+          "status": "ok"
+        },
+        "terminalRetry": {
+          "status": "ok",
+          "skipped": true
+        }
+      },
+      "400": {
+        "invalidJson": {
+          "status": "error",
+          "error": "Invalid JSON body"
+        },
+        "invalidImageType": {
+          "status": "error",
+          "error": "Invalid input: expected string, received number",
+          "missing_fields": [
+            "results",
+            0,
+            "imageUrl"
+          ]
+        }
+      },
+      "401": {
+        "denied": {
+          "status": "error",
+          "error": "Unauthorized"
+        }
+      },
+      "503": {
+        "unconfigured": {
+          "error": "Content agent not configured"
+        }
+      }
+    },
+    "responseHeaders": {
+      "200": {
+        "Access-Control-Allow-Origin": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "*"
+            ]
+          }
+        },
+        "Access-Control-Allow-Methods": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            ]
+          }
+        },
+        "Access-Control-Allow-Headers": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "Content-Type, Authorization, X-Requested-With, x-api-key"
+            ]
+          }
+        },
+        "Access-Control-Expose-Headers": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "x-workflow-run-id, x-workflow-stream-tail-index"
+            ]
+          }
+        }
+      },
+      "400": {
+        "Access-Control-Allow-Origin": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "*"
+            ]
+          }
+        },
+        "Access-Control-Allow-Methods": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            ]
+          }
+        },
+        "Access-Control-Allow-Headers": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "Content-Type, Authorization, X-Requested-With, x-api-key"
+            ]
+          }
+        },
+        "Access-Control-Expose-Headers": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "x-workflow-run-id, x-workflow-stream-tail-index"
+            ]
+          }
+        }
+      },
+      "401": {
+        "Access-Control-Allow-Origin": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "*"
+            ]
+          }
+        },
+        "Access-Control-Allow-Methods": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "GET, POST, PUT, DELETE, OPTIONS, PATCH"
+            ]
+          }
+        },
+        "Access-Control-Allow-Headers": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "Content-Type, Authorization, X-Requested-With, x-api-key"
+            ]
+          }
+        },
+        "Access-Control-Expose-Headers": {
+          "description": "Existing shared response header; this does not establish browser preflight support.",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "x-workflow-run-id, x-workflow-stream-tail-index"
+            ]
+          }
+        }
+      },
+      "503": {}
+    }
+  },
+  "taskValidation": {
+    "path": "/api/tasks",
+    "responses": {
+      "POST": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "error"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ],
+              "description": "Always `error` when validation fails"
+            },
+            "missing_fields": {
+              "type": "array",
+              "description": "JSON path segments for the first schema validation issue, e.g. `[\"id\"]` or `[\"schedule\"]`. The path can be empty for a body-level issue. Omitted when the body is not valid JSON.",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              }
+            },
+            "error": {
+              "type": "string",
+              "description": "`Invalid JSON body` when JSON parsing fails; otherwise the message for the first schema validation issue."
+            }
+          },
+          "description": "Request-body validation error for creating or updating a task. Invalid JSON omits `missing_fields`; a schema validation failure includes the path of the first issue."
+        },
+        "examples": {
+          "invalidJson": {
+            "status": "error",
+            "error": "Invalid JSON body"
+          },
+          "invalidScheduleType": {
+            "status": "error",
+            "missing_fields": [
+              "schedule"
+            ],
+            "error": "Invalid input: expected string, received number"
+          }
+        }
+      },
+      "PATCH": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "error"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "error"
+              ],
+              "description": "Always `error` when validation fails"
+            },
+            "missing_fields": {
+              "type": "array",
+              "description": "JSON path segments for the first schema validation issue, e.g. `[\"id\"]` or `[\"schedule\"]`. The path can be empty for a body-level issue. Omitted when the body is not valid JSON.",
+              "items": {
+                "oneOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ]
+              }
+            },
+            "error": {
+              "type": "string",
+              "description": "`Invalid JSON body` when JSON parsing fails; otherwise the message for the first schema validation issue."
+            }
+          },
+          "description": "Request-body validation error for creating or updating a task. Invalid JSON omits `missing_fields`; a schema validation failure includes the path of the first issue."
+        },
+        "examples": {
+          "invalidJson": {
+            "status": "error",
+            "error": "Invalid JSON body"
+          },
+          "invalidScheduleType": {
+            "status": "error",
+            "missing_fields": [
+              "schedule"
+            ],
+            "error": "Invalid input: expected string, received number"
+          }
+        }
+      }
+    }
+  },
+  "taskAuthentication": {
+    "path": "/api/tasks",
+    "operations": {
+      "GET": {
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "examples": {
+          "missingOrConflictingCredentials": {
+            "status": "error",
+            "error": "Exactly one of x-api-key or Authorization must be provided"
+          },
+          "invalidCredential": {
+            "status": "error",
+            "message": "Unauthorized"
+          }
+        }
+      },
+      "POST": {
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "examples": {
+          "missingOrConflictingCredentials": {
+            "status": "error",
+            "error": "Exactly one of x-api-key or Authorization must be provided"
+          },
+          "invalidCredential": {
+            "status": "error",
+            "message": "Unauthorized"
+          }
+        }
+      },
+      "PATCH": {
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "examples": {
+          "missingOrConflictingCredentials": {
+            "status": "error",
+            "error": "Exactly one of x-api-key or Authorization must be provided"
+          },
+          "invalidCredential": {
+            "status": "error",
+            "message": "Unauthorized"
+          }
+        }
+      },
+      "DELETE": {
+        "security": [
+          {
+            "apiKeyAuth": []
+          },
+          {
+            "bearerAuth": []
+          }
+        ],
+        "examples": {
+          "missingOrConflictingCredentials": {
+            "status": "error",
+            "error": "Exactly one of x-api-key or Authorization must be provided"
+          },
+          "invalidCredential": {
+            "status": "error",
+            "message": "Unauthorized"
+          }
+        }
+      }
+    }
+  },
+  "headlessChat": {
+    "requestSchema": {
+      "type": "object",
+      "description": "Request body for chat generation. Exactly one of 'prompt' or 'messages' must be provided.",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "Single text prompt for the assistant. Required if 'messages' is not provided.",
+          "minLength": 1
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "role",
+              "parts"
+            ],
+            "description": "AI SDK UIMessage. Parts are structurally validated before provisioning for headless runs. Legacy content-only messages are rejected.",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "assistant",
+                  "system"
+                ]
+              },
+              "metadata": {},
+              "parts": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "type"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": true
+                },
+                "description": "SDK discriminated parts: text (text), file (mediaType and url), reasoning, supported tool and data-* parts. Each must satisfy the installed AI SDK schema; a type field alone is insufficient.",
+                "example": [
+                  {
+                    "type": "text",
+                    "text": "Summarize my next release."
+                  }
+                ]
+              }
+            }
+          },
+          "description": "Array of UIMessage objects for context. Required if 'prompt' is not provided.",
+          "minItems": 1
+        },
+        "artistId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "The unique identifier of the artist (optional)"
+        },
+        "model": {
+          "type": "string",
+          "description": "The AI model to use for text generation (optional)",
+          "example": "openai/gpt-5-mini"
+        },
+        "trigger_run_id": {
+          "type": "string",
+          "description": "Optional. When the run is kicked off by a Trigger.dev scheduled task, the Trigger run id (`run_...`). The started workflow's `{ sessionId, chatId, workflowRunId }` are written to that Trigger run's metadata so the scheduled run can be traced to the chat that did the work.",
+          "example": "run_06g3i0e3logru439uh9e1m8801"
+        }
+      },
+      "example": {
+        "messages": [
+          {
+            "id": "user-1",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "Summarize my next release."
+              }
+            ]
+          }
+        ]
+      },
+      "examples": [
+        {
+          "messages": [
+            {
+              "id": "user-inline-file",
+              "role": "user",
+              "parts": [
+                {
+                  "type": "text",
+                  "text": "Summarize this attached note."
+                },
+                {
+                  "type": "file",
+                  "mediaType": "text/plain",
+                  "url": "data:text/plain;base64,U3ludGhldGljIHJlbGVhc2Ugbm90ZS4="
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "requestExamples": [
+      {
+        "messages": [
+          {
+            "id": "user-1",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "Summarize my next release."
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "messages": [
+          {
+            "id": "user-inline-file",
+            "role": "user",
+            "parts": [
+              {
+                "type": "text",
+                "text": "Summarize this attached note."
+              },
+              {
+                "type": "file",
+                "mediaType": "text/plain",
+                "url": "data:text/plain;base64,U3ludGhldGljIHJlbGVhc2Ugbm90ZS4="
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "errorSchema": {
+      "type": "object",
+      "required": [
+        "status",
+        "error"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": [
+            "error"
+          ],
+          "description": "Status of the request"
+        },
+        "error": {
+          "type": "string",
+          "description": "Validation error describing why the headless request was rejected."
+        },
+        "missing_fields": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Optional validation path when available; a general request error can omit it."
+        }
+      }
+    },
+    "statusSchema": {
+      "type": "object",
+      "required": [
+        "runId",
+        "status"
+      ],
+      "description": "Point-in-time status of an asynchronous chat-generation run.",
+      "properties": {
+        "runId": {
+          "type": "string",
+          "description": "The durable workflow run id.",
+          "example": "wrun_01KVWZNM82NA7XKNEWWHG8VPHJ"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "queued",
+            "running",
+            "completed",
+            "failed",
+            "cancelled"
+          ],
+          "description": "Lifecycle state of the run. Read the produced content via the chat (`chatId` from the start response)."
+        },
+        "createdAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "When the workflow run was created; null if unavailable, including for terminal runs.",
+          "example": "2026-08-25T19:33:56.000Z"
+        },
+        "startedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "When execution started; null while unavailable or if its timing getter fails, including for terminal runs.",
+          "example": "2026-08-25T19:34:16.386Z"
+        },
+        "completedAt": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time",
+          "description": "When the run reached a terminal state; null while unavailable or if its timing getter fails, including for terminal runs.",
+          "example": "2026-08-25T20:15:55.000Z"
+        },
+        "durationMs": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "description": "completedAt minus startedAt in milliseconds; null if either timestamp is unavailable, including for terminal runs.",
+          "example": 2498614
+        }
+      }
+    }
+  },
+  "chatLifecycle": {
+    "start": {
+      "method": "POST",
+      "path": "/api/chat",
+      "parameters": [
+        {
+          "name": "streamLifecycle",
+          "in": "query",
+          "required": false,
+          "description": "Send streamLifecycle=explicit-stop-v1 exactly once on the initial POST and every reconnect GET to keep server work running when that reader disconnects. Only exactly one parameter with that exact value opts in. Omitting it, an empty or unknown value, or repeating the parameter retains legacy disconnect cancellation. Use authenticated POST /api/chat/{chatId}/stop for cancellation; a local reader abort is not confirmation that server work stopped. This is a query parameter, not a request-body field.",
+          "schema": {
+            "type": "string"
+          },
+          "example": "explicit-stop-v1"
+        }
+      ]
+    },
+    "resume": {
+      "method": "GET",
+      "path": "/api/chat/{chatId}/stream",
+      "parameters": [
+        {
+          "name": "chatId",
+          "in": "path",
+          "required": true,
+          "description": "UUID of the chat to resume.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "account_id",
+          "in": "query",
+          "required": false,
+          "description": "Act on a chat belonging to another account. Only honoured for a key that is authorised for that account \u2014 an organization key may pass a member account's id; a personal key passing anyone else's is rejected with `403 Access denied to specified account_id`. Omit it to act as the authenticated account.",
+          "schema": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        {
+          "name": "startIndex",
+          "in": "query",
+          "required": false,
+          "description": "Zero-based index of the first stream chunk to return, so a client that was already receiving this response resumes where it left off instead of replaying the whole turn.\n\nPass the number of chunks already received. Omit it to receive the response from the beginning \u2014 the right choice for a fresh reader such as a page load, or a client watching a headless [`POST /api/chat/runs`](/api-reference/chat/runs) run for the first time.\n\nA long turn's stream can end before the run does; reconnecting with `startIndex` is how a client keeps rendering without duplicating or skipping chunks.",
+          "schema": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        {
+          "name": "streamLifecycle",
+          "in": "query",
+          "required": false,
+          "description": "Send streamLifecycle=explicit-stop-v1 exactly once on the initial POST and every reconnect GET to keep server work running when that reader disconnects. Only exactly one parameter with that exact value opts in. Omitting it, an empty or unknown value, or repeating the parameter retains legacy disconnect cancellation. Use authenticated POST /api/chat/{chatId}/stop for cancellation; a local reader abort is not confirmation that server work stopped. This is a query parameter, not a request-body field.",
+          "schema": {
+            "type": "string"
+          },
+          "example": "explicit-stop-v1"
+        }
+      ]
+    }
+  },
+  "chatTrailingDelete": {
+    "method": "DELETE",
+    "path": "/api/chats/{id}/messages/trailing",
+    "description": "Delete a message in a Workflow chat and every message after it, ordered by `created_at` then `id`. Concurrent edit/resend is unsupported: stop other writers first, because an active workflow run returns `409`. `200` means the delete ran, possibly affecting zero rows; after a transport failure, refresh the chat history instead of resending.",
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "description": "UUID of the owned Workflow chat.",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "from_message_id",
+        "in": "query",
+        "description": "UUID of the persisted message in this Workflow chat to use as the inclusive created_at, id boundary. Any persisted message role is eligible.",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "account_id",
+        "in": "query",
+        "required": false,
+        "description": "Optional effective account override, accepted only when current authentication authorizes access to that account. It does not grant access by itself.",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "security": [
+      {
+        "apiKeyAuth": []
+      },
+      {
+        "bearerAuth": []
+      }
+    ],
+    "responseDescriptions": {
+      "200": "Delete statement succeeded, including a possible zero-row result. No deleted count, durable-absence or concurrent edit/resend guarantee.",
+      "400": "Invalid chat UUID or missing/invalid from_message_id query UUID.",
+      "401": "Missing, conflicting or invalid credentials. Authentication errors retain the error or message envelope returned by the selected authentication path.",
+      "403": "Access denied to the requested account_id override or the effective account does not own the Workflow chat session.",
+      "404": "Workflow chat/session is absent, or the anchor is absent from this chat (including a foreign-chat anchor).",
+      "500": "Authentication/storage failure, chat/session/anchor read failure, invalid stored boundary, or delete failure. A transport failure may leave the commit outcome unknown; refresh history before further action.",
+      "409": "An occupied workflow slot was observed. Pending reservations and other nonnull values are rejected without provider calls, cancellation or slot mutation. This check is not a concurrency lock."
+    }
+  }
+}

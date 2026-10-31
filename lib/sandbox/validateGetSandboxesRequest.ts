@@ -8,8 +8,15 @@ import { z } from "zod";
 
 const getSandboxesQuerySchema = z.object({
   sandbox_id: z.string().optional(),
+  metadata_only: z.enum(["true", "false"]).optional(),
   account_id: z.string().uuid("account_id must be a valid UUID").optional(),
 });
+
+export type ValidatedGetSandboxesParams = SelectAccountSandboxesParams & {
+  metadataOnly?: boolean;
+  /** Explicit, authorized target echoed to account-aware clients. */
+  targetAccountId?: string;
+};
 
 /**
  * Validates GET /api/sandboxes request.
@@ -17,6 +24,7 @@ const getSandboxesQuerySchema = z.object({
  *
  * Query parameters:
  * - sandbox_id: Filter to a specific sandbox (must belong to account/org)
+ * - metadata_only: Skip live sandbox status lookups when "true" (default false)
  * - account_id: Filter to a specific account (validated against org membership)
  *
  * @param request - The NextRequest object
@@ -24,11 +32,12 @@ const getSandboxesQuerySchema = z.object({
  */
 export async function validateGetSandboxesRequest(
   request: NextRequest,
-): Promise<NextResponse | SelectAccountSandboxesParams> {
+): Promise<NextResponse | ValidatedGetSandboxesParams> {
   // Parse query parameters
   const { searchParams } = new URL(request.url);
   const queryParams = {
     sandbox_id: searchParams.get("sandbox_id") ?? undefined,
+    metadata_only: searchParams.get("metadata_only") ?? undefined,
     account_id: searchParams.get("account_id") ?? undefined,
   };
 
@@ -71,5 +80,9 @@ export async function validateGetSandboxesRequest(
     );
   }
 
-  return params;
+  return {
+    ...params,
+    ...(targetAccountId && { targetAccountId }),
+    ...(queryResult.data.metadata_only === "true" && { metadataOnly: true }),
+  };
 }

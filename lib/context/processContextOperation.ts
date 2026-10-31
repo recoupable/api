@@ -1,4 +1,8 @@
+import { catalogCaseOperationSchemas } from "./catalogCaseOperationSchemas";
+import { processCatalogCaseOperation } from "./processCatalogCaseOperation";
 import { releaseCaseOperationSchemas } from "./releaseCaseOperationSchemas";
+import { evidenceAttachmentOperationSchemas } from "./evidenceAttachmentSchemas";
+import { processEvidenceAttachmentOperation } from "./processEvidenceAttachmentOperation";
 import { processReleaseCaseOperation } from "./processReleaseCaseOperation";
 import { createHash } from "node:crypto";
 import { z } from "zod";
@@ -9,6 +13,11 @@ import { parseContextReleaseUrl } from "./parseContextReleaseUrl";
 import type { ContextBriefDocument } from "./selectContextDocuments";
 import { compileContextBrief } from "./compileContextBrief";
 import type { ContextRequestRecord } from "./runContextRequest";
+import { readContextRequest } from "./readContextRequest";
+import {
+  catalogPlanningModuleMap,
+  normalizeCatalogPlanningModule,
+} from "./normalizeCatalogPlanningModule";
 
 const briefFields = {
   request_id: z.uuid(),
@@ -19,6 +28,8 @@ const briefFields = {
 };
 
 export const contextOperationSchema = z.discriminatedUnion("action", [
+  ...catalogCaseOperationSchemas,
+  ...evidenceAttachmentOperationSchemas,
   ...releaseCaseOperationSchemas,
   z.strictObject({
     action: z.literal("save_brief"),
@@ -93,7 +104,11 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
     organization_id: z.string().uuid().optional(),
     after_isrc: z.string().min(1).max(100).optional(),
     limit: z.number().int().min(1).max(100).default(100),
-    module: z.enum(["musicbrainz", "mlc_recording", "songstats"]),
+    module: z
+      .enum(Object.keys(catalogPlanningModuleMap) as (keyof typeof catalogPlanningModuleMap)[])
+      .describe(
+        "Use recording_candidates for unconfirmed recording matches, recording_work_candidates for candidate linked works (not ownership), or platform_metadata for available platform track information (not growth metrics). Legacy musicbrainz, mlc_recording and songstats remain accepted. Planning only; returned module IDs retain legacy values and collection is not permitted.",
+      ),
   }),
   z.strictObject({
     action: z.literal("read_execution"),
@@ -180,6 +195,8 @@ export interface ContextOperationDependencies {
     subjectId: string,
   ) => Promise<unknown>;
   authorize?: typeof authorizeContextOwner;
+  /** Trusted transport policy; never read from client input. */
+  includeMaterialEvidence?: boolean;
 }
 /** Single authenticated operation surface used by HTTP, MCP and integration tests. */
 export async function processContextOperation(
@@ -193,16 +210,41 @@ export async function processContextOperation(
     args.organization_id,
   );
   if (
+    args.action === "save_catalog_case" ||
+    args.action === "read_catalog_case" ||
+    args.action === "list_catalog_cases"
+  )
+    return processCatalogCaseOperation(accountId, ownerId, args, deps.rpc);
+  if (
+    args.action === "attach_evidence" ||
+    args.action === "read_evidence_attachment" ||
+    args.action === "list_evidence_attachments"
+  )
+    return processEvidenceAttachmentOperation(accountId, ownerId, args, deps.rpc);
+  if (
     args.action === "list_release_cases" ||
     args.action === "read_release_case" ||
     args.action === "read_release_case_review" ||
     args.action === "review_release_case"
   )
     return processReleaseCaseOperation(accountId, ownerId, args, deps.rpc);
-  if (args.action === "read_brief")
-    return {
-      snapshot: await deps.rpc("read_context_brief", { p_owner: ownerId, p_brief: args.brief_id }),
-    };
+  // Evidence reads and persistence can outlive the membership check at entry.
+  const recheckOwner = async () => {
+    const current = await (deps.authorize ?? authorizeContextOwner)(
+      accountId,
+      args.organization_id,
+    );
+    if (current.ownerId.toLowerCase() !== ownerId.toLowerCase())
+      throw new Error("Context owner changed");
+  };
+  if (args.action === "read_brief") {
+    const snapshot = await deps.rpc("read_context_brief", {
+      p_owner: ownerId,
+      p_brief: args.brief_id,
+    });
+    await recheckOwner();
+    return { snapshot };
+  }
   if (args.action === "plan") {
     const { planStoredContextModules } = await import("./planning/planStoredContextModules");
     return planStoredContextModules(accountId, ownerId, args.request_id);
@@ -318,7 +360,10 @@ export async function processContextOperation(
         availableFields: ["isrc" as const],
         reusableModules: [],
       })),
-      requested: page.members.map(member => ({ subjectId: member.subjectId, module: args.module })),
+      requested: page.members.map(member => ({
+        subjectId: member.subjectId,
+        module: normalizeCatalogPlanningModule(args.module),
+      })),
       permittedModules: [],
     });
     return { page, plan, collectionPermitted: false };
@@ -467,7 +512,15 @@ export async function processContextOperation(
     p_request: args.request_id,
   })) as ContextRequestRecord & { output?: { subjectIds?: string[]; gaps?: unknown[] } };
   if (!request) throw new Error("Context request not found");
-  if (args.action === "read") return { request };
+  if (args.action === "read")
+    return readContextRequest({
+      accountId,
+      ownerId,
+      organizationId: args.organization_id,
+      requestId: args.request_id,
+      request,
+      deps,
+    });
   const requestIds = [...new Set([args.request_id, ...args.additional_request_ids])];
   const requests = [request];
   for (const id of requestIds.slice(1)) {
@@ -499,13 +552,16 @@ export async function processContextOperation(
     purpose: args.purpose,
     maxCharacters: args.max_characters,
   });
-  if (args.action === "save_brief")
-    return {
-      snapshot: await deps.rpc("save_context_brief", {
-        p_owner: ownerId,
-        p_key: args.idempotency_key,
-        p_snapshot: brief,
-      }),
-    };
+  await recheckOwner();
+  if (args.action === "save_brief") {
+    const snapshot = await deps.rpc("save_context_brief", {
+      p_owner: ownerId,
+      p_key: args.idempotency_key,
+      p_snapshot: brief,
+    });
+    // A completed write cannot be undone here; withhold its content after revocation.
+    await recheckOwner();
+    return { snapshot };
+  }
   return brief;
 }

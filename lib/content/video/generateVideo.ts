@@ -6,8 +6,9 @@ import { buildVideoInput } from "./buildVideoInput";
 // Owner ruling 2026-08-31: MiniMax H3 Max is the house video model. Ids
 // verified against fal 2026-09-02. Not caller-overridable — cost is only
 // predictable if the model is ours (recoupable/app#2052). Lipsync/OmniHuman
-// is out of this endpoint's scope for now (docs#328, 2026-09-03).
-export const HOUSE_VIDEO_MODEL = "minimax/h3-max/image-to-video";
+// is out of this endpoint's scope for now (docs-legacy#328, 2026-09-03).
+import { HOUSE_VIDEO_MODEL } from "@/lib/const";
+export { HOUSE_VIDEO_MODEL } from "@/lib/const";
 
 type VideoParams = z.infer<typeof createVideoBodySchema>;
 
