@@ -1,4 +1,4 @@
-import { packExecutionSettings, LIGHTWEIGHT_MODEL } from "@/lib/const";
+import { packExecutionSettings, PACK_STILL_INSPECTION_MODEL } from "@/lib/const";
 import { generateText } from "ai";
 import { z } from "zod";
 import { analyzeVideo } from "@/lib/twelvelabs/analyzeVideo";
@@ -32,7 +32,7 @@ export const inspectPackMedia: PackProductionServices["inspect"] = async ({
       const media = await fetchPackMedia(url);
       text = (
         await generateText({
-          model: LIGHTWEIGHT_MODEL,
+          model: PACK_STILL_INSPECTION_MODEL,
           ...packExecutionSettings.stillInspection,
           messages: [
             {

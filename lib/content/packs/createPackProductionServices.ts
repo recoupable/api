@@ -1,4 +1,4 @@
-import { packExecutionSettings, LIGHTWEIGHT_MODEL } from "@/lib/const";
+import { packExecutionSettings, PACK_CAPTION_MODEL } from "@/lib/const";
 import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
 import { generateText } from "ai";
 import { buildImageInput } from "@/lib/content/image/buildImageInput";
@@ -77,7 +77,7 @@ export function createPackProductionServices(
     caption: async prompt => {
       assertPackQuoteConfiguration(job.quote);
       const result = await generateText({
-        model: LIGHTWEIGHT_MODEL,
+        model: PACK_CAPTION_MODEL,
         ...packExecutionSettings.caption,
         abortSignal: AbortSignal.timeout(30_000),
         system:

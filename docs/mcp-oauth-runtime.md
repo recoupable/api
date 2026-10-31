@@ -101,3 +101,9 @@ An authorized rollback may disable `OAUTH_ENABLED` to stop delegated verificatio
 [Mono #215](https://github.com/recoupable/mono/issues/215) holds dated client receipts and the remaining per-host connect/read/write/readback/refresh/revoke/reconnect matrix. Keep each actual host/version, callback, registration mechanism, actor/scope and serving revision distinct. A controlled local test is not named-client acceptance. Intended-account connection availability, a supported host, and scoped live-write permission are separate prerequisites; paid/outbound tests additionally require their approved budget/recipient.
 
 [Mono #208–216](https://github.com/recoupable/mono/issues/207) retain the unfinished selected-organization, role-loss, action/retry, observability, UI and production launch criteria. This reconciliation neither closes those gates nor asserts current credentials, connector access, deployment state or complete operational dashboards.
+
+### Malformed MCP JSON
+
+After bearer verification, the MCP route parses a copy of JSON POST bodies before the handler adapter. This guards the adapter's uncaught JSON parsing path: invalid JSON returns a fixed HTTP400 JSON-RPC parse error without echoing the body or exception. Missing required Accept types retain HTTP406 precedence; non-JSON media types remain owned by the transport. Unauthenticated requests retain HTTP401 and the canonical discovery challenge without parsing the body.
+
+The parsed copy also supplies limited-tool scope inference; the original body remains untouched for transport validation and dispatch. Valid JSON with invalid JSON-RPC structure, notifications, and authorized tool calls continue through the existing transport. Local real-route tests cover limited/full/first-party admission with synthetic bearer verification and mocked effects; this is not named-client or production acceptance.
