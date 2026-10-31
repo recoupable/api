@@ -145,3 +145,106 @@ it.each([
   expect(response.headers.get("WWW-Authenticate")).toBeNull();
   expect(createArtist).not.toHaveBeenCalled();
 });
+
+// Bound a broken adapter response without waiting for the suite's five-second timeout.
+async function boundedPost(req: Request) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      POST(req),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error("MCP response did not settle")), 250);
+      }),
+    ]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+it.each(["limited", "full", "first-party"])(
+  "returns a finite redacted parse error for %s authenticated malformed JSON",
+  async mode => {
+    if (mode === "full") access.scopes = ["mcp:tools"];
+    if (mode === "first-party")
+      verify.mockResolvedValue({
+        token: "synthetic-token",
+        clientId: "first-party",
+        scopes: [],
+        extra: { accountId: "alice" },
+      });
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const original = request("create_new_artist");
+      const response = await boundedPost(
+        new Request(original.url, {
+          method: "POST",
+          headers: original.headers,
+          body: '{"private":"DO-NOT-ECHO",',
+        }),
+      );
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({
+        jsonrpc: "2.0",
+        error: { code: -32700, message: "Parse error: Invalid JSON" },
+        id: null,
+      });
+      expect(response.headers.get("WWW-Authenticate")).toBeNull();
+      expect(response.headers.get("Cache-Control")).toBe("no-store");
+      expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
+      expect(log).not.toHaveBeenCalled();
+      expect(createArtist).not.toHaveBeenCalled();
+      expect(listArtists).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+    }
+  },
+);
+
+it("rejects invalid authentication before reading malformed JSON", async () => {
+  const original = request("create_new_artist", "invalid");
+  const req = new Request(original.url, { method: "POST", headers: original.headers, body: "{" });
+  const clone = vi.spyOn(req, "clone");
+  const response = await boundedPost(req);
+  expect(response.status).toBe(401);
+  expect(response.headers.get("WWW-Authenticate")).toContain(
+    'resource_metadata="https://api.example/.well-known/oauth-protected-resource/mcp"',
+  );
+  expect(clone).not.toHaveBeenCalled();
+});
+
+it.each(["text/plain", "application/octet-stream"])(
+  "preserves non-JSON %s rejection",
+  async contentType => {
+    const original = request("list_artists");
+    original.headers.set("Content-Type", contentType);
+    const response = await boundedPost(
+      new Request(original.url, { method: "POST", headers: original.headers, body: "{" }),
+    );
+    expect(response.status).toBe(415);
+    expect(listArtists).not.toHaveBeenCalled();
+  },
+);
+
+it.each(["{}", "{"])("preserves Accept rejection with body %s", async body => {
+  const original = request("list_artists");
+  original.headers.set("Accept", "application/json");
+  const response = await boundedPost(
+    new Request(original.url, { method: "POST", headers: original.headers, body }),
+  );
+  expect(response.status).toBe(406);
+  expect(listArtists).not.toHaveBeenCalled();
+});
+
+it.each([
+  ["null", 400],
+  ["42", 400],
+  ['{"jsonrpc":"2.0","method":"notifications/initialized"}', 202],
+])("keeps transport semantics for valid JSON %s", async (body, status) => {
+  const original = request("list_artists");
+  const req = new Request(original.url, { method: "POST", headers: original.headers, body });
+  const clone = vi.spyOn(req, "clone");
+  const response = await boundedPost(req);
+  expect(response.status).toBe(status);
+  expect(clone).toHaveBeenCalledTimes(1);
+  expect(listArtists).not.toHaveBeenCalled();
+});
