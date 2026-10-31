@@ -103,6 +103,9 @@ export const TERMINAL_WORKFLOW_RUN_STATUSES: readonly string[] = Object.freeze([
 ]);
 
 // Existing Release Pack routes and settings, shared by quotation and execution.
+// Keep Pack migrations independent of the application-wide lightweight alias.
+export const PACK_CAPTION_MODEL = "openai/gpt-4o-mini";
+export const PACK_STILL_INSPECTION_MODEL = "openai/gpt-4o-mini";
 export const HOUSE_VIDEO_MODEL = "minimax/h3-max/image-to-video";
 export const TWELVELABS_ANALYSIS_MODEL = "pegasus1.5";
 
