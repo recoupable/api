@@ -74,3 +74,27 @@ describe("release pack authenticated transports", () => {
     expect(processPackOperation).not.toHaveBeenCalled();
   });
 });
+
+it.each(["get", "export"] as const)(
+  "preserves saved progress through the %s HTTP response",
+  async operation => {
+    const progress = {
+      counts: { usable_pieces: 0 },
+      milestones: { first_usable_asset_at: null },
+      timings: { remaining_ms: null },
+    };
+    vi.mocked(processPackOperation).mockResolvedValueOnce({
+      job: { id },
+      assets: [],
+      progress,
+    } as never);
+    const response = await handlePackRequest(
+      new NextRequest(`https://api.example/content/packs/${id}`),
+      operation,
+      id,
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).progress).toEqual(progress);
+    expect(processPackOperation).toHaveBeenLastCalledWith("owner", operation, { job_id: id }, null);
+  },
+);
