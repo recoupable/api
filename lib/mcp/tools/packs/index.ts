@@ -20,7 +20,7 @@ export const releasePackToolManifest: Record<PackOperation, [string, string]> = 
   ],
   estimate: [
     "estimate_release_pack",
-    "Quote every creative piece, captions, inspection and composition. Pass asset_id only for a confirmed failed asset's fresh retry quote. Does not spend.",
+    "Quote the customer charge ceiling for the selected pieces; captions, inspection and composition have no added customer fee. Provider expense is unmeasured, not zero. Concepts, contingency and refinements are not budgeted. Pass asset_id only for a confirmed failed asset's fresh retry quote. Does not spend.",
   ],
   generate: [
     "generate_release_pack",

@@ -136,3 +136,14 @@ export const packCandidateAdapterSettings = {
     inspectionTokens: 600,
   },
 } as const;
+
+/** Quote amounts are customer charges; provider expenses are not measured by pack receipts. */
+export const packCostAccounting = {
+  amount_basis: "customer_charge",
+  included_services: "no_additional_customer_charge",
+  provider_cost_usd: null,
+  provider_cost_status: "not_measured",
+  concepts: "not_budgeted",
+  contingency: "not_budgeted",
+  refinements: "not_budgeted",
+} as const;
