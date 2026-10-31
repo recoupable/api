@@ -11,12 +11,19 @@ import { runPackCommand } from "@/lib/supabase/release_pack_jobs/runPackCommand"
 import { resolvePackCreativeContext } from "./resolvePackCreativeContext";
 import { createSignedFileUrlByKey } from "@/lib/supabase/storage/createSignedFileUrlByKey";
 import type { PackActor, PackJob } from "./packTypes";
+const analysisText = z.string().refine(
+  value =>
+    // Match Context evidence substance without rewriting Unicode claims.
+    /[^\s\p{Cf}\p{Default_Ignorable_Code_Point}]/u.test(value) &&
+    !/^(?:n\/a|none|unknown|unavailable|not available|not applicable)$/i.test(value.trim()),
+  "Audio analysis must contain descriptive observations and direction, not placeholder text",
+);
 const contextSchema = z.object({
   state: z.literal("complete"),
   audio: z.object({ storage_key: z.string() }),
   references: z.array(z.object({ storage_key: z.string() })),
-  summary: z.string(),
-  visual_direction: z.string(),
+  summary: analysisText.max(6000),
+  visual_direction: analysisText.max(2000),
   proposed_start_seconds: z.number(),
   selected_start_seconds: z.number(),
   duration_seconds: z.number(),
@@ -26,6 +33,10 @@ export async function preparePackProduction(actor: PackActor, job: PackJob): Pro
   job = { ...job, brief: resolvePackCreativeContext(job.brief) };
   let context = contextSchema.safeParse(job.production_context);
   if (!context.success) {
+    if ((job.production_context as { state?: string } | undefined)?.state === "complete")
+      throw new Error(
+        "Saved audio analysis is invalid; reconcile the retained context before production. No analysis was repeated.",
+      );
     assertPackQuoteConfiguration(job.quote);
     if ((job.production_context as { state?: string } | undefined)?.state === "analyzing")
       throw new Error(
@@ -99,8 +110,8 @@ export async function preparePackProduction(actor: PackActor, job: PackJob): Pro
     }
     const interpreted = z
       .object({
-        summary: z.string().min(1).max(6000),
-        visual_direction: z.string().min(1).max(2000),
+        summary: analysisText.max(6000),
+        visual_direction: analysisText.max(2000),
         proposed_start_seconds: z
           .number()
           .min(0)
