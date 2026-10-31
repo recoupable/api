@@ -186,3 +186,21 @@ it.each([{ bytes: Buffer.alloc(10 * 1024 * 1024 + 1) }, { prompt: "a".repeat(12_
     expect(fixture.fetch).not.toHaveBeenCalled();
   },
 );
+it.each(["\u200b", "\ufe0f", "\u2060\u200d"])(
+  "rejects invisible-only Luna output %j",
+  async text => {
+    const fixture = lunaFixture(text);
+    await expect(
+      generatePackTextWithLuna({ model: fixture.model, stage: "caption", prompt: "Fixture" }),
+    ).rejects.toThrow(/no text/i);
+  },
+);
+it.each(["静かな夜", "موسيقى", "🎵"])(
+  "preserves substantive Unicode Luna output %s",
+  async text => {
+    const fixture = lunaFixture(text);
+    await expect(
+      generatePackTextWithLuna({ model: fixture.model, stage: "caption", prompt: "Fixture" }),
+    ).resolves.toBe(text);
+  },
+);

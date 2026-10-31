@@ -1,3 +1,4 @@
+import { hasPackTextContent } from "./hasPackTextContent";
 import { generateText, type LanguageModel } from "ai";
 import { z } from "zod";
 import { packCandidateAdapterSettings } from "@/lib/const";
@@ -47,6 +48,6 @@ export async function generatePackTextWithLuna(input: Input): Promise<string> {
   if (result.finishReason !== "stop")
     throw new Error("Text generation is incomplete; reconcile before another attempt");
   const text = result.text.trim();
-  if (!text) throw new Error("Text generation returned no text");
+  if (!hasPackTextContent(text)) throw new Error("Text generation returned no text");
   return text;
 }
