@@ -2,6 +2,7 @@ import { createRecoupServerInfo } from "@/lib/mcp/createRecoupServerInfo";
 import { registerRecoupExtension } from "@/lib/mcp/extension/registerRecoupExtension";
 import { registerFullOAuthTools } from "@/lib/mcp/oauth/registerFullOAuthTools";
 import { createFullOAuthToolServices } from "@/lib/mcp/oauth/createFullOAuthToolServices";
+import { getLimitedOAuthRequestScopes } from "@/lib/mcp/oauth/getLimitedOAuthRequestScopes";
 import { setOAuthMcpHeaders } from "@/lib/mcp/oauth/setOAuthMcpHeaders";
 import { registerAllTools } from "@/lib/mcp/tools";
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
@@ -43,6 +44,10 @@ const fullOAuthHandler = createMcpHandler(
 async function handler(req: Request) {
   const bearer = /^Bearer +([^\s]+)$/i.exec(req.headers.get("authorization") ?? "")?.[1];
   const auth = await verifyBearerToken(req, bearer);
+  const requiredScopes =
+    auth?.extra.oauth && !auth.scopes.includes("mcp:tools")
+      ? await getLimitedOAuthRequestScopes(req)
+      : [];
   const response = await withMcpAuth(
     auth?.extra.oauth
       ? auth.scopes.includes("mcp:tools")
@@ -52,12 +57,14 @@ async function handler(req: Request) {
     async () => auth,
     {
       required: true,
+      requiredScopes,
       resourceMetadataPath: "/.well-known/oauth-protected-resource/mcp",
     },
   )(req);
   return setOAuthMcpHeaders(
     response,
     process.env.OAUTH_ENABLED === "true" ? process.env.OAUTH_ISSUER : undefined,
+    requiredScopes,
   );
 }
 
