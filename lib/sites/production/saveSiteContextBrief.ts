@@ -19,7 +19,9 @@ export async function saveSiteContextBrief(
       organization_id: site.owner_id,
       purpose: "creative_direction",
       max_characters: 32000,
-      idempotency_key: `sites:${site.id}:${site.revision}:${context.requestId}:brief-v3`,
+      // save_context_brief rejects a reused key with different output: bump the suffix
+      // whenever compiled brief output changes (v4: evidence freshness lines and manifest).
+      idempotency_key: `sites:${site.id}:${site.revision}:${context.requestId}:brief-v4`,
     },
     { rpc: callContextRpc, dispatch: runStoredContextRequest },
   );

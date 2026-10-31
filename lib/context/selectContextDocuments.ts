@@ -15,6 +15,8 @@ export interface ContextBriefDocument {
   text: string;
   sourceVersionIds: string[];
   coverage: "full" | "partial" | "unknown" | "unavailable";
+  /** Source rows as read_context_documents returns them; locations stay out of brief text and manifests. */
+  sources?: { versionId: string; url?: string | null; retrievedAt?: string | null }[];
 }
 
 export interface ContextBriefSelection {

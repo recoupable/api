@@ -1,6 +1,19 @@
 import { z } from "zod";
 
 const purpose = z.enum(["creative_direction", "playlist_pitch", "company_onboarding"]);
+const retrievalDate = z.iso.datetime().nullable();
+const freshness = z.strictObject({
+  oldestRetrievedAt: retrievalDate,
+  newestRetrievedAt: retrievalDate,
+  documentsWithoutRetrievalDate: z.array(z.uuid()),
+  documents: z.array(
+    z.strictObject({
+      documentId: z.uuid(),
+      oldestRetrievedAt: retrievalDate,
+      newestRetrievedAt: retrievalDate,
+    }),
+  ),
+});
 // selectContextDocuments / compileContextBrief return saved evidence, not new model output.
 const document = z.strictObject({
   id: z.uuid(),
@@ -63,6 +76,8 @@ export const contextBriefResponseSchema = z.strictObject({
     method: z.literal("saved_evidence_selection"),
     requestIds: z.array(z.uuid()),
     excludedTopics: z.array(z.string()),
+    // Historical snapshots predate freshness attribution and must remain readable.
+    freshness: freshness.optional(),
     documents: z.array(
       z.strictObject({
         documentId: z.uuid(),

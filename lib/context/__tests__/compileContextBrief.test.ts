@@ -261,3 +261,34 @@ it.each([
   expect(result.input_manifest.documents).toHaveLength(result.documents.length);
   expect(result.text).toContain(text);
 });
+
+it("reports unknown freshness without failing when source rows are absent or undated", () => {
+  const brief = compileContextBrief({
+    ...input,
+    purpose: "playlist_pitch",
+    documents: [
+      document("song-a", "song_summary"),
+      { ...document("song-a", "catalog_metadata"), sources: [] },
+      {
+        ...document("artist", "artist_research"),
+        sources: [{ versionId: "artist:artist_research:source", retrievedAt: "yesterday" }],
+      },
+    ],
+  });
+  expect(brief.input_manifest.compilerVersion).toBe("context-brief-v1");
+  expect(brief.input_manifest.freshness).toEqual({
+    oldestRetrievedAt: null,
+    newestRetrievedAt: null,
+    documentsWithoutRetrievalDate: [
+      "song-a:catalog_metadata",
+      "song-a:song_summary",
+      "artist:artist_research",
+    ],
+    documents: [
+      { documentId: "song-a:catalog_metadata", oldestRetrievedAt: null, newestRetrievedAt: null },
+      { documentId: "song-a:song_summary", oldestRetrievedAt: null, newestRetrievedAt: null },
+      { documentId: "artist:artist_research", oldestRetrievedAt: null, newestRetrievedAt: null },
+    ],
+  });
+  expect(brief.text.match(/Retrieved: unknown/g)).toHaveLength(3);
+});

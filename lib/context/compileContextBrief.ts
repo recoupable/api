@@ -1,5 +1,7 @@
 import { selectContextDocuments, type ContextBriefDocument } from "./selectContextDocuments";
 
+import { summarizeContextBriefFreshness } from "./summarizeContextBriefFreshness";
+
 const recipes = {
   company_onboarding: {
     title: "Company-onboarding assessment",
@@ -75,6 +77,14 @@ export function compileContextBrief(input: {
     withdrawnSourceVersionIds: [],
   });
   const documents = [...selection.documents];
+  const retrievedAt = new Map(
+    summarizeContextBriefFreshness(documents).documents.map(entry => [
+      entry.documentId,
+      entry.oldestRetrievedAt === entry.newestRetrievedAt
+        ? (entry.newestRetrievedAt ?? "unknown")
+        : `${entry.oldestRetrievedAt} to ${entry.newestRetrievedAt}`,
+    ]),
+  );
   const getRequestCoverage = () =>
     input.requests.map(request => {
       const matching = documents.filter(doc => request.subjectIds.includes(doc.subjectId));
@@ -106,7 +116,9 @@ export function compileContextBrief(input: {
             `\n## ${doc.topic.replaceAll("_", " ")} — ${doc.subjectId}\nCoverage: ${doc.coverage}; evidence: ${doc.evidenceKind}\n\n${doc.text
               .split("\n")
               .map(line => `> ${line}`)
-              .join("\n")}\n\nSources: ${doc.sourceVersionIds.join(", ")}\n`,
+              .join(
+                "\n",
+              )}\n\nSources: ${doc.sourceVersionIds.join(", ")}\nRetrieved: ${retrievedAt.get(doc.id)}\n`,
         )
         .join("")
     );
@@ -171,6 +183,7 @@ export function compileContextBrief(input: {
     guidance,
     request_coverage: requestCoverage,
     input_manifest: {
+      // Storage pins this version and the exact six-key document manifest.
       compilerVersion: "context-brief-v1",
       method: "saved_evidence_selection",
       requestIds: input.requests.map(request => request.id),
@@ -182,6 +195,7 @@ export function compileContextBrief(input: {
         version: doc.version,
         sourceVersionIds: doc.sourceVersionIds,
       })),
+      freshness: summarizeContextBriefFreshness(documents),
       excludedTopics: [
         ...new Set(
           input.documents
