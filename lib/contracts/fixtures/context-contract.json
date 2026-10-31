@@ -1557,6 +1557,9 @@
             "additionalProperties": false
           },
           "description": "Pending API #1208 release; reviewed source 1de332ebeae6b74c6f21866482175d33cd843009. Copy 1\u20138 exact six-field rows from this saved company assessment. Duplicate document IDs and repeated source version IDs are rejected before storage reads. Source versions compare as exact unique sets regardless of order; no labels, inferred kind, owner or UI revision are accepted."
+        },
+        "explain_evidence_validation": {
+          "type": "boolean"
         }
       },
       "required": [
@@ -4809,6 +4812,16 @@
                 "state": {
                   "type": "string",
                   "const": "unavailable"
+                },
+                "reason": {
+                  "type": "string",
+                  "enum": [
+                    "saved_assessment_unavailable",
+                    "selection_mismatch",
+                    "current_evidence_unavailable",
+                    "identity_unconfirmed",
+                    "validation_limit_exceeded"
+                  ]
                 }
               },
               "required": [

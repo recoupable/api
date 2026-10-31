@@ -42,12 +42,18 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
       .max(128)
       .regex(/^[A-Za-z0-9._:-]+$/),
   }),
-  z.strictObject({
-    action: z.literal("read_brief"),
-    brief_id: z.uuid(),
-    selected_evidence: selectedBriefEvidenceSchema.optional(),
-    organization_id: z.uuid().optional(),
-  }),
+  z
+    .strictObject({
+      action: z.literal("read_brief"),
+      brief_id: z.uuid(),
+      selected_evidence: selectedBriefEvidenceSchema.optional(),
+      explain_evidence_validation: z.boolean().optional(),
+      organization_id: z.uuid().optional(),
+    })
+    .refine(args => !args.explain_evidence_validation || !!args.selected_evidence, {
+      message: "explain_evidence_validation requires selected_evidence",
+      path: ["explain_evidence_validation"],
+    }),
   z.strictObject({
     action: z.literal("plan"),
     request_id: z.string().uuid(),
@@ -251,6 +257,7 @@ export async function processContextOperation(
           briefId: args.brief_id,
           snapshot,
           selected: args.selected_evidence,
+          explain: args.explain_evidence_validation === true,
           rpc: deps.rpc,
         })
       : undefined;
