@@ -9,6 +9,7 @@ import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { verifyBearerToken } from "@/lib/mcp/verifyApiKey";
 import { registerOAuthTools } from "@/lib/mcp/oauth/registerOAuthTools";
 import { createOAuthToolServices } from "@/lib/mcp/oauth/createOAuthToolServices";
+import { validateMcpJsonBody } from "@/lib/mcp/validateMcpJsonBody";
 import { verifyOAuthBearer } from "@/lib/oauth/verifyOAuthBearer";
 
 // Site generation can take several minutes, matching the HTTP generation route.
@@ -44,9 +45,11 @@ const fullOAuthHandler = createMcpHandler(
 async function handler(req: Request) {
   const bearer = /^Bearer +([^\s]+)$/i.exec(req.headers.get("authorization") ?? "")?.[1];
   const auth = await verifyBearerToken(req, bearer);
+  const parsed = auth ? await validateMcpJsonBody(req) : { body: undefined };
+  if (parsed instanceof Response) return setOAuthMcpHeaders(parsed);
   const requiredScopes =
     auth?.extra.oauth && !auth.scopes.includes("mcp:tools")
-      ? await getLimitedOAuthRequestScopes(req)
+      ? getLimitedOAuthRequestScopes(parsed.body)
       : [];
   const response = await withMcpAuth(
     auth?.extra.oauth
