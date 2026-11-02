@@ -89,3 +89,25 @@ describe("FULL_REPORT_SECTIONS", () => {
     expect(FULL_REPORT_PRESET_NAME).toBe("full_report");
   });
 });
+
+describe("structured preset text preservation", () => {
+  it.each([
+    "catalog_metadata",
+    "audience_profile",
+    "content_advisory",
+    "mood_tags",
+    "music_theory",
+    "similar_artists",
+    "sync_brief_match",
+  ])("%s preserves text while decoding Python literals", name => {
+    const parsed = getPreset(name)!.parseResponse!(
+      String.raw`{'title': 'True Love', 'artist': 'Nonetheless', 'note': 'Don\'t change False', 'explicit': False}`,
+    );
+    expect(parsed).toEqual({
+      title: "True Love",
+      artist: "Nonetheless",
+      note: "Don't change False",
+      explicit: false,
+    });
+  });
+});
