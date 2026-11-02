@@ -148,6 +148,10 @@ Guest admission is capped at 100 new workspaces/day globally, metadata only. Unc
 
 Still outside this addition: automatic paid enrichment/credit settlement, Sites creation from saved context, signup completion email delivery, cross-device claim links, and a UI organization destination picker. Do not promise an emailed or generated experience from this metadata screen.
 
+Workspace routing source contract: claim without `organization_id` passes the authenticated account as both `p_actor` and `p_owner` to `adopt_context_guest`. With an organization destination, current membership is checked and the account remains `p_actor` while the organization becomes `p_owner`. `guestWorkspaceRouting.test.ts` exercises the real handler, authentication-context validation, owner authorization and processor with mocked credential/membership lookups and RPC/dispatch boundaries. Denied or malformed destinations do not reach private Context storage or dispatch; claim success, retries and storage refusals retain the existing cookie.
+
+Replay and expired/foreign-claim cases use mocked RPC answers. They verify unchanged routing and dispatch only of the existing guest ID, not database idempotency, actual extraction deduplication, transaction-level revocation or hosted-account/browser behavior. Existing guest-worker and transport tests separately cover duplicate-worker skipping and fresh capabilities on a new start. These fixtures introduce no destination UI, attribution policy or runtime activation.
+
 ### Expand a catalog request
 
 Authenticated `action: expand_catalog_members` accepts `request_id`, `subject_id`, optional
