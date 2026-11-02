@@ -8,7 +8,8 @@ import { dispatchContextRequest } from "./dispatchContextRequest";
 import { dispatchContextReleaseVerification } from "./dispatchContextReleaseVerification";
 import { dispatchContextReleaseTrackIsrcs } from "./dispatchContextReleaseTrackIsrcs";
 import { getContextFailureReason } from "./getContextFailureReason";
-import { getContextFailureMessage } from "./getContextFailureMessage";
+import { classifyContextOperationError } from "./classifyContextOperationError";
+import { formatContextOperationError } from "./formatContextOperationError";
 /** POST /api/context: authenticated ingestion, progress, and task-specific context selection. */
 export async function contextOperationHandler(request: NextRequest) {
   const parsed = validateContextOperationBody(await request.json().catch(() => null));
@@ -50,11 +51,10 @@ export async function contextOperationHandler(request: NextRequest) {
         reason: getContextFailureReason(error),
       });
     }
-    return NextResponse.json(
-      {
-        error: getContextFailureMessage(parsed.action),
-      },
-      { status: 409, headers },
+    const failure = formatContextOperationError(
+      classifyContextOperationError(error),
+      parsed.action,
     );
+    return NextResponse.json(failure.body, { status: failure.status, headers });
   }
 }
