@@ -399,3 +399,32 @@ The reason describes the first failed validation check, not every possible cause
 It uses only existing authorized reads, exposes no raw records or internal errors,
 and adds no logging. Authorization, final owner rechecks and storage errors retain
 their existing behavior; they are not converted into diagnostic reasons.
+
+### Catalog valuation estimate provenance
+
+The existing private `catalog_valuation` collector
+(`providers/collectContextCatalogValuation.ts`, enrichment key `catalog-valuation-v2`)
+reuses `computeValuationBand` over stored song measurements. Saved content now carries
+an additive `estimate` descriptor: USD currency, lifetime-average annual-run-rate
+basis, modeled catalog age and one-year floor, age source, assumptions, methodology
+version/executor, and source provenance. Assumptions are frozen, including nested
+bands, and read the same constants as the calculation. This documents the existing
+model; it does not validate or endorse its commercial assumptions.
+
+`revenueBasis: modeled_estimate` is separate from `observedRevenue.status:
+not_collected`. Neither a zero band nor `not_measured` is a zero observed-revenue
+claim. When no band was modeled, catalog age, floor and age-source values are null.
+`measuredThrough` remains null and source freshness remains `unknown`: the aggregate
+has no capture timestamp. The existing top-level fields and trace are preserved;
+repeated currency, scope and age labels agree with the same modeled result.
+
+The v2 enrichment key changes reuse identity so unlabeled v1 results are not silently
+reused. `scope: workspace_private` and `shareable: false` are descriptive labels,
+not new permission enforcement. Existing catalog authorization, workspace-owner
+checks and owner-scoped document selection remain the access boundaries.
+
+This change adds no action, dispatcher support, collection, provider call or brief
+recipe. `planning/dispatchPlannedContextModule.ts` still accepts only its existing
+MusicBrainz, MLC recording and Spotify release modules; no brief recipe selects
+`catalog_valuation`. Local fixtures verify label persistence, not hosted deployment,
+licensed analytics access, actual revenue or an appraisal.
