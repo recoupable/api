@@ -399,3 +399,57 @@ The reason describes the first failed validation check, not every possible cause
 It uses only existing authorized reads, exposes no raw records or internal errors,
 and adds no logging. Authorization, final owner rechecks and storage errors retain
 their existing behavior; they are not converted into diagnostic reasons.
+
+## Pending Spotify ingestion failure guidance (#2126)
+
+This source successor of API #1001 (`9c2701a82b37430f0cbf82d881d5a9f141a631a0`)
+is pending owning Docs acceptance before merge. It changes only authored text stored
+through the existing `fail_context_request(p_owner, p_request, p_token, p_error)`
+contract. The request state remains `failed`; no new RPC, field, schema, lifecycle
+state, job or spend path is introduced. A failed-status write still depends on the
+existing owner/request/running/claim-token guard; a false result does not mean this
+worker persisted a failure. Reclaim and workflow retry behavior are unchanged.
+
+The text has a bounded `<code>: <guidance>` form: `unsupported_input`,
+`recording_unavailable`, `provider_outage`, `provider_rejected`,
+`provider_response_invalid`, `identity_conflict` or `unknown`. Only authored
+constants enter the persisted error, never provider bodies, exception messages,
+causes, IDs or stack traces. No raw diagnostic logging is added. Existing exceptions
+are rethrown in-process; these messages do not replace workflow error handling.
+
+A Spotify 404/410 means that this request did not return the track, not proof of
+permanent removal. HTTP 429/5xx and standard fetch timeout/interruption failures
+are classified at the provider-call boundary. HTTP 401/403 are provider rejection,
+not a platform account-access diagnosis. JSON syntax and schema failures are
+classified only while decoding the provider response; an arbitrary Zod, syntax,
+transport or authorization failure elsewhere stays unknown. Identity mismatch
+rejects a returned/relinked track ID before commit. Only exact authored
+`commit_spotify_context` identity conflicts wrapped by `callContextRpc` are
+recognized globally; substring matches and unrelated payload guards stay unknown.
+
+Recovery guidance requires checking saved state and current access before deciding
+whether to retry. A thrown commit response may follow a successful transaction;
+unknown failures do not establish that no records exist or were accepted. Guidance
+makes no automatic-retry, duplicate-paid-work or no-charge guarantee. Existing
+claims and transactions own persistence. Authorization before lookup and before
+commit, terminal completed/partial/cancelled skips and the same claim token on
+commit/failure are preserved. Mocked tests establish call ordering and withholding
+of commit attempts after fetch/mismatch/access failures, not database rollback or
+physical absence of records.
+
+Spotify album, playlist and artist URLs now produce explicit schema-level HTTP 400
+routing guidance. Album locators point to `ingest_release`; this does not enable
+album collection or verification. Playlists and artist pages remain unsupported
+track inputs. Canonical track normalization and the request fingerprint are
+unchanged; retaining the original submitted locator/query remains a separate
+provenance decision. HTTPS, credential, port and unknown-host checks remain, and
+the YouTube URL parser is unchanged. YouTube ingestion remains disabled.
+
+This persisted background-failure string is distinct from the pending typed
+operation response contract in API #1215 / Docs #31. Their handler/classifier,
+source binding and projection are untouched. Current Docs must separately describe
+these seven codes and conditional recovery text, schema-level routing and unchanged
+successful URL normalization before this candidate merges. No duplicate Docs intake
+is opened here. This source work does not establish live Spotify behavior, persisted
+DB outcomes, authenticated/native acceptance or completion of #2126 and its
+#2119/#2122/#2124 dependencies. Guest failure persistence is unchanged.
