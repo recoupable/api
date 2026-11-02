@@ -32,7 +32,7 @@ export const contextToolOperations = {
   save_brief: {
     name: "save_music_context_brief",
     description:
-      "Compile and save a creative direction or playlist pitch brief from saved music context.",
+      "Compile and save a creative direction, playlist pitch or company onboarding (company_onboarding) brief from selected saved context. Company onboarding is a bounded assessment with evidence gaps, not confirmation of company facts, rights or workspace authority.",
     readOnly: false,
   },
   read_brief: {
@@ -149,7 +149,7 @@ export const contextToolOperations = {
   brief: {
     name: "compile_music_context_brief",
     description:
-      "Compile a creative direction or playlist pitch brief from saved music context without saving a snapshot.",
+      "Compile a creative direction, playlist pitch or company onboarding (company_onboarding) brief from selected saved context without saving a snapshot. Company onboarding is a bounded assessment with evidence gaps, not confirmation of company facts, rights or workspace authority.",
     readOnly: true,
   },
 } satisfies Record<

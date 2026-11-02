@@ -83,12 +83,19 @@ describe("guest context ownership", () => {
           ? { actor: "actor", owner: "org" }
           : true,
     );
+    const denial = new Error("CANARY-private-membership-detail");
     const authorize = vi.fn(async () => {
-      throw Error("revoked");
+      throw denial;
     });
     await expect(
       runGuestContext("guest", { rpc, extract: vi.fn(async () => ({}) as never), authorize }),
-    ).rejects.toThrow("revoked");
+    ).rejects.toBe(denial);
     expect(rpc.mock.calls.some(([name]) => name === "complete_context_guest")).toBe(false);
+    expect(authorize).toHaveBeenCalledExactlyOnceWith("actor", "org");
+    expect(rpc).toHaveBeenLastCalledWith("fail_context_guest", {
+      p_id: "guest",
+      p_token: expect.any(String),
+    });
+    expect(JSON.stringify(rpc.mock.calls)).not.toContain(denial.message);
   });
 });
