@@ -1,0 +1,6 @@
+track_title,artist_name,release_title,isrc,upc
+Example Song One,Example Artist,Example Release,ZZTST2600001,000000000017
+Example Song Two,Example Artist
+Example Song Three,Test Artist Two,Another Release,ZZTST2600003,000000000024
+
+Example Song Four,Test Artist Two,Another Release,ZZTST2600004,000000000031
