@@ -516,7 +516,28 @@ it("does not imply enabled verification or queue work when its existing flags ar
         body: JSON.stringify(input),
       }),
     );
-    expect(response.status).toBe(409);
+    expect(response.status).toBe(503);
+    const body = await response.json();
+    expect(body).toEqual({
+      error: "A required dependency or capability is unavailable.",
+      code: "unavailable",
+      retryable: true,
+      guidance:
+        "Retry later with unchanged input after the dependency recovers or the capability becomes available. Retry eligibility is not a guarantee of recovery.",
+    });
+    expect(body.guidance).not.toContain("idempotency");
+    const result = await handleContextToolOperation(
+      input,
+      {} as Parameters<typeof handleContextToolOperation>[1],
+    );
+    expect(result).toHaveProperty("isError", true);
+    expect(JSON.parse(result.content[0].text)).toEqual({
+      success: false,
+      message: body.error,
+      code: body.code,
+      retryable: body.retryable,
+      guidance: body.guidance,
+    });
   }
   expect(mocks.rpc).not.toHaveBeenCalled();
   noUnexpectedDispatch("");
