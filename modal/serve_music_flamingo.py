@@ -30,6 +30,32 @@ SCALEDOWN_WINDOW = 60    # 1 min idle before a container stops. Modal bills the 
 MAX_CONTAINERS = 4
 MAX_NEW_TOKENS = 512           # default max tokens to generate
 MODEL_CACHE_DIR = "/model_cache"  # where model weights live inside the container
+AUDIO_DOWNLOAD_TIMEOUT = 120   # seconds; an unreachable host must not hold a GPU
+# Formats the processor's audio loader reads directly. Anything else is
+# transcoded to WAV with ffmpeg (which the image installs) before inference.
+DECODABLE_EXTENSIONS = {".wav", ".mp3", ".flac"}
+
+
+def transcode_to_wav(path: str) -> str:
+    """
+    Converts a downloaded audio file to 16 kHz mono WAV next to it and removes
+    the original. Raises if ffmpeg cannot read the file.
+
+    Music Flamingo's feature extractor resamples to 16 kHz mono anyway, so the
+    conversion loses nothing the model would have used.
+    """
+    import os
+    import subprocess
+
+    out_path = path + ".wav"
+    subprocess.run(
+        ["ffmpeg", "-y", "-loglevel", "error", "-i", path, "-ac", "1", "-ar", "16000", out_path],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    os.unlink(path)
+    return out_path
 
 
 # ---------------------------------------------------------------------------
@@ -171,6 +197,7 @@ class MusicFlamingo:
         import os
         import time
         from urllib.parse import urlparse
+        from fastapi import HTTPException
 
         start_time = time.time()
 
@@ -194,20 +221,32 @@ class MusicFlamingo:
 
         # If an audio URL is provided, download it and add to the conversation
         if audio_url:
-            audio_response = http_requests.get(audio_url)
-            audio_response.raise_for_status()
+            try:
+                audio_response = http_requests.get(audio_url, timeout=AUDIO_DOWNLOAD_TIMEOUT)
+                audio_response.raise_for_status()
+            except http_requests.RequestException as err:
+                raise HTTPException(status_code=422, detail=f"audio_unreachable: {err}")
 
             # Strip query params before extracting extension — signed URLs
             # (CloudFront, S3, Supabase Storage) append ?Expires=...&Signature=...
             # which os.path.splitext would include in the "extension", creating
             # filenames that exceed the OS 255-char limit.
             url_path = urlparse(audio_url).path
-            ext = os.path.splitext(url_path)[-1] or ".mp3"
+            ext = os.path.splitext(url_path)[-1].lower() or ".mp3"
             tmp = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
             tmp.write(audio_response.content)
             tmp.flush()
             tmp_path = tmp.name
             tmp.close()
+
+            # The processor's loader reads WAV, MP3 and FLAC. Anything else
+            # (M4A/AAC, OGG, WebM, MP4 audio) goes through ffmpeg first.
+            if ext not in DECODABLE_EXTENSIONS:
+                try:
+                    tmp_path = transcode_to_wav(tmp_path)
+                except Exception as err:
+                    os.unlink(tmp_path)
+                    raise HTTPException(status_code=422, detail=f"audio_undecodable: {err}")
 
             content.append({"type": "audio", "path": tmp_path})
 

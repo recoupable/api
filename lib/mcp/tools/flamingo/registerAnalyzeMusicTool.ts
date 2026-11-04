@@ -102,7 +102,7 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
         return getToolResultError(`Music analysis failed: ${message}`);
       }
 
-      if (result.type === "error") {
+      if (result.type === "error" || result.type === "upstream_error") {
         return getToolResultError(result.error);
       }
 
