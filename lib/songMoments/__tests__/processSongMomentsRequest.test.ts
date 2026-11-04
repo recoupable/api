@@ -22,6 +22,7 @@ const hook = {
 };
 const climax = { ...hook, type: "climax" as const, start: 143.36, end: 158.1 };
 const song: MeasuredSong = {
+  measured_with: "song-moments-2026-11-04",
   duration_seconds: 169.4,
   tempo_bpm: 123,
   loudness_lufs: -12.9,

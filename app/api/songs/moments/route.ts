@@ -37,6 +37,7 @@ export async function OPTIONS() {
  *
  * Response (200):
  * - status: "success"
+ * - measured_with: the measurement version, for rerunning stored results
  * - duration_seconds, tempo_bpm, loudness_lufs, ending ("fade" | "cold")
  * - names_from: "lyrics" when section_order fit the audio, else "audio"
  * - sections: [{ label, start, end, group, energy }]

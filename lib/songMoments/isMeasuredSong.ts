@@ -26,6 +26,8 @@ export interface MeasuredMoment {
 
 /** What the song-moments Modal endpoint returns. */
 export interface MeasuredSong {
+  /** Which version of the measurement produced this, so stored results can be rerun. */
+  measured_with: string;
   duration_seconds: number;
   tempo_bpm: number;
   loudness_lufs: number | null;

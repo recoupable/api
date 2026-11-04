@@ -25,6 +25,7 @@ function request(body: unknown): NextRequest {
 }
 
 const measured = {
+  measured_with: "song-moments-2026-11-04",
   duration_seconds: 180,
   tempo_bpm: 120,
   loudness_lufs: -9,

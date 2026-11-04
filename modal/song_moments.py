@@ -22,6 +22,7 @@ import numpy as np
 # ---------------------------------------------------------------------------
 # Configuration — all tunables live here (no magic numbers inline)
 # ---------------------------------------------------------------------------
+MEASURE_VERSION = "song-moments-2026-11-04"  # bump when results would change; stored with each song
 SAMPLE_RATE = 22050
 HOP_LENGTH = 512
 CUT_SECONDS = (6, 15, 30)          # standard ad and promo lengths
@@ -583,6 +584,7 @@ def measure_song(y, sr, section_order=None):
         moments.append(moment)
 
     return {
+        "measured_with": MEASURE_VERSION,
         "duration_seconds": round(duration, 2),
         "tempo_bpm": round(tempo, 1),
         "loudness_lufs": _loudness_lufs(y, sr),
