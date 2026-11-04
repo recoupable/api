@@ -56,6 +56,28 @@ def download_model_weights():
     print(f"Model weights saved to {MODEL_CACHE_DIR}/model")
 
 
+def cut_clip(path, start, end):
+    """
+    Replace the downloaded file with just start..end seconds of it, so the
+    model describes one moment rather than the whole song. Returns the clip's
+    path; the original is removed.
+    """
+    import os
+    import subprocess
+
+    if not 0 <= start < end:
+        raise ValueError("clip_start must be at least 0 and before clip_end")
+    clip_path = os.path.splitext(path)[0] + "-clip.wav"
+    subprocess.run(
+        ["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-ss", str(start), "-t", str(end - start),
+         "-i", path, "-ac", "1", "-ar", "16000", clip_path],
+        check=True,
+        timeout=60,
+    )
+    os.unlink(path)
+    return clip_path
+
+
 # ---------------------------------------------------------------------------
 # Modal Image — the "Docker image" that runs on the cloud GPU.
 # Key optimization: .run_function(download_model_weights) bakes the 16GB
@@ -157,7 +179,9 @@ class MusicFlamingo:
             "max_new_tokens": 512,                     (optional, default 512)
             "temperature": 0.7,                        (optional, default 1.0)
             "top_p": 0.9,                              (optional, default 1.0)
-            "do_sample": false                         (optional, default false)
+            "do_sample": false,                        (optional, default false)
+            "clip_start": 45.2,                        (optional, seconds; with clip_end,
+            "clip_end": 60.4                            the model hears only that clip)
         }
 
         Returns:
@@ -186,6 +210,8 @@ class MusicFlamingo:
         temperature = request.get("temperature", 1.0)
         top_p = request.get("top_p", 1.0)
         do_sample = request.get("do_sample", False)
+        clip_start = request.get("clip_start", None)
+        clip_end = request.get("clip_end", None)
 
         # ---- Build the conversation ----
         # Music Flamingo uses a chat-style format with "user" and "assistant" roles
@@ -208,6 +234,9 @@ class MusicFlamingo:
             tmp.flush()
             tmp_path = tmp.name
             tmp.close()
+
+            if clip_start is not None and clip_end is not None:
+                tmp_path = cut_clip(tmp_path, float(clip_start), float(clip_end))
 
             content.append({"type": "audio", "path": tmp_path})
 

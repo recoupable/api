@@ -33,3 +33,31 @@ Both web endpoints (`generate`, `health`) require Modal proxy auth
 `401 missing credentials for proxy authorization` before a GPU is
 touched. Recoup API is the billing boundary; do not point clients at the
 Modal URL.
+
+# Song moments (Modal)
+
+`serve_song_moments.py` is the deploy source for the `song-moments` Modal
+app behind `POST /api/songs/moments`. It is CPU only: `song_moments.py`
+measures the audio (beat grid, loudness, which passages repeat) to find a
+song's sections and moments, and names sections from an optional lyric-sheet
+section order. Recoup API then has Music Flamingo describe each moment by
+sending `clip_start`/`clip_end` to the `generate` endpoint above, which cuts
+the clip before the model hears it.
+
+The same workflow deploys it, after `music-flamingo`. Its `measure` endpoint
+uses the same proxy auth as Music Flamingo; Recoup API calls it at
+`SONG_MOMENTS_MEASURE_URL` (`lib/const.ts`).
+
+`song_moments.py` has no Modal imports, so it runs locally on any audio file:
+
+```bash
+uv run --no-project --with librosa==0.10.2.post1 --with pyloudnorm==0.1.1 \
+  python -I modal/song_moments.py song.mp3 "Verse 1" "Chorus" "Verse 2" "Chorus"
+```
+
+Its tests use a synthetic song with known section times:
+
+```bash
+uv run --no-project --with librosa==0.10.2.post1 --with pyloudnorm==0.1.1 --with pytest \
+  python -I -m pytest modal/test_song_moments.py -q
+```

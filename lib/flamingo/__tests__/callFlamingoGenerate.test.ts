@@ -3,6 +3,7 @@ import { callFlamingoGenerate } from "../callFlamingoGenerate";
 
 // Mock global fetch
 const mockFetch = vi.fn();
+const defaults = { max_new_tokens: 512, temperature: 1.0, top_p: 1.0, do_sample: false };
 vi.stubGlobal("fetch", mockFetch);
 
 describe("callFlamingoGenerate", () => {
@@ -50,6 +51,38 @@ describe("callFlamingoGenerate", () => {
 
     const [, options] = mockFetch.mock.calls[0];
     expect(options.headers).toEqual({ "Content-Type": "application/json" });
+  });
+
+  it("asks the model to hear only the clip when one is given", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ response: "test", elapsed_seconds: 1.0 }),
+    });
+
+    await callFlamingoGenerate(
+      { ...defaults, prompt: "Describe this clip.", audio_url: "https://example.com/song.mp3" },
+      { clip: { start: 45.2, end: 60.4 } },
+    );
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body).toMatchObject({ clip_start: 45.2, clip_end: 60.4 });
+  });
+
+  it("sends no clip fields for a whole-song call", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: async () => ({ response: "test", elapsed_seconds: 1.0 }),
+    });
+
+    await callFlamingoGenerate({
+      ...defaults,
+      prompt: "Describe.",
+      audio_url: "https://example.com/song.mp3",
+    });
+
+    const body = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(body).not.toHaveProperty("clip_start");
+    expect(body).not.toHaveProperty("clip_end");
   });
 
   it("returns model response on successful call", async () => {

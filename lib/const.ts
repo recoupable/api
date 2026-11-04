@@ -87,6 +87,12 @@ export const FLAMINGO_MODEL_ID = "nvidia/music-flamingo-2601-hf";
 export const FLAMINGO_GENERATE_URL =
   "https://shared-78369--music-flamingo-musicflamingo-generate.modal.run";
 
+/** Song moments measurement endpoint (Modal, CPU): sections, moments and cuts from the audio. */
+export const SONG_MOMENTS_MEASURE_URL = "https://shared-78369--song-moments-measure.modal.run";
+
+/** Written on `usage_events.model_id` for the song moments measurement charge. */
+export const SONG_MOMENTS_MODEL_ID = "recoup/song-moments";
+
 /** Snapshot expiration duration (7 days) */
 export const SNAPSHOT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
