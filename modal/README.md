@@ -31,7 +31,8 @@ both or neither) to hear only that stretch, cut fresh from the one download
 for each prompt, and its own `temperature`, `top_p` or `do_sample` to
 override the batch's settings for that prompt alone. An answer from a clip
 echoes `clip_start`/`clip_end`, so a caller can tell it was not answered from
-the whole song. The validation is pure Python and tested locally:
+the whole song. The validation and the batch loop are pure Python and tested
+locally (ffmpeg and ffprobe must be on the PATH):
 
 ```bash
 uv run --no-project --with modal --with pytest \

@@ -66,6 +66,26 @@ describe("describeMoments", () => {
     expect(described.has("climax")).toBe(true);
   });
 
+  it("drops an answer whose reply holds nothing usable, so it is neither merged nor billed", async () => {
+    vi.mocked(callFlamingoGenerateBatch).mockResolvedValue({
+      answers: [
+        {
+          id: "vocal_hook",
+          response: "I cannot describe this clip.",
+          elapsed_seconds: 2,
+          clip_start: 36.15,
+          clip_end: 50.9,
+        },
+        { id: "climax", response: reply, elapsed_seconds: 3, clip_start: 143.36, clip_end: 158.1 },
+      ],
+      elapsed_seconds: 6,
+    });
+
+    const described = await describeMoments({ audioUrl, moments: [hook, climax] });
+
+    expect([...described.keys()]).toEqual(["climax"]);
+  });
+
   it("lets the batch's failure through for the caller to handle", async () => {
     vi.mocked(callFlamingoGenerateBatch).mockRejectedValue(
       new Error("Music analysis failed (status 503)"),

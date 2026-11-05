@@ -48,9 +48,13 @@ describe("getAllPresets", () => {
     const data = getAllPresets().filter(p => !PROSE_PRESETS.includes(p.name));
     expect(data).toHaveLength(10);
     for (const preset of data) {
-      expect({ name: preset.name, do_sample: preset.params.do_sample }).toEqual({
+      // Temperature 1.0 is the neutral value greedy decoding ignores; any other
+      // value makes transformers log an "invalid flag" notice on every call.
+      const { do_sample, temperature } = preset.params;
+      expect({ name: preset.name, do_sample, temperature }).toEqual({
         name: preset.name,
         do_sample: false,
+        temperature: 1.0,
       });
     }
   });

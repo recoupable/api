@@ -15,7 +15,10 @@ export interface PresetConfig {
   /** Generation parameters */
   params: {
     max_new_tokens: number;
-    /** Only used when `do_sample` is true; greedy decoding ignores it. */
+    /**
+     * Only used when `do_sample` is true. Greedy presets keep the neutral 1.0,
+     * since any other value makes transformers log an ignored-flag notice.
+     */
     temperature: number;
     /**
      * False (greedy) for presets whose answer is stored as data, so the same

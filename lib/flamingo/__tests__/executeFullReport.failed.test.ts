@@ -60,6 +60,30 @@ describe("executeFullReport — failed sections", () => {
     });
   });
 
+  it("counts a section whose parsed answer is only an { error } as failed and does not charge it", async () => {
+    // A model reply of {"error": "..."} parses into the same shape the report
+    // uses for a failed section, so it must be reported (and billed) as one.
+    vi.mocked(getPreset).mockImplementation(name =>
+      name === FULL_REPORT_SECTIONS[1].preset
+        ? ({ ...plainPreset(name), parseResponse: (raw: string) => JSON.parse(raw) } as never)
+        : (plainPreset(name) as never),
+    );
+    vi.mocked(callFlamingoGenerateBatch).mockResolvedValue({
+      answers: FULL_REPORT_SECTIONS.map((s, i) => ({
+        id: s.reportKey,
+        response: i === 1 ? '{"error": "cannot analyze"}' : "ok",
+        elapsed_seconds: 1,
+      })),
+      elapsed_seconds: 14,
+    });
+
+    const { failed } = await executeFullReport(AUDIO, "acc_1");
+
+    expect(failed).toEqual([FULL_REPORT_SECTIONS[1].reportKey]);
+    const [charge] = vi.mocked(chargeForBatchAnswers).mock.calls[0];
+    expect(charge.answers).toHaveLength(FULL_REPORT_SECTIONS.length - 1);
+  });
+
   it("fails every section, with the batch's error, and charges nothing when the batch fails", async () => {
     vi.mocked(callFlamingoGenerateBatch).mockRejectedValue(
       new Error("Music analysis failed (status 500)"),

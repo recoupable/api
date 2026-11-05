@@ -125,8 +125,18 @@ def cut_clip(path, start, end):
 
 
 def is_number(value) -> bool:
-    """A JSON number: int or float, but not bool (bool is an int subclass in Python)."""
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
+    """
+    A finite JSON number: int or float, but not bool (bool is an int subclass
+    in Python), NaN, infinity, or an int too large to be a float.
+    """
+    import math
+
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(float(value))
+    except OverflowError:
+        return False
 
 
 def check_generation_settings(settings: dict, where: str = "") -> None:
@@ -201,6 +211,41 @@ def parse_batch_prompts(prompts, defaults: dict) -> list:
             "do_sample": item.get("do_sample", defaults["do_sample"]),
         })
     return jobs
+
+
+def run_batch(jobs: list, audio_path: str, run_prompt) -> list:
+    """
+    Answers each job (from parse_batch_prompts) against `audio_path`, or
+    against a clip cut from it when the job has one; every clip is deleted
+    after its prompt, whether or not the prompt succeeds. `run_prompt(prompt,
+    audio_path, max_new_tokens, temperature, top_p, do_sample)` returns the
+    answer text. Returns the answers in job order; an answer from a clip
+    echoes the window so the caller can tell it came from the clip.
+    """
+    import os
+    import time
+
+    answers = []
+    for job in jobs:
+        started = time.time()
+        clip_path = extract_clip(audio_path, *job["clip"]) if job["clip"] else None
+        try:
+            response = run_prompt(
+                job["prompt"], clip_path or audio_path, job["max_new_tokens"],
+                job["temperature"], job["top_p"], job["do_sample"],
+            )
+        finally:
+            if clip_path:
+                os.unlink(clip_path)
+        answer = {
+            "id": job["id"],
+            "response": response,
+            "elapsed_seconds": round(time.time() - started, 2),
+        }
+        if job["clip"]:
+            answer["clip_start"], answer["clip_end"] = job["clip"]
+        answers.append(answer)
+    return answers
 
 
 # ---------------------------------------------------------------------------
@@ -506,28 +551,8 @@ class MusicFlamingo:
         tmp_path = self.download_audio(audio_url)
 
         # ---- Run every prompt against the same file (or a clip cut from it) ----
-        answers = []
         try:
-            for job in jobs:
-                prompt_start = time.time()
-                audio_path = extract_clip(tmp_path, *job["clip"]) if job["clip"] else tmp_path
-                try:
-                    response = self.run_prompt(
-                        job["prompt"], audio_path, job["max_new_tokens"],
-                        job["temperature"], job["top_p"], job["do_sample"],
-                    )
-                finally:
-                    if audio_path != tmp_path:
-                        os.unlink(audio_path)
-                answer = {
-                    "id": job["id"],
-                    "response": response,
-                    "elapsed_seconds": round(time.time() - prompt_start, 2),
-                }
-                if job["clip"]:
-                    # Echo the window so the caller can tell the answer came from the clip
-                    answer["clip_start"], answer["clip_end"] = job["clip"]
-                answers.append(answer)
+            answers = run_batch(jobs, tmp_path, self.run_prompt)
         finally:
             os.unlink(tmp_path)
 

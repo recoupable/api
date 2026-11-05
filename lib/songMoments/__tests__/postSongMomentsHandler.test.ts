@@ -50,7 +50,7 @@ describe("postSongMomentsHandler", () => {
     vi.mocked(processSongMomentsRequest).mockResolvedValue(measured);
   });
 
-  it("gates on the full possible price, then returns the measured song flat", async () => {
+  it("gates on the measurement plus one model base fee, then returns the measured song flat", async () => {
     const res = await postSongMomentsHandler(
       request({ audio_url: "https://example.com/song.mp3" }),
     );

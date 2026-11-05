@@ -24,7 +24,8 @@ export interface DescribedMoment {
  *
  * An answer counts only when it echoes the clip it was asked about, so a
  * description can never come from the whole song (for example from a model
- * service that does not cut clips yet).
+ * service that does not cut clips yet), and only when its reply parses into
+ * at least one field, so an unusable reply is neither shown nor billed.
  *
  * @param params - The song's audio URL and the moments to describe (at most
  *   one of each type, so the type is each prompt's id).
@@ -53,10 +54,19 @@ export async function describeMoments(params: {
   for (const moment of params.moments) {
     const answer = result.answers.find(a => a.id === moment.type);
     if (!answer || answer.clip_start !== moment.start || answer.clip_end !== moment.end) continue;
-    described.set(moment.type, {
-      description: parseMomentDescription(answer.response),
-      elapsed_seconds: answer.elapsed_seconds,
-    });
+    const description = parseMomentDescription(answer.response);
+    if (!hasWords(description)) continue;
+    described.set(moment.type, { description, elapsed_seconds: answer.elapsed_seconds });
   }
   return described;
+}
+
+/** False for the empty shape `parseMomentDescription` returns when a reply has nothing usable. */
+function hasWords(description: MomentDescription): boolean {
+  return (
+    description.description !== null ||
+    description.emotion.length > 0 ||
+    description.best_for.length > 0 ||
+    description.vocals !== null
+  );
 }

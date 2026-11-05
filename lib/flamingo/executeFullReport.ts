@@ -77,9 +77,15 @@ export async function executeFullReport(
       continue;
     }
     try {
-      report[reportKey] = preset.parseResponse
-        ? preset.parseResponse(answer.response)
-        : answer.response;
+      const data = preset.parseResponse ? preset.parseResponse(answer.response) : answer.response;
+      if (isErrorShape(data)) {
+        // A reply of {"error": "..."} would read as a failed section in the
+        // report, so it is one: listed in `failed` and not billed.
+        report[reportKey] = sectionError(data.error);
+        failed.push(reportKey);
+        continue;
+      }
+      report[reportKey] = data;
       used.push(answer);
     } catch (error) {
       console.error(`[WARN] Full report section "${preset.name}" failed to parse:`, error);
@@ -102,4 +108,14 @@ export async function executeFullReport(
 /** The `{ error }` object a failed section reports in place of its data. */
 function sectionError(reason: string): { error: string } {
   return { error: `Section failed: ${reason}` };
+}
+
+/** True for an object whose only key is a string `error`: the failed-section shape. */
+function isErrorShape(data: unknown): data is { error: string } {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    Object.keys(data).length === 1 &&
+    typeof (data as { error?: unknown }).error === "string"
+  );
 }

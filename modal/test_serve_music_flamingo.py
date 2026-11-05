@@ -17,7 +17,9 @@ from serve_music_flamingo import (
     check_generation_settings,
     cut_clip,
     extract_clip,
+    is_number,
     parse_batch_prompts,
+    run_batch,
 )
 
 DEFAULTS = {"temperature": 0.2, "top_p": 1.0, "do_sample": False}
@@ -142,3 +144,77 @@ def test_extract_clip_refuses_a_backwards_window(tmp_path):
 
     with pytest.raises(ValueError, match="before clip_end"):
         extract_clip(source, 1.5, 1.0)
+
+
+@pytest.mark.parametrize("value, ok", [
+    (3, True), (2.5, True), (0, True),
+    (True, False), ("1", False), (None, False),
+    (float("inf"), False), (float("nan"), False), (10 ** 400, False),
+])
+def test_is_number_takes_only_finite_numbers(value, ok):
+    assert is_number(value) is ok
+
+
+def test_a_clip_window_at_infinity_or_too_large_for_a_float_is_refused():
+    for end in (float("inf"), 10 ** 400):
+        with pytest.raises(ValueError, match="needs clip_start and clip_end"):
+            parse_batch_prompts([{"id": "a", "prompt": "x", "clip_start": 0, "clip_end": end}], DEFAULTS)
+    with pytest.raises(ValueError, match="temperature must be a number"):
+        parse_batch_prompts([{"id": "a", "prompt": "x", "temperature": float("nan")}], DEFAULTS)
+
+
+class FakeModel:
+    """Stands in for the GPU: records each call and what audio it was given."""
+
+    def __init__(self, fail_on=None):
+        self.calls = []
+        self.fail_on = fail_on
+
+    def __call__(self, prompt, audio_path, max_new_tokens, temperature, top_p, do_sample):
+        self.calls.append({
+            "prompt": prompt, "audio_path": audio_path, "existed": os.path.exists(audio_path),
+            "seconds": duration(audio_path), "max_new_tokens": max_new_tokens,
+            "temperature": temperature, "top_p": top_p, "do_sample": do_sample,
+        })
+        if prompt == self.fail_on:
+            raise RuntimeError("model failed")
+        return f"answer to {prompt}"
+
+
+def test_run_batch_answers_in_order_with_each_prompts_own_settings_and_clip(tmp_path):
+    source = tone(str(tmp_path / "song.wav"), 4)
+    jobs = parse_batch_prompts([
+        {"id": "whole", "prompt": "Genre?"},
+        {"id": "hook", "prompt": "Describe.", "clip_start": 1, "clip_end": 2.5,
+         "temperature": 0.7, "do_sample": True},
+    ], DEFAULTS)
+    model = FakeModel()
+
+    answers = run_batch(jobs, source, model)
+
+    assert [a["id"] for a in answers] == ["whole", "hook"]
+    assert answers[0]["response"] == "answer to Genre?"
+    assert "clip_start" not in answers[0]
+    assert (answers[1]["clip_start"], answers[1]["clip_end"]) == (1.0, 2.5)
+    whole, hook = model.calls
+    assert whole["audio_path"] == source and whole["seconds"] == pytest.approx(4, abs=0.05)
+    assert (whole["temperature"], whole["do_sample"]) == (0.2, False)
+    assert hook["audio_path"] != source and hook["existed"]
+    assert hook["seconds"] == pytest.approx(1.5, abs=0.05)
+    assert (hook["temperature"], hook["top_p"], hook["do_sample"]) == (0.7, 1.0, True)
+    assert not os.path.exists(hook["audio_path"])
+    assert os.path.exists(source)
+
+
+def test_run_batch_deletes_the_clip_when_the_model_fails(tmp_path):
+    source = tone(str(tmp_path / "song.wav"), 3)
+    jobs = parse_batch_prompts(
+        [{"id": "hook", "prompt": "Describe.", "clip_start": 0.5, "clip_end": 1.5}], DEFAULTS
+    )
+    model = FakeModel(fail_on="Describe.")
+
+    with pytest.raises(RuntimeError, match="model failed"):
+        run_batch(jobs, source, model)
+
+    assert not os.path.exists(model.calls[0]["audio_path"])
+    assert os.path.exists(source)

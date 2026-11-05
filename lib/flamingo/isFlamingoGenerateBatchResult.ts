@@ -23,7 +23,8 @@ export interface FlamingoGenerateBatchResult {
  *
  * @param value - Unknown parsed JSON payload.
  * @returns True when the payload has a total `elapsed_seconds` and every
- *   answer carries a string `id`, a string `response` and numeric seconds.
+ *   answer carries a string `id`, a string `response` and numeric seconds,
+ *   plus either no clip window or both of its ends as numbers.
  */
 export function isFlamingoGenerateBatchResult(
   value: unknown,
@@ -36,10 +37,12 @@ export function isFlamingoGenerateBatchResult(
   return candidate.answers.every(answer => {
     if (!answer || typeof answer !== "object") return false;
     const a = answer as Record<string, unknown>;
+    const clipped = a.clip_start !== undefined || a.clip_end !== undefined;
     return (
       typeof a.id === "string" &&
       typeof a.response === "string" &&
-      typeof a.elapsed_seconds === "number"
+      typeof a.elapsed_seconds === "number" &&
+      (!clipped || (typeof a.clip_start === "number" && typeof a.clip_end === "number"))
     );
   });
 }

@@ -114,7 +114,7 @@ describe("processSongMomentsRequest", () => {
 
     expect(result.moments[1]).toEqual(climax);
     const [charge] = vi.mocked(chargeForBatchAnswers).mock.calls[0];
-    expect(charge.answers).toHaveLength(1);
+    expect(charge.answers).toEqual([...described("vocal_hook").values()]);
   });
 
   it("returns every moment without words, and charges no model time, when the batch fails", async () => {
