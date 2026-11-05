@@ -34,3 +34,6 @@ jobs:
 
       - name: Deploy music-flamingo
         run: modal deploy modal/serve_music_flamingo.py
+
+      - name: Deploy song-moments
+        run: modal deploy modal/serve_song_moments.py
