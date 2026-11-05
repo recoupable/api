@@ -31,7 +31,20 @@ both or neither) to hear only that stretch, cut fresh from the one download
 for each prompt, and its own `temperature`, `top_p` or `do_sample` to
 override the batch's settings for that prompt alone. An answer from a clip
 echoes `clip_start`/`clip_end`, so a caller can tell it was not answered from
-the whole song. The validation and the batch loop are pure Python and tested
+the whole song.
+
+Prompts that share settings are decoded together, up to `GENERATE_GROUP_SIZE`
+(8) per `generate()` call, instead of one at a time; one prompt at a time
+leaves the A100 mostly idle. Each answer's `elapsed_seconds` is its share of
+its group's time, so the answers still add up to the time billed. A group that
+runs out of GPU memory is split in half and retried, and any other error in a
+grouped call falls back to one prompt at a time. A request may pass
+`group_size` (1–8); 1 restores one-at-a-time decoding. To compare the two on a
+real song in a workspace you can spend GPU time in:
+
+```bash
+modal run modal/serve_music_flamingo.py::bench --audio-url-file url.txt --prompts-file prompts.json
+``` The validation and the batch loop are pure Python and tested
 locally (ffmpeg and ffprobe must be on the PATH):
 
 ```bash

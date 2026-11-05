@@ -17,6 +17,7 @@ from serve_music_flamingo import (
     check_generation_settings,
     cut_clip,
     extract_clip,
+    group_jobs,
     is_number,
     parse_batch_prompts,
     run_batch,
@@ -164,21 +165,44 @@ def test_a_clip_window_at_infinity_or_too_large_for_a_float_is_refused():
 
 
 class FakeModel:
-    """Stands in for the GPU: records each call and what audio it was given."""
+    """Stands in for the GPU: records each group it is given and what audio each prompt had."""
 
     def __init__(self, fail_on=None):
-        self.calls = []
+        self.groups = []
         self.fail_on = fail_on
 
-    def __call__(self, prompt, audio_path, max_new_tokens, temperature, top_p, do_sample):
-        self.calls.append({
-            "prompt": prompt, "audio_path": audio_path, "existed": os.path.exists(audio_path),
-            "seconds": duration(audio_path), "max_new_tokens": max_new_tokens,
-            "temperature": temperature, "top_p": top_p, "do_sample": do_sample,
-        })
-        if prompt == self.fail_on:
+    @property
+    def calls(self):
+        return [call for group in self.groups for call in group]
+
+    def __call__(self, requests):
+        group = []
+        for prompt, audio_path, max_new_tokens, temperature, top_p, do_sample in requests:
+            group.append({
+                "prompt": prompt, "audio_path": audio_path, "existed": os.path.exists(audio_path),
+                "seconds": duration(audio_path), "max_new_tokens": max_new_tokens,
+                "temperature": temperature, "top_p": top_p, "do_sample": do_sample,
+            })
+        self.groups.append(group)
+        if any(call["prompt"] == self.fail_on for call in group):
             raise RuntimeError("model failed")
-        return f"answer to {prompt}"
+        return [f"answer to {call['prompt']}" for call in group]
+
+
+def jobs_with(*settings):
+    """One plain job per settings tuple (temperature, do_sample), ids j0, j1..."""
+    return parse_batch_prompts([
+        {"id": f"j{i}", "prompt": f"q{i}", "temperature": t, "do_sample": s}
+        for i, (t, s) in enumerate(settings)
+    ], DEFAULTS)
+
+
+def test_group_jobs_keeps_settings_apart_and_caps_each_group():
+    jobs = jobs_with((1.0, False), (0.7, True), (1.0, False), (1.0, False), (0.7, True))
+
+    assert group_jobs(jobs, size=2) == [[0, 2], [1, 4], [3]]
+    assert group_jobs(jobs, size=8) == [[0, 2, 3], [1, 4]]
+    assert group_jobs(jobs, size=1) == [[0], [1], [2], [3], [4]]
 
 
 def test_run_batch_answers_in_order_with_each_prompts_own_settings_and_clip(tmp_path):
@@ -206,15 +230,38 @@ def test_run_batch_answers_in_order_with_each_prompts_own_settings_and_clip(tmp_
     assert os.path.exists(source)
 
 
-def test_run_batch_deletes_the_clip_when_the_model_fails(tmp_path):
+def test_run_batch_decodes_prompts_that_share_settings_together(tmp_path):
     source = tone(str(tmp_path / "song.wav"), 3)
-    jobs = parse_batch_prompts(
-        [{"id": "hook", "prompt": "Describe.", "clip_start": 0.5, "clip_end": 1.5}], DEFAULTS
-    )
+    jobs = parse_batch_prompts([
+        {"id": "a", "prompt": "qa", "clip_start": 0, "clip_end": 1},
+        {"id": "b", "prompt": "qb", "temperature": 0.7, "do_sample": True},
+        {"id": "c", "prompt": "qc", "clip_start": 1, "clip_end": 2},
+        {"id": "d", "prompt": "qd"},
+    ], DEFAULTS)
+    model = FakeModel()
+
+    answers = run_batch(jobs, source, model, group_size=8)
+
+    assert [[c["prompt"] for c in g] for g in model.groups] == [["qa", "qc", "qd"], ["qb"]]
+    assert [a["id"] for a in answers] == ["a", "b", "c", "d"]
+    assert [a["response"] for a in answers] == ["answer to qa", "answer to qb", "answer to qc", "answer to qd"]
+    # The two clips in the group were separate files, both gone afterwards
+    clip_a, clip_c = model.groups[0][0]["audio_path"], model.groups[0][1]["audio_path"]
+    assert clip_a != clip_c and not os.path.exists(clip_a) and not os.path.exists(clip_c)
+    # A group's prompts share its time equally
+    assert answers[0]["elapsed_seconds"] == answers[2]["elapsed_seconds"] == answers[3]["elapsed_seconds"]
+
+
+def test_run_batch_deletes_the_clips_when_the_model_fails(tmp_path):
+    source = tone(str(tmp_path / "song.wav"), 3)
+    jobs = parse_batch_prompts([
+        {"id": "hook", "prompt": "Describe.", "clip_start": 0.5, "clip_end": 1.5},
+        {"id": "lift", "prompt": "Lift.", "clip_start": 1.5, "clip_end": 2.5},
+    ], DEFAULTS)
     model = FakeModel(fail_on="Describe.")
 
     with pytest.raises(RuntimeError, match="model failed"):
         run_batch(jobs, source, model)
 
-    assert not os.path.exists(model.calls[0]["audio_path"])
+    assert all(not os.path.exists(call["audio_path"]) for call in model.calls)
     assert os.path.exists(source)
