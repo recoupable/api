@@ -87,6 +87,16 @@ export const FLAMINGO_MODEL_ID = "nvidia/music-flamingo-2601-hf";
 export const FLAMINGO_GENERATE_URL =
   "https://shared-78369--music-flamingo-musicflamingo-generate.modal.run";
 
+/**
+ * Music Flamingo batch endpoint (Modal): many prompts on one audio download.
+ * Same deployment as `FLAMINGO_GENERATE_URL`; Modal names each endpoint's host
+ * after its method, with underscores as hyphens (`generate_batch` → `generate-batch`).
+ */
+export const FLAMINGO_GENERATE_BATCH_URL = FLAMINGO_GENERATE_URL.replace(
+  /-generate\.modal\.run$/,
+  "-generate-batch.modal.run",
+);
+
 /** Snapshot expiration duration (7 days) */
 export const SNAPSHOT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
