@@ -29,6 +29,8 @@ SCALEDOWN_WINDOW = 60    # 1 min idle before a container stops. Modal bills the 
 # burn the $100 Modal usage limit (~$8.64/hour vs ~$21.60 at 10 GPUs).
 MAX_CONTAINERS = 4
 MAX_NEW_TOKENS = 512           # default max tokens to generate
+MAX_NEW_TOKENS_LIMIT = 2048    # hard cap per prompt on /generate_batch
+MAX_BATCH_PROMPTS = 40         # most prompts one /generate_batch request may carry
 MODEL_CACHE_DIR = "/model_cache"  # where model weights live inside the container
 AUDIO_DOWNLOAD_TIMEOUT = 120   # seconds; an unreachable host must not hold a GPU
 # Formats the processor's audio loader reads directly. Anything else is
@@ -171,85 +173,62 @@ class MusicFlamingo:
         """
         return {"status": "ok", "model": MODEL_ID}
 
-    @modal.fastapi_endpoint(method="POST", docs=True, requires_proxy_auth=True)
-    def generate(self, request: dict):
+    def download_audio(self, audio_url: str) -> str:
         """
-        Main API endpoint for music understanding.
+        Downloads `audio_url` to a temp file and, when the processor cannot
+        read its format, transcodes it to WAV. Returns the local path; the
+        caller deletes it. Shared by /generate and /generate_batch so a batch
+        downloads (and transcodes) its audio exactly once.
 
-        JSON body:
-        {
-            "prompt": "Describe this track.",          (required)
-            "audio_url": "https://example.com/s.mp3",  (optional)
-            "max_new_tokens": 512,                     (optional, default 512)
-            "temperature": 0.7,                        (optional, default 1.0)
-            "top_p": 0.9,                              (optional, default 1.0)
-            "do_sample": false                         (optional, default false)
-        }
-
-        Returns:
-        {
-            "response": "...",
-            "elapsed_seconds": 3.21
-        }
+        Raises HTTPException 422 when the URL cannot be fetched
+        (audio_unreachable) or ffmpeg cannot read the file (audio_undecodable).
         """
         import requests as http_requests
         import tempfile
         import os
-        import time
         from urllib.parse import urlparse
         from fastapi import HTTPException
 
-        start_time = time.time()
+        try:
+            audio_response = http_requests.get(audio_url, timeout=AUDIO_DOWNLOAD_TIMEOUT)
+            audio_response.raise_for_status()
+        except http_requests.RequestException as err:
+            raise HTTPException(status_code=422, detail=f"audio_unreachable: {err}")
 
-        # ---- Parse input ----
-        prompt = request.get("prompt", "Describe this music.")
-        audio_url = request.get("audio_url", None)
-        max_tokens = request.get("max_new_tokens", MAX_NEW_TOKENS)
+        # Strip query params before extracting extension — signed URLs
+        # (CloudFront, S3, Supabase Storage) append ?Expires=...&Signature=...
+        # which os.path.splitext would include in the "extension", creating
+        # filenames that exceed the OS 255-char limit.
+        url_path = urlparse(audio_url).path
+        ext = os.path.splitext(url_path)[-1].lower() or ".mp3"
+        tmp = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
+        tmp.write(audio_response.content)
+        tmp.flush()
+        tmp_path = tmp.name
+        tmp.close()
 
-        # Generation parameters -- control how "creative" the output is:
-        # temperature: higher = more creative/random, lower = more focused/deterministic
-        # top_p: nucleus sampling -- only consider tokens within this probability mass
-        # do_sample: if False, always picks the most likely token (greedy decoding)
-        temperature = request.get("temperature", 1.0)
-        top_p = request.get("top_p", 1.0)
-        do_sample = request.get("do_sample", False)
+        # The processor's loader reads WAV, MP3 and FLAC. Anything else
+        # (M4A/AAC, OGG, WebM, MP4 audio) goes through ffmpeg first.
+        if ext not in DECODABLE_EXTENSIONS:
+            try:
+                tmp_path = transcode_to_wav(tmp_path)
+            except Exception as err:
+                os.unlink(tmp_path)
+                raise HTTPException(status_code=422, detail=f"audio_undecodable: {err}")
 
+        return tmp_path
+
+    def run_prompt(self, prompt, audio_path, max_tokens, temperature, top_p, do_sample) -> str:
+        """
+        Runs one prompt as its own conversation on the loaded model, with the
+        audio at `audio_path` attached when given, and returns the decoded
+        answer. Shared by /generate and /generate_batch.
+        """
         # ---- Build the conversation ----
         # Music Flamingo uses a chat-style format with "user" and "assistant" roles
         content = [{"type": "text", "text": prompt}]
-        tmp_path = None
-
-        # If an audio URL is provided, download it and add to the conversation
-        if audio_url:
-            try:
-                audio_response = http_requests.get(audio_url, timeout=AUDIO_DOWNLOAD_TIMEOUT)
-                audio_response.raise_for_status()
-            except http_requests.RequestException as err:
-                raise HTTPException(status_code=422, detail=f"audio_unreachable: {err}")
-
-            # Strip query params before extracting extension — signed URLs
-            # (CloudFront, S3, Supabase Storage) append ?Expires=...&Signature=...
-            # which os.path.splitext would include in the "extension", creating
-            # filenames that exceed the OS 255-char limit.
-            url_path = urlparse(audio_url).path
-            ext = os.path.splitext(url_path)[-1].lower() or ".mp3"
-            tmp = tempfile.NamedTemporaryFile(suffix=ext, delete=False)
-            tmp.write(audio_response.content)
-            tmp.flush()
-            tmp_path = tmp.name
-            tmp.close()
-
-            # The processor's loader reads WAV, MP3 and FLAC. Anything else
-            # (M4A/AAC, OGG, WebM, MP4 audio) goes through ffmpeg first.
-            if ext not in DECODABLE_EXTENSIONS:
-                try:
-                    tmp_path = transcode_to_wav(tmp_path)
-                except Exception as err:
-                    os.unlink(tmp_path)
-                    raise HTTPException(status_code=422, detail=f"audio_undecodable: {err}")
-
-            content.append({"type": "audio", "path": tmp_path})
-
+        if audio_path:
+            content.append({"type": "audio", "path": audio_path})
         conversation = [{"role": "user", "content": content}]
 
         # ---- Run inference ----
@@ -278,16 +257,171 @@ class MusicFlamingo:
             outputs[:, inputs.input_ids.shape[1]:],
             skip_special_tokens=True,
         )
+        return decoded[0]
 
-        # ---- Clean up temp file ----
-        if tmp_path:
-            os.unlink(tmp_path)
+    @modal.fastapi_endpoint(method="POST", docs=True, requires_proxy_auth=True)
+    def generate(self, request: dict):
+        """
+        Main API endpoint for music understanding.
+
+        JSON body:
+        {
+            "prompt": "Describe this track.",          (required)
+            "audio_url": "https://example.com/s.mp3",  (optional)
+            "max_new_tokens": 512,                     (optional, default 512)
+            "temperature": 0.7,                        (optional, default 1.0)
+            "top_p": 0.9,                              (optional, default 1.0)
+            "do_sample": false                         (optional, default false)
+        }
+
+        Returns:
+        {
+            "response": "...",
+            "elapsed_seconds": 3.21
+        }
+        """
+        import os
+        import time
+
+        start_time = time.time()
+
+        # ---- Parse input ----
+        prompt = request.get("prompt", "Describe this music.")
+        audio_url = request.get("audio_url", None)
+        max_tokens = request.get("max_new_tokens", MAX_NEW_TOKENS)
+
+        # Generation parameters -- control how "creative" the output is:
+        # temperature: higher = more creative/random, lower = more focused/deterministic
+        # top_p: nucleus sampling -- only consider tokens within this probability mass
+        # do_sample: if False, always picks the most likely token (greedy decoding)
+        temperature = request.get("temperature", 1.0)
+        top_p = request.get("top_p", 1.0)
+        do_sample = request.get("do_sample", False)
+
+        # If an audio URL is provided, download it (and transcode if needed)
+        tmp_path = self.download_audio(audio_url) if audio_url else None
+
+        try:
+            response = self.run_prompt(prompt, tmp_path, max_tokens, temperature, top_p, do_sample)
+        finally:
+            # ---- Clean up temp file ----
+            if tmp_path:
+                os.unlink(tmp_path)
 
         elapsed = round(time.time() - start_time, 2)
 
         return {
-            "response": decoded[0],
+            "response": response,
             "elapsed_seconds": elapsed,
+        }
+
+    @modal.fastapi_endpoint(method="POST", docs=True, requires_proxy_auth=True)
+    def generate_batch(self, request: dict):
+        """
+        Many short prompts about ONE audio file in one request. The audio is
+        downloaded (and transcoded if needed) once; each prompt then runs
+        sequentially as its own conversation against the same file. The API
+        charges one base price per request, so batching saves the base on
+        every prompt after the first.
+
+        JSON body:
+        {
+            "audio_url": "https://example.com/s.mp3",                (required)
+            "prompts": [                                             (required, 1-40)
+                {"id": "genre", "prompt": "What genre is this?",
+                 "max_new_tokens": 64}                               (optional, 1-2048)
+            ],
+            "temperature": 0.2,                                      (optional, default 1.0)
+            "top_p": 1.0,                                            (optional, default 1.0)
+            "do_sample": false                                       (optional, default false)
+        }
+
+        Returns:
+        {
+            "answers": [{"id": "genre", "response": "...", "elapsed_seconds": 1.2}],
+            "elapsed_seconds": 9.87      (whole batch, download included)
+        }
+
+        Answers come back in prompt order. Any invalid input answers 422
+        before the audio is fetched.
+        """
+        import os
+        import time
+        from fastapi import HTTPException
+
+        start_time = time.time()
+
+        def reject(detail: str):
+            raise HTTPException(status_code=422, detail=f"invalid_batch: {detail}")
+
+        # ---- Validate input (all of it, before any download) ----
+        audio_url = request.get("audio_url")
+        if not isinstance(audio_url, str) or not audio_url:
+            reject("audio_url is required")
+
+        prompts = request.get("prompts")
+        if not isinstance(prompts, list) or not prompts:
+            reject("prompts must be a non-empty list")
+        if len(prompts) > MAX_BATCH_PROMPTS:
+            reject(f"prompts cannot contain more than {MAX_BATCH_PROMPTS} items")
+
+        jobs = []
+        seen_ids = set()
+        for index, item in enumerate(prompts):
+            if not isinstance(item, dict):
+                reject(f"prompts[{index}] must be an object")
+            prompt_id = item.get("id")
+            prompt = item.get("prompt")
+            max_tokens = item.get("max_new_tokens", MAX_NEW_TOKENS)
+            if not isinstance(prompt_id, str) or not prompt_id:
+                reject(f"prompts[{index}].id must be a non-empty string")
+            if prompt_id in seen_ids:
+                reject(f"prompts[{index}].id '{prompt_id}' is repeated")
+            seen_ids.add(prompt_id)
+            if not isinstance(prompt, str) or not prompt:
+                reject(f"prompts[{index}].prompt must be a non-empty string")
+            # bool is an int subclass in Python; refuse it explicitly
+            if (
+                isinstance(max_tokens, bool)
+                or not isinstance(max_tokens, int)
+                or not 1 <= max_tokens <= MAX_NEW_TOKENS_LIMIT
+            ):
+                reject(f"prompts[{index}].max_new_tokens must be 1-{MAX_NEW_TOKENS_LIMIT}")
+            jobs.append((prompt_id, prompt, max_tokens))
+
+        # Generation parameters apply to every prompt in the batch
+        temperature = request.get("temperature", 1.0)
+        top_p = request.get("top_p", 1.0)
+        do_sample = request.get("do_sample", False)
+        if isinstance(temperature, bool) or not isinstance(temperature, (int, float)):
+            reject("temperature must be a number")
+        if isinstance(top_p, bool) or not isinstance(top_p, (int, float)):
+            reject("top_p must be a number")
+        if not isinstance(do_sample, bool):
+            reject("do_sample must be a boolean")
+
+        # ---- Download (and transcode) the audio ONCE ----
+        tmp_path = self.download_audio(audio_url)
+
+        # ---- Run every prompt against the same file ----
+        answers = []
+        try:
+            for prompt_id, prompt, max_tokens in jobs:
+                prompt_start = time.time()
+                response = self.run_prompt(
+                    prompt, tmp_path, max_tokens, temperature, top_p, do_sample
+                )
+                answers.append({
+                    "id": prompt_id,
+                    "response": response,
+                    "elapsed_seconds": round(time.time() - prompt_start, 2),
+                })
+        finally:
+            os.unlink(tmp_path)
+
+        return {
+            "answers": answers,
+            "elapsed_seconds": round(time.time() - start_time, 2),
         }
 
 
