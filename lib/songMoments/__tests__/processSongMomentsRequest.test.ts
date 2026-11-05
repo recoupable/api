@@ -2,14 +2,14 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { processSongMomentsRequest } from "../processSongMomentsRequest";
 import { callMeasureSongMoments } from "@/lib/songMoments/callMeasureSongMoments";
 import { chargeForSongMeasure } from "@/lib/songMoments/chargeForSongMeasure";
-import { describeMoment } from "@/lib/songMoments/describeMoment";
-import { chargeForFlamingoCall } from "@/lib/flamingo/chargeForFlamingoCall";
+import { describeMoments } from "@/lib/songMoments/describeMoments";
+import { chargeForBatchAnswers } from "@/lib/flamingo/chargeForBatchAnswers";
 import type { MeasuredSong } from "@/lib/songMoments/isMeasuredSong";
 
 vi.mock("@/lib/songMoments/callMeasureSongMoments", () => ({ callMeasureSongMoments: vi.fn() }));
 vi.mock("@/lib/songMoments/chargeForSongMeasure", () => ({ chargeForSongMeasure: vi.fn() }));
-vi.mock("@/lib/songMoments/describeMoment", () => ({ describeMoment: vi.fn() }));
-vi.mock("@/lib/flamingo/chargeForFlamingoCall", () => ({ chargeForFlamingoCall: vi.fn() }));
+vi.mock("@/lib/songMoments/describeMoments", () => ({ describeMoments: vi.fn() }));
+vi.mock("@/lib/flamingo/chargeForBatchAnswers", () => ({ chargeForBatchAnswers: vi.fn() }));
 
 const audio = "https://example.com/song.mp3";
 const hook = {
@@ -39,15 +39,17 @@ const words = {
   best_for: ["ad"],
   vocals: true,
 };
+const described = (...types: ("vocal_hook" | "climax")[]) =>
+  new Map(types.map(type => [type, { description: words, elapsed_seconds: 2 }]));
 
 describe("processSongMomentsRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(callMeasureSongMoments).mockResolvedValue(song);
-    vi.mocked(describeMoment).mockResolvedValue({ description: words, elapsed_seconds: 2 });
+    vi.mocked(describeMoments).mockResolvedValue(described("vocal_hook", "climax"));
   });
 
-  it("measures, charges the measurement, and describes and charges every moment", async () => {
+  it("measures, charges the measurement, and describes every moment in one charged batch", async () => {
     const result = await processSongMomentsRequest(
       { audio_url: audio, section_order: ["Verse", "Chorus"], describe: true },
       { accountId: "acc_1" },
@@ -58,12 +60,12 @@ describe("processSongMomentsRequest", () => {
       section_order: ["Verse", "Chorus"],
     });
     expect(chargeForSongMeasure).toHaveBeenCalledWith({ accountId: "acc_1", audioUrl: audio });
-    expect(describeMoment).toHaveBeenCalledWith({ audioUrl: audio, start: 36.15, end: 50.9 });
-    expect(describeMoment).toHaveBeenCalledTimes(2);
-    expect(chargeForFlamingoCall).toHaveBeenCalledTimes(2);
-    expect(chargeForFlamingoCall).toHaveBeenCalledWith({
+    expect(describeMoments).toHaveBeenCalledTimes(1);
+    expect(describeMoments).toHaveBeenCalledWith({ audioUrl: audio, moments: [hook, climax] });
+    expect(chargeForBatchAnswers).toHaveBeenCalledTimes(1);
+    expect(chargeForBatchAnswers).toHaveBeenCalledWith({
       accountId: "acc_1",
-      elapsedSeconds: 2,
+      answers: [...described("vocal_hook", "climax").values()],
       audioUrl: audio,
     });
     expect(result.moments[0]).toEqual({ ...hook, ...words });
@@ -79,31 +81,31 @@ describe("processSongMomentsRequest", () => {
     expect(callMeasureSongMoments).toHaveBeenCalledWith({ audio_url: audio, tempo_hint: 86 });
   });
 
-  it("describes nothing when describe is false", async () => {
+  it("describes nothing, and charges no model time, when describe is false", async () => {
     const result = await processSongMomentsRequest(
       { audio_url: audio, describe: false },
       { accountId: "acc_1" },
     );
 
-    expect(describeMoment).not.toHaveBeenCalled();
-    expect(chargeForFlamingoCall).not.toHaveBeenCalled();
+    expect(describeMoments).not.toHaveBeenCalled();
+    expect(chargeForBatchAnswers).toHaveBeenCalledWith(expect.objectContaining({ answers: [] }));
     expect(result.moments).toEqual([hook, climax]);
   });
 
   it("describes only the listed moment types", async () => {
-    await processSongMomentsRequest(
+    vi.mocked(describeMoments).mockResolvedValue(described("climax"));
+
+    const result = await processSongMomentsRequest(
       { audio_url: audio, describe: ["climax"] },
       { accountId: "acc_1" },
     );
 
-    expect(describeMoment).toHaveBeenCalledTimes(1);
-    expect(describeMoment).toHaveBeenCalledWith({ audioUrl: audio, start: 143.36, end: 158.1 });
+    expect(describeMoments).toHaveBeenCalledWith({ audioUrl: audio, moments: [climax] });
+    expect(result.moments).toEqual([hook, { ...climax, ...words }]);
   });
 
-  it("returns a moment without words, and charges nothing for it, when its description fails", async () => {
-    vi.mocked(describeMoment)
-      .mockResolvedValueOnce({ description: words, elapsed_seconds: 2 })
-      .mockRejectedValueOnce(new Error("Music analysis failed (status 503)"));
+  it("returns a moment without words, and charges nothing for it, when the model drops it", async () => {
+    vi.mocked(describeMoments).mockResolvedValue(described("vocal_hook"));
 
     const result = await processSongMomentsRequest(
       { audio_url: audio, describe: true },
@@ -111,7 +113,23 @@ describe("processSongMomentsRequest", () => {
     );
 
     expect(result.moments[1]).toEqual(climax);
-    expect(chargeForFlamingoCall).toHaveBeenCalledTimes(1);
+    const [charge] = vi.mocked(chargeForBatchAnswers).mock.calls[0];
+    expect(charge.answers).toHaveLength(1);
+  });
+
+  it("returns every moment without words, and charges no model time, when the batch fails", async () => {
+    vi.mocked(describeMoments).mockRejectedValue(new Error("Music analysis failed (status 503)"));
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await processSongMomentsRequest(
+      { audio_url: audio, describe: true },
+      { accountId: "acc_1" },
+    );
+
+    expect(result.moments).toEqual([hook, climax]);
+    expect(chargeForSongMeasure).toHaveBeenCalledTimes(1);
+    expect(chargeForBatchAnswers).toHaveBeenCalledWith(expect.objectContaining({ answers: [] }));
+    errorSpy.mockRestore();
   });
 
   it("charges nothing when the measurement fails", async () => {
@@ -123,6 +141,6 @@ describe("processSongMomentsRequest", () => {
       processSongMomentsRequest({ audio_url: audio, describe: true }, { accountId: "acc_1" }),
     ).rejects.toThrow("status 422");
     expect(chargeForSongMeasure).not.toHaveBeenCalled();
-    expect(describeMoment).not.toHaveBeenCalled();
+    expect(describeMoments).not.toHaveBeenCalled();
   });
 });

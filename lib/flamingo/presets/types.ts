@@ -15,7 +15,12 @@ export interface PresetConfig {
   /** Generation parameters */
   params: {
     max_new_tokens: number;
+    /** Only used when `do_sample` is true; greedy decoding ignores it. */
     temperature: number;
+    /**
+     * False (greedy) for presets whose answer is stored as data, so the same
+     * song gets the same answer on every run; true only for prose.
+     */
     do_sample: boolean;
   };
   /** Whether this preset requires an audio_url */

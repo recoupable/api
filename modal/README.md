@@ -20,11 +20,27 @@ workspace settings.
 ## Capacity
 
 `MAX_CONTAINERS` is 4 (workspace GPU cap is 10). Recoup `full_report`
-fans out 13 HTTP calls; they only run in parallel if this cap is >1.
+sends its 13 sections as one `generate_batch` request, so one report holds
+one container and the sections run one after another on it.
+
+## Batches
+
+`generate_batch` downloads (and transcodes) the audio once and answers up to
+40 prompts against it. A prompt may carry `clip_start`/`clip_end` (seconds,
+both or neither) to hear only that stretch, cut fresh from the one download
+for each prompt, and its own `temperature`, `top_p` or `do_sample` to
+override the batch's settings for that prompt alone. An answer from a clip
+echoes `clip_start`/`clip_end`, so a caller can tell it was not answered from
+the whole song. The validation is pure Python and tested locally:
+
+```bash
+uv run --no-project --with modal --with pytest \
+  python -I -m pytest modal/test_serve_music_flamingo.py -q
+```
 
 ## Auth
 
-Both web endpoints (`generate`, `health`) require Modal proxy auth
+Every web endpoint (`generate`, `generate_batch`, `health`) requires Modal proxy auth
 (`requires_proxy_auth=True`): requests must carry `Modal-Key` and
 `Modal-Secret` headers from a proxy auth token minted in the
 `shared-78369` workspace settings. Recoup API sends them from the
@@ -40,9 +56,10 @@ Modal URL.
 app behind `POST /api/songs/moments`. It is CPU only: `song_moments.py`
 measures the audio (beat grid, loudness, which passages repeat) to find a
 song's sections and moments, and names sections from an optional lyric-sheet
-section order. Recoup API then has Music Flamingo describe each moment by
-sending `clip_start`/`clip_end` to the `generate` endpoint above, which cuts
-the clip before the model hears it.
+section order. Recoup API then has Music Flamingo describe the moments in one
+`generate_batch` request above, one prompt per moment with its
+`clip_start`/`clip_end`, so the song downloads once and each prompt hears
+only its clip.
 
 The same workflow deploys it, after `music-flamingo`. Its `measure` endpoint
 uses the same proxy auth as Music Flamingo; Recoup API calls it at

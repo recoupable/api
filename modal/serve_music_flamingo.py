@@ -84,6 +84,33 @@ def download_model_weights():
     print(f"Model weights saved to {MODEL_CACHE_DIR}/model")
 
 
+def extract_clip(path, start, end):
+    """
+    Cut start..end seconds of `path` into a new 16 kHz mono WAV and return its
+    path. The source is kept, so a batch can cut several clips from one
+    download; the caller deletes the clip.
+    """
+    import os
+    import subprocess
+    import tempfile
+
+    if not 0 <= start < end:
+        raise ValueError("clip_start must be at least 0 and before clip_end")
+    clip = tempfile.NamedTemporaryFile(suffix="-clip.wav", delete=False)
+    clip.close()
+    try:
+        subprocess.run(
+            ["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-ss", str(start), "-t", str(end - start),
+             "-i", path, "-ac", "1", "-ar", "16000", clip.name],
+            check=True,
+            timeout=60,
+        )
+    except Exception:
+        os.unlink(clip.name)
+        raise
+    return clip.name
+
+
 def cut_clip(path, start, end):
     """
     Replace the downloaded file with just start..end seconds of it, so the
@@ -91,19 +118,89 @@ def cut_clip(path, start, end):
     path; the original is removed.
     """
     import os
-    import subprocess
 
-    if not 0 <= start < end:
-        raise ValueError("clip_start must be at least 0 and before clip_end")
-    clip_path = os.path.splitext(path)[0] + "-clip.wav"
-    subprocess.run(
-        ["ffmpeg", "-nostdin", "-loglevel", "error", "-y", "-ss", str(start), "-t", str(end - start),
-         "-i", path, "-ac", "1", "-ar", "16000", clip_path],
-        check=True,
-        timeout=60,
-    )
+    clip_path = extract_clip(path, start, end)
     os.unlink(path)
     return clip_path
+
+
+def is_number(value) -> bool:
+    """A JSON number: int or float, but not bool (bool is an int subclass in Python)."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
+def check_generation_settings(settings: dict, where: str = "") -> None:
+    """
+    Raises ValueError unless `temperature` and `top_p` (when present) are
+    numbers and `do_sample` (when present) is a boolean. `where` prefixes the
+    message, e.g. "prompts[2]." for one prompt's own settings.
+    """
+    for key in ("temperature", "top_p"):
+        if key in settings and not is_number(settings[key]):
+            raise ValueError(f"{where}{key} must be a number")
+    if "do_sample" in settings and not isinstance(settings["do_sample"], bool):
+        raise ValueError(f"{where}do_sample must be a boolean")
+
+
+def parse_batch_prompts(prompts, defaults: dict) -> list:
+    """
+    Validates /generate_batch's `prompts` and resolves each one into a job.
+
+    A prompt may carry `clip_start` and `clip_end` (seconds, both or neither)
+    to be answered from just that stretch of the audio, and `temperature`,
+    `top_p` or `do_sample` to override the batch's `defaults` for that prompt
+    alone. Returns one job dict per prompt, in order; raises ValueError naming
+    the first invalid field.
+    """
+    if not isinstance(prompts, list) or not prompts:
+        raise ValueError("prompts must be a non-empty list")
+    if len(prompts) > MAX_BATCH_PROMPTS:
+        raise ValueError(f"prompts cannot contain more than {MAX_BATCH_PROMPTS} items")
+
+    jobs = []
+    seen_ids = set()
+    for index, item in enumerate(prompts):
+        if not isinstance(item, dict):
+            raise ValueError(f"prompts[{index}] must be an object")
+        prompt_id = item.get("id")
+        prompt = item.get("prompt")
+        max_tokens = item.get("max_new_tokens", MAX_NEW_TOKENS)
+        if not isinstance(prompt_id, str) or not prompt_id:
+            raise ValueError(f"prompts[{index}].id must be a non-empty string")
+        if prompt_id in seen_ids:
+            raise ValueError(f"prompts[{index}].id '{prompt_id}' is repeated")
+        seen_ids.add(prompt_id)
+        if not isinstance(prompt, str) or not prompt:
+            raise ValueError(f"prompts[{index}].prompt must be a non-empty string")
+        # bool is an int subclass in Python; refuse it explicitly
+        if (
+            isinstance(max_tokens, bool)
+            or not isinstance(max_tokens, int)
+            or not 1 <= max_tokens <= MAX_NEW_TOKENS_LIMIT
+        ):
+            raise ValueError(f"prompts[{index}].max_new_tokens must be 1-{MAX_NEW_TOKENS_LIMIT}")
+        check_generation_settings(item, f"prompts[{index}].")
+
+        clip = None
+        clip_start, clip_end = item.get("clip_start"), item.get("clip_end")
+        if clip_start is not None or clip_end is not None:
+            if not (is_number(clip_start) and is_number(clip_end) and 0 <= clip_start < clip_end):
+                raise ValueError(
+                    f"prompts[{index}] needs clip_start and clip_end in seconds, "
+                    "with 0 <= clip_start < clip_end"
+                )
+            clip = (float(clip_start), float(clip_end))
+
+        jobs.append({
+            "id": prompt_id,
+            "prompt": prompt,
+            "max_new_tokens": max_tokens,
+            "clip": clip,
+            "temperature": item.get("temperature", defaults["temperature"]),
+            "top_p": item.get("top_p", defaults["top_p"]),
+            "do_sample": item.get("do_sample", defaults["do_sample"]),
+        })
+    return jobs
 
 
 # ---------------------------------------------------------------------------
@@ -358,7 +455,11 @@ class MusicFlamingo:
             "audio_url": "https://example.com/s.mp3",                (required)
             "prompts": [                                             (required, 1-40)
                 {"id": "genre", "prompt": "What genre is this?",
-                 "max_new_tokens": 64}                               (optional, 1-2048)
+                 "max_new_tokens": 64,                               (optional, 1-2048)
+                 "clip_start": 45.2, "clip_end": 60.4,               (optional, seconds; both or
+                                                                      neither: the prompt hears
+                                                                      only that clip)
+                 "temperature": 0.7, "top_p": 0.9, "do_sample": true} (optional, this prompt only)
             ],
             "temperature": 0.2,                                      (optional, default 1.0)
             "top_p": 1.0,                                            (optional, default 1.0)
@@ -367,7 +468,8 @@ class MusicFlamingo:
 
         Returns:
         {
-            "answers": [{"id": "genre", "response": "...", "elapsed_seconds": 1.2}],
+            "answers": [{"id": "genre", "response": "...", "elapsed_seconds": 1.2,
+                         "clip_start": 45.2, "clip_end": 60.4}],     (clip echoed when one was cut)
             "elapsed_seconds": 9.87      (whole batch, download included)
         }
 
@@ -388,63 +490,44 @@ class MusicFlamingo:
         if not isinstance(audio_url, str) or not audio_url:
             reject("audio_url is required")
 
-        prompts = request.get("prompts")
-        if not isinstance(prompts, list) or not prompts:
-            reject("prompts must be a non-empty list")
-        if len(prompts) > MAX_BATCH_PROMPTS:
-            reject(f"prompts cannot contain more than {MAX_BATCH_PROMPTS} items")
-
-        jobs = []
-        seen_ids = set()
-        for index, item in enumerate(prompts):
-            if not isinstance(item, dict):
-                reject(f"prompts[{index}] must be an object")
-            prompt_id = item.get("id")
-            prompt = item.get("prompt")
-            max_tokens = item.get("max_new_tokens", MAX_NEW_TOKENS)
-            if not isinstance(prompt_id, str) or not prompt_id:
-                reject(f"prompts[{index}].id must be a non-empty string")
-            if prompt_id in seen_ids:
-                reject(f"prompts[{index}].id '{prompt_id}' is repeated")
-            seen_ids.add(prompt_id)
-            if not isinstance(prompt, str) or not prompt:
-                reject(f"prompts[{index}].prompt must be a non-empty string")
-            # bool is an int subclass in Python; refuse it explicitly
-            if (
-                isinstance(max_tokens, bool)
-                or not isinstance(max_tokens, int)
-                or not 1 <= max_tokens <= MAX_NEW_TOKENS_LIMIT
-            ):
-                reject(f"prompts[{index}].max_new_tokens must be 1-{MAX_NEW_TOKENS_LIMIT}")
-            jobs.append((prompt_id, prompt, max_tokens))
-
-        # Generation parameters apply to every prompt in the batch
-        temperature = request.get("temperature", 1.0)
-        top_p = request.get("top_p", 1.0)
-        do_sample = request.get("do_sample", False)
-        if isinstance(temperature, bool) or not isinstance(temperature, (int, float)):
-            reject("temperature must be a number")
-        if isinstance(top_p, bool) or not isinstance(top_p, (int, float)):
-            reject("top_p must be a number")
-        if not isinstance(do_sample, bool):
-            reject("do_sample must be a boolean")
+        # Generation parameters apply to every prompt that does not set its own
+        defaults = {
+            "temperature": request.get("temperature", 1.0),
+            "top_p": request.get("top_p", 1.0),
+            "do_sample": request.get("do_sample", False),
+        }
+        try:
+            jobs = parse_batch_prompts(request.get("prompts"), defaults)
+            check_generation_settings(defaults)
+        except ValueError as err:
+            reject(str(err))
 
         # ---- Download (and transcode) the audio ONCE ----
         tmp_path = self.download_audio(audio_url)
 
-        # ---- Run every prompt against the same file ----
+        # ---- Run every prompt against the same file (or a clip cut from it) ----
         answers = []
         try:
-            for prompt_id, prompt, max_tokens in jobs:
+            for job in jobs:
                 prompt_start = time.time()
-                response = self.run_prompt(
-                    prompt, tmp_path, max_tokens, temperature, top_p, do_sample
-                )
-                answers.append({
-                    "id": prompt_id,
+                audio_path = extract_clip(tmp_path, *job["clip"]) if job["clip"] else tmp_path
+                try:
+                    response = self.run_prompt(
+                        job["prompt"], audio_path, job["max_new_tokens"],
+                        job["temperature"], job["top_p"], job["do_sample"],
+                    )
+                finally:
+                    if audio_path != tmp_path:
+                        os.unlink(audio_path)
+                answer = {
+                    "id": job["id"],
                     "response": response,
                     "elapsed_seconds": round(time.time() - prompt_start, 2),
-                })
+                }
+                if job["clip"]:
+                    # Echo the window so the caller can tell the answer came from the clip
+                    answer["clip_start"], answer["clip_end"] = job["clip"]
+                answers.append(answer)
         finally:
             os.unlink(tmp_path)
 

@@ -62,6 +62,50 @@ describe("callFlamingoGenerateBatch", () => {
     });
   });
 
+  it("sends a prompt's clip window and its own settings only when the prompt has them", async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => RESULT });
+
+    await callFlamingoGenerateBatch({
+      ...BODY,
+      prompts: [
+        {
+          id: "climax",
+          prompt: "Describe this clip.",
+          max_new_tokens: 256,
+          clip: { start: 143.36, end: 158.1 },
+        },
+        {
+          id: "pitch",
+          prompt: "Pitch it.",
+          max_new_tokens: 512,
+          temperature: 0.6,
+          top_p: 0.9,
+          do_sample: true,
+        },
+        { id: "key", prompt: "Key?", max_new_tokens: 32 },
+      ],
+    });
+
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body).prompts).toEqual([
+      {
+        id: "climax",
+        prompt: "Describe this clip.",
+        max_new_tokens: 256,
+        clip_start: 143.36,
+        clip_end: 158.1,
+      },
+      {
+        id: "pitch",
+        prompt: "Pitch it.",
+        max_new_tokens: 512,
+        temperature: 0.6,
+        top_p: 0.9,
+        do_sample: true,
+      },
+      { id: "key", prompt: "Key?", max_new_tokens: 32 },
+    ]);
+  });
+
   it("passes an abort signal through when given one", async () => {
     mockFetch.mockResolvedValue({ ok: true, json: async () => RESULT });
     const controller = new AbortController();

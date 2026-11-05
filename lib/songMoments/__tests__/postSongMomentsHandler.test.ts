@@ -57,7 +57,7 @@ describe("postSongMomentsHandler", () => {
 
     expect(ensureCreditsOrShortCircuit).toHaveBeenCalledWith({
       accountId: "acc_1",
-      creditsToDeduct: 360_000,
+      creditsToDeduct: 60_000,
     });
     expect(processSongMomentsRequest).toHaveBeenCalledWith(
       { audio_url: "https://example.com/song.mp3", describe: true },

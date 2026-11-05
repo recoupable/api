@@ -6,6 +6,9 @@ export interface FlamingoBatchAnswer {
   response: string;
   /** Inference time for this prompt alone, in seconds. */
   elapsed_seconds: number;
+  /** The clip window the model heard, echoed when the prompt asked for one (seconds). */
+  clip_start?: number;
+  clip_end?: number;
 }
 
 /** Response shape from the Music Flamingo /generate_batch endpoint on Modal. */
