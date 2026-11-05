@@ -68,6 +68,7 @@ describe("processAnalyzeMusicRequest", () => {
       mockExecuteFullReport.mockResolvedValue({
         report: { metadata: { title: "Song" } },
         elapsed_seconds: 30.5,
+        failed: [],
       });
 
       const result = await processAnalyzeMusicRequest(
@@ -84,9 +85,11 @@ describe("processAnalyzeMusicRequest", () => {
 
       expect(result).toEqual({
         type: "success",
+        status: "success",
         preset: "full_report",
         report: { metadata: { title: "Song" } },
         elapsed_seconds: 30.5,
+        failed: [],
       });
       expect(mockExecuteFullReport).toHaveBeenCalledWith(
         "https://example.com/song.mp3",

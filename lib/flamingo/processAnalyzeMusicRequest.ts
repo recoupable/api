@@ -5,12 +5,24 @@ import { executeFullReport } from "@/lib/flamingo/executeFullReport";
 import { chargeForFlamingoCall } from "@/lib/flamingo/chargeForFlamingoCall";
 import type { FlamingoGenerateBody } from "@/lib/flamingo/flamingoGenerateBodySchema";
 
-/** Successful result with a full report. */
+/**
+ * Successful result with a full report. `status` is "partial" when at least
+ * one section failed; `failed` lists those sections' report keys.
+ */
 interface FullReportSuccess {
   type: "success";
+  status: "success" | "partial";
   preset: "full_report";
   report: Record<string, unknown>;
   elapsed_seconds: number;
+  failed: string[];
+}
+
+/** Every section of a full report failed upstream; nothing was charged. */
+interface UpstreamError {
+  type: "upstream_error";
+  error: string;
+  failed: string[];
 }
 
 /** Successful result with a single analysis response. */
@@ -27,7 +39,11 @@ interface AnalysisError {
   error: string;
 }
 
-export type AnalyzeMusicResult = FullReportSuccess | AnalysisSuccess | AnalysisError;
+export type AnalyzeMusicResult =
+  | FullReportSuccess
+  | AnalysisSuccess
+  | AnalysisError
+  | UpstreamError;
 
 /** Who pays for the model calls this request makes. */
 export interface AnalyzeMusicContext {
@@ -47,7 +63,9 @@ export interface AnalyzeMusicContext {
  *
  * @param params - Validated request parameters.
  * @param context - The account the model calls are charged to.
- * @returns Discriminated union with type "success" or "error".
+ * @returns Discriminated union with type "success", "error" or
+ *   "upstream_error" (every full-report section failed).
+ * @throws FlamingoServiceError when a single model call is rejected upstream.
  */
 export async function processAnalyzeMusicRequest(
   params: FlamingoGenerateBody,
@@ -55,12 +73,22 @@ export async function processAnalyzeMusicRequest(
 ): Promise<AnalyzeMusicResult> {
   // Handle full_report preset
   if (params.preset === FULL_REPORT_PRESET_NAME) {
-    const { report, elapsed_seconds } = await executeFullReport(
+    const { report, elapsed_seconds, failed } = await executeFullReport(
       params.audio_url,
       context.accountId,
       context.recordAudioUrl ?? true,
     );
-    return { type: "success", preset: "full_report", report, elapsed_seconds };
+    if (failed.length > 0 && failed.length === Object.keys(report).length) {
+      return { type: "upstream_error", error: "Music analysis failed for every section", failed };
+    }
+    return {
+      type: "success",
+      status: failed.length > 0 ? "partial" : "success",
+      preset: "full_report",
+      report,
+      elapsed_seconds,
+      failed,
+    };
   }
 
   // Resolve individual preset to prompt + params

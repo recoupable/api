@@ -93,6 +93,16 @@ export const SONG_MOMENTS_MEASURE_URL = "https://shared-78369--song-moments-meas
 /** Written on `usage_events.model_id` for the song moments measurement charge. */
 export const SONG_MOMENTS_MODEL_ID = "recoup/song-moments";
 
+/**
+ * Music Flamingo batch endpoint (Modal): many prompts on one audio download.
+ * Same deployment as `FLAMINGO_GENERATE_URL`; Modal names each endpoint's host
+ * after its method, with underscores as hyphens (`generate_batch` → `generate-batch`).
+ */
+export const FLAMINGO_GENERATE_BATCH_URL = FLAMINGO_GENERATE_URL.replace(
+  /-generate\.modal\.run$/,
+  "-generate-batch.modal.run",
+);
+
 /** Snapshot expiration duration (7 days) */
 export const SNAPSHOT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
