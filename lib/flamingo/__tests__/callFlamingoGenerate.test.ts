@@ -137,6 +137,22 @@ describe("callFlamingoGenerate", () => {
     ).rejects.toThrow("Music analysis failed (status 503)");
   });
 
+  it("carries the upstream status and body on the thrown error", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 422,
+      text: async () => "audio_undecodable: bad file",
+    });
+
+    await expect(
+      callFlamingoGenerate({ prompt: "Describe this.", audio_url: "https://example.com/song.m4a" }),
+    ).rejects.toMatchObject({
+      name: "FlamingoServiceError",
+      status: 422,
+      detail: "audio_undecodable: bad file",
+    });
+  });
+
   it("throws error with fallback message when error text cannot be read", async () => {
     mockFetch.mockResolvedValue({
       ok: false,
