@@ -6,13 +6,14 @@ import { isMeasuredSong, type MeasuredSong } from "@/lib/songMoments/isMeasuredS
  * Calls the song-moments /measure endpoint on Modal, which finds the song's
  * sections, moments and cuts from the audio itself (no language model).
  *
- * @param params - The audio and, optionally, the lyric sheet's section order.
+ * @param params - The audio and, optionally, the lyric sheet's section order and a tempo hint in BPM.
  * @returns The measured song.
  * @throws Error if the Modal endpoint returns a non-OK status or an unexpected shape.
  */
 export async function callMeasureSongMoments(params: {
   audio_url: string;
   section_order?: string[];
+  tempo_hint?: number;
 }): Promise<MeasuredSong> {
   const response = await fetch(SONG_MOMENTS_MEASURE_URL, {
     method: "POST",
@@ -20,6 +21,7 @@ export async function callMeasureSongMoments(params: {
     body: JSON.stringify({
       audio_url: params.audio_url,
       section_order: params.section_order ?? null,
+      tempo_hint: params.tempo_hint ?? null,
     }),
   });
 

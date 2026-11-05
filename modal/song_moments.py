@@ -9,9 +9,10 @@ sheet (for example ["verse", "chorus", "verse", "chorus", "bridge", "chorus"])
 names the sections; without one, names are inferred from repetition and
 loudness and the result says so (`names_from: "audio"`).
 
-Pure analysis code with no Modal imports, so it runs the same locally:
+Pure analysis code with no Modal imports, so it runs the same locally
+(`measure_file` adds the extended fields from song_measure.py):
   uv run --no-project --with librosa==0.10.2.post1 --with pyloudnorm==0.1.1 \
-    python -I modal/song_moments.py <audio file> [section labels...]
+    python -I modal/song_moments.py <audio file> [--tempo-hint BPM] [section labels...]
 
 `serve_song_moments.py` wraps it as the Modal web endpoint behind
 POST /api/songs/moments.
@@ -605,15 +606,26 @@ def measure_song(y, sr, section_order=None):
     }
 
 
-def measure_file(path, section_order=None):
-    import librosa
+def measure_file(path, section_order=None, tempo_hint=None):
+    """
+    The full measurement for one audio file: measure_song on the mono mix plus
+    the extended fields from song_measure.py (loudness, bands, fingerprint,
+    key, drops, edit points), with the tracked tempo reconciled to `tempo_hint`.
+    """
+    from song_measure import load_stereo, measure_signal
 
-    y, sr = librosa.load(path, sr=SAMPLE_RATE, mono=True)
-    return measure_song(y, sr, section_order)
+    y, sr = load_stereo(path)
+    return measure_signal(y, sr, section_order, tempo_hint, audio_path=path)
 
 
 if __name__ == "__main__":
     import json
+    import os
     import sys
 
-    print(json.dumps(measure_file(sys.argv[1], sys.argv[2:] or None), indent=1))
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # song_measure.py, under python -I
+    args = sys.argv[2:]
+    hint = None
+    if args[:1] == ["--tempo-hint"]:
+        hint, args = float(args[1]), args[2:]
+    print(json.dumps(measure_file(sys.argv[1], args or None, hint), indent=1))

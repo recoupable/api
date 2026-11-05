@@ -46,8 +46,21 @@ describe("callMeasureSongMoments", () => {
     expect(JSON.parse(options.body)).toEqual({
       audio_url: "https://example.com/song.mp3",
       section_order: ["Verse", "Chorus"],
+      tempo_hint: null,
     });
     expect(result).toEqual(measured);
+  });
+
+  it("sends a tempo hint when one is given", async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => measured });
+
+    await callMeasureSongMoments({ audio_url: "https://example.com/song.mp3", tempo_hint: 86 });
+
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({
+      audio_url: "https://example.com/song.mp3",
+      section_order: null,
+      tempo_hint: 86,
+    });
   });
 
   it("throws with the status when Modal refuses", async () => {
