@@ -30,7 +30,8 @@ interface SectionResult {
  * @param audioUrl - Public URL to the audio file
  * @param accountId - The account the section calls are charged to
  * @param recordAudioUrl - False for temporary host attachment URLs
- * @returns Combined report object with all sections + total elapsed time
+ * @returns Combined report object with all sections, total elapsed time, and
+ *   the report keys of the sections that failed (in report order)
  */
 export async function executeFullReport(
   audioUrl: string,
@@ -39,6 +40,7 @@ export async function executeFullReport(
 ): Promise<{
   report: Record<string, unknown>;
   elapsed_seconds: number;
+  failed: string[];
 }> {
   const startTime = Date.now();
 
@@ -89,13 +91,28 @@ export async function executeFullReport(
 
   // Assemble report in narrative order (sections are already ordered)
   const report: Record<string, unknown> = {};
+  const failed: string[] = [];
   for (const result of results) {
     if (result) {
       report[result.reportKey] = result.data;
+      if (isFailedSection(result.data)) failed.push(result.reportKey);
     }
   }
 
   const totalElapsed = Math.round(((Date.now() - startTime) / 1000) * 100) / 100;
 
-  return { report, elapsed_seconds: totalElapsed };
+  return { report, elapsed_seconds: totalElapsed, failed };
+}
+
+/**
+ * A section that failed is the `{ error }` object the catch above produced;
+ * a preset that legitimately returns an object never uses that key alone.
+ */
+function isFailedSection(data: unknown): boolean {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    Object.keys(data).length === 1 &&
+    typeof (data as { error?: unknown }).error === "string"
+  );
 }

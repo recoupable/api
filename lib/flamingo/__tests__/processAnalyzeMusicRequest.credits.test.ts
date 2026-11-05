@@ -59,7 +59,7 @@ describe("processAnalyzeMusicRequest — credits", () => {
   });
 
   it("hands the account to executeFullReport, which charges per section", async () => {
-    vi.mocked(executeFullReport).mockResolvedValue({ report: {}, elapsed_seconds: 12 });
+    vi.mocked(executeFullReport).mockResolvedValue({ report: {}, elapsed_seconds: 12, failed: [] });
 
     await processAnalyzeMusicRequest(
       { ...base, preset: "full_report", audio_url: "https://example.com/song.mp3" },
@@ -80,7 +80,7 @@ describe("processAnalyzeMusicRequest — credits", () => {
   });
 
   it("passes attachment privacy through to full reports", async () => {
-    vi.mocked(executeFullReport).mockResolvedValue({ report: {}, elapsed_seconds: 12 });
+    vi.mocked(executeFullReport).mockResolvedValue({ report: {}, elapsed_seconds: 12, failed: [] });
     await processAnalyzeMusicRequest(
       { ...base, preset: "full_report", audio_url: "https://example.com/audio?token=private" },
       { accountId: "acc_1", recordAudioUrl: false },
