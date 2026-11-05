@@ -91,10 +91,37 @@ part changes.
 | `key` | `tonic`, `mode` and `confidence` (Krumhansl profile correlation). |
 | `time_signature` | `3/4` or `4/4`, from beat-strength periodicity. |
 | `valence`, `arousal` | The measured half of mood (mode, brightness, energy, tempo); a listening model's mood words should refine valence. |
-| `mute_drops` | Level drops against the preceding eight beats, and breakdowns against the whole song: `mute` under two beats (a zero-bleed cut), `breakdown` two or more; breakdowns within three beats merge. Local drops start after the first eight beats, whole-song breakdowns after the first section, and none fall inside the fade or the last three seconds. |
+| `mute_drops` | Level drops against the preceding eight beats, and breakdowns against the whole song: `mute` under two beats (a zero-bleed cut), `breakdown` two or more; breakdowns within three beats merge. Local drops start after the first eight beats, whole-song breakdowns after the first section; none start inside the ending or the last three seconds, and a drop must recover before the ending starts. |
 | `chord_loop` | One diatonic chord per bar and the most common four-bar cycle. Always `confidence: "low"`; treat it as one vote beside a listening model's answer. |
-| `edit_points` | Typed `in`/`out` points: cold open, chorus entries and exits, the three deepest mutes, breakdowns and their re-entry, and where a fade begins. |
+| `edit_points` | Typed `in`/`out` points: cold open, chorus entries and exits, the three deepest mutes, breakdowns and their re-entry, and last, where the fade begins or the band stops. |
+| `ending`, `ending_detail` | How the song ends, read from `energy_curve` (see below). `ending` keeps its two values: `fade`, or `cold` for both kinds of stop. |
+| `sections[].arrangement`, `arrangement_notes` | Per-section arrangement density and the notes drawn from it (see below). |
 | `tempo_note` | How `tempo_bpm` was decided (see `tempo_hint` above). |
+
+**Ending.** `ending_detail.type` is read from the per-second energy curve
+against its median non-silent second. After the last second at 50 % or more of
+the median, the closing silence is the final run of seconds under 10 %. `stop`
+when the next second is already under 30 %; `stop_with_tail` when, after such a
+stop, seconds at 5–30 % add up to three or more before the closing silence (a
+ringing chord, a room, a short coda); `fade` when there is no stop and four
+seconds or more pass from the last loud second to the closing silence; `stop`
+otherwise. A fade carries `from` and `silent_from`, a stop `stop_at` and
+`silent_from`, a stop with tail `stop_at` and `tail_until`; all carry `mmss`. The
+energy curve is scaled between its 5th and 98th percentile seconds, so a short
+fade only reads as one when quieter seconds elsewhere set the floor; several
+seconds of digital silence at the end can push a stop one second late.
+
+**Arrangement.** Each section carries `arrangement`, to one decimal:
+`percussive_pct` (the percussive share of its energy, from the same
+harmonic/percussive split the fingerprint uses), `onsets_per_s`, `high_pct` and
+`sub_pct` (its spectral energy at or above 2 kHz and below 120 Hz) and `rms_db`.
+`arrangement_notes` compares each section with the median section, leaving out
+sections that lie mostly inside the ending: `sparse open` when the first section
+is both the quietest and the brightest; `drums drop out at m:ss` when a section
+has under one onset a second while its RMS stays within 6 dB of the median; and
+`band thins at m:ss` when its percussive share and onset rate both fall more
+than 35 % below the median (not repeated where the drums drop out). The first
+section gets neither of the last two, which describe a change.
 
 **Calibration caveat.** The fingerprint formulas and the band reference split
 were calibrated on two songs (2026-11-04). They give plausible, comparable

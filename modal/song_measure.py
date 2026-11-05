@@ -4,9 +4,11 @@ song_measure.py
 Extends the song-moments measurement (song_moments.py) with every number a
 song report draws: loudness and peaks, the stereo image, a seven-band
 spectrum, a six-axis sound fingerprint, key, time signature, valence and
-arousal, mute and breakdown drops, a chord-loop estimate and typed edit
-points. The tracked tempo can be reconciled against a hint from metadata or
-a listening model.
+arousal, mute and breakdown drops, a chord-loop estimate, typed edit points,
+how the song ends (fade, stop, or stop with a tail), and each section's
+arrangement density with plain-language notes on where the band thins. The
+tracked tempo can be reconciled against a hint from metadata or a listening
+model.
 
 No language model is involved. Pure analysis code with no Modal imports;
 ffmpeg's ebur128 filter supplies true peak and integrated loudness when a
@@ -25,7 +27,7 @@ from song_moments import SAMPLE_RATE, measure_song
 # ---------------------------------------------------------------------------
 # Configuration — all tunables live here (no magic numbers inline)
 # ---------------------------------------------------------------------------
-EXTENDED_VERSION = "extended-2026-11-04"  # appended to the base version in measured_with
+EXTENDED_VERSION = "extended-2026-11-04.2"  # appended to the base version in measured_with
 EXTENDED_SAMPLE_RATE = 44100               # the spectrum, bands and fingerprint assume 44.1 kHz
 EBUR128_TIMEOUT_SECONDS = 120
 
@@ -71,6 +73,19 @@ CHORD_LOOP_BARS = 4
 TIME_SIGNATURE_MARGIN = 1.25  # 3/4 must beat 4/4 periodicity by this factor
 MIN_BARS_FOR_METER = 4
 
+ARRANGEMENT_HIGH_HZ = 2000       # a section's high share is its spectral energy at or above this...
+ARRANGEMENT_SUB_HZ = 120         # ...and its sub share the energy below this
+THIN_FALL = 0.35                 # "band thins": percussive share and onset rate both this far under the median section
+DRUMS_OUT_ONSETS_PER_S = 1.0     # "drums drop out": fewer onsets a second than this...
+DRUMS_OUT_LEVEL_DB = 6           # ...while the section's RMS stays within this of the median section
+
+# Endings, read from the per-second energy curve against its median (non-silent) second.
+ENDING_LOUD_SHARE = 0.5          # the last second at or above this share of the median is the last loud one
+ENDING_SILENT_SHARE = 0.1        # the final run of seconds under this share is the closing silence
+ENDING_TAIL_SHARES = (0.05, 0.3)  # a low tail sits in this band of the median; a stop falls straight into it
+TAIL_MIN_SECONDS = 3             # a tail this long after a stop makes it a stop with tail
+FADE_MIN_SECONDS = 4             # a gradual decay this long or longer is a fade
+
 
 # ---------------------------------------------------------------------------
 # Small helpers
@@ -81,6 +96,11 @@ def _mmss(t):
 
 def _clamp01(x):
     return float(min(1.0, max(0.0, x)))
+
+
+def _energy(x):
+    """Sum of squares, in float64."""
+    return float(np.sum(np.asarray(x, dtype=np.float64) ** 2))
 
 
 def _json_ready(value):
@@ -203,11 +223,13 @@ def _stereo(left, right, mono, side):
     return {"lr_correlation": round(corr, 3), "side_to_mid": round(width, 3)}
 
 
-def _band_profile(mono, side, sr):
-    """Each band's share of the mix's energy, its side energy, and a level against the pop reference."""
+def _band_profile(power, side, sr):
+    """
+    Each band's share of the mix's energy, its side energy, and a level against the pop reference.
+    `power` is the mono mix's power spectrogram (STFT_SIZE, STFT_HOP).
+    """
     import librosa
 
-    power = np.abs(librosa.stft(mono, n_fft=STFT_SIZE, hop_length=STFT_HOP)) ** 2
     side_power = np.abs(librosa.stft(side, n_fft=STFT_SIZE, hop_length=STFT_HOP)) ** 2
     freqs = librosa.fft_frequencies(sr=sr, n_fft=STFT_SIZE)
     total = float(power.sum()) + 1e-12
@@ -232,13 +254,15 @@ def _band_profile(mono, side, sr):
 # ---------------------------------------------------------------------------
 # Fingerprint, key and mood
 # ---------------------------------------------------------------------------
-def _fingerprint_inputs(mono, sr, duration):
-    """The spectral and rhythmic measurements the fingerprint is built from."""
+def _fingerprint_inputs(mono, sr, duration, split, onsets):
+    """
+    The spectral and rhythmic measurements the fingerprint is built from.
+    `split` is the mix's (harmonic, percussive) separation; `onsets` are onset times in seconds.
+    """
     import librosa
 
-    harmonic, percussive = librosa.effects.hpss(mono)
-    h, p = float(np.sum(harmonic.astype(np.float64) ** 2)), float(np.sum(percussive.astype(np.float64) ** 2))
-    onsets = librosa.onset.onset_detect(y=mono, sr=sr, units="time")
+    harmonic, percussive = split
+    h, p = _energy(harmonic), _energy(percussive)
     return {
         "flatness": float(np.mean(librosa.feature.spectral_flatness(y=mono))),
         "contrast_db": float(np.mean(librosa.feature.spectral_contrast(y=mono, sr=sr))),
@@ -284,15 +308,47 @@ def _valence_arousal(energy_mean, fingerprint, mode):
 
 
 # ---------------------------------------------------------------------------
+# Ending
+# ---------------------------------------------------------------------------
+def _ending_detail(energy_curve, duration):
+    """
+    How the song ends, from the per-second energy curve (energy_curve[i] covers second i to i+1),
+    against the median non-silent second. After the last second at 50 % or more of the median,
+    the closing silence is the final run of seconds under 10 % (none when the file ends on sound).
+      stop            the next second is already under 30 % (the band stops): {stop_at, silent_from};
+      stop_with_tail  a stop after which 5-30 % seconds add up to three or more before the closing
+                      silence (a ringing chord, a room, a short coda): {stop_at, tail_until};
+      fade            no stop, and four seconds or more from the last loud second to the closing
+                      silence: {from, silent_from};
+      stop            otherwise, a decay too quick to be a fade.
+    Each carries `type` and `mmss` (of `from` or `stop_at`). Times are clamped to the duration.
+    """
+    e = np.asarray(energy_curve, dtype=float)
+    median = float(np.median(e[e > 0])) if np.any(e > 0) else 1.0
+    low, high = ENDING_TAIL_SHARES
+    loud = np.flatnonzero(e >= ENDING_LOUD_SHARE * median)
+    last_loud = int(loud[-1]) if len(loud) else len(e) - 1
+    silence_at = len(e)
+    while silence_at > last_loud + 1 and e[silence_at - 1] < ENDING_SILENT_SHARE * median:
+        silence_at -= 1
+    after = e[last_loud + 1:silence_at]
+    stops = last_loud + 1 < len(e) and e[last_loud + 1] < high * median
+    tail_seconds = int(np.sum((after >= low * median) & (after < high * median)))
+    end_of_loud = min(float(last_loud + 1), duration)
+    silent = min(float(silence_at), duration)
+    if stops and tail_seconds >= TAIL_MIN_SECONDS:
+        detail = {"type": "stop_with_tail", "stop_at": end_of_loud, "tail_until": silent}
+    elif not stops and silence_at - last_loud >= FADE_MIN_SECONDS:
+        detail = {"type": "fade", "from": end_of_loud, "silent_from": silent}
+    else:
+        detail = {"type": "stop", "stop_at": end_of_loud, "silent_from": silent}
+    detail["mmss"] = _mmss(end_of_loud)
+    return detail
+
+
+# ---------------------------------------------------------------------------
 # Drops
 # ---------------------------------------------------------------------------
-def _fade_start(base):
-    """Where the fade-out begins (the last section's start when the song fades), else the end."""
-    if base.get("ending") == "fade" and base.get("sections"):
-        return float(base["sections"][-1]["start"])
-    return float(base["duration_seconds"])
-
-
 def _merge_breakdowns(drops, beat):
     """Merge breakdowns separated by less than three beats (a breath inside one pull-back)."""
     merged = []
@@ -310,12 +366,14 @@ def _merge_breakdowns(drops, beat):
     return merged
 
 
-def _find_drops(mono, sr, tempo, duration, fade_start, first_end):
+def _find_drops(mono, sr, tempo, duration, ending_start, first_end):
     """
-    Drops: RMS falling well below the preceding eight beats and staying there.
+    Drops: RMS falling well below the preceding eight beats and staying there,
+    before `ending_start` (where the fade begins or the band stops).
     A "mute" is shorter than two beats (the editor's zero-bleed cut); a "breakdown"
     is two beats or longer (the band pulling back). Measured on 1/8-beat frames so a
-    single-beat mute in a 96 BPM song (0.6 s) is still eight frames wide.
+    single-beat mute in a 96 BPM song (0.6 s) is still eight frames wide. A drop must
+    come back before `ending_start`; one that does not is the ending itself, not a drop.
     """
     import librosa
 
@@ -340,10 +398,12 @@ def _find_drops(mono, sr, tempo, duration, fade_start, first_end):
     med = np.array([np.median(rms_db[max(0, i - lookback):max(1, i - win // 2)]) for i in range(len(rms_db))])
     drops, i = [], lookback
     while i < len(rms_db):
-        if rms_db[i] < med[i] - DROP_ENTER_DB and times[i] < min(duration - END_GUARD_SECONDS, fade_start):
+        if rms_db[i] < med[i] - DROP_ENTER_DB and times[i] < min(duration - END_GUARD_SECONDS, ending_start):
             j = i
             while j < len(rms_db) and rms_db[j] < med[i] - DROP_EXIT_DB:
                 j += 1
+            if j > last or times[j] >= ending_start:
+                break  # does not come back before the ending: it is the ending
             length = times[min(j, last)] - times[i]
             if length >= beat * DROP_MIN_BEATS:
                 kind = "breakdown" if length >= BREAKDOWN_MIN_BEATS * beat else "mute"
@@ -353,15 +413,17 @@ def _find_drops(mono, sr, tempo, duration, fade_start, first_end):
             i += 1
 
     # Breakdowns against the whole song: a stretch of two beats or more sitting ten dB
-    # under the song's median, outside the first section and the fade. The local test
+    # under the song's median, outside the first section and the ending. The local test
     # above misses a drop that follows an already-quiet bridge.
     song_med = float(np.median(rms_db[lookback:])) if len(rms_db) > lookback else float(np.median(rms_db))
     i = 0
     while i < len(rms_db):
-        if rms_db[i] < song_med - SONG_DROP_ENTER_DB and first_end < times[i] < fade_start:
+        if rms_db[i] < song_med - SONG_DROP_ENTER_DB and first_end < times[i] < ending_start:
             j = i
             while j < len(rms_db) and rms_db[j] < song_med - SONG_DROP_EXIT_DB:
                 j += 1
+            if j > last or times[j] >= ending_start:
+                break  # does not come back before the ending: it is the ending
             length = times[min(j, last)] - times[i]
             overlaps = any(d["start"] - 1 <= times[i] <= d["end"] + 1 for d in drops)
             if length >= BREAKDOWN_MIN_BEATS * beat and not overlaps:
@@ -433,10 +495,90 @@ def _time_signature(beat_strength):
 
 
 # ---------------------------------------------------------------------------
+# Arrangement density
+# ---------------------------------------------------------------------------
+def _arrangement(sections, mono, split, onsets, power, sr):
+    """
+    Per section: the percussive share of its energy (from the harmonic/percussive
+    split), onsets per second, the share of its spectral energy at or above 2 kHz
+    and below 120 Hz, and its RMS level in dB. Shows a section thinning out even
+    when it does not get quieter. One dict per section, values to one decimal.
+    """
+    import librosa
+
+    harmonic, percussive = split
+    freqs = librosa.fft_frequencies(sr=sr, n_fft=STFT_SIZE)
+    high_rows, sub_rows = freqs >= ARRANGEMENT_HIGH_HZ, freqs < ARRANGEMENT_SUB_HZ
+    frame_times = librosa.frames_to_time(np.arange(power.shape[1]), sr=sr, hop_length=STFT_HOP)
+    onsets = np.asarray(onsets)
+    result = []
+    for section in sections:
+        start, end = float(section["start"]), float(section["end"])
+        a, b = int(start * sr), int(end * sr)
+        h, p = _energy(harmonic[a:b]), _energy(percussive[a:b])
+        spectrum = power[:, (frame_times >= start) & (frame_times < end)]
+        total = float(spectrum.sum()) + 1e-12
+        rms = np.sqrt(_energy(mono[a:b]) / max(b - a, 1))
+        result.append({
+            "percussive_pct": round(p / (h + p + 1e-12) * 100, 1),
+            "onsets_per_s": round(float(np.sum((onsets >= start) & (onsets < end))) / max(end - start, 1e-6), 1),
+            "high_pct": round(float(spectrum[high_rows].sum()) / total * 100, 1),
+            "sub_pct": round(float(spectrum[sub_rows].sum()) / total * 100, 1),
+            "rms_db": round(float(20 * np.log10(rms + 1e-9)), 1),
+        })
+    return result
+
+
+def _arrangement_notes(sections, ending_start=None):
+    """
+    Plain-language notes from each section's `arrangement`, against the median section:
+      "sparse open"             the first section is both the quietest and the brightest;
+      "drums drop out at m:ss"  under one onset a second while the RMS stays within 6 dB of the median;
+      "band thins at m:ss"      percussive share and onset rate both more than 35 % under the median
+                                (left out where the drums drop out, the more specific note).
+    The last two describe a change, so the first section, which has nothing before it, gets neither.
+    Sections lying mostly past `ending_start` (where the fade begins or the band stops) are the
+    ending, which ending_detail describes; they are left out of the notes and the medians.
+    """
+    if ending_start is not None:
+        sections = [s for s in sections if (s["start"] + s["end"]) / 2 < ending_start]
+    if len(sections) < 2:
+        return []
+    values = [s["arrangement"] for s in sections]
+    median = {k: float(np.median([v[k] for v in values])) for k in ("percussive_pct", "onsets_per_s", "rms_db")}
+    keep = 1 - THIN_FALL
+    notes = []
+    first = values[0]
+    if first["rms_db"] <= min(v["rms_db"] for v in values) and first["high_pct"] >= max(v["high_pct"] for v in values):
+        notes.append("sparse open")
+    for section, v in zip(sections[1:], values[1:]):
+        at = _mmss(section["start"])
+        if v["onsets_per_s"] < DRUMS_OUT_ONSETS_PER_S and abs(v["rms_db"] - median["rms_db"]) <= DRUMS_OUT_LEVEL_DB:
+            notes.append(f"drums drop out at {at}")
+        elif all(v[k] < keep * median[k] for k in ("percussive_pct", "onsets_per_s")):
+            notes.append(f"band thins at {at}")
+    return notes
+
+
+# ---------------------------------------------------------------------------
 # Edit points
 # ---------------------------------------------------------------------------
-def _edit_points(sections, drops, ending):
-    """Typed in/out points from chorus entries and exits, drops and the fade."""
+def _ending_point(ending, duration):
+    """The closing edit point: where the fade begins, or where the band stops (and any dead air after)."""
+    if ending["type"] == "fade":
+        return {"type": "out", "time": ending["from"], "name": "Fade begins",
+                "note": f"Fades over {round(ending['silent_from'] - ending['from'])} s; needs no tail edit."}
+    if ending["type"] == "stop_with_tail":
+        note = f"Cold stop; a low tail runs to {_mmss(ending['tail_until'])}, then silence."
+    elif ending["silent_from"] < duration:
+        note = f"Cold stop; silence from {_mmss(ending['silent_from'])}. Trim the dead air."
+    else:
+        note = "Cold stop at the end of the file."
+    return {"type": "out", "time": ending["stop_at"], "name": "Band stops", "note": note}
+
+
+def _edit_points(sections, drops, ending, duration):
+    """Typed in/out points from chorus entries and exits, drops, and the ending (an _ending_detail)."""
     points = []
     if sections:
         points.append({"type": "in", "time": 0.0, "name": f"Cold open ({sections[0]['label']})",
@@ -459,9 +601,8 @@ def _edit_points(sections, drops, ending):
                            "note": f"Band pulls back {d['depth_db']} dB for {round(d['end'] - d['start'], 1)} s."})
             points.append({"type": "in", "time": d["end"], "name": "Re-entry after the breakdown",
                            "note": "Full band returns; lands as a hit."})
-    if ending == "fade" and sections:
-        points.append({"type": "out", "time": sections[-1]["start"], "name": "Fade begins",
-                       "note": "Natural fade; needs no tail edit."})
+    if sections:
+        points.append(_ending_point(ending, duration))
     points.sort(key=lambda e: e["time"])
     for e in points:
         e["mmss"] = _mmss(e["time"])
@@ -482,7 +623,9 @@ def measure_extended(y_stereo, sr, base, tempo_hint=None, audio_path=None):
       audio_path: the decoded file, for ffmpeg ebur128; without it true peak is None.
 
     Returns a JSON-ready dict: every base field (tempo_bpm reconciled, loudness_lufs
-    replaced by the ebur128 figure when there is one) plus the extended fields.
+    replaced by the ebur128 figure when there is one, `ending` re-read from the
+    energy curve with `ending_detail` beside it, each section with its
+    `arrangement` added) plus the extended fields.
     """
     import librosa
 
@@ -500,19 +643,27 @@ def measure_extended(y_stereo, sr, base, tempo_hint=None, audio_path=None):
     stereo = _stereo(left, right, mono, side)
     centroid = float(np.mean(librosa.feature.spectral_centroid(y=mono, sr=sr)))
     rolloff = float(np.mean(librosa.feature.spectral_rolloff(y=mono, sr=sr, roll_percent=ROLLOFF_PERCENT)))
-    inputs = _fingerprint_inputs(mono, sr, duration)
+    power = np.abs(librosa.stft(mono, n_fft=STFT_SIZE, hop_length=STFT_HOP)) ** 2  # bands and arrangement
+    onset_env = librosa.onset.onset_strength(y=mono, sr=sr)  # onsets and beat strength
+    onsets = librosa.onset.onset_detect(onset_envelope=onset_env, sr=sr, units="time")
+    split = librosa.effects.hpss(mono)  # the slow step: one split serves the fingerprint and the arrangement
+    inputs = _fingerprint_inputs(mono, sr, duration, split, onsets)
+    arrangement = _arrangement(sections, mono, split, onsets, power, sr)
+    del split  # the largest intermediates; free them before the chroma pass
+    sections = [{**s, "arrangement": a} for s, a in zip(sections, arrangement)]
     fingerprint = _fingerprint(inputs, centroid, energy.mean(), stereo["side_to_mid"], loudness["lufs"], tempo)
 
     chroma = librosa.feature.chroma_cqt(y=mono, sr=sr)
     key = _estimate_key(chroma.mean(axis=1))
     valence, arousal = _valence_arousal(energy.mean(), fingerprint, key["mode"])
 
+    ending = _ending_detail(base.get("energy_curve") or [], duration)
+    ending_start = ending["from"] if ending["type"] == "fade" else ending["stop_at"]
     first_end = float(sections[1]["start"]) if len(sections) > 1 else 0.0
-    drops = _find_drops(mono, sr, tempo, duration, _fade_start(base), first_end)
+    drops = _find_drops(mono, sr, tempo, duration, ending_start, first_end)
 
     beats = librosa.beat.beat_track(y=mono, sr=sr, bpm=tempo, units="frames")[1]
     beat_chroma = librosa.util.sync(chroma, beats, aggregate=np.median, pad=False)
-    onset_env = librosa.onset.onset_strength(y=mono, sr=sr)
     beat_strength = librosa.util.sync(onset_env[None, :], beats, aggregate=np.mean, pad=False)[0]
 
     result = dict(base)
@@ -522,10 +673,13 @@ def measure_extended(y_stereo, sr, base, tempo_hint=None, audio_path=None):
         "tempo_note": tempo_note,
         "loudness_lufs": loudness["lufs"],
         **loudness,
+        "ending": "fade" if ending["type"] == "fade" else "cold",
+        "ending_detail": ending,
+        "sections": sections,
         "stereo": stereo,
         "spectral_centroid_hz": round(centroid),
         "rolloff95_hz": round(rolloff),
-        "band_profile": _band_profile(mono, side, sr),
+        "band_profile": _band_profile(power, side, sr),
         "fingerprint": {k: round(v, 2) for k, v in fingerprint.items()},
         "fingerprint_inputs": {
             "flatness": round(inputs["flatness"], 4),
@@ -540,7 +694,8 @@ def measure_extended(y_stereo, sr, base, tempo_hint=None, audio_path=None):
         "arousal": round(arousal, 2),
         "mute_drops": drops,
         "chord_loop": _chord_loop(beat_chroma, key),
-        "edit_points": _edit_points(sections, drops, base.get("ending")),
+        "edit_points": _edit_points(sections, drops, ending, duration),
+        "arrangement_notes": _arrangement_notes(sections, ending_start),
     })
     return _json_ready(result)
 
