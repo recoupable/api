@@ -1,5 +1,6 @@
 import { FLAMINGO_GENERATE_URL } from "@/lib/const";
 import { getModalProxyAuthHeaders } from "@/lib/flamingo/getModalProxyAuthHeaders";
+import { FlamingoServiceError } from "@/lib/flamingo/FlamingoServiceError";
 import type { FlamingoGenerateBody } from "@/lib/flamingo/flamingoGenerateBodySchema";
 import {
   isFlamingoGenerateResult,
@@ -16,7 +17,7 @@ export type { FlamingoGenerateResult };
  * @param options - `signal` to abort; `clip` (seconds) to have the model hear only
  *   that stretch of `audio_url`, used to describe a song moment.
  * @returns The model's response text and inference time.
- * @throws Error if the Modal endpoint returns a non-OK status.
+ * @throws FlamingoServiceError if the Modal endpoint returns a non-OK status.
  */
 export async function callFlamingoGenerate(
   params: FlamingoGenerateBody,
@@ -43,7 +44,7 @@ export async function callFlamingoGenerate(
   if (!response.ok) {
     const errorText = await response.text().catch(() => "Unknown error");
     console.error(`Audio model returned ${response.status}: ${errorText}`);
-    throw new Error(`Music analysis failed (status ${response.status})`);
+    throw new FlamingoServiceError(response.status, errorText);
   }
 
   const data = await response.json();
