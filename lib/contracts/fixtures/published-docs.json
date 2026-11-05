@@ -1233,13 +1233,13 @@
     "content/docs/source/api-reference/openapi/accounts.json": "1a5a04f9ec358a15b8339b7029c9fed5fe69c6f042c8b03b6b4f03f3aafdeeed",
     "content/docs/source/api-reference/openapi/content.json": "f790ee44d1b881709e393a65500bec23493e21a391c7b66555e0c78750f95239",
     "content/docs/source/api-reference/openapi/research.json": "f301a714e994e99b1dbcfc63ee18824537cf42813d8df3906ac7c2436a481ae0",
-    "content/docs/source/api-reference/openapi/releases.json": "d8e37689800283d88c02f0a728e5678c75873aec1b2da49df1ce8388e09a5e93",
+    "content/docs/source/api-reference/openapi/releases.json": "64ed2324df2cafb93567aa04e44aaa643d1f567a13f9ef9832f4d853e61f2dc7",
     "content/docs/source/api-reference/openapi/social.json": "5bd167a78cf6a17c46724486e2921882be20969ea32f3c0297f5b7e7ba9a30aa",
     "content/docs/source/api-reference/openapi/context.json": "7784ee1d8c4b6753cc47bf518f468effa58d50fb9d0289009edf0caad3d05a67",
     "content/docs/source/api-reference/openapi/projects.json": "b059cf8baa83a7f73a3c15db19f54fa56e46a3840e91bd42979b83550f543ace",
     "content/docs/source/api-reference/openapi/sessions.json": "85af56cc150374b28c25541c45db15849c71fdeb6288cf90dc2beb08f494e83e",
     "content/docs/source/api-reference/sites/overview.mdx": "1430730142df476e6cec9ea40aab751b0a48373d1479254da70bd8a545ae51b2",
-    "content/docs/source/credits.mdx": "0da77f081d8246fbd6925dac796817c4e9ade746b1221ef981df13d534ff37d3",
+    "content/docs/source/credits.mdx": "377d965fc531dc096e2553c8f4b24cffe4c8b84918af6abfb49531aef77a88f3",
     "content/docs/source/api-reference/admins/agent-signups.mdx": "a6b65f3ad1b0ead873b83cdccf2254cdd3afa1556ae94738502c9b1fc46954bc"
   },
   "examples": {
