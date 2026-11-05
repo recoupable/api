@@ -42,7 +42,8 @@ export async function OPTIONS() {
  * - measured_with: the measurement version, for rerunning stored results
  * - duration_seconds, tempo_bpm, loudness_lufs, ending ("fade" | "cold")
  * - names_from: "lyrics" when section_order fit the audio, else "audio"
- * - sections: [{ label, start, end, group, energy }]
+ * - sections: [{ label, start, end, group, energy, arrangement: { percussive_pct,
+ *   onsets_per_s, high_pct, sub_pct, rms_db } }]
  * - moments: [{ type, start, end, section, energy, cuts: { "6", "15", "30" },
  *   also?, description?, emotion?, best_for?, vocals? }]
  * - energy_curve: loudness per second, 0–100
@@ -57,6 +58,9 @@ export async function OPTIONS() {
  * - chord_loop: { dominant_loop, loop_share, distinct_chords, bars, confidence: "low" }
  * - edit_points: [{ type: "in" | "out", time, name, note, mmss }]
  * - tempo_note: how tempo_bpm was decided
+ * - ending_detail: { type: "fade" | "stop" | "stop_with_tail", from | stop_at,
+ *   silent_from | tail_until, mmss }; ending is "fade" or "cold" from the same reading
+ * - arrangement_notes: "sparse open", "band thins at m:ss", "drums drop out at m:ss"
  * - elapsed_seconds
  *
  * Pricing: $0.01 per song measured, plus the /api/songs/analyze rate for each

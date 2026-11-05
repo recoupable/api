@@ -1,5 +1,17 @@
 import type { SongMomentType } from "@/lib/songMoments/songMomentsBodySchema";
 
+/** How dense a section's arrangement is; every value to one decimal. */
+export interface SectionArrangement {
+  /** The percussive share of the section's energy, 0–100 (harmonic/percussive split). */
+  percussive_pct: number;
+  onsets_per_s: number;
+  /** Share of the section's spectral energy at or above 2 kHz, 0–100. */
+  high_pct: number;
+  /** Share of the section's spectral energy below 120 Hz, 0–100. */
+  sub_pct: number;
+  rms_db: number;
+}
+
 /** One named section, in seconds from the start. */
 export interface MeasuredSection {
   label: string;
@@ -9,6 +21,8 @@ export interface MeasuredSection {
   group: string;
   /** Average loudness for the section, 0–100 relative to the song. */
   energy: number;
+  /** Present when the extended measurement ran. */
+  arrangement?: SectionArrangement;
 }
 
 /** One moment, with edit points for each standard length that fits. */
@@ -87,6 +101,15 @@ export interface EditPoint {
   mmss: string;
 }
 
+/**
+ * How the song ends, read from the energy curve. `ending` carries the same
+ * answer as "fade" or "cold" (stop and stop_with_tail are both "cold").
+ */
+export type EndingDetail =
+  | { type: "fade"; from: number; silent_from: number; mmss: string }
+  | { type: "stop"; stop_at: number; silent_from: number; mmss: string }
+  | { type: "stop_with_tail"; stop_at: number; tail_until: number; mmss: string };
+
 /** The extended measurement: loudness, stereo, spectrum, fingerprint, key, drops and edit points. */
 export interface ExtendedSongMeasurement {
   /** Integrated loudness; the same figure as `loudness_lufs`. */
@@ -113,6 +136,9 @@ export interface ExtendedSongMeasurement {
   edit_points: EditPoint[];
   /** How `tempo_bpm` was decided (the beat tracker alone, or reconciled to a hint). */
   tempo_note: string;
+  ending_detail: EndingDetail;
+  /** Plain-language notes on the arrangement: "sparse open", "band thins at m:ss", "drums drop out at m:ss". */
+  arrangement_notes: string[];
 }
 
 /** What the song-moments Modal endpoint returns. */
@@ -131,7 +157,25 @@ export interface MeasuredSong extends Partial<ExtendedSongMeasurement> {
 }
 
 const isNumberOrNull = (v: unknown) => v === null || typeof v === "number";
-const isObject = (v: unknown) => typeof v === "object" && v !== null && !Array.isArray(v);
+const isObject = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null && !Array.isArray(v);
+
+const ARRANGEMENT_FIELDS: (keyof SectionArrangement)[] = [
+  "percussive_pct",
+  "onsets_per_s",
+  "high_pct",
+  "sub_pct",
+  "rms_db",
+];
+const ENDING_TYPES: EndingDetail["type"][] = ["fade", "stop", "stop_with_tail"];
+
+/** All five arrangement numbers. */
+const isArrangement = (v: unknown) =>
+  isObject(v) && ARRANGEMENT_FIELDS.every(field => typeof v[field] === "number");
+
+/** A section's arrangement is optional; when present it must be complete. */
+const hasValidArrangement = (section: unknown) =>
+  !isObject(section) || section.arrangement === undefined || isArrangement(section.arrangement);
 
 /** Top-level shape of each extended field, checked only when the field is present. */
 const EXTENDED_FIELD_CHECKS: Record<keyof ExtendedSongMeasurement, (v: unknown) => boolean> = {
@@ -155,12 +199,15 @@ const EXTENDED_FIELD_CHECKS: Record<keyof ExtendedSongMeasurement, (v: unknown) 
   chord_loop: isObject,
   edit_points: Array.isArray,
   tempo_note: v => typeof v === "string",
+  ending_detail: v => isObject(v) && ENDING_TYPES.includes(v.type as EndingDetail["type"]),
+  arrangement_notes: v => Array.isArray(v) && v.every(note => typeof note === "string"),
 };
 
 /**
  * Type guard for the song-moments Modal response: checks the fields callers
  * rely on (sections, moments and the timing numbers), not every nested value.
- * Extended fields are optional; when present, each must have its top-level type.
+ * Extended fields are optional; when present, each must have its top-level type,
+ * and a section's `arrangement` must carry its five numbers.
  *
  * @param value - Unknown parsed JSON payload
  * @returns True when payload has the measured song shape
@@ -172,6 +219,7 @@ export function isMeasuredSong(value: unknown): value is MeasuredSong {
     typeof candidate.duration_seconds === "number" &&
     typeof candidate.elapsed_seconds === "number" &&
     Array.isArray(candidate.sections) &&
+    candidate.sections.every(hasValidArrangement) &&
     Array.isArray(candidate.moments) &&
     Array.isArray(candidate.energy_curve) &&
     Object.entries(EXTENDED_FIELD_CHECKS).every(

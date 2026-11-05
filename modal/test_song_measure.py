@@ -17,8 +17,10 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from song_measure import (  # noqa: E402
     EXTENDED_SAMPLE_RATE,
+    _arrangement_notes,
     _base_mono,
     _edit_points,
+    _ending_detail,
     _find_drops,
     _parse_ebur128,
     _reconcile_tempo,
@@ -89,7 +91,7 @@ def test_tempo_hint_wins_when_no_ratio_lands_near_it():
 # ---------------------------------------------------------------------------
 def test_a_silent_two_beat_gap_is_found_at_the_right_time():
     mono = _click_track(30, GAP_START, GAP_BEATS)
-    drops = _find_drops(mono, SR, BPM, duration=30.0, fade_start=30.0, first_end=0.0)
+    drops = _find_drops(mono, SR, BPM, duration=30.0, ending_start=30.0, first_end=0.0)
     assert len(drops) == 1
     drop = drops[0]
     assert drop["type"] in ("mute", "breakdown")
@@ -102,12 +104,23 @@ def test_a_silent_two_beat_gap_is_found_at_the_right_time():
 
 def test_a_steady_click_track_has_no_drops():
     mono = _click_track(30)
-    assert _find_drops(mono, SR, BPM, duration=30.0, fade_start=30.0, first_end=0.0) == []
+    assert _find_drops(mono, SR, BPM, duration=30.0, ending_start=30.0, first_end=0.0) == []
 
 
-def test_drops_inside_the_fade_are_ignored():
+def test_drops_inside_the_ending_are_ignored():
     mono = _click_track(30, GAP_START, GAP_BEATS)
-    assert _find_drops(mono, SR, BPM, duration=30.0, fade_start=GAP_START - 1, first_end=0.0) == []
+    assert _find_drops(mono, SR, BPM, duration=30.0, ending_start=GAP_START - 1, first_end=0.0) == []
+
+
+def test_a_drop_that_never_comes_back_is_the_ending_not_a_drop():
+    mono = _click_track(30)
+    mono[int(20 * SR):] = 0.0
+    assert _find_drops(mono, SR, BPM, duration=30.0, ending_start=30.0, first_end=0.0) == []
+
+
+def test_a_drop_that_only_comes_back_after_the_ending_starts_is_not_a_drop():
+    mono = _click_track(30, GAP_START, GAP_BEATS)
+    assert _find_drops(mono, SR, BPM, duration=30.0, ending_start=GAP_START + 0.5, first_end=0.0) == []
 
 
 # ---------------------------------------------------------------------------
@@ -124,7 +137,8 @@ def test_edit_points_mark_chorus_entries_breakdowns_and_the_fade():
         {"type": "mute", "start": 12.0, "end": 12.5, "beats": 1.0, "depth_db": 20.0},
         {"type": "breakdown", "start": 30.0, "end": 34.0, "beats": 8.0, "depth_db": 15.0},
     ]
-    points = _edit_points(sections, drops, "fade")
+    fade = {"type": "fade", "from": 40.0, "silent_from": 46.0, "mmss": "0:40"}
+    points = _edit_points(sections, drops, fade, 46.0)
     assert [(p["type"], p["time"], p["name"]) for p in points] == [
         ("in", 0.0, "Cold open (intro)"),
         ("out", 12.0, "Mute drop"),
@@ -135,6 +149,23 @@ def test_edit_points_mark_chorus_entries_breakdowns_and_the_fade():
         ("out", 40.0, "Fade begins"),
     ]
     assert points[2]["mmss"] == "0:24"
+    assert points[-1]["note"] == "Fades over 6 s; needs no tail edit."
+
+
+@pytest.mark.parametrize(
+    ("ending", "duration", "note"),
+    [
+        ({"type": "stop", "stop_at": 50.0, "silent_from": 50.0}, 56.0,
+         "Cold stop; silence from 0:50. Trim the dead air."),
+        ({"type": "stop", "stop_at": 50.0, "silent_from": 50.0}, 50.0, "Cold stop at the end of the file."),
+        ({"type": "stop_with_tail", "stop_at": 50.0, "tail_until": 55.0}, 56.0,
+         "Cold stop; a low tail runs to 0:55, then silence."),
+    ],
+)
+def test_the_last_edit_point_is_where_the_band_stops(ending, duration, note):
+    points = _edit_points([{"label": "verse", "start": 0.0}], [], {**ending, "mmss": "0:50"}, duration)
+    assert (points[-1]["type"], points[-1]["time"], points[-1]["name"]) == ("out", 50.0, "Band stops")
+    assert points[-1]["note"] == note
 
 
 # ---------------------------------------------------------------------------
@@ -171,10 +202,13 @@ def test_ebur128_ignores_an_unmeasurable_value():
 # The whole measurement
 # ---------------------------------------------------------------------------
 def test_the_base_measurement_stays_at_the_top_level(measured, base):
-    for field in ("sections", "moments", "energy_curve", "ending", "duration_seconds", "names_from"):
+    for field in ("moments", "energy_curve", "duration_seconds", "names_from"):
         assert measured[field] == base[field]
-    assert measured["measured_with"] == base["measured_with"] + "+extended-2026-11-04"
+    # sections only gain their arrangement
+    assert [{k: v for k, v in s.items() if k != "arrangement"} for s in measured["sections"]] == base["sections"]
+    assert measured["measured_with"] == base["measured_with"] + "+extended-2026-11-04.2"
     assert "lufs" not in base  # the base measurement is not changed in place
+    assert all("arrangement" not in s for s in base["sections"])
 
 
 def test_one_loudness_figure(measured):
@@ -228,6 +262,238 @@ def test_without_a_file_true_peak_is_skipped(measured):
 
 def test_the_measurement_is_strict_json(measured):
     json.dumps(measured, allow_nan=False)
+
+
+# ---------------------------------------------------------------------------
+# Arrangement density
+# ---------------------------------------------------------------------------
+BAND_SECTIONS = (("verse", 0.0, 10.0), ("bridge", 10.0, 20.0), ("chorus", 20.0, 30.0))
+ARRANGEMENT_FIELDS = {"percussive_pct", "onsets_per_s", "high_pct", "sub_pct", "rms_db"}
+
+
+def _band_song(drum_gain, tone_gain, drumless=(10.0, 20.0), seconds=30):
+    """
+    A 120 BPM band: a 60 Hz kick on every beat and a noise hat on every eighth over a
+    sustained A major chord, with the drums muted from `drumless[0]` to `drumless[1]`.
+    """
+    t = np.arange(int(seconds * SR)) / SR
+    tone = sum(np.sin(2 * np.pi * f * t) for f in A_MAJOR) / len(A_MAJOR)
+    n = np.arange(int(0.12 * SR))
+    kick = np.exp(-n / (0.03 * SR)) * np.sin(2 * np.pi * 60 * n / SR)
+    hat = np.exp(-n / (0.005 * SR)) * np.random.default_rng(0).standard_normal(len(n))
+    drums = np.zeros_like(t)
+    for k, start in enumerate(np.arange(0, seconds, BEAT / 2)):
+        i = int(start * SR)
+        hit = hat if k % 2 else kick + 0.5 * hat
+        drums[i:i + len(n)] += hit[: len(drums[i:i + len(n)])]
+    drums[int(drumless[0] * SR):int(drumless[1] * SR)] = 0.0
+    return (tone_gain * tone + drum_gain * drums).astype(np.float32)
+
+
+def _measure_band(y):
+    """measure_extended over BAND_SECTIONS, without the slower base pass."""
+    base = {
+        "measured_with": "test",
+        "duration_seconds": len(y) / SR,
+        "tempo_bpm": float(BPM),
+        "loudness_lufs": None,
+        "ending": "cold",
+        "names_from": "lyrics",
+        "sections": [
+            {"label": label, "start": start, "end": end, "group": label[0].upper(), "energy": 50}
+            for label, start, end in BAND_SECTIONS
+        ],
+        "moments": [],
+        "energy_curve": [50] * int(len(y) / SR),
+    }
+    return measure_extended(np.vstack([y, y]), SR, base)
+
+
+@pytest.fixture(scope="module")
+def thinned():
+    """Loud drums over a quiet chord; muting them in the bridge thins the band and drops the level."""
+    return _measure_band(_band_song(drum_gain=0.8, tone_gain=0.05))
+
+
+@pytest.fixture(scope="module")
+def drumless():
+    """Quiet drums under a loud sustained chord; without them the bridge holds its level."""
+    return _measure_band(_band_song(drum_gain=0.1, tone_gain=0.5))
+
+
+def test_a_bridge_without_its_drums_thins_the_band(thinned):
+    perc = [s["arrangement"]["percussive_pct"] for s in thinned["sections"]]
+    assert perc[1] < perc[0] and perc[1] < perc[2]
+    assert "band thins at 0:10" in thinned["arrangement_notes"]
+    assert "drums drop out at 0:10" not in thinned["arrangement_notes"]  # the level fell too far
+
+
+def test_the_kick_and_hat_show_in_the_sub_and_high_shares(thinned):
+    verse, bridge, chorus = (s["arrangement"] for s in thinned["sections"])
+    assert bridge["sub_pct"] < min(verse["sub_pct"], chorus["sub_pct"])
+    assert bridge["high_pct"] < min(verse["high_pct"], chorus["high_pct"])
+    assert bridge["rms_db"] < min(verse["rms_db"], chorus["rms_db"]) - 6
+    for section in (verse, chorus):
+        assert 3 <= section["onsets_per_s"] <= 6  # eighth notes at 120 BPM; the long kick can count twice
+
+
+def test_onsets_gone_under_a_held_chord_reads_as_the_drums_dropping_out(drumless):
+    bridge = drumless["sections"][1]["arrangement"]
+    assert bridge["onsets_per_s"] < 1
+    assert "drums drop out at 0:10" in drumless["arrangement_notes"]
+    assert "band thins at 0:10" not in drumless["arrangement_notes"]  # the more specific note stands alone
+
+
+def test_arrangement_shares_lie_between_zero_and_one_hundred(measured, thinned, drumless):
+    for song in (measured, thinned, drumless):
+        assert song["sections"]
+        assert all(isinstance(note, str) for note in song["arrangement_notes"])
+        for section in song["sections"]:
+            arrangement = section["arrangement"]
+            assert set(arrangement) == ARRANGEMENT_FIELDS
+            assert all(round(v, 1) == v for v in arrangement.values())
+            for share in ("percussive_pct", "high_pct", "sub_pct"):
+                assert 0 <= arrangement[share] <= 100
+            assert arrangement["onsets_per_s"] >= 0
+            assert arrangement["rms_db"] <= 0
+
+
+def _sections(*rows):
+    """Back-to-back sections with arrangement values: (start, percussive_pct, onsets_per_s, high_pct, rms_db)."""
+    ends = [row[0] for row in rows[1:]] + [rows[-1][0] + 30.0]
+    return [
+        {"start": start, "end": end, "arrangement": {"percussive_pct": perc, "onsets_per_s": onsets,
+                                                     "high_pct": high, "sub_pct": 10.0, "rms_db": rms}}
+        for (start, perc, onsets, high, rms), end in zip(rows, ends)
+    ]
+
+
+def test_a_quiet_bright_first_section_is_a_sparse_open_and_not_a_thinning():
+    sections = _sections(
+        (0.0, 5.0, 0.5, 30.0, -30.0),   # quietest and brightest; would thin if it were not first
+        (12.0, 40.0, 4.0, 20.0, -15.0),
+        (40.0, 45.0, 5.0, 22.0, -12.0),
+        (70.0, 42.0, 4.5, 21.0, -14.0),
+    )
+    assert _arrangement_notes(sections) == ["sparse open"]
+
+
+def test_notes_follow_the_song_in_order():
+    sections = _sections(
+        (0.0, 40.0, 4.0, 20.0, -14.0),
+        (30.0, 10.0, 1.5, 15.0, -20.0),   # thins: both more than 35 % under the median
+        (60.0, 45.0, 5.0, 22.0, -12.0),
+        (95.0, 20.0, 0.5, 18.0, -15.0),   # drums out: under one onset a second, level within 6 dB
+        (120.0, 44.0, 4.5, 21.0, -13.0),
+    )
+    assert _arrangement_notes(sections) == ["band thins at 0:30", "drums drop out at 1:35"]
+
+
+def test_a_single_section_has_no_notes():
+    assert _arrangement_notes(_sections((0.0, 5.0, 0.5, 30.0, -30.0))) == []
+
+
+def test_sections_inside_the_ending_get_no_notes():
+    sections = _sections(
+        (0.0, 40.0, 4.0, 20.0, -14.0),
+        (30.0, 45.0, 5.0, 22.0, -12.0),
+        (60.0, 42.0, 4.5, 21.0, -13.0),
+        (90.0, 2.0, 0.0, 1.0, -40.0),   # after the band stops: the ending explains it
+    )
+    assert _arrangement_notes(sections) == ["band thins at 1:30"]
+    assert _arrangement_notes(sections, ending_start=90.5) == []
+
+
+# ---------------------------------------------------------------------------
+# Ending
+# ---------------------------------------------------------------------------
+INTRO_SECONDS, BODY_SECONDS, END_SECONDS = 4, 30, 6
+
+
+def _ending_song(ending):
+    """
+    Four quiet seconds (-60 dB), thirty of the click track, then six more: a fade
+    (linear in dB down to -56 dB, running to the end of the file) or silence after a dead
+    stop. The quiet intro anchors the energy curve's scale, as a real song's quietest
+    seconds do, so the fade is not the quietest stretch of the song.
+    """
+    y = _click_track(INTRO_SECONDS + BODY_SECONDS + END_SECONDS).astype(np.float64)
+    y[:INTRO_SECONDS * SR] *= 10 ** (-60 / 20)
+    end = (INTRO_SECONDS + BODY_SECONDS) * SR
+    if ending == "fade":
+        y[end:] *= 10 ** (-56 * np.arange(len(y) - end) / (len(y) - end) / 20)
+    else:
+        y[end:] = 0.0
+    return y.astype(np.float32)
+
+
+def _measure_whole(y):
+    stereo = np.vstack([y, y])
+    return measure_extended(stereo, SR, measure_song(_base_mono(stereo, SR), SAMPLE_RATE))
+
+
+@pytest.fixture(scope="module")
+def stopped():
+    return _measure_whole(_ending_song("stop"))
+
+
+@pytest.fixture(scope="module")
+def faded():
+    return _measure_whole(_ending_song("fade"))
+
+
+def test_a_dead_stop_reads_as_a_stop(stopped):
+    stop = INTRO_SECONDS + BODY_SECONDS
+    detail = stopped["ending_detail"]
+    assert detail["type"] == "stop"
+    # six seconds of digital silence flatten the energy curve's floor, so the
+    # resampler's ringing can hold the stop's own second up: within a second
+    assert stop <= detail["stop_at"] <= stop + 1
+    assert detail["stop_at"] <= detail["silent_from"] < stopped["duration_seconds"]
+    assert stopped["ending"] == "cold"
+    last = stopped["edit_points"][-1]
+    assert (last["type"], last["time"], last["name"]) == ("out", detail["stop_at"], "Band stops")
+    assert last["note"].endswith("Trim the dead air.")
+    assert all(d["start"] < stop for d in stopped["mute_drops"])  # the stop itself is not a breakdown
+
+
+def test_a_six_second_ramp_reads_as_a_fade(faded):
+    detail = faded["ending_detail"]
+    assert detail["type"] == "fade"
+    assert INTRO_SECONDS + BODY_SECONDS <= detail["from"] < detail["silent_from"] <= faded["duration_seconds"]
+    assert detail["mmss"] == f"0:{int(detail['from'])}"
+    assert faded["ending"] == "fade"
+    last = faded["edit_points"][-1]
+    assert (last["type"], last["time"], last["name"]) == ("out", detail["from"], "Fade begins")
+    assert not any(d["start"] >= INTRO_SECONDS + BODY_SECONDS for d in faded["mute_drops"])  # the fade is no breakdown
+
+
+def test_a_low_tail_after_a_stop_reads_as_a_stop_with_tail():
+    curve = [100] * 20 + [20, 18, 15, 12, 0, 0]
+    assert _ending_detail(curve, 26.0) == {
+        "type": "stop_with_tail", "stop_at": 20.0, "tail_until": 24.0, "mmss": "0:20",
+    }
+
+
+def test_a_breath_of_silence_before_the_tail_is_still_a_stop_with_tail():
+    curve = [100] * 20 + [0, 16, 12, 14, 14, 16, 10, 22, 22, 2, 0, 0]
+    assert _ending_detail(curve, 32.0) == {
+        "type": "stop_with_tail", "stop_at": 20.0, "tail_until": 29.0, "mmss": "0:20",
+    }
+
+
+def test_a_stop_with_a_short_tail_is_a_stop_not_a_fade():
+    curve = [100] * 20 + [20, 15, 0, 0, 0]
+    assert _ending_detail(curve, 25.0) == {"type": "stop", "stop_at": 20.0, "silent_from": 22.0, "mmss": "0:20"}
+
+
+def test_a_gradual_decay_through_the_tail_band_is_still_a_fade():
+    curve = [100] * 20 + [80, 60, 40, 25, 12, 5, 0]
+    assert _ending_detail(curve, 27.0) == {"type": "fade", "from": 22.0, "silent_from": 25.0, "mmss": "0:22"}
+
+
+def test_a_song_that_ends_at_full_level_stops_at_the_end_of_the_file():
+    assert _ending_detail([100] * 30, 29.6) == {"type": "stop", "stop_at": 29.6, "silent_from": 29.6, "mmss": "0:29"}
 
 
 @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="ffmpeg not installed")
