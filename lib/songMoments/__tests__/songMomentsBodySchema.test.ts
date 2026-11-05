@@ -6,6 +6,7 @@ describe("songMomentsBodySchema", () => {
     const parsed = songMomentsBodySchema.parse({ audio_url: "https://example.com/song.mp3" });
     expect(parsed.describe).toBe(true);
     expect(parsed.section_order).toBeUndefined();
+    expect(parsed.tempo_hint).toBeUndefined();
   });
 
   it("accepts a lyric sheet's section order and a list of moments to describe", () => {
@@ -29,6 +30,23 @@ describe("songMomentsBodySchema", () => {
       describe: ["drop_the_bass"],
     });
     expect(result.success).toBe(false);
+  });
+
+  it("accepts a tempo hint between 30 and 300 BPM", () => {
+    const parsed = songMomentsBodySchema.parse({
+      audio_url: "https://example.com/song.mp3",
+      tempo_hint: 86,
+    });
+    expect(parsed.tempo_hint).toBe(86);
+  });
+
+  it.each([29, 301, "86"])("rejects a tempo hint of %j", tempo_hint => {
+    const result = songMomentsBodySchema.safeParse({
+      audio_url: "https://example.com/song.mp3",
+      tempo_hint,
+    });
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0].path).toEqual(["tempo_hint"]);
   });
 
   it("rejects more than 60 section labels", () => {

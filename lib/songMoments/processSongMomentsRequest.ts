@@ -35,6 +35,7 @@ export async function processSongMomentsRequest(
   const song = await callMeasureSongMoments({
     audio_url: body.audio_url,
     ...(body.section_order ? { section_order: body.section_order } : {}),
+    ...(body.tempo_hint !== undefined ? { tempo_hint: body.tempo_hint } : {}),
   });
   await chargeForSongMeasure({ accountId: context.accountId, audioUrl: body.audio_url });
 

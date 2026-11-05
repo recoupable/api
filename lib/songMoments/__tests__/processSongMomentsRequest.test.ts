@@ -70,6 +70,15 @@ describe("processSongMomentsRequest", () => {
     expect(result.sections).toEqual(song.sections);
   });
 
+  it("passes a tempo hint to the measurement", async () => {
+    await processSongMomentsRequest(
+      { audio_url: audio, tempo_hint: 86, describe: false },
+      { accountId: "acc_1" },
+    );
+
+    expect(callMeasureSongMoments).toHaveBeenCalledWith({ audio_url: audio, tempo_hint: 86 });
+  });
+
   it("describes nothing when describe is false", async () => {
     const result = await processSongMomentsRequest(
       { audio_url: audio, describe: false },

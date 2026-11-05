@@ -2,7 +2,8 @@
 serve_song_moments.py
 ---------------------
 Modal app that measures a song's sections and best short moments from its
-audio (see song_moments.py). CPU only: no model, no GPU. Backs
+audio (see song_moments.py), plus loudness, bands, fingerprint, key, drops
+and edit points (see song_measure.py). CPU only: no model, no GPU. Backs
 POST /api/songs/moments, which adds Music Flamingo descriptions per moment.
 
 Usage:
@@ -18,7 +19,7 @@ import modal
 # Configuration — all tunables live here (no magic numbers inline)
 # ---------------------------------------------------------------------------
 CPU_CORES = 2.0
-MEMORY_MB = 4096
+MEMORY_MB = 8192               # a 15-minute song peaks near 5.5 GB (stereo 44.1 kHz analysis)
 SCALEDOWN_WINDOW = 60          # same idle window as music-flamingo
 MAX_CONTAINERS = 8             # CPU containers are cheap; batches fan out
 TIMEOUT_SECONDS = 300
@@ -26,6 +27,7 @@ DOWNLOAD_TIMEOUT_SECONDS = 60
 MAX_AUDIO_BYTES = 100 * 1024 * 1024
 MAX_AUDIO_SECONDS = 15 * 60    # decode at most the first 15 minutes
 MAX_SECTION_LABELS = 60
+TEMPO_HINT_RANGE = (30, 300)   # BPM
 
 image = (
     modal.Image.debian_slim(python_version="3.11")
@@ -37,6 +39,7 @@ image = (
         "fastapi[standard]",
     )
     .add_local_file(Path(__file__).parent / "song_moments.py", "/root/song_moments.py")
+    .add_local_file(Path(__file__).parent / "song_measure.py", "/root/song_measure.py")
 )
 
 app = modal.App(name="song-moments", image=image)
@@ -82,18 +85,20 @@ def measure(request: dict):
     {
         "audio_url": "https://example.com/song.mp3",        (required)
         "section_order": ["verse", "chorus", "verse", ...]   (optional, lyric-sheet headers in order)
+        "tempo_hint": 86                                     (optional, BPM 30-300 from metadata)
     }
 
     Returns sections, moments with :06/:15/:30 cuts, tempo, loudness, the
-    ending type, a per-second energy curve and elapsed_seconds.
+    ending type, a per-second energy curve and elapsed_seconds, plus the
+    extended fields from song_measure.py (true peak, bands, fingerprint, key,
+    drops, edit points...).
     """
     import os
     import time
 
-    import librosa
     from fastapi import HTTPException
 
-    from song_moments import SAMPLE_RATE, measure_song
+    from song_measure import load_stereo, measure_signal
 
     started = time.time()
     audio_url = request.get("audio_url")
@@ -106,6 +111,12 @@ def measure(request: dict):
         or not all(isinstance(label, str) for label in section_order)
     ):
         raise HTTPException(status_code=422, detail="section_order must be a list of strings")
+    tempo_hint = request.get("tempo_hint")
+    low, high = TEMPO_HINT_RANGE
+    if tempo_hint is not None and (
+        isinstance(tempo_hint, bool) or not isinstance(tempo_hint, (int, float)) or not low <= tempo_hint <= high
+    ):
+        raise HTTPException(status_code=422, detail=f"tempo_hint must be a number from {low} to {high}")
 
     try:
         path = _download(audio_url)
@@ -113,13 +124,13 @@ def measure(request: dict):
         raise HTTPException(status_code=422, detail=f"audio_url could not be downloaded: {error}") from error
 
     try:
-        y, sr = librosa.load(path, sr=SAMPLE_RATE, mono=True, duration=MAX_AUDIO_SECONDS)
-    except Exception as error:  # noqa: BLE001 - undecodable audio
-        raise HTTPException(status_code=422, detail="audio_url is not decodable audio") from error
+        try:
+            y, sr = load_stereo(path, MAX_AUDIO_SECONDS)
+        except Exception as error:  # noqa: BLE001 - undecodable audio
+            raise HTTPException(status_code=422, detail="audio_url is not decodable audio") from error
+        result = measure_signal(y, sr, section_order, tempo_hint, audio_path=path)  # ebur128 reads the file
     finally:
         os.unlink(path)
-
-    result = measure_song(y, sr, section_order)
     result["elapsed_seconds"] = round(time.time() - started, 2)
     return result
 
