@@ -31,6 +31,10 @@ MAX_CONTAINERS = 4
 MAX_NEW_TOKENS = 512           # default max tokens to generate
 MAX_NEW_TOKENS_LIMIT = 2048    # hard cap per prompt on /generate_batch
 MAX_BATCH_PROMPTS = 40         # most prompts one /generate_batch request may carry
+# Prompts that share temperature, top_p and do_sample are decoded together, this
+# many per generate() call. One prompt at a time leaves the GPU mostly idle; a
+# group that runs out of GPU memory is split in half and retried.
+GENERATE_GROUP_SIZE = 8
 MODEL_CACHE_DIR = "/model_cache"  # where model weights live inside the container
 AUDIO_DOWNLOAD_TIMEOUT = 120   # seconds; an unreachable host must not hold a GPU
 # Formats the processor's audio loader reads directly. Anything else is
@@ -213,38 +217,74 @@ def parse_batch_prompts(prompts, defaults: dict) -> list:
     return jobs
 
 
-def run_batch(jobs: list, audio_path: str, run_prompt) -> list:
+def build_conversation(prompt: str, audio_path) -> list:
+    """
+    One user turn in Music Flamingo's chat format: the prompt, then the audio
+    at `audio_path` when given.
+    """
+    content = [{"type": "text", "text": prompt}]
+    if audio_path:
+        content.append({"type": "audio", "path": audio_path})
+    return [{"role": "user", "content": content}]
+
+
+def group_jobs(jobs: list, size: int = GENERATE_GROUP_SIZE) -> list:
+    """
+    Splits jobs into groups that can share one generate() call: the same
+    temperature, top_p and do_sample, at most `size` each. Returns lists of
+    job indexes; groups and the jobs in them keep the order jobs first appear.
+    """
+    groups, filling = [], {}
+    for index, job in enumerate(jobs):
+        key = (job["temperature"], job["top_p"], job["do_sample"])
+        group = filling.get(key)
+        if group is None or len(group) == size:
+            group = []
+            groups.append(group)
+            filling[key] = group
+        group.append(index)
+    return groups
+
+
+def run_batch(jobs: list, audio_path: str, run_prompts, group_size: int = GENERATE_GROUP_SIZE) -> list:
     """
     Answers each job (from parse_batch_prompts) against `audio_path`, or
-    against a clip cut from it when the job has one; every clip is deleted
-    after its prompt, whether or not the prompt succeeds. `run_prompt(prompt,
-    audio_path, max_new_tokens, temperature, top_p, do_sample)` returns the
-    answer text. Returns the answers in job order; an answer from a clip
-    echoes the window so the caller can tell it came from the clip.
+    against a clip cut from it when the job has one. Jobs that share settings
+    run together, `group_size` per call to `run_prompts(requests)`, which takes
+    (prompt, audio_path, max_new_tokens, temperature, top_p, do_sample) tuples
+    with the same settings and returns their answers in order. A group's clips
+    are deleted after it runs, whether or not it succeeds.
+
+    Returns the answers in job order. Each answer's `elapsed_seconds` is its
+    share of its group's time, so the answers add up to the time spent; an
+    answer from a clip echoes the window so the caller can tell where it came from.
     """
     import os
     import time
 
-    answers = []
-    for job in jobs:
+    answers = [None] * len(jobs)
+    for group in group_jobs(jobs, group_size):
         started = time.time()
-        clip_path = extract_clip(audio_path, *job["clip"]) if job["clip"] else None
+        clips = {}
         try:
-            response = run_prompt(
-                job["prompt"], clip_path or audio_path, job["max_new_tokens"],
-                job["temperature"], job["top_p"], job["do_sample"],
-            )
+            for index in group:
+                if jobs[index]["clip"]:
+                    clips[index] = extract_clip(audio_path, *jobs[index]["clip"])
+            responses = run_prompts([
+                (jobs[index]["prompt"], clips.get(index, audio_path), jobs[index]["max_new_tokens"],
+                 jobs[index]["temperature"], jobs[index]["top_p"], jobs[index]["do_sample"])
+                for index in group
+            ])
         finally:
-            if clip_path:
+            for clip_path in clips.values():
                 os.unlink(clip_path)
-        answer = {
-            "id": job["id"],
-            "response": response,
-            "elapsed_seconds": round(time.time() - started, 2),
-        }
-        if job["clip"]:
-            answer["clip_start"], answer["clip_end"] = job["clip"]
-        answers.append(answer)
+        share = round((time.time() - started) / len(group), 2)
+        for index, response in zip(group, responses):
+            job = jobs[index]
+            answer = {"id": job["id"], "response": response, "elapsed_seconds": share}
+            if job["clip"]:
+                answer["clip_start"], answer["clip_end"] = job["clip"]
+            answers[index] = answer
     return answers
 
 
@@ -389,11 +429,7 @@ class MusicFlamingo:
         answer. Shared by /generate and /generate_batch.
         """
         # ---- Build the conversation ----
-        # Music Flamingo uses a chat-style format with "user" and "assistant" roles
-        content = [{"type": "text", "text": prompt}]
-        if audio_path:
-            content.append({"type": "audio", "path": audio_path})
-        conversation = [{"role": "user", "content": content}]
+        conversation = build_conversation(prompt, audio_path)
 
         # ---- Run inference ----
         inputs = self.processor.apply_chat_template(
@@ -422,6 +458,62 @@ class MusicFlamingo:
             skip_special_tokens=True,
         )
         return decoded[0]
+
+    def run_prompts(self, requests: list) -> list:
+        """
+        Runs prompts that share temperature, top_p and do_sample as ONE
+        generate() call, each as its own conversation with its own audio, and
+        returns the answers in order, each cut to its own max_new_tokens.
+        `requests` holds (prompt, audio_path, max_new_tokens, temperature,
+        top_p, do_sample) tuples. Used by /generate_batch.
+
+        Fails safe: a single prompt takes the same path as /generate; if the
+        GPU runs out of memory the group is split in half and retried; any
+        other error in a grouped call falls back to one prompt at a time.
+        """
+        import torch
+
+        if len(requests) == 1:
+            return [self.run_prompt(*requests[0])]
+        try:
+            return self._generate_together(requests)
+        except torch.cuda.OutOfMemoryError:
+            torch.cuda.empty_cache()
+            half = len(requests) // 2
+            return self.run_prompts(requests[:half]) + self.run_prompts(requests[half:])
+        except Exception as err:
+            print(f"[generate_batch] grouped generation of {len(requests)} failed ({err!r}); "
+                  "answering one at a time")
+            return [self.run_prompt(*request) for request in requests]
+
+    def _generate_together(self, requests: list) -> list:
+        """One generate() call for `requests` (see run_prompts); the processor pads on the left."""
+        conversations = [build_conversation(prompt, audio_path) for prompt, audio_path, *_ in requests]
+        inputs = self.processor.apply_chat_template(
+            conversations,
+            tokenize=True,
+            add_generation_prompt=True,
+            return_dict=True,
+        ).to(self.model.device)
+        if "input_features" in inputs:
+            inputs["input_features"] = inputs["input_features"].to(self.model.dtype)
+
+        limits = [max_tokens for _, _, max_tokens, *_ in requests]
+        _, _, _, temperature, top_p, do_sample = requests[0]
+        outputs = self.model.generate(
+            **inputs,
+            max_new_tokens=max(limits),
+            temperature=temperature,
+            top_p=top_p,
+            do_sample=do_sample,
+        )
+
+        # Every row's new tokens start after the padded prompt; cut each to its own limit
+        start = inputs.input_ids.shape[1]
+        return self.processor.batch_decode(
+            [outputs[row, start:start + limit] for row, limit in enumerate(limits)],
+            skip_special_tokens=True,
+        )
 
     @modal.fastapi_endpoint(method="POST", docs=True, requires_proxy_auth=True)
     def generate(self, request: dict):
@@ -490,8 +582,9 @@ class MusicFlamingo:
     def generate_batch(self, request: dict):
         """
         Many short prompts about ONE audio file in one request. The audio is
-        downloaded (and transcoded if needed) once; each prompt then runs
-        sequentially as its own conversation against the same file. The API
+        downloaded (and transcoded if needed) once; each prompt runs as its own
+        conversation against the same file, and prompts that share settings
+        are decoded together, up to `group_size` per generate() call. The API
         charges one base price per request, so batching saves the base on
         every prompt after the first.
 
@@ -508,13 +601,17 @@ class MusicFlamingo:
             ],
             "temperature": 0.2,                                      (optional, default 1.0)
             "top_p": 1.0,                                            (optional, default 1.0)
-            "do_sample": false                                       (optional, default false)
+            "do_sample": false,                                      (optional, default false)
+            "group_size": 8                                          (optional, 1-8, default 8;
+                                                                      1 runs prompts one at a time)
         }
 
         Returns:
         {
             "answers": [{"id": "genre", "response": "...", "elapsed_seconds": 1.2,
-                         "clip_start": 45.2, "clip_end": 60.4}],     (clip echoed when one was cut)
+                         "clip_start": 45.2, "clip_end": 60.4}],     (clip echoed when one was cut;
+                                                                      seconds are the answer's share
+                                                                      of its group's time)
             "elapsed_seconds": 9.87      (whole batch, download included)
         }
 
@@ -541,18 +638,25 @@ class MusicFlamingo:
             "top_p": request.get("top_p", 1.0),
             "do_sample": request.get("do_sample", False),
         }
+        group_size = request.get("group_size", GENERATE_GROUP_SIZE)
         try:
             jobs = parse_batch_prompts(request.get("prompts"), defaults)
             check_generation_settings(defaults)
         except ValueError as err:
             reject(str(err))
+        if (
+            isinstance(group_size, bool)
+            or not isinstance(group_size, int)
+            or not 1 <= group_size <= GENERATE_GROUP_SIZE
+        ):
+            reject(f"group_size must be 1-{GENERATE_GROUP_SIZE}")
 
         # ---- Download (and transcode) the audio ONCE ----
         tmp_path = self.download_audio(audio_url)
 
         # ---- Run every prompt against the same file (or a clip cut from it) ----
         try:
-            answers = run_batch(jobs, tmp_path, self.run_prompt)
+            answers = run_batch(jobs, tmp_path, self.run_prompts, group_size)
         finally:
             os.unlink(tmp_path)
 
@@ -574,3 +678,36 @@ def main():
     })
     print(f"\nModel response:\n{result['response']}")
     print(f"Took {result['elapsed_seconds']}s")
+
+
+@app.local_entrypoint()
+def bench(audio_url_file: str, prompts_file: str, out_file: str = ""):
+    """
+    Times one /generate_batch request with prompts one at a time (group_size
+    1) and decoded together (the default), on the same audio and prompts, and
+    counts the answers that match. Run it in a workspace you can spend GPU
+    time in; it never deploys:
+      modal run modal/serve_music_flamingo.py::bench --audio-url-file url.txt --prompts-file prompts.json
+
+    `prompts_file` is a JSON list of /generate_batch prompts.
+    """
+    import json
+
+    audio_url = open(audio_url_file).read().strip()
+    prompts = json.load(open(prompts_file))
+    flamingo = MusicFlamingo()
+    # Warm the GPU so the first timed run does not pay for it
+    flamingo.generate_batch.remote(
+        {"audio_url": audio_url, "prompts": [{"id": "warm", "prompt": "Genre?", "max_new_tokens": 8}]}
+    )
+    results = {}
+    for size in (1, GENERATE_GROUP_SIZE):
+        results[size] = flamingo.generate_batch.remote(
+            {"audio_url": audio_url, "prompts": prompts, "group_size": size}
+        )
+        print(f"group_size {size}: {results[size]['elapsed_seconds']} s for {len(prompts)} prompts")
+    pairs = zip(results[1]["answers"], results[GENERATE_GROUP_SIZE]["answers"])
+    same = sum(a["response"].strip() == b["response"].strip() for a, b in pairs)
+    print(f"identical answers: {same} of {len(prompts)}")
+    if out_file:
+        json.dump(results, open(out_file, "w"), indent=1)
