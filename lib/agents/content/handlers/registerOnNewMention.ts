@@ -1,11 +1,12 @@
 import type { ContentAgentBot } from "../bot";
 import { triggerCreateContent } from "@/lib/trigger/triggerCreateContent";
 import { triggerPollContentRun } from "@/lib/trigger/triggerPollContentRun";
-import { resolveArtistSlug } from "@/lib/content/resolveArtistSlug";
 import { getArtistContentReadiness } from "@/lib/content/getArtistContentReadiness";
 import { selectAccountSnapshots } from "@/lib/supabase/account_snapshots/selectAccountSnapshots";
 import { parseContentPrompt } from "../parseContentPrompt";
 import { extractMessageAttachments } from "../extractMessageAttachments";
+import { resolveContentAccount } from "../resolveContentAccount";
+import { resolveContentArtist } from "../resolveContentArtist";
 
 /**
  * Registers the onNewMention handler on the content agent bot.
@@ -18,25 +19,27 @@ import { extractMessageAttachments } from "../extractMessageAttachments";
 export function registerOnNewMention(bot: ContentAgentBot) {
   bot.onNewMention(async (thread, message) => {
     try {
-      const accountId = "fb678396-a68f-4294-ae50-b8cacf9ce77b";
-      const artistAccountId = "1873859c-dd37-4e9a-9bac-80d3558527a9";
-
-      // Parse the user's natural-language prompt into structured flags
-      const { lipsync, batch, captionLength, upscale, template, songs } = await parseContentPrompt(
-        message.text,
-      );
-
-      // Extract audio/image attachments from the Slack message
-      const { songUrl, imageUrls } = await extractMessageAttachments(message);
-
-      // Resolve artist slug
-      const artistSlug = await resolveArtistSlug(artistAccountId);
-      if (!artistSlug) {
+      const accountId = resolveContentAccount(message);
+      if (!accountId) {
         await thread.post(
-          `Artist not found for account ID \`${artistAccountId}\`. Please check the ID and try again.`,
+          "Your Slack account is not configured for content generation. Contact your administrator.",
         );
         return;
       }
+
+      // Parse the user's natural-language prompt into structured flags
+      const { lipsync, batch, captionLength, upscale, template, songs, artistNames } =
+        await parseContentPrompt(message.text);
+
+      const selection = await resolveContentArtist(accountId, artistNames, message.text);
+      if (selection.error) {
+        await thread.post(selection.error);
+        return;
+      }
+      const { artistAccountId, artistSlug } = selection;
+
+      // Attachment handling can upload public blobs: do it only after selection and authorization.
+      const { songUrl, imageUrls } = await extractMessageAttachments(message);
 
       // Resolve GitHub repo
       let githubRepo: string;
@@ -48,7 +51,7 @@ export function registerOnNewMention(bot: ContentAgentBot) {
         });
         githubRepo = readiness.githubRepo;
       } catch {
-        const snapshots = await selectAccountSnapshots(artistAccountId);
+        const snapshots = await selectAccountSnapshots(accountId);
         const repo = snapshots?.[0]?.github_repo;
         if (!repo) {
           await thread.post(

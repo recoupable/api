@@ -9,9 +9,8 @@ vi.mock("@/lib/trigger/triggerPollContentRun", () => ({
   triggerPollContentRun: vi.fn(),
 }));
 
-vi.mock("@/lib/content/resolveArtistSlug", () => ({
-  resolveArtistSlug: vi.fn(),
-}));
+vi.mock("../resolveContentAccount", () => ({ resolveContentAccount: vi.fn(() => "account-1") }));
+vi.mock("../resolveContentArtist", () => ({ resolveContentArtist: vi.fn() }));
 
 vi.mock("@/lib/content/getArtistContentReadiness", () => ({
   getArtistContentReadiness: vi.fn(),
@@ -34,8 +33,13 @@ vi.mock("../extractMessageAttachments", () => ({
 }));
 
 const { triggerCreateContent } = await import("@/lib/trigger/triggerCreateContent");
+const mockRunHandle = {
+  id: "run-1",
+  publicAccessToken: "test-token",
+  taskIdentifier: "create-content",
+} as Awaited<ReturnType<typeof triggerCreateContent>>;
 const { triggerPollContentRun } = await import("@/lib/trigger/triggerPollContentRun");
-const { resolveArtistSlug } = await import("@/lib/content/resolveArtistSlug");
+const { resolveContentArtist } = await import("../resolveContentArtist");
 const { getArtistContentReadiness } = await import("@/lib/content/getArtistContentReadiness");
 const { parseContentPrompt } = await import("../parseContentPrompt");
 const { extractMessageAttachments } = await import("../extractMessageAttachments");
@@ -81,6 +85,22 @@ function createMockMessage(text: string) {
 describe("registerOnNewMention", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(resolveContentArtist).mockResolvedValue({
+      artistAccountId: "artist-1",
+      artistSlug: "test-artist",
+    });
+    vi.mocked(parseContentPrompt).mockResolvedValue({
+      lipsync: false,
+      batch: 1,
+      captionLength: "none",
+      upscale: false,
+      template: "artist-caption-bedroom",
+    });
+    vi.mocked(getArtistContentReadiness).mockResolvedValue({
+      githubRepo: "https://github.com/test/repo",
+    } as never);
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
+    vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
     vi.mocked(extractMessageAttachments).mockResolvedValue({
       songUrl: null,
       imageUrls: [],
@@ -104,11 +124,10 @@ describe("registerOnNewMention", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
@@ -129,11 +148,10 @@ describe("registerOnNewMention", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
@@ -154,11 +172,10 @@ describe("registerOnNewMention", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
@@ -179,11 +196,10 @@ describe("registerOnNewMention", () => {
       upscale: true,
       template: "artist-caption-stage",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
@@ -211,11 +227,10 @@ describe("registerOnNewMention", () => {
       template: "artist-caption-bedroom",
       songs: ["hiccups"],
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
@@ -238,11 +253,10 @@ describe("registerOnNewMention", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
@@ -264,11 +278,10 @@ describe("registerOnNewMention", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
@@ -293,11 +306,10 @@ describe("registerOnNewMention", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
@@ -322,7 +334,6 @@ describe("registerOnNewMention", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
@@ -330,7 +341,7 @@ describe("registerOnNewMention", () => {
       songUrl: "https://blob.vercel-storage.com/song.mp3",
       imageUrls: [],
     });
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
@@ -352,7 +363,6 @@ describe("registerOnNewMention", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
@@ -360,7 +370,7 @@ describe("registerOnNewMention", () => {
       songUrl: null,
       imageUrls: ["https://blob.vercel-storage.com/face.png"],
     });
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
@@ -385,7 +395,6 @@ describe("registerOnNewMention", () => {
       upscale: false,
       template: "artist-release-editorial",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
@@ -397,7 +406,7 @@ describe("registerOnNewMention", () => {
         "https://blob.vercel-storage.com/cover2.png",
       ],
     });
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
@@ -426,11 +435,10 @@ describe("registerOnNewMention", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
@@ -452,7 +460,6 @@ describe("registerOnNewMention", () => {
       upscale: false,
       template: "artist-caption-bedroom",
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
@@ -460,7 +467,7 @@ describe("registerOnNewMention", () => {
       songUrl: "https://blob.vercel-storage.com/song.mp3",
       imageUrls: ["https://blob.vercel-storage.com/face.png"],
     });
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
@@ -484,11 +491,10 @@ describe("registerOnNewMention", () => {
       template: "artist-caption-bedroom",
       songs: ["hiccups"],
     });
-    vi.mocked(resolveArtistSlug).mockResolvedValue("test-artist");
     vi.mocked(getArtistContentReadiness).mockResolvedValue({
       githubRepo: "https://github.com/test/repo",
     } as never);
-    vi.mocked(triggerCreateContent).mockResolvedValue({ id: "run-1" });
+    vi.mocked(triggerCreateContent).mockResolvedValue(mockRunHandle);
     vi.mocked(triggerPollContentRun).mockResolvedValue(undefined as never);
 
     const thread = createMockThread();
