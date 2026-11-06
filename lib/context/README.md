@@ -432,3 +432,67 @@ recipe. `planning/dispatchPlannedContextModule.ts` still accepts only its existi
 MusicBrainz, MLC recording and Spotify release modules; no brief recipe selects
 `catalog_valuation`. Local fixtures verify label persistence, not hosted deployment,
 licensed analytics access, actual revenue or an appraisal.
+
+## Pending typed operation error contract (Context #2125)
+
+This source candidate supersedes the bounded error-contract work from API #1005
+(`b6502fb8c982e55db65e27b95d9ea7b7e320d656`). It is **pending**, not a published or
+hosted contract. Legacy Docs #361 remains unmerged and cannot satisfy the prerequisite:
+the current owning Docs contract must be prepared, reviewed and accepted before this API
+change is merged. No action, database migration, spend path or provider operation is added.
+
+After input validation and authentication, shared operation failures use these codes:
+
+| Code | HTTP | Retryable |
+| --- | --- | --- |
+| `permission_denied` | 403 | false |
+| `not_found` | 404 | false |
+| `conflict` | 409 | false |
+| `unsupported_input` | 422 | false |
+| `not_ready` | 409 | true, after the prerequisite changes |
+| `unavailable` | 503 | true, after dependency recovery or capability availability |
+| `budget_exhausted` | 402 | false; reserved, no spend-path producer |
+| `storage_failed` | 409 | false |
+| `internal` | 500 | false |
+
+HTTP retains `error` and adds `code`, `retryable` and `guidance`. MCP retains
+`success: false` and `message`, adds the same three fields, and sets `isError: true`.
+The human-readable message and guidance are authored constants, never exception text.
+Known missing and inaccessible record messages share a nondisclosing `not_found` response.
+Owner authorization failures identify no private record. Current authentication responses,
+HTTP 400 schema failures and MCP SDK InvalidParams validation remain outside this contract.
+Direct internal MCP handler calls that bypass SDK validation fail closed; a Zod exception
+inside the operation is not evidence of a caller error.
+
+Classification uses separate exact API and storage-message allowlists. Unknown API errors
+and malformed stored RPC shapes are `internal`; unknown storage rejections are opaque
+`storage_failed`, not an assertion that the caller caused a conflict. Generic SQL
+`query returned no rows` cannot prove which lookup failed and remains `storage_failed`.
+No substring matching, generic Zod issue-path inference or SQLSTATE-only retry inference is
+used. In particular, authored revision/fingerprint conflicts may use serialization codes
+but still require changed state/input. Only exact recognized transient storage messages
+receive `unavailable`. Disabled capabilities share that code but require configuration
+availability before retry; the flag is not a promise that retry will succeed.
+
+Retry guidance is action-aware: read/list/plan/verify operations do not request a write key.
+For uncertain writes, retain identical input and the same key; attachment retries also retain
+the exact source version and targets, and catalog saves retain the unchanged payload and
+revision context. A new key is new work. This formatter neither enforces idempotency nor
+proves that paid work has not occurred: existing domain/RPC and execution paths own that.
+Partial successful results remain successful, with their gaps unchanged; no new partial-result
+or media-recovery behavior is implemented.
+
+Private exception messages, causes, traces and identifiers are neither returned nor logged.
+The classifier has no logging side effects. Existing `getContextFailureReason` enum-only
+logging and private/no-store headers on read, evidence and catalog operations are preserved.
+The delegated OAuth catalog exclusion and `includeMaterialEvidence` policy are unchanged.
+Guest endpoints retain their separate error behavior.
+
+The Docs dependency must update current Context OpenAPI error schema/status responses,
+HTTP/MCP envelopes, operation-error URL descriptions (409 to 422 where applicable),
+conditional retry guidance and URL-only/reconnect/partial-result examples. It must explicitly
+retain schema/auth exceptions, reserved budget status, conservative stored-data classification,
+and the absence of a hosted acceptance claim. Do not copy legacy raw-logging claims or
+blanket guarantees that reusing a key prevents every paid retry. Current Docs #30 is not
+modified by this source candidate. Actual intended-account API/MCP parity, native save/denial
+and workspace acceptance remain separate work under #2125 and its prerequisites.

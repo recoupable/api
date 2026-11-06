@@ -257,7 +257,9 @@ describe.each(operations)("Context ownership parity: $action", ({ option, operat
   it("denied in the domain layer: opaque failure through both transports, no private sink", async () => {
     // Transport membership passes (a stale grant); the domain recheck fails with private detail.
     vi.mocked(validateOrganizationAccess).mockResolvedValue(true);
-    vi.mocked(authorizeContextOwner).mockRejectedValue(new Error(`Access denied: ${canary}`));
+    vi.mocked(authorizeContextOwner).mockRejectedValue(
+      new Error("Access denied to context owner", { cause: new Error(canary) }),
+    );
 
     const response = await callHttp(operation);
     expectHttpDenial(response.status);
