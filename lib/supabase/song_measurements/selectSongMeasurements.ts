@@ -13,6 +13,7 @@ import { Tables } from "@/types/database.types";
  * @param params.platform - Optional platform filter (e.g. "spotify")
  * @param params.metric - Optional metric filter (e.g. "platform_displayed_play_count")
  * @param params.limit - Optional cap on returned rows
+ * @param params.offset - Page offset; uses deterministic captured_at/id ordering
  * @returns Measurement rows newest-first, or [] if none exist or on error
  */
 export async function selectSongMeasurements({
@@ -22,6 +23,7 @@ export async function selectSongMeasurements({
   platform,
   metric,
   limit,
+  offset,
 }: {
   song?: string;
   songs?: string[];
@@ -29,6 +31,7 @@ export async function selectSongMeasurements({
   platform?: string;
   metric?: string;
   limit?: number;
+  offset?: number;
 }): Promise<Tables<"song_measurements">[]> {
   if (!song && (!songs || songs.length === 0) && !snapshot) return [];
 
@@ -42,7 +45,9 @@ export async function selectSongMeasurements({
   if (snapshot) query = query.eq("snapshot", snapshot);
   if (platform) query = query.eq("platform", platform);
   if (metric) query = query.eq("metric", metric);
-  if (limit) query = query.limit(limit);
+  if (offset !== undefined) {
+    query = query.order("id", { ascending: false }).range(offset, offset + (limit ?? 1000) - 1);
+  } else if (limit) query = query.limit(limit);
 
   const { data, error } = await query;
 

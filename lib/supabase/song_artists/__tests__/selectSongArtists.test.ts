@@ -57,6 +57,30 @@ describe("selectSongArtists", () => {
     expect(mockIn).toHaveBeenCalledTimes(3);
   });
 
+  it("paginates artist credits when requested before the profile applies its cap", async () => {
+    const page = Array.from({ length: 1000 }, (_, i) => ({
+      id: `id${i}`,
+      song: `S${i}`,
+      artist: "artist-1",
+    }));
+    const range = vi
+      .fn()
+      .mockResolvedValueOnce({ data: page, error: null })
+      .mockResolvedValueOnce({
+        data: [{ id: "last", song: "LAST", artist: "artist-1" }],
+        error: null,
+      });
+    const order = vi.fn().mockReturnValue({ range });
+    mockIn.mockReturnValue({ order });
+    const rows = await selectSongArtists({ artists: ["artist-1"], paginate: true });
+    expect(rows).toHaveLength(1001);
+    expect(order).toHaveBeenCalledWith("id", { ascending: true });
+    expect(range.mock.calls).toEqual([
+      [0, 999],
+      [1000, 1999],
+    ]);
+  });
+
   it("throws on query error instead of conflating it with no rows (chat#1965)", async () => {
     mockIn.mockResolvedValue({ data: null, error: { message: "boom" } });
 
