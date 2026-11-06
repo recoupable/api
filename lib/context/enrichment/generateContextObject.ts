@@ -43,6 +43,12 @@ export async function generateContextObject(options: {
   const rawCost = metadata.success ? metadata.data.gateway?.cost : undefined;
   const cost = rawCost === undefined || rawCost === "" ? NaN : Number(rawCost);
   const known = Number.isFinite(cost) && cost >= 0;
+  // On the AI Gateway `response.modelId` echoes the requested id; only the gateway's raw body can
+  // report the model that answered. Null when the body reports none.
+  const reported = z
+    .object({ response: z.object({ modelId: z.string().min(1) }).passthrough() })
+    .passthrough()
+    .safeParse(response.response?.body);
   return {
     content: response.object,
     coverage: "partial",
@@ -50,6 +56,7 @@ export async function generateContextObject(options: {
     costStatus: known ? "confirmed" : "unknown",
     trace: {
       model,
+      reportedModel: reported.success ? reported.data.response.modelId : null,
       system: options.system,
       messages,
       response: response.response,
