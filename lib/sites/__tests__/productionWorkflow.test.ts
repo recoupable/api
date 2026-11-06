@@ -216,7 +216,7 @@ it("continues durable repairs beyond four reviews and saves only after passing",
   expect(m.save.mock.calls[0][1].production.reviews).toHaveLength(7);
   for (let i = 0; i < 6; i++) expect(m.revise.mock.calls[i][6].issues[0].detail).toBe(`Fix ${i}`);
 });
-it("reports a repair failure without saving an unfinished candidate", async () => {
+it("preserves the completed candidate when a later repair fails", async () => {
   vi.mocked(reviewStep).mockResolvedValueOnce({
     verdict: "revise",
     issues: [{ module: "implementation", detail: "Font missing" }],
@@ -229,11 +229,9 @@ it("reports a repair failure without saving an unfinished candidate", async () =
     undefined,
     approvedConcept,
   );
-  expect(result).toEqual({
-    error:
-      "Site production stopped during implementation repair. Your existing draft is unchanged.",
-  });
-  expect(m.save).not.toHaveBeenCalled();
+  expect(result).toHaveProperty("site");
+  expect(m.save.mock.calls[0][1].production.status).toBe("needs-review");
+  expect(m.save.mock.calls[0][1].production.reviews.at(-1).summary).toContain("interrupted");
 });
 
 it("keeps building when a customer-facing milestone fails", async () => {
@@ -315,4 +313,34 @@ it("saves a credit-blocked review as an unfinished draft without starting paid r
     }),
     "account",
   );
+});
+
+it("preserves the latest completed repair if its review fails", async () => {
+  m.build.mockResolvedValue({ name: "first" });
+  vi.mocked(reviewStep)
+    .mockResolvedValueOnce({
+      verdict: "revise",
+      issues: [{ module: "implementation", detail: "Fix replay" }],
+    } as never)
+    .mockRejectedValueOnce(new Error("Review unavailable"));
+  m.revise.mockResolvedValueOnce({ snapshot: { name: "repaired" }, direction: {}, assets: [] });
+  await siteProductionWorkflow({ id: "site" } as Site, "", "account", undefined, approvedConcept);
+  expect(m.save.mock.calls[0][1].name).toBe("repaired");
+  expect(m.save.mock.calls[0][1].production.status).toBe("needs-review");
+});
+it("does not overwrite a newer draft when recovery saving conflicts", async () => {
+  m.build.mockResolvedValue({ name: "candidate" });
+  vi.mocked(reviewStep).mockRejectedValueOnce(new Error("Review unavailable"));
+  m.save.mockRejectedValueOnce(new Error("Newer revision exists"));
+  const result = await siteProductionWorkflow(
+    { id: "site" } as Site,
+    "",
+    "account",
+    undefined,
+    approvedConcept,
+  );
+  expect(result).toEqual({
+    error: "The recovered candidate could not be saved. Your existing draft is unchanged.",
+  });
+  expect(m.save).toHaveBeenCalledOnce();
 });
