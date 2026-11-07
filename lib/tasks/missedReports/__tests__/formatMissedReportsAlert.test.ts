@@ -21,7 +21,7 @@ describe("formatMissedReportsAlert", () => {
           customerNotified: false,
         },
       ],
-      0,
+      { unchecked: 0, truncated: false },
     );
 
     expect(text).toContain("2 scheduled reports did not send");
@@ -44,14 +44,42 @@ describe("formatMissedReportsAlert", () => {
           customerNotified: false,
         },
       ],
-      0,
+      { unchecked: 0, truncated: false },
     );
     expect(text).toContain("1 scheduled report did not send");
     expect(text).toContain("plan blocked (Free includes 1 task.)");
   });
 
   it("says how many runs could not be checked", () => {
-    expect(formatMissedReportsAlert([], 2)).toContain("2 scheduled runs could not be checked");
-    expect(formatMissedReportsAlert([], 1)).toContain("1 scheduled run could not be checked");
+    const text = formatMissedReportsAlert([], { unchecked: 2, truncated: false });
+    expect(text).toContain("2 scheduled runs could not be checked");
+    expect(text).not.toContain("0 scheduled reports did not send");
+    expect(formatMissedReportsAlert([], { unchecked: 1, truncated: false })).toContain(
+      "1 scheduled run could not be checked",
+    );
+  });
+
+  // Telegram cuts messages at 4,000 characters; keep every alert readable.
+  it("lists at most 20 reports and counts the rest", () => {
+    const miss = {
+      task: reportTask,
+      run: reportRun,
+      cause: "no_email" as const,
+      detail: "no send attempted; run completed",
+      customerNotified: false,
+    };
+    const text = formatMissedReportsAlert(Array(25).fill(miss), {
+      unchecked: 0,
+      truncated: false,
+    });
+    expect(text.match(/^• /gm)).toHaveLength(20);
+    expect(text).toContain("…and 5 more");
+    expect(text.length).toBeLessThan(4000);
+  });
+
+  it("says when the hour held more runs than one page", () => {
+    expect(formatMissedReportsAlert([], { unchecked: 0, truncated: true })).toContain(
+      "More than 100 runs started in that hour",
+    );
   });
 });

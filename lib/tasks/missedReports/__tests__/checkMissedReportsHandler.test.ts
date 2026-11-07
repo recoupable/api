@@ -39,7 +39,7 @@ describe("checkMissedReportsHandler", () => {
     vi.setSystemTime(new Date("2026-11-06T13:17:00.000Z"));
     vi.spyOn(console, "error").mockImplementation(() => {});
     mockValidate.mockReturnValue(null);
-    mockListRuns.mockResolvedValue([reportRun]);
+    mockListRuns.mockResolvedValue({ runs: [reportRun], unreadable: 0, truncated: false });
     mockSelectTasks.mockResolvedValue([reportTask]);
     mockFindMissed.mockResolvedValue(null);
     mockNotice.mockResolvedValue(true);
@@ -97,7 +97,11 @@ describe("checkMissedReportsHandler", () => {
   });
 
   it("skips runs whose task was deleted or turned off", async () => {
-    mockListRuns.mockResolvedValue([reportRun, { ...reportRun, runId: "run_2", taskId: "gone" }]);
+    mockListRuns.mockResolvedValue({
+      runs: [reportRun, { ...reportRun, runId: "run_2", taskId: "gone" }],
+      unreadable: 0,
+      truncated: false,
+    });
     mockSelectTasks.mockImplementation(async ({ id }: { id: string }) =>
       id === "gone" ? [] : [{ ...reportTask, enabled: false }],
     );
@@ -114,10 +118,11 @@ describe("checkMissedReportsHandler", () => {
   });
 
   it("keeps checking, and still alerts, when one run cannot be checked", async () => {
-    mockListRuns.mockResolvedValue([
-      { ...reportRun, runId: "run_bad", taskId: "task-bad" },
-      reportRun,
-    ]);
+    mockListRuns.mockResolvedValue({
+      runs: [{ ...reportRun, runId: "run_bad", taskId: "task-bad" }, reportRun],
+      unreadable: 1,
+      truncated: false,
+    });
     mockSelectTasks.mockImplementation(async ({ id }: { id: string }) => {
       if (id === "task-bad") throw new Error("db down");
       return [reportTask];
@@ -126,13 +131,14 @@ describe("checkMissedReportsHandler", () => {
 
     const response = await checkMissedReportsHandler(request());
 
-    expect(await response.json()).toMatchObject({ missed: 1, unchecked: 1 });
-    expect(mockSendMessage.mock.calls[0][0]).toContain("1 scheduled run could not be checked");
+    expect(await response.json()).toMatchObject({ missed: 1, unchecked: 2 });
+    expect(mockSendMessage.mock.calls[0][0]).toContain("2 scheduled runs could not be checked");
   });
 
   it("returns 500 when the run list cannot be read", async () => {
     mockListRuns.mockRejectedValue(new Error("trigger down"));
     const response = await checkMissedReportsHandler(request());
     expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ status: "error", message: "Internal server error" });
   });
 });

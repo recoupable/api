@@ -45,15 +45,17 @@ export async function sendMissedReportNotice(miss: MissedReport): Promise<boolea
   const to = pickAccountRecipient(await selectAccountEmails({ accountIds: miss.task.account_id }));
   if (!to) return false;
 
+  // Titles are account-entered; keep control characters out of the header.
+  const plainTitle = miss.task.title.replace(/[\u0000-\u001f\u007f]+/g, " ").trim();
   const title = escapeHtml(miss.task.title);
   const { subject, html } =
     miss.cause === "plan_blocked"
       ? {
-          subject: `Your task didn't run: ${miss.task.title}`,
+          subject: `Your task didn't run: ${plainTitle}`,
           html: `<p>Your scheduled task “${title}” was due and didn't run, because your plan doesn't cover it. ${escapeHtml(miss.detail)}</p><p>Upgrade or change your tasks at <a href="${miss.billingUrl}">${miss.billingUrl}</a>, and it will run at its next scheduled time.</p>`,
         }
       : {
-          subject: `Your report didn't go out: ${miss.task.title}`,
+          subject: `Your report didn't go out: ${plainTitle}`,
           html: `<p>Your scheduled report “${title}” was due and didn't reach your inbox. We've been alerted and are looking into it.</p><p>It will run again at its next scheduled time.</p>`,
         };
 

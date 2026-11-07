@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextResponse } from "next/server";
 import { reportRun, reportTask } from "./fixtures";
 import type { MissedReport } from "../types";
@@ -47,6 +47,7 @@ describe("sendMissedReportNotice", () => {
     mockSend.mockResolvedValue({ id: "re_1" });
     mockSelectEmailSendLog.mockResolvedValue([]);
   });
+  afterEach(() => vi.unstubAllEnvs());
 
   it("sends nothing while customer notices are switched off", async () => {
     vi.stubEnv("MISSED_REPORT_CUSTOMER_NOTICES", "");
@@ -56,6 +57,7 @@ describe("sendMissedReportNotice", () => {
 
   it("tells the account owner a report did not arrive", async () => {
     expect(await sendMissedReportNotice(rejected)).toBe(true);
+    expect(mockSelectAccountEmails).toHaveBeenCalledWith({ accountIds: "acc-1" });
     const email = mockSend.mock.calls[0][0];
     expect(email.to).toBe("owner@example.com");
     expect(email.subject).toBe("Your report didn't go out: Monthly Catalog Report: Luh Tyler");
@@ -114,5 +116,15 @@ describe("sendMissedReportNotice", () => {
     mockSelectAccountEmails.mockResolvedValue([{ email: "owner@example.com" }]);
     mockSend.mockResolvedValue(NextResponse.json({ error: "x" }, { status: 502 }));
     expect(await sendMissedReportNotice(rejected)).toBe(false);
+  });
+
+  it("keeps line breaks in a task title out of the subject", async () => {
+    await sendMissedReportNotice({
+      ...rejected,
+      task: { ...reportTask, title: "Monthly Catalog Report: A\r\nBcc: x@example.com" },
+    });
+    expect(mockSend.mock.calls[0][0].subject).toBe(
+      "Your report didn't go out: Monthly Catalog Report: A Bcc: x@example.com",
+    );
   });
 });

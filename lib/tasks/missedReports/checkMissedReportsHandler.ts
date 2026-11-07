@@ -33,13 +33,13 @@ export async function checkMissedReportsHandler(request: NextRequest): Promise<N
   try {
     const currentHour = Math.floor(Date.now() / HOUR_MS) * HOUR_MS;
     const windowStart = currentHour - HOURS_BACK * HOUR_MS;
-    const runs = await listScheduledReportRuns({
+    const { runs, unreadable, truncated } = await listScheduledReportRuns({
       from: new Date(windowStart).toISOString(),
       to: new Date(windowStart + HOUR_MS - 1).toISOString(),
     });
 
     const misses: NotifiedMissedReport[] = [];
-    let unchecked = 0;
+    let unchecked = unreadable;
     for (const run of runs) {
       try {
         const [task] = await selectScheduledActions({ id: run.taskId });
@@ -59,8 +59,8 @@ export async function checkMissedReportsHandler(request: NextRequest): Promise<N
       }
     }
 
-    if (misses.length > 0 || unchecked > 0) {
-      await sendMessage(formatMissedReportsAlert(misses, unchecked));
+    if (misses.length > 0 || unchecked > 0 || truncated) {
+      await sendMessage(formatMissedReportsAlert(misses, { unchecked, truncated }));
     }
 
     return NextResponse.json({

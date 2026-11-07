@@ -93,6 +93,14 @@ describe("findMissedReport", () => {
     await expect(findMissedReport({ run: reportRun, task: reportTask })).rejects.toThrow("db down");
   });
 
+  it("names a stalled run that is still executing", async () => {
+    const result = await findMissedReport({
+      run: { ...reportRun, status: "EXECUTING" },
+      task: reportTask,
+    });
+    expect(result).toMatchObject({ cause: "no_email", detail: "no send attempted; run executing" });
+  });
+
   it("falls back to the run status when no send was attempted", async () => {
     const result = await findMissedReport({
       run: { ...reportRun, status: "FAILED" },

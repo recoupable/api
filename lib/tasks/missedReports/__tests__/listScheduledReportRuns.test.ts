@@ -27,7 +27,7 @@ describe("listScheduledReportRuns", () => {
     ]);
     mockRetrieveTaskRun.mockResolvedValue({ schedule: { externalId: "task-1" } });
 
-    const runs = await listScheduledReportRuns(window);
+    const { runs } = await listScheduledReportRuns(window);
 
     expect(mockFetchTriggerRuns).toHaveBeenCalledWith(
       {
@@ -59,9 +59,10 @@ describe("listScheduledReportRuns", () => {
       return { schedule: { externalId: "task-2" } };
     });
 
-    const runs = await listScheduledReportRuns(window);
+    const { runs, unreadable } = await listScheduledReportRuns(window);
 
     expect(runs.map(run => run.runId)).toEqual(["run_ok"]);
+    expect(unreadable).toBe(1);
     expect(console.error).toHaveBeenCalled();
   });
 
@@ -75,8 +76,31 @@ describe("listScheduledReportRuns", () => {
     );
     mockRetrieveTaskRun.mockResolvedValue(null);
 
-    await listScheduledReportRuns(window);
+    const { truncated } = await listScheduledReportRuns(window);
 
+    expect(truncated).toBe(true);
     expect(console.warn).toHaveBeenCalled();
+  });
+
+  // One hung Trigger.dev read must not stall the whole check.
+  it("gives up on a run read that does not answer in time", async () => {
+    vi.useFakeTimers();
+    mockFetchTriggerRuns.mockResolvedValue([
+      { id: "run_hung", status: "COMPLETED", createdAt: "2026-11-06T10:01:00.000Z" },
+      { id: "run_ok", status: "COMPLETED", createdAt: "2026-11-06T10:02:00.000Z" },
+    ]);
+    mockRetrieveTaskRun.mockImplementation((id: string) =>
+      id === "run_hung"
+        ? new Promise(() => {})
+        : Promise.resolve({ schedule: { externalId: "task-1" } }),
+    );
+
+    const pending = listScheduledReportRuns(window);
+    await vi.advanceTimersByTimeAsync(5_000);
+    const { runs, unreadable } = await pending;
+
+    expect(runs.map(run => run.runId)).toEqual(["run_ok"]);
+    expect(unreadable).toBe(1);
+    vi.useRealTimers();
   });
 });
