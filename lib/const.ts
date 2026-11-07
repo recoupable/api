@@ -50,6 +50,9 @@ export const FOUNDER_FROM_EMAIL = `Patrick from Recoup <sweetman${OUTBOUND_EMAIL
 /** Where Reply lands for founder-voiced outreach (personal inbox). */
 export const FOUNDER_REPLY_TO_EMAIL = "sweetmantech@gmail.com";
 
+/** Marker in email_send_log.raw_body for a missed scheduled-report notice. */
+export const MISSED_REPORT_NOTICE_LOG_TYPE = "missed_report_notice";
+
 /** Marker in email_send_log.raw_body for the abandoned-checkout follow-up. */
 export const ABANDONED_CHECKOUT_EMAIL_LOG_TYPE = "abandoned_checkout_email";
 

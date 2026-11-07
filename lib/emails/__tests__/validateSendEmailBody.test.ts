@@ -259,6 +259,17 @@ describe("validateSendEmailBody", () => {
       });
     });
 
+    it("caps the recipients named in the reason", async () => {
+      const disallowed = Array.from({ length: 8 }, (_, i) => `r${i}@example.com`);
+      mockAssertRecipientsAllowed.mockResolvedValue({ allowed: false, disallowed });
+      const request = createRequest({ to: disallowed, text: "body" }, { "x-api-key": "k" });
+      const result = await validateSendEmailBody(request);
+      expect(result).toMatchObject({
+        reason:
+          "recipient_not_allowed: r0@example.com, r1@example.com, r2@example.com, r3@example.com, r4@example.com and 3 more",
+      });
+    });
+
     it("names the failing field when the body is invalid", async () => {
       const request = createRequest({ to: ["d@example.com"], html: "   " }, { "x-api-key": "k" });
       const result = await validateSendEmailBody(request);

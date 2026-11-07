@@ -122,7 +122,11 @@ export async function validateSendEmailBody(
         },
         { status: 403, headers: getCorsHeaders() },
       ),
-      reason: `recipient_not_allowed: ${recipientCheck.disallowed.join(", ")}`,
+      reason: `recipient_not_allowed: ${recipientCheck.disallowed.slice(0, 5).join(", ")}${
+        recipientCheck.disallowed.length > 5
+          ? ` and ${recipientCheck.disallowed.length - 5} more`
+          : ""
+      }`,
       accountId: authContext.accountId,
     };
   }
