@@ -4,22 +4,25 @@ import { reportRun, reportTask } from "./fixtures";
 
 describe("formatMissedReportsAlert", () => {
   it("lists each missed report with its cause, account, run and notice state", () => {
-    const text = formatMissedReportsAlert([
-      {
-        task: reportTask,
-        run: reportRun,
-        cause: "email_rejected",
-        detail: "recipient_not_allowed: a@example.com",
-        customerNotified: true,
-      },
-      {
-        task: { ...reportTask, id: "task-2", title: "Daily fan digest", account_id: "acc-2" },
-        run: { ...reportRun, runId: "run_2" },
-        cause: "no_email",
-        detail: "no send attempted; run completed",
-        customerNotified: false,
-      },
-    ]);
+    const text = formatMissedReportsAlert(
+      [
+        {
+          task: reportTask,
+          run: reportRun,
+          cause: "email_rejected",
+          detail: "recipient_not_allowed: a@example.com",
+          customerNotified: true,
+        },
+        {
+          task: { ...reportTask, id: "task-2", title: "Daily fan digest", account_id: "acc-2" },
+          run: { ...reportRun, runId: "run_2" },
+          cause: "no_email",
+          detail: "no send attempted; run completed",
+          customerNotified: false,
+        },
+      ],
+      0,
+    );
 
     expect(text).toContain("2 scheduled reports did not send");
     expect(text).toContain(
@@ -31,16 +34,24 @@ describe("formatMissedReportsAlert", () => {
   });
 
   it("uses the singular for one report", () => {
-    const text = formatMissedReportsAlert([
-      {
-        task: reportTask,
-        run: reportRun,
-        cause: "plan_blocked",
-        detail: "Free includes 1 task.",
-        customerNotified: false,
-      },
-    ]);
+    const text = formatMissedReportsAlert(
+      [
+        {
+          task: reportTask,
+          run: reportRun,
+          cause: "plan_blocked",
+          detail: "Free includes 1 task.",
+          customerNotified: false,
+        },
+      ],
+      0,
+    );
     expect(text).toContain("1 scheduled report did not send");
     expect(text).toContain("plan blocked (Free includes 1 task.)");
+  });
+
+  it("says how many runs could not be checked", () => {
+    expect(formatMissedReportsAlert([], 2)).toContain("2 scheduled runs could not be checked");
+    expect(formatMissedReportsAlert([], 1)).toContain("1 scheduled run could not be checked");
   });
 });

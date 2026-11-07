@@ -13,6 +13,16 @@ vi.mock("@/lib/emails/sendEmail", () => ({
   sendEmailWithResend: (...args: unknown[]) => mockSend(...args),
 }));
 
+const mockSelectEmailSendLog = vi.fn();
+vi.mock("@/lib/supabase/email_send_log/selectEmailSendLog", () => ({
+  selectEmailSendLog: (...args: unknown[]) => mockSelectEmailSendLog(...args),
+}));
+
+const mockLogEmailAttempt = vi.fn();
+vi.mock("@/lib/emails/logEmailAttempt", () => ({
+  logEmailAttempt: (...args: unknown[]) => mockLogEmailAttempt(...args),
+}));
+
 const { sendMissedReportNotice } = await import("../sendMissedReportNotice");
 
 const rejected: MissedReport = {
@@ -35,6 +45,7 @@ describe("sendMissedReportNotice", () => {
     vi.stubEnv("MISSED_REPORT_CUSTOMER_NOTICES", "true");
     mockSelectAccountEmails.mockResolvedValue([{ email: "owner@example.com" }]);
     mockSend.mockResolvedValue({ id: "re_1" });
+    mockSelectEmailSendLog.mockResolvedValue([]);
   });
 
   it("sends nothing while customer notices are switched off", async () => {
@@ -49,6 +60,36 @@ describe("sendMissedReportNotice", () => {
     expect(email.to).toBe("owner@example.com");
     expect(email.subject).toBe("Your report didn't go out: Monthly Catalog Report: Luh Tyler");
     expect(email.html).toContain("We've been alerted");
+    expect(email.html).not.toMatch(/reply/i);
+    // A duplicate cron delivery for the same run must not email twice.
+    expect(mockSend.mock.calls[0][1]).toEqual({ idempotencyKey: "missed-report/run_1" });
+  });
+
+  // A blocked task fires on every scheduled run; tell the owner once a month,
+  // not every hour. The notice log row carries no account_id, so it never
+  // counts as the account's report being sent.
+  it("sends a plan-block notice once per task per 30 days and logs it without an account", async () => {
+    expect(await sendMissedReportNotice(blocked)).toBe(true);
+    expect(mockSelectEmailSendLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rawBodyLike: "missed_report_notice:task-1:plan_blocked",
+        limit: 1,
+      }),
+    );
+    expect(mockLogEmailAttempt).toHaveBeenCalledWith({
+      rawBody: JSON.stringify({
+        type: "missed_report_notice:task-1:plan_blocked",
+        account_id: "acc-1",
+        run_id: "run_1",
+      }),
+      status: "sent",
+      resendId: "re_1",
+    });
+
+    vi.clearAllMocks();
+    mockSelectEmailSendLog.mockResolvedValue([{ id: "earlier-notice" }]);
+    expect(await sendMissedReportNotice(blocked)).toBe(false);
+    expect(mockSend).not.toHaveBeenCalled();
   });
 
   it("explains a plan block with the upgrade link, escaping the task title", async () => {
