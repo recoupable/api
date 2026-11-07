@@ -41,10 +41,12 @@ export type ValidatedSendEmailRequest = Omit<SendEmailBody, "to" | "subject"> & 
 /**
  * Validation outcome. Always carries `rawBody` — the request body as received —
  * so the handler can record it in `email_send_log` on both the rejected and the
- * accepted paths without re-reading the request.
+ * accepted paths without re-reading the request. A rejection also carries
+ * `reason` (a short code, then detail) and the account once auth has resolved
+ * it, so the rejection rate can be grouped by cause (recoupable/app#1949 F2).
  */
 export type ValidateSendEmailResult =
-  | { rawBody: string; error: NextResponse }
+  | { rawBody: string; error: NextResponse; reason: string; accountId?: string }
   | { rawBody: string; data: ValidatedSendEmailRequest };
 
 /**
@@ -54,7 +56,7 @@ export type ValidateSendEmailResult =
  * `subject` is derived from the body when omitted. Always returns `rawBody`.
  *
  * @param request - The NextRequest object
- * @returns `{ rawBody, error }` if validation/auth/recipients fail, else `{ rawBody, data }`.
+ * @returns `{ rawBody, error, reason }` if validation/auth/recipients fail, else `{ rawBody, data }`.
  */
 export async function validateSendEmailBody(
   request: NextRequest,
@@ -72,18 +74,20 @@ export async function validateSendEmailBody(
   const result = sendEmailBodySchema.safeParse(parsed);
   if (!result.success) {
     const firstError = result.error.issues[0];
+    const field = firstError.path.join(".");
     return {
       rawBody,
       error: NextResponse.json(
         { status: "error", missing_fields: firstError.path, error: firstError.message },
         { status: 400, headers: getCorsHeaders() },
       ),
+      reason: `invalid_body: ${field ? `${field}: ` : ""}${firstError.message}`,
     };
   }
 
   const authContext = await validateAuthContext(request, { accountId: result.data.account_id });
   if (authContext instanceof NextResponse) {
-    return { rawBody, error: authContext };
+    return { rawBody, error: authContext, reason: `auth_failed: ${authContext.status}` };
   }
 
   let to = result.data.to ?? [];
@@ -97,6 +101,8 @@ export async function validateSendEmailBody(
           { status: "error", error: "No email address found for the authenticated account." },
           { status: 400, headers: getCorsHeaders() },
         ),
+        reason: "no_account_email",
+        accountId: authContext.accountId,
       };
     }
   }
@@ -116,6 +122,8 @@ export async function validateSendEmailBody(
         },
         { status: 403, headers: getCorsHeaders() },
       ),
+      reason: `recipient_not_allowed: ${recipientCheck.disallowed.join(", ")}`,
+      accountId: authContext.accountId,
     };
   }
 

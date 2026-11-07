@@ -2480,6 +2480,7 @@ export type Database = {
           created_at: string;
           id: string;
           raw_body: string | null;
+          reason: string | null;
           resend_id: string | null;
           status: string;
         };
@@ -2489,6 +2490,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           raw_body?: string | null;
+          reason?: string | null;
           resend_id?: string | null;
           status: string;
         };
@@ -2498,6 +2500,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           raw_body?: string | null;
+          reason?: string | null;
           resend_id?: string | null;
           status?: string;
         };

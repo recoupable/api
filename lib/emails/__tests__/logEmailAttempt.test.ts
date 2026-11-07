@@ -33,6 +33,23 @@ describe("logEmailAttempt", () => {
     expect(row.raw_body).toBe(raw);
   });
 
+  it("records why a send was rejected", async () => {
+    await logEmailAttempt({
+      rawBody: "{}",
+      status: "rejected",
+      accountId: "acc-1",
+      reason: "no_account_email",
+    });
+    const row = mockInsert.mock.calls[0][0];
+    expect(row.reason).toBe("no_account_email");
+    expect(row.account_id).toBe("acc-1");
+  });
+
+  it("stores a null reason when none is given", async () => {
+    await logEmailAttempt({ rawBody: "{}", status: "sent" });
+    expect(mockInsert.mock.calls[0][0].reason).toBeNull();
+  });
+
   it("stores the full raw body (no truncation)", async () => {
     await logEmailAttempt({ rawBody: "x".repeat(20000), status: "rejected" });
     expect(mockInsert.mock.calls[0][0].raw_body.length).toBe(20000);
