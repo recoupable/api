@@ -45,9 +45,11 @@ describe("logEmailAttempt", () => {
     expect(row.account_id).toBe("acc-1");
   });
 
-  it("stores a null reason when none is given", async () => {
+  // Sends without a reason never touch the column, so they keep logging even if
+  // this code ships before the email_send_log.reason migration is applied.
+  it("leaves reason out of the insert when none is given", async () => {
     await logEmailAttempt({ rawBody: "{}", status: "sent" });
-    expect(mockInsert.mock.calls[0][0].reason).toBeNull();
+    expect(mockInsert.mock.calls[0][0]).not.toHaveProperty("reason");
   });
 
   it("stores the full raw body (no truncation)", async () => {
