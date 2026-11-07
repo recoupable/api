@@ -240,4 +240,48 @@ describe("validateSendEmailBody", () => {
       if ("error" in result) expect(result.error.status).toBe(401);
     });
   });
+
+  // recoupable/app#1949 F2: a rejected send records why, so the rejection rate is diagnosable.
+  describe("rejection reason", () => {
+    it("names the disallowed recipients and the sending account", async () => {
+      mockAssertRecipientsAllowed.mockResolvedValue({
+        allowed: false,
+        disallowed: ["stranger@example.com", "other@example.com"],
+      });
+      const request = createRequest(
+        { to: ["stranger@example.com", "other@example.com"], text: "body" },
+        { "x-api-key": "k" },
+      );
+      const result = await validateSendEmailBody(request);
+      expect(result).toMatchObject({
+        reason: "recipient_not_allowed: stranger@example.com, other@example.com",
+        accountId: "account-123",
+      });
+    });
+
+    it("names the failing field when the body is invalid", async () => {
+      const request = createRequest({ to: ["d@example.com"], html: "   " }, { "x-api-key": "k" });
+      const result = await validateSendEmailBody(request);
+      expect(result).toMatchObject({
+        reason: "invalid_body: html: a non-empty html or text body is required",
+      });
+      expect("accountId" in result && result.accountId).toBeFalsy();
+    });
+
+    it("records the account when it has no email on file", async () => {
+      mockSelectAccountEmails.mockResolvedValue([]);
+      const request = createRequest({ text: "body" }, { "x-api-key": "k" });
+      const result = await validateSendEmailBody(request);
+      expect(result).toMatchObject({ reason: "no_account_email", accountId: "account-123" });
+    });
+
+    it("records the auth status when authentication fails", async () => {
+      mockValidateAuthContext.mockResolvedValue(
+        NextResponse.json({ status: "error", error: "Unauthorized" }, { status: 401 }),
+      );
+      const request = createRequest({ to: ["d@example.com"], text: "body" });
+      const result = await validateSendEmailBody(request);
+      expect(result).toMatchObject({ reason: "auth_failed: 401" });
+    });
+  });
 });
