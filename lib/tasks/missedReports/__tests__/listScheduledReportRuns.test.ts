@@ -52,9 +52,11 @@ describe("listScheduledReportRuns", () => {
       { id: "run_manual", status: "COMPLETED", createdAt: "2026-11-06T10:01:00.000Z" },
       { id: "run_broken", status: "COMPLETED", createdAt: "2026-11-06T10:02:00.000Z" },
       { id: "run_ok", status: "FAILED", createdAt: "2026-11-06T10:03:00.000Z" },
+      { id: "run_gone", status: "COMPLETED", createdAt: "2026-11-06T10:04:00.000Z" },
     ]);
     mockRetrieveTaskRun.mockImplementation(async (id: string) => {
       if (id === "run_manual") return { schedule: undefined };
+      if (id === "run_gone") return null;
       if (id === "run_broken") throw new Error("trigger down");
       return { schedule: { externalId: "task-2" } };
     });
@@ -62,7 +64,8 @@ describe("listScheduledReportRuns", () => {
     const { runs, unreadable } = await listScheduledReportRuns(window);
 
     expect(runs.map(run => run.runId)).toEqual(["run_ok"]);
-    expect(unreadable).toBe(1);
+    // run_broken threw and run_gone came back empty; a manual run is simply not scheduled.
+    expect(unreadable).toBe(2);
     expect(console.error).toHaveBeenCalled();
   });
 

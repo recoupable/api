@@ -6,8 +6,13 @@ const CAUSE_LABELS: Record<MissedReportCause, string> = {
   no_email: "no email",
 };
 
-/** Telegram cuts messages at 4,000 characters; this many lines stay well inside it. */
-const MAX_LISTED = 20;
+/** Telegram cuts messages at 4,000 characters; with the field caps below, ten lines stay inside it. */
+const MAX_LISTED = 10;
+const MAX_TITLE = 80;
+const MAX_DETAIL = 120;
+
+const clip = (text: string, max: number): string =>
+  text.length > max ? `${text.slice(0, max - 1)}…` : text;
 
 /**
  * The team's Telegram alert for scheduled reports that did not send: one
@@ -33,7 +38,7 @@ export function formatMissedReportsAlert(
     .slice(0, MAX_LISTED)
     .map(
       miss =>
-        `• ${miss.task.title}: ${CAUSE_LABELS[miss.cause]} (${miss.detail})\n  account ${miss.task.account_id}, run ${miss.run.runId}, customer ${miss.customerNotified ? "emailed" : "not emailed"}`,
+        `• ${clip(miss.task.title, MAX_TITLE)}: ${CAUSE_LABELS[miss.cause]} (${clip(miss.detail, MAX_DETAIL)})\n  account ${miss.task.account_id}, run ${miss.run.runId}, customer ${miss.customerNotified ? "emailed" : "not emailed"}`,
     );
   const notes = [
     ...(count > MAX_LISTED ? [`…and ${count - MAX_LISTED} more`] : []),

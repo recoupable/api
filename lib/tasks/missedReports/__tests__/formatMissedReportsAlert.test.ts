@@ -60,7 +60,7 @@ describe("formatMissedReportsAlert", () => {
   });
 
   // Telegram cuts messages at 4,000 characters; keep every alert readable.
-  it("lists at most 20 reports and counts the rest", () => {
+  it("lists at most 10 reports and counts the rest", () => {
     const miss = {
       task: reportTask,
       run: reportRun,
@@ -72,8 +72,8 @@ describe("formatMissedReportsAlert", () => {
       unchecked: 0,
       truncated: false,
     });
-    expect(text.match(/^• /gm)).toHaveLength(20);
-    expect(text).toContain("…and 5 more");
+    expect(text.match(/^• /gm)).toHaveLength(10);
+    expect(text).toContain("…and 15 more");
     expect(text.length).toBeLessThan(4000);
   });
 
@@ -81,5 +81,21 @@ describe("formatMissedReportsAlert", () => {
     expect(formatMissedReportsAlert([], { unchecked: 0, truncated: true })).toContain(
       "More than 100 runs started in that hour",
     );
+  });
+
+  it("shortens long titles and details so the alert stays within Telegram's limit", () => {
+    const miss = {
+      task: { ...reportTask, title: "T".repeat(500) },
+      run: reportRun,
+      cause: "email_rejected" as const,
+      detail: "D".repeat(1000),
+      customerNotified: false,
+    };
+    const text = formatMissedReportsAlert(Array(20).fill(miss), {
+      unchecked: 0,
+      truncated: false,
+    });
+    expect(text.length).toBeLessThan(4000);
+    expect(text).toContain("…");
   });
 });

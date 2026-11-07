@@ -58,7 +58,10 @@ export async function listScheduledReportRuns({
             setTimeout(() => reject(new Error("run read timed out")), READ_TIMEOUT_MS),
           ),
         ]);
-        const taskId = detail?.schedule?.externalId;
+        // A listed run that cannot be found is unchecked; one without a schedule
+        // (a manual run) simply is not a scheduled report.
+        if (!detail) throw new Error("run not found");
+        const taskId = detail.schedule?.externalId;
         if (!taskId) return null;
         return { runId: run.id, taskId, createdAt: run.createdAt, status: run.status };
       } catch (error) {
