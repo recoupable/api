@@ -3,7 +3,7 @@ import { callContextRpc } from "@/lib/supabase/context_requests/callContextRpc";
 import { flamingoGenerateBodySchema } from "@/lib/flamingo/flamingoGenerateBodySchema";
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
 import { verifyAudioUrl } from "@/lib/flamingo/verifyAudioUrl";
-import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsForAnalyzeRequest";
+import { FLAMINGO_BASE_CREDITS } from "@/lib/flamingo/creditsForFlamingoCall";
 import { requireCredits } from "./requireCredits";
 import { generateProductionObject } from "./generateProductionObject";
 import { authorizeSiteWorkspace } from "../authorizeSiteWorkspace";
@@ -29,7 +29,7 @@ export async function analyzeSiteContextAudio(
         const params = flamingoGenerateBodySchema.parse(input);
         if (!(await verifyAudioUrl(input.audio_url)).ok)
           throw new Error("Private audio URL unavailable");
-        await requireCredits(accountId, minimumCreditsForAnalyzeRequest(params));
+        await requireCredits(accountId, FLAMINGO_BASE_CREDITS);
         const result = await processAnalyzeMusicRequest(params, { accountId });
         if (
           result.type !== "success" ||

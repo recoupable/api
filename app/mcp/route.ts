@@ -12,8 +12,9 @@ import { createOAuthToolServices } from "@/lib/mcp/oauth/createOAuthToolServices
 import { validateMcpJsonBody } from "@/lib/mcp/validateMcpJsonBody";
 import { verifyOAuthBearer } from "@/lib/oauth/verifyOAuthBearer";
 
-// Site generation can take several minutes, matching the HTTP generation route.
-export const maxDuration = 300;
+// Site generation and analyze_music's full_report (13 sections run one after
+// another in one model batch) can take several minutes, matching their HTTP routes.
+export const maxDuration = 800;
 
 const baseHandler = createMcpHandler(
   server => {

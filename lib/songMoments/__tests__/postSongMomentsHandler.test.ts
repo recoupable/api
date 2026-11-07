@@ -50,14 +50,14 @@ describe("postSongMomentsHandler", () => {
     vi.mocked(processSongMomentsRequest).mockResolvedValue(measured);
   });
 
-  it("gates on the full possible price, then returns the measured song flat", async () => {
+  it("gates on the measurement plus one model base fee, then returns the measured song flat", async () => {
     const res = await postSongMomentsHandler(
       request({ audio_url: "https://example.com/song.mp3" }),
     );
 
     expect(ensureCreditsOrShortCircuit).toHaveBeenCalledWith({
       accountId: "acc_1",
-      creditsToDeduct: 360_000,
+      creditsToDeduct: 60_000,
     });
     expect(processSongMomentsRequest).toHaveBeenCalledWith(
       { audio_url: "https://example.com/song.mp3", describe: true },

@@ -62,6 +62,60 @@ describe("callFlamingoGenerateBatch", () => {
     });
   });
 
+  it("sends a prompt's clip window and its own settings only when the prompt has them", async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => RESULT });
+
+    await callFlamingoGenerateBatch({
+      ...BODY,
+      prompts: [
+        {
+          id: "climax",
+          prompt: "Describe this clip.",
+          max_new_tokens: 256,
+          clip: { start: 143.36, end: 158.1 },
+        },
+        {
+          id: "pitch",
+          prompt: "Pitch it.",
+          max_new_tokens: 512,
+          temperature: 0.6,
+          top_p: 0.9,
+          do_sample: true,
+        },
+        { id: "key", prompt: "Key?", max_new_tokens: 32 },
+      ],
+    });
+
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body).prompts).toEqual([
+      {
+        id: "climax",
+        prompt: "Describe this clip.",
+        max_new_tokens: 256,
+        clip_start: 143.36,
+        clip_end: 158.1,
+      },
+      {
+        id: "pitch",
+        prompt: "Pitch it.",
+        max_new_tokens: 512,
+        temperature: 0.6,
+        top_p: 0.9,
+        do_sample: true,
+      },
+      { id: "key", prompt: "Key?", max_new_tokens: 32 },
+    ]);
+  });
+
+  it("accepts an answer that echoes both ends of its clip", async () => {
+    const clipped = {
+      answers: [{ id: "a", response: "x", elapsed_seconds: 1, clip_start: 2, clip_end: 9.5 }],
+      elapsed_seconds: 1,
+    };
+    mockFetch.mockResolvedValue({ ok: true, json: async () => clipped });
+
+    await expect(callFlamingoGenerateBatch(BODY)).resolves.toEqual(clipped);
+  });
+
   it("passes an abort signal through when given one", async () => {
     mockFetch.mockResolvedValue({ ok: true, json: async () => RESULT });
     const controller = new AbortController();
@@ -117,6 +171,20 @@ describe("callFlamingoGenerateBatch", () => {
       { answers: [{ id: "a", response: 42, elapsed_seconds: 1 }], elapsed_seconds: 1 },
     ],
     ["an answer without seconds", { answers: [{ id: "a", response: "x" }], elapsed_seconds: 1 }],
+    [
+      "an answer with only one end of its clip",
+      {
+        answers: [{ id: "a", response: "x", elapsed_seconds: 1, clip_start: 2 }],
+        elapsed_seconds: 1,
+      },
+    ],
+    [
+      "an answer whose clip end is not a number",
+      {
+        answers: [{ id: "a", response: "x", elapsed_seconds: 1, clip_start: 2, clip_end: "9" }],
+        elapsed_seconds: 1,
+      },
+    ],
     ["null", null],
   ])("throws on an unexpected response shape: %s", async (_name, payload) => {
     mockFetch.mockResolvedValue({ ok: true, json: async () => payload });
