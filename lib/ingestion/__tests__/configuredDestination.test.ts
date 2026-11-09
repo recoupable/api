@@ -1,11 +1,18 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { deliverConfiguredIngestion } from "../deliverConfiguredIngestion";
-const mocks = vi.hoisted(() => ({ on: vi.fn(), connect: vi.fn(), end: vi.fn(), deliver: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  on: vi.fn(),
+  connect: vi.fn(),
+  end: vi.fn(),
+  deliver: vi.fn(),
+  query: vi.fn(),
+}));
 vi.mock("pg", () => ({
   Client: class {
     on = mocks.on;
     connect = mocks.connect;
     end = mocks.end;
+    query = mocks.query;
   },
 }));
 vi.mock("../deliverIngestionToPostgres", () => ({ deliverIngestionToPostgres: mocks.deliver }));
@@ -27,10 +34,12 @@ const gold = {
   field_types: { id: "string" as const },
 };
 describe("configured destination boundaries", () => {
+  afterEach(() => vi.unstubAllEnvs());
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("INGESTION_DESTINATIONS_JSON", JSON.stringify([config]));
     vi.stubEnv("INGESTION_DB_TEST", "postgresql://test:secret@database.example/test");
+    mocks.query.mockResolvedValue({ rows: [{ database_id: config.database_id }] });
     mocks.deliver.mockResolvedValue({ committed: true, rows: 1 });
   });
   function store() {
@@ -48,6 +57,21 @@ describe("configured destination boundaries", () => {
     await deliverConfiguredIngestion(scope, "db", "a".repeat(64), gold, "b".repeat(64), store());
     expect(mocks.on.mock.calls[0][0]).toBe("error");
     expect(() => mocks.on.mock.calls[0][1](new Error("connection dropped"))).not.toThrow();
+  });
+  it("does not freeze a binding before the live database identity matches", async () => {
+    const storage = store();
+    vi.stubEnv(
+      "INGESTION_DESTINATIONS_JSON",
+      JSON.stringify([{ ...config, database_id: "44444444-4444-4444-8444-444444444444" }]),
+    );
+    await expect(
+      deliverConfiguredIngestion(scope, "db", "a".repeat(64), gold, "b".repeat(64), storage),
+    ).rejects.toThrow("Destination identity mismatch");
+    expect(mocks.deliver).not.toHaveBeenCalled();
+    vi.stubEnv("INGESTION_DESTINATIONS_JSON", JSON.stringify([config]));
+    await expect(
+      deliverConfiguredIngestion(scope, "db", "a".repeat(64), gold, "b".repeat(64), storage),
+    ).resolves.toMatchObject({ committed: true });
   });
   it("refuses rebinding one destination ID to another logical database", async () => {
     const storage = store();

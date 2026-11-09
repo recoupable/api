@@ -34,6 +34,15 @@ describe("private artifact storage", () => {
     await expect(readIngestionObject("key")).rejects.toThrow("Private ingestion storage required");
     expect(mocks.from).not.toHaveBeenCalled();
   });
+  it("refuses missing or mismatched bucket size limits before transferring data", async () => {
+    for (const file_size_limit of [undefined, 1024, 32 * 1024 * 1024]) {
+      mocks.bucket.mockResolvedValue({ data: { public: false, file_size_limit }, error: null });
+      await expect(readIngestionObject("key")).rejects.toThrow(
+        "Ingestion bucket size limit required",
+      );
+    }
+    expect(mocks.from).not.toHaveBeenCalled();
+  });
   it("distinguishes missing objects from denied or unavailable reads", async () => {
     mocks.download.mockResolvedValue({ error: { statusCode: "404" } });
     expect(await readIngestionObject("key")).toBeNull();

@@ -58,3 +58,10 @@ export interface IngestionDependencies {
     digest: string,
   ): Promise<{ committed: boolean; rows: number }>;
 }
+
+export interface IngestionSqlClient {
+  query(
+    sql: string,
+    values?: unknown[],
+  ): Promise<{ rows: Record<string, unknown>[]; rowCount?: number | null }>;
+}

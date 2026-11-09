@@ -1,14 +1,8 @@
 import { destinationConfigSchema, type DestinationConfig } from "./destinationConfigSchema";
 import { hashIngestionValue } from "./hashIngestionValue";
-import type { GoldArtifact } from "./types";
+import { verifyIngestionDestinationIdentity } from "./verifyIngestionDestinationIdentity";
+import type { GoldArtifact, IngestionSqlClient } from "./types";
 import Decimal from "decimal.js";
-
-interface SqlClient {
-  query(
-    sql: string,
-    values?: unknown[],
-  ): Promise<{ rows: Record<string, unknown>[]; rowCount?: number | null }>;
-}
 
 /** Publish rows and an idempotency receipt in the same client-database transaction. */
 export async function deliverIngestionToPostgres(
@@ -16,7 +10,7 @@ export async function deliverIngestionToPostgres(
   deliveryId: string,
   gold: GoldArtifact,
   digest: string,
-  client: SqlClient,
+  client: IngestionSqlClient,
 ): Promise<{ committed: boolean; rows: number }> {
   const config = destinationConfigSchema.parse(input);
   if (
@@ -56,11 +50,7 @@ export async function deliverIngestionToPostgres(
     await client.query("SET LOCAL statement_timeout = '20000'");
     await client.query("SET LOCAL lock_timeout = '5000'");
     await client.query("SET LOCAL DateStyle = 'ISO, YMD'");
-    const identity = await client.query(
-      `SELECT database_id::text FROM ${quote(config.receipt_schema)}."destination_identity"`,
-    );
-    if (identity.rows.length !== 1 || identity.rows[0].database_id !== config.database_id)
-      throw new Error("Destination identity mismatch");
+    await verifyIngestionDestinationIdentity(config, client);
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [deliveryId]);
     const existing = await client.query(
       `SELECT artifact_sha256, target, config_sha256, row_count FROM ${receiptTable} WHERE delivery_id = $1`,

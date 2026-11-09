@@ -26,7 +26,7 @@ export function getIngestionFailure(error: unknown) {
   const [status, reason] =
     error instanceof ZodError
       ? [400, "invalid_arguments"]
-      : error instanceof Error && known[error.message]
+      : error instanceof Error && Object.hasOwn(known, error.message)
         ? known[error.message]
         : [503, "operation_unavailable"];
   return {
@@ -37,8 +37,10 @@ export function getIngestionFailure(error: unknown) {
         ? "Invalid ingestion arguments"
         : status === 403
           ? "Ingestion access denied"
-          : status === 429
-            ? "Too many ingestion requests. Try again shortly."
-            : "Ingestion operation unavailable. Check scope, job state and configuration.",
+          : status === 413
+            ? "Ingestion size limit exceeded"
+            : status === 429
+              ? "Too many ingestion requests. Try again shortly."
+              : "Ingestion operation unavailable. Check scope, job state and configuration.",
   };
 }
