@@ -47,6 +47,18 @@ describe("configured API source acquisition", () => {
     );
     await expect(acquireIngestionSource(scope, "report")).rejects.toThrow("Source size limit");
   });
+  it("rejects malformed server URLs as configuration errors without fetching", async () => {
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    vi.stubEnv(
+      "INGESTION_SOURCES_JSON",
+      JSON.stringify([{ id: "report", scope, url: "invalid-url" }]),
+    );
+    await expect(acquireIngestionSource(scope, "report")).rejects.toThrow(
+      "Source connector configuration invalid",
+    );
+    expect(fetcher).not.toHaveBeenCalled();
+  });
   it("refuses unconfigured credentials and non-HTTPS connectors", async () => {
     const fetcher = vi.fn();
     vi.stubGlobal("fetch", fetcher);

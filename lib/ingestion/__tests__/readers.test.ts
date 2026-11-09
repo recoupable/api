@@ -61,10 +61,25 @@ describe("native reader qualification", () => {
     expect(result.status).toBe("rejected");
   });
   it("refuses XML entity definitions before parsing a workbook", async () => {
-    const bytes = zipSync({
-      "xl/workbook.xml": strToU8('<!DOCTYPE x [<!ENTITY secret "value">]><workbook/>'),
-    });
-    expect((await runIngestionPipeline(bytes, "xlsx", contract)).status).toBe("rejected");
+    const files = {
+      "xl/workbook.xml": strToU8(
+        '<workbook><sheets><sheet name="Data" r:id="r1"/></sheets></workbook>',
+      ),
+      "xl/_rels/workbook.xml.rels": strToU8(
+        '<Relationships><Relationship Id="r1" Target="worksheets/sheet1.xml"/></Relationships>',
+      ),
+      "xl/worksheets/sheet1.xml": strToU8(
+        '<worksheet><sheetData><row r="1"><c r="A1" t="inlineStr"><is><t>ID</t></is></c><c r="B1" t="inlineStr"><is><t>Amount</t></is></c></row><row r="2"><c r="A2" t="inlineStr"><is><t>001</t></is></c><c r="B2"><v>0.3</v></c></row></sheetData></worksheet>',
+      ),
+    };
+    expect((await runIngestionPipeline(zipSync(files), "xlsx", contract)).status).toBe("ready");
+    files["xl/workbook.xml"] = strToU8(
+      '<!DOCTYPE x [<!ENTITY secret "value">]>' +
+        new TextDecoder().decode(files["xl/workbook.xml"]),
+    );
+    const result = await runIngestionPipeline(zipSync(files), "xlsx", contract);
+    expect(result.status).toBe("rejected");
+    expect(result.issues[0].code).toBe("WORKBOOK_INVALID");
   });
   it("preserves JSONL precision and reads declared API envelope paths", async () => {
     const c = ingestionContractSchema.parse({

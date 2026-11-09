@@ -85,6 +85,44 @@ describe("ingestion integrity boundaries", () => {
     );
     await expect(readIngestionManifest(store, "invalid", id)).rejects.toThrow("Invalid scope");
   });
+  it("rejects malformed IDs, missing manifests and mismatched manifest owners", async () => {
+    const manifest = {
+      job_id: id,
+      input_sha256: id,
+      engine_version: "1",
+      scope,
+      format: "csv",
+      filename: "data.csv",
+      bronze_key: `${scope}/originals/${id}`,
+      bronze_sha256: id,
+      source: { kind: "inline" },
+      contract,
+      created_at: new Date().toISOString(),
+    };
+    let saved: unknown = manifest;
+    const store = {
+      read: async () => (saved === null ? null : Buffer.from(JSON.stringify(saved))),
+      create: async () => false,
+    };
+    await expect(readIngestionManifest(store, scope, "bad-id")).rejects.toThrow("Invalid scope");
+    await expect(readIngestionManifest(store, scope, id)).resolves.toMatchObject({
+      scope,
+      job_id: id,
+    });
+    saved = { ...manifest, job_id: "b".repeat(64) };
+    await expect(readIngestionManifest(store, scope, id)).rejects.toThrow(
+      "Ingestion job not found",
+    );
+    const other = "account/22222222-2222-4222-8222-222222222222";
+    saved = { ...manifest, scope: other, bronze_key: `${other}/originals/${id}` };
+    await expect(readIngestionManifest(store, scope, id)).rejects.toThrow(
+      "Ingestion job not found",
+    );
+    saved = null;
+    await expect(readIngestionManifest(store, scope, id)).rejects.toThrow(
+      "Ingestion job not found",
+    );
+  });
   it("does not approve an unmatched zero-valued control", async () => {
     const c = ingestionContractSchema.parse({
       version: "1",
