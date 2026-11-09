@@ -8,6 +8,12 @@ describe("safe ingestion failures", () => {
         reason: "operation_unavailable",
       });
   });
+  it("reports an oversized shared-database record as a size error", () => {
+    expect(getIngestionFailure(new Error("Ingestion record size limit"))).toMatchObject({
+      status: 413,
+      reason: "record_size_limit",
+    });
+  });
   it("explains the size limit for oversized requests", () => {
     expect(getIngestionFailure(new Error("Request too large"))).toMatchObject({
       status: 413,

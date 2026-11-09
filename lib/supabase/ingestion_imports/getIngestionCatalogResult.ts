@@ -22,7 +22,9 @@ export const getIngestionCatalogResult: IngestionDependencies["catalog"] = async
     if (error.code === "42501") throw new Error("Access denied");
     if (
       error.code === "P0001" &&
-      ["Ingestion catalog conflict", "Artifact not ready"].includes(error.message)
+      ["Ingestion catalog conflict", "Artifact not ready", "Ingestion record size limit"].includes(
+        error.message,
+      )
     )
       throw new Error(error.message);
     throw new Error("Ingestion catalog unavailable");
