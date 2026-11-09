@@ -52,7 +52,7 @@ export function registerOAuthTools(
     {
       description: "List artists in your personal Recoup account.",
       inputSchema: z.object({}).strict(),
-      annotations: { readOnlyHint: true },
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     (_args, extra) => run(extra, "list_artists", id => services.listArtists(id)),
   );
@@ -84,7 +84,7 @@ export function registerOAuthTools(
             value.instruction !== undefined,
           "Provide at least one profile field to update",
         ),
-      annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+      annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
     },
     ({ artistId, ...updates }, extra) =>
       run(extra, "update_account_info", id => services.updateArtist(id, artistId, updates)),
@@ -94,7 +94,7 @@ export function registerOAuthTools(
     {
       description: "Read social profiles for an artist in your personal Recoup account.",
       inputSchema: z.object({ artist_account_id: z.string().uuid() }).strict(),
-      annotations: { readOnlyHint: true },
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     (args, extra) =>
       run(extra, "get_artist_socials", id => services.getSocials(id, args.artist_account_id)),
@@ -104,7 +104,7 @@ export function registerOAuthTools(
     {
       description: "List your own Recoup chat conversations.",
       inputSchema: z.object({}).strict(),
-      annotations: { readOnlyHint: true },
+      annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     (_args, extra) => run(extra, "get_chats", id => services.getChats(id)),
   );
