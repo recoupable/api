@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "strict": true, "incremental": false },
+  "include": ["lib/ingestion/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "lib/ingestion/__tests__/**",
+    "lib/ingestion/authorizeIngestionScope.ts",
+    "lib/ingestion/limitIngestionRequest.ts",
+    "lib/ingestion/createIngestionDependencies.ts",
+    "lib/ingestion/dispatchIngestionJob.ts",
+    "lib/ingestion/ingestionOperationHandler.ts"
+  ]
+}

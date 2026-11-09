@@ -123,7 +123,10 @@ export function readIngestionWorkbook(bytes: Uint8Array, contract: IngestionCont
           throw new Error("SHARED_STRING_INVALID");
         value = strings[Number(value)];
       }
-      if (type === "b") value = value === "1" ? "true" : value === "0" ? "false" : value;
+      if (type === "b") {
+        if (!["0", "1"].includes(value)) throw new Error("CELL_TYPE_UNSUPPORTED");
+        value = value === "1" ? "true" : "false";
+      }
       cells[column] = value;
     }
     if (number < contract.header_row) continue;
@@ -133,7 +136,8 @@ export function readIngestionWorkbook(bytes: Uint8Array, contract: IngestionCont
         throw new Error("HEADER_INVALID");
       continue;
     }
-    if (!header || cells.length > header.length) throw new Error("ROW_WIDTH_INVALID");
+    if (!header || cells.slice(header.length).some(v => v !== ""))
+      throw new Error("ROW_WIDTH_INVALID");
     if (!cells.some(v => v !== "")) continue;
     output.push({
       source_row: number,
@@ -141,6 +145,7 @@ export function readIngestionWorkbook(bytes: Uint8Array, contract: IngestionCont
       values: Object.fromEntries(header.map((h, i) => [h, cells[i] ?? ""])),
     });
   }
-  if (!header || output.length > INGESTION_MAX_ROWS) throw new Error("ROW_LIMIT");
+  if (!header) throw new Error("HEADER_INVALID");
+  if (output.length > INGESTION_MAX_ROWS) throw new Error("ROW_LIMIT");
   return output;
 }

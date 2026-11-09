@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readIngestionObject } from "@/lib/supabase/storage/readIngestionObject";
 import { createIngestionObject } from "@/lib/supabase/storage/createIngestionObject";
 const mocks = vi.hoisted(() => ({
@@ -11,11 +11,15 @@ vi.mock("@/lib/supabase/serverClient", () => ({
   default: { storage: { getBucket: mocks.bucket, from: mocks.from } },
 }));
 describe("private artifact storage", () => {
+  afterEach(() => vi.unstubAllEnvs());
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubEnv("INGESTION_STORAGE_BUCKET", "recoup-ingestion");
     mocks.from.mockReturnValue({ download: mocks.download, upload: mocks.upload });
-    mocks.bucket.mockResolvedValue({ data: { public: false }, error: null });
+    mocks.bucket.mockResolvedValue({
+      data: { public: false, file_size_limit: 16 * 1024 * 1024 },
+      error: null,
+    });
   });
   it("refuses public buckets before any data transfer", async () => {
     mocks.bucket.mockResolvedValue({ data: { public: true }, error: null });

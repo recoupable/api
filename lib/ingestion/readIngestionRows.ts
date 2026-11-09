@@ -32,9 +32,13 @@ export async function readIngestionRows(
           skip_empty_lines: true,
           max_record_size: 100000,
           info: true,
+          relax_column_count: true,
         }),
       );
-    const header = rows[contract.header_row - 1]?.record;
+    const startLine = (r: (typeof rows)[number]) =>
+      r.info.lines - r.record.reduce((n, v) => n + (v.match(/\r\n|\r|\n/g)?.length ?? 0), 0);
+    const headerIndex = rows.findIndex(r => startLine(r) === contract.header_row);
+    const header = rows[headerIndex]?.record;
     if (
       !header?.length ||
       header.length > INGESTION_MAX_COLUMNS ||
@@ -42,9 +46,10 @@ export async function readIngestionRows(
       new Set(header).size !== header.length
     )
       throw new Error("HEADER_INVALID");
-    if (rows.length - contract.header_row > INGESTION_MAX_ROWS) throw new Error("ROW_LIMIT");
-    return rows.slice(contract.header_row).map(({ record: cells, info }) => {
+    if (rows.length - headerIndex - 1 > INGESTION_MAX_ROWS) throw new Error("ROW_LIMIT");
+    return rows.slice(headerIndex + 1).map(({ record: cells, info }) => {
       if (cells.length !== header.length) throw new Error("ROW_WIDTH_INVALID");
+      if (cells.every((v, i) => v === header[i])) throw new Error("REPEATED_HEADER");
       return {
         source_row:
           info.lines - cells.reduce((n, cell) => n + (cell.match(/\r\n|\r|\n/g)?.length ?? 0), 0),

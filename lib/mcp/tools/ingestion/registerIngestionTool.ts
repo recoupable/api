@@ -4,6 +4,7 @@ import { handleIngestionToolOperation } from "./handleIngestionToolOperation";
 
 /** Register private ingestion for standard authenticated connections. */
 export function registerIngestionTool(server: McpServer) {
+  if (process.env.INGESTION_ENABLED !== "true") return;
   server.registerTool(
     "ingestion",
     {

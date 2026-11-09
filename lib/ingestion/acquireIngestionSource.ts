@@ -5,8 +5,12 @@ const sourceSchema = z.strictObject({
   id: z.string().min(1).max(128),
   scope: z.string().regex(/^(account|organization)\/[a-f0-9-]{36}$/),
   url: z.url().refine(s => {
-    const u = new URL(s);
-    return u.protocol === "https:" && !u.username && !u.password;
+    try {
+      const u = new URL(s);
+      return u.protocol === "https:" && !u.username && !u.password;
+    } catch {
+      return false;
+    }
   }),
   token_env: z
     .string()
@@ -16,9 +20,13 @@ const sourceSchema = z.strictObject({
 
 /** Acquire one bounded JSON snapshot from an operator-configured HTTPS connector. No caller URLs. */
 export async function acquireIngestionSource(scope: string, connectorId: string) {
-  const sources = z
-    .array(sourceSchema)
-    .parse(JSON.parse(process.env.INGESTION_SOURCES_JSON ?? "[]"));
+  const sources = (() => {
+    try {
+      return z.array(sourceSchema).parse(JSON.parse(process.env.INGESTION_SOURCES_JSON ?? "[]"));
+    } catch {
+      throw new Error("Source connector configuration invalid");
+    }
+  })();
   const matches = sources.filter(s => s.scope === scope && s.id === connectorId);
   if (matches.length !== 1) throw new Error("Source connector unavailable");
   const source = matches[0];

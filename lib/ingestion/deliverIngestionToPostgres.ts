@@ -55,6 +55,12 @@ export async function deliverIngestionToPostgres(
   try {
     await client.query("SET LOCAL statement_timeout = '20000'");
     await client.query("SET LOCAL lock_timeout = '5000'");
+    await client.query("SET LOCAL DateStyle = 'ISO, YMD'");
+    const identity = await client.query(
+      `SELECT database_id::text FROM ${quote(config.receipt_schema)}."destination_identity"`,
+    );
+    if (identity.rows.length !== 1 || identity.rows[0].database_id !== config.database_id)
+      throw new Error("Destination identity mismatch");
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [deliveryId]);
     const existing = await client.query(
       `SELECT artifact_sha256, target, config_sha256, row_count FROM ${receiptTable} WHERE delivery_id = $1`,

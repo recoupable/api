@@ -9,6 +9,49 @@ vi.mock("../dispatchIngestionJob", () => ({ dispatchIngestionJob: vi.fn() }));
 vi.mock("../processIngestionOperation", () => ({ processIngestionOperation: vi.fn() }));
 
 describe("ingestion HTTP boundary", () => {
+  it.each([
+    ["Access denied", 403],
+    ["Idempotency conflict", 409],
+    ["Ingestion request limit reached", 429],
+    ["backend unavailable", 503],
+  ])("maps %s without leaking internal detail", async (message, status) => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "actor",
+      orgId: null,
+      authToken: "secret",
+    });
+    vi.mocked(processIngestionOperation).mockRejectedValue(new Error(message));
+    const response = await ingestionOperationHandler(
+      new NextRequest("https://test/api/ingestion", { method: "POST", body: "{}" }),
+    );
+    expect(response.status).toBe(status);
+  });
+  it("supports authenticated GET retrieval while rejecting mutation query parameters", async () => {
+    vi.mocked(validateAuthContext).mockResolvedValue({
+      accountId: "actor",
+      orgId: null,
+      authToken: "secret",
+    });
+    vi.mocked(processIngestionOperation).mockResolvedValue({
+      job_id: "a".repeat(64),
+      status: "ready",
+    });
+    const response = await ingestionOperationHandler(
+      new NextRequest(`https://test/api/ingestion?job_id=${"a".repeat(64)}`),
+    );
+    expect(response.status).toBe(200);
+    expect(vi.mocked(processIngestionOperation).mock.calls[0][1]).toEqual({
+      action: "read",
+      job_id: "a".repeat(64),
+    });
+    expect(
+      (
+        await ingestionOperationHandler(
+          new NextRequest(`https://test/api/ingestion?job_id=${"a".repeat(64)}&action=deliver`),
+        )
+      ).status,
+    ).toBe(400);
+  });
   beforeEach(() => {
     vi.resetAllMocks();
     vi.stubEnv("INGESTION_ENABLED", "true");

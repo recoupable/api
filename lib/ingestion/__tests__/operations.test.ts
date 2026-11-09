@@ -20,6 +20,7 @@ function harness() {
   const objects = new Map<string, Uint8Array>();
   let allowed = true;
   const deps: IngestionDependencies = {
+    limit: async () => undefined,
     authorize: async (actor, organization) => {
       if (!allowed) throw new Error("Access denied");
       return organization ? `organization/${organization}` : `account/${actor}`;
@@ -47,6 +48,40 @@ function harness() {
   };
 }
 describe("ingestion operations", () => {
+  it("refuses noncanonical base64 and oversized decoded sources before capture", async () => {
+    const { deps, objects } = harness();
+    await expect(
+      processIngestionOperation(
+        owner,
+        { ...input, source: { ...input.source, content_base64: "AB==" } },
+        deps,
+      ),
+    ).rejects.toThrow("Invalid base64");
+    await expect(
+      processIngestionOperation(
+        owner,
+        {
+          ...input,
+          source: {
+            ...input.source,
+            content_base64: Buffer.alloc(2 * 1024 * 1024 + 1).toString("base64"),
+          },
+        },
+        deps,
+      ),
+    ).rejects.toThrow("Source size limit");
+    expect(objects.size).toBe(0);
+  });
+  it("checks request limits before source acquisition or object creation", async () => {
+    const { deps, objects } = harness();
+    deps.limit = async () => {
+      throw new Error("Ingestion request limit reached");
+    };
+    await expect(processIngestionOperation(owner, input, deps)).rejects.toThrow(
+      "Ingestion request limit reached",
+    );
+    expect(objects.size).toBe(0);
+  });
   it("converges concurrent creation and resumes after dispatch failure without recapturing", async () => {
     const { deps } = harness();
     let attempts = 0;
@@ -183,7 +218,7 @@ describe("ingestion operations", () => {
     );
     expect(receipt.receipt.committed).toBe(true);
   });
-  it("rejects oversized, malformed and impersonating requests", async () => {
+  it("rejects malformed and impersonating requests", async () => {
     const { deps } = harness();
     for (const value of [
       { ...input, account_id: other },

@@ -7,8 +7,10 @@ export async function authorizeIngestionScope(
   organization?: string,
 ): Promise<string> {
   z.uuid().parse(actor);
+  actor = actor.toLowerCase();
   if (!organization) return `account/${actor.toLowerCase()}`;
   z.uuid().parse(organization);
+  organization = organization.toLowerCase();
   if (!(await validateOrganizationAccess({ accountId: actor, organizationId: organization })))
     throw new Error("Access denied");
   return `organization/${organization.toLowerCase()}`;

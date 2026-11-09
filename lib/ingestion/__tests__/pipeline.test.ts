@@ -16,6 +16,28 @@ const run = (text: string, format = "csv", rules = contract) =>
   runIngestionPipeline(Buffer.from(text), format as "csv", rules);
 
 describe("medallion processing", () => {
+  it("holds a required identifier that becomes blank after explicit trimming", async () => {
+    const rules = ingestionContractSchema.parse({
+      ...contract,
+      fields: contract.fields.map(f => ({ ...f, trim: true })),
+    });
+    const result = await run('ID,Amount\n"   ",0.3', "csv", rules);
+    expect(result.status).toBe("held");
+    expect(result.gold).toBeNull();
+    expect(result.issues).toContainEqual({ code: "VALUE_INVALID_OR_MISSING", row: 2, field: "id" });
+  });
+  it("normalizes explicitly trimmed blanks to null consistently across field types", async () => {
+    const rules = ingestionContractSchema.parse({
+      version: "1",
+      fields: [
+        { name: "id", source: "ID", type: "string", trim: true, nullable: true },
+        { name: "amount", source: "Amount", type: "decimal", trim: true, nullable: true },
+      ],
+    });
+    const result = await run('ID,Amount\n"   ","   "', "csv", rules);
+    expect(result.status).toBe("ready");
+    expect(result.gold?.records).toEqual([{ id: null, amount: null }]);
+  });
   it("preserves identifiers, source coordinates and exact decimal control totals", async () => {
     const result = await run("ID,Amount\n001,0.1\n002,0.2\n");
     expect(result.status).toBe("ready");

@@ -37,7 +37,7 @@ describe("configured API source acquisition", () => {
     vi.stubGlobal("fetch", fetcher);
     await expect(
       acquireIngestionSource("account/22222222-2222-4222-8222-222222222222", "report"),
-    ).rejects.toThrow();
+    ).rejects.toThrow("Source connector unavailable");
     expect(fetcher).not.toHaveBeenCalled();
   });
   it("bounds chunked sources without trusting Content-Length", async () => {

@@ -8,6 +8,12 @@ export async function readIngestionObject(key: string): Promise<Uint8Array | nul
   const { data, error } = await supabase.storage.from(bucket).download(key);
   if (error) {
     if ("statusCode" in error && String(error.statusCode) === "404") return null;
+    console.error("[ingestion] storage read failed", {
+      status:
+        "statusCode" in error && /^\d{3}$/.test(String(error.statusCode))
+          ? String(error.statusCode)
+          : "unknown",
+    });
     throw new Error("Ingestion storage read failed");
   }
   if (!data || data.size > INGESTION_MAX_ARTIFACT_BYTES)

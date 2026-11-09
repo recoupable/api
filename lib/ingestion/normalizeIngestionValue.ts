@@ -6,11 +6,11 @@ export function normalizeIngestionValue(
   value: string | null,
   field: IngestionContract["fields"][number],
 ): string | null {
-  if (value === null || value === "") {
+  const text = value === null ? null : field.trim ? value.trim() : value;
+  if (text === null || text === "") {
     if (field.nullable) return null;
     throw new Error("VALUE_REQUIRED");
   }
-  const text = field.trim ? value.trim() : value;
   if (field.type === "string") return text;
   if (field.type === "boolean") {
     if (!["true", "false"].includes(text)) throw new Error("VALUE_INVALID");

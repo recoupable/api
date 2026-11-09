@@ -14,6 +14,7 @@ export async function processIngestionOperation(
 ) {
   const args = ingestionOperationSchema.parse(input);
   const scope = await deps.authorize(actor, args.organization_id);
+  await deps.limit(actor, scope, args.action);
   const recheck = async () => {
     if ((await deps.authorize(actor, args.organization_id)) !== scope)
       throw new Error("Scope changed");
@@ -69,7 +70,7 @@ export async function processIngestionOperation(
       saved = await deps.store.read(`${prefix}/manifest.json`);
     }
     if (!saved) throw new Error("Job creation unavailable");
-    const manifest: IngestionManifest = JSON.parse(new TextDecoder().decode(saved));
+    const manifest = await readIngestionManifest(deps.store, scope, jobId);
     if (
       manifest.input_sha256 !== fingerprint ||
       manifest.scope !== scope ||

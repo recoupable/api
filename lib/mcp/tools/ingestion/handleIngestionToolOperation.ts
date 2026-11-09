@@ -7,6 +7,7 @@ import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { processIngestionOperation } from "@/lib/ingestion/processIngestionOperation";
 import { createIngestionDependencies } from "@/lib/ingestion/createIngestionDependencies";
 import { dispatchIngestionJob } from "@/lib/ingestion/dispatchIngestionJob";
+import { getIngestionFailure } from "@/lib/ingestion/getIngestionFailure";
 
 /** Execute the same scope-checked domain operation as the HTTP endpoint. */
 export async function handleIngestionToolOperation(
@@ -25,7 +26,10 @@ export async function handleIngestionToolOperation(
         createIngestionDependencies(dispatchIngestionJob),
       ),
     );
-  } catch {
+  } catch (error) {
+    console.error("[ingestion] MCP operation failed", {
+      reason: getIngestionFailure(error).reason,
+    });
     return {
       ...getToolResultError(
         "Ingestion operation unavailable. Check authentication, workspace access and operation arguments.",

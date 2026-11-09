@@ -1,4 +1,5 @@
 import type { ArtifactStore, IngestionManifest } from "./types";
+import { ingestionManifestSchema } from "./ingestionManifestSchema";
 
 /** Read only within the already authorized scope. Job identifiers never grant access. */
 export async function readIngestionManifest(
@@ -10,7 +11,12 @@ export async function readIngestionManifest(
     throw new Error("Invalid scope");
   const bytes = await store.read(`${scope}/${jobId}/manifest.json`);
   if (!bytes) throw new Error("Ingestion job not found");
-  const manifest: IngestionManifest = JSON.parse(new TextDecoder().decode(bytes));
+  let manifest: IngestionManifest;
+  try {
+    manifest = ingestionManifestSchema.parse(JSON.parse(new TextDecoder().decode(bytes)));
+  } catch {
+    throw new Error("Invalid ingestion manifest");
+  }
   if (manifest.scope !== scope || manifest.job_id !== jobId)
     throw new Error("Ingestion job not found");
   return manifest;

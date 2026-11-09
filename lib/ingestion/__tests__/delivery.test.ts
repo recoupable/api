@@ -6,6 +6,7 @@ const config: DestinationConfig = {
   id: "test",
   scope: "account/11111111-1111-4111-8111-111111111111",
   connection_env: "INGESTION_DB_TEST",
+  database_id: "33333333-3333-4333-8333-333333333333",
   schema: "public",
   table: "income",
   receipt_schema: "ingestion",
@@ -26,6 +27,8 @@ function client(fail = false, existing?: unknown) {
     queries,
     query: async (sql: string, values?: unknown[]) => {
       queries.push({ sql, values });
+      if (sql.startsWith("SELECT database_id"))
+        return { rows: [{ database_id: config.database_id }] };
       if (sql.startsWith("SELECT artifact")) return { rows: existing ? [existing] : [] };
       if (sql.startsWith("SELECT a.attname"))
         return {
@@ -54,12 +57,6 @@ describe("transactional destination delivery", () => {
     expect(db.queries.some(q => q.sql.startsWith('INSERT INTO "ingestion"'))).toBe(true);
   });
   it("recovers a lost acknowledgement using the destination receipt without loading twice", async () => {
-    const db = client(false, {
-      artifact_sha256: "b".repeat(64),
-      target: "public.income",
-      config_sha256: "",
-      row_count: 1,
-    });
     // Get the configuration fingerprint from a successful first delivery.
     const first = client();
     await deliverIngestionToPostgres(config, "a".repeat(64), gold, "b".repeat(64), first);
@@ -75,7 +72,7 @@ describe("transactional destination delivery", () => {
         .committed,
     ).toBe(true);
     expect(replay.queries.some(q => q.sql.startsWith("INSERT"))).toBe(false);
-    expect(db.queries.length).toBe(0);
+    expect(replay.queries.some(q => q.sql.startsWith("SELECT artifact"))).toBe(true);
   });
   it("rolls back both target and receipt on a failed load", async () => {
     const db = client(true);

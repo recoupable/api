@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { ingestionManifestSchema } from "./ingestionManifestSchema";
 import type { ingestionContractSchema, ingestionFormatSchema } from "./schemas";
 
 export type IngestionContract = z.infer<typeof ingestionContractSchema>;
@@ -21,35 +22,29 @@ export interface GoldArtifact {
   records: Values[];
   field_types: Record<string, IngestionContract["fields"][number]["type"]>;
 }
-export interface PipelineResult {
-  status: "ready" | "held" | "rejected";
+export interface PipelineEvidence {
+  rows_read: number;
   silver: { records: SourceRow[] };
-  gold: GoldArtifact | null;
   controls: { field: string; expected: string; actual: string; passed: boolean }[];
   issues: IngestionIssue[];
   issue_count: number;
 }
+export type PipelineResult = PipelineEvidence &
+  ({ status: "ready"; gold: GoldArtifact } | { status: "held" | "rejected"; gold: null });
 export interface ArtifactStore {
   read(key: string): Promise<Uint8Array | null>;
   /** Atomic create-if-absent. Never overwrites an existing object. */
   create(key: string, bytes: Uint8Array): Promise<boolean>;
 }
-export interface IngestionManifest {
-  job_id: string;
-  input_sha256: string;
-  engine_version: string;
-  scope: string;
-  format: IngestionFormat;
-  filename: string;
-  bronze_key: string;
-  bronze_sha256: string;
-  source: { kind: "inline" | "connector"; connector_id?: string };
-  contract: IngestionContract;
-  created_at: string;
-}
+export type IngestionManifest = z.infer<typeof ingestionManifestSchema>;
 export interface IngestionDependencies {
   store: ArtifactStore;
   authorize(actor: string, organization?: string): Promise<string>;
+  limit(
+    actor: string,
+    scope: string,
+    action: "create" | "read" | "artifact" | "deliver",
+  ): Promise<void>;
   dispatch(actor: string, organization: string | undefined, jobId: string): Promise<unknown>;
   acquire(
     scope: string,

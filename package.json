@@ -26,7 +26,7 @@
     "test:chat-fence-foundation": "vitest run lib/chat/fence lib/supabase/chat_fence && tsc --noEmit --project tsconfig.chat-fence.json && tsc --noEmit --project tsconfig.chat-fence.json --strict false && node scripts/chat-fence-fixture/run.mjs",
     "test:chat-fence-workflow": "node scripts/chat-fence-workflow-fixture/run.mjs",
     "test:ingestion": "vitest run lib/ingestion/__tests__",
-    "typecheck:ingestion": "tsc --noEmit --project tsconfig.ingestion.json"
+    "typecheck:ingestion": "tsc --noEmit --project tsconfig.ingestion-core.json && tsc --noEmit --project tsconfig.ingestion.json"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.78",

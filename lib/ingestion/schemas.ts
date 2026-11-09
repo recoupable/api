@@ -46,7 +46,11 @@ export const ingestionContractSchema = z
     text_table: z
       .strictObject({
         review_ref: z.string().min(1).max(200),
-        separator: z.string().min(1).max(10),
+        separator: z
+          .string()
+          .min(1)
+          .max(10)
+          .refine(s => !/[\r\n]/.test(s), "A separator cannot contain line breaks"),
       })
       .optional(),
   })

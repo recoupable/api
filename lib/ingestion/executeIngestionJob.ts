@@ -21,20 +21,26 @@ export async function executeIngestionJob(
   const bronze = await deps.store.read(manifest.bronze_key);
   if (!bronze || hashIngestionBytes(bronze) !== manifest.bronze_sha256)
     throw new Error("Original integrity check failed");
-  const processed = await runIngestionPipeline(bronze, manifest.format, manifest.contract);
-  const rowsRead = processed.silver.records.length;
+  let processed = await runIngestionPipeline(bronze, manifest.format, manifest.contract);
+  const rowsRead = processed.rows_read;
   const encode = (value: unknown) => Buffer.from(JSON.stringify(value));
   let silver = encode(processed.silver);
-  if (silver.length > INGESTION_MAX_ARTIFACT_BYTES) {
-    processed.status = "rejected";
-    processed.gold = null;
-    processed.silver = { records: [] };
-    processed.issues = [{ code: "OUTPUT_SIZE_LIMIT" }];
-    processed.issue_count = 1;
+  let gold = processed.gold ? encode(processed.gold) : null;
+  if (
+    silver.length > INGESTION_MAX_ARTIFACT_BYTES ||
+    (gold && gold.length > INGESTION_MAX_ARTIFACT_BYTES)
+  ) {
+    processed = {
+      ...processed,
+      status: "rejected",
+      gold: null,
+      silver: { records: [] },
+      issues: [{ code: "OUTPUT_SIZE_LIMIT" }],
+      issue_count: 1,
+    };
     silver = encode(processed.silver);
+    gold = null;
   }
-  const gold = processed.gold ? encode(processed.gold) : null;
-  if (gold && gold.length > INGESTION_MAX_ARTIFACT_BYTES) throw new Error("Output size limit");
   if ((await deps.authorize(actor, organization)) !== scope) throw new Error("Scope changed");
   await writeIngestionArtifact(deps.store, `${prefix}/silver.json`, silver);
   if (gold) await writeIngestionArtifact(deps.store, `${prefix}/gold.json`, gold);
