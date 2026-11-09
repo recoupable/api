@@ -151,6 +151,27 @@ describe("organization ingestion catalog", () => {
     );
     expect(h.catalog).not.toHaveBeenCalled();
   });
+  it.each([
+    { file: "result", token: '\"expected\":\"', error: "Invalid ingestion completion" },
+    { file: "manifest", token: '\"filename\":\"', error: "Invalid ingestion manifest" },
+  ])("rejects malformed UTF-8 in saved $file metadata", async ({ file, token, error }) => {
+    const h = harness();
+    const input = {
+      ...create,
+      contract: { ...create.contract, controls: [{ field: "amount", expected: "0.3" }] },
+    };
+    const job = await processIngestionOperation(actor, input, h.deps);
+    await executeIngestionJob(actor, organization, job.job_id, h.deps);
+    const key = `organization/${organization}/${job.job_id}/${file}.json`;
+    const bytes = Buffer.from(h.objects.get(key)!);
+    const offset = bytes.indexOf(token);
+    expect(offset).toBeGreaterThanOrEqual(0);
+    bytes[offset + Buffer.byteLength(token)] = 255;
+    h.objects.set(key, bytes);
+    h.catalog.mockClear();
+    await expect(processIngestionOperation(actor, input, h.deps)).rejects.toThrow(error);
+    expect(h.catalog).not.toHaveBeenCalled();
+  });
   it("binds the selected dataset to the immutable import contract", async () => {
     const h = harness();
     const job = await processIngestionOperation(actor, { ...create, dataset_id: dataset }, h.deps);
