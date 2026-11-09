@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { contextOperationHandler } from "../contextOperationHandler";
-import { contextOperationSchema, processContextOperation } from "../processContextOperation";
+import { contextOperationSchema } from "../contextOperationSchema";
+import { processContextOperation } from "../processContextOperation";
 import { authorizeContextOwner } from "../authorizeContextOwner";
 import { validateOrganizationAccess } from "@/lib/organizations/validateOrganizationAccess";
 import { registerContextTool } from "@/lib/mcp/tools/context/registerContextTool";

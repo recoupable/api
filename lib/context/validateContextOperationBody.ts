@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
-import { contextOperationSchema } from "./processContextOperation";
+import { contextOperationSchema } from "./contextOperationSchema";
 /** Strict input validation shared by the Context HTTP handler. */
 export function validateContextOperationBody(body: unknown) {
   const parsed = contextOperationSchema.safeParse(body);

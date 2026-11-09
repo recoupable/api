@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { expect, it, vi } from "vitest";
-import { contextOperationSchema } from "@/lib/context/processContextOperation";
+import { contextOperationSchema } from "@/lib/context/contextOperationSchema";
 import { buildContextOperationCatalog } from "../buildContextOperationCatalog";
 
 vi.mock("@/lib/context/authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));

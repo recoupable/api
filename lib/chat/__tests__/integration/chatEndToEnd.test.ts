@@ -78,7 +78,7 @@ vi.mock("@/lib/telegram/sendErrorNotification", () => ({
 }));
 
 // Mock chat title generation
-vi.mock("@/lib/chat/generateChatTitle", () => ({
+vi.mock("@/lib/chats/generateChatTitle", () => ({
   generateChatTitle: vi.fn().mockResolvedValue("Test Chat"),
 }));
 

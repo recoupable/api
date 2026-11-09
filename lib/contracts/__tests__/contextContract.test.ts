@@ -1,9 +1,7 @@
 import { writeFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
-import {
-  contextOperationSchema,
-  processContextOperation,
-} from "@/lib/context/processContextOperation";
+import { contextOperationSchema } from "@/lib/context/contextOperationSchema";
+import { processContextOperation } from "@/lib/context/processContextOperation";
 import fixture from "../fixtures/published-docs.json";
 import contextFixture from "../fixtures/context-contract.json";
 import { buildContextOperationCatalog } from "../buildContextOperationCatalog";

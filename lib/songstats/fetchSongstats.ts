@@ -3,7 +3,7 @@ import type { ProxyResult } from "@/lib/research/ProxyResult";
 import { appendQueryParams } from "@/lib/songstats/appendQueryParams";
 import { parseSongstatsResponse } from "@/lib/songstats/parseSongstatsResponse";
 import { getSongstatsTimeoutMs } from "@/lib/songstats/getSongstatsTimeoutMs";
-import { isAbortError } from "@/lib/songstats/isAbortError";
+import { isAbortError } from "@/lib/errors/isAbortError";
 import { getSongstatsApiKey } from "@/lib/songstats/getSongstatsApiKey";
 
 export async function fetchSongstats(

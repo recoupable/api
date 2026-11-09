@@ -1,7 +1,7 @@
 import { registerDevelopmentEntitlementTool } from "./registerDevelopmentEntitlementTool";
 import { registerCatalogCaseTools } from "./registerCatalogCaseTools";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { contextOperationSchema } from "@/lib/context/processContextOperation";
+import { contextOperationSchema } from "@/lib/context/contextOperationSchema";
 import { handleContextToolOperation } from "./handleContextToolOperation";
 import { registerContextEvidenceTools } from "./registerContextEvidenceTools";
 /** Same domain operations and ownership rules as POST /api/context. */

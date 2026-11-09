@@ -11,7 +11,7 @@ import { addCacheControlToMessages } from "@/lib/agent/contextManagement/addCach
 import { wrapToolsWithAbort } from "@/lib/agent/contextManagement/wrapToolsWithAbort";
 import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
 import { closeOpenToolCalls } from "@/lib/chat/closeOpenToolCalls";
-import { isAbortError } from "@/lib/chat/isAbortError";
+import { isAbortError } from "@/lib/errors/isAbortError";
 import { isRunCancelled } from "@/lib/chat/isRunCancelled";
 import { getWorkflowMetadata } from "workflow";
 

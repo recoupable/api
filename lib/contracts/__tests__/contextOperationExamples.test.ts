@@ -4,7 +4,7 @@ import { writeFileSync } from "node:fs";
 import { NextRequest, NextResponse } from "next/server";
 import { POST } from "@/app/api/context/route";
 import { handleContextToolOperation } from "@/lib/mcp/tools/context/handleContextToolOperation";
-import { contextOperationSchema } from "@/lib/context/processContextOperation";
+import { contextOperationSchema } from "@/lib/context/contextOperationSchema";
 import {
   contextResponseReferences,
   contextResponseSchemas,
