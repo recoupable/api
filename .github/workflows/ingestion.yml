@@ -6,6 +6,7 @@ on:
     paths:
       - "lib/ingestion/**"
       - "lib/mcp/tools/ingestion/**"
+      - "lib/mcp/tools/index.ts"
       - "lib/supabase/storage/*Ingestion*.ts"
       - "app/api/ingestion/**"
       - "app/workflows/ingestion/**"
@@ -18,6 +19,7 @@ on:
     paths:
       - "lib/ingestion/**"
       - "lib/mcp/tools/ingestion/**"
+      - "lib/mcp/tools/index.ts"
       - "lib/supabase/storage/*Ingestion*.ts"
       - "app/api/ingestion/**"
       - "app/workflows/ingestion/**"

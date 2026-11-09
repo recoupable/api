@@ -83,16 +83,23 @@ describe("ingestion operations", () => {
     expect(objects.size).toBe(0);
   });
   it("converges concurrent creation and resumes after dispatch failure without recapturing", async () => {
-    const { deps } = harness();
+    const { deps, objects } = harness();
     let attempts = 0;
     deps.dispatch = async () => {
       if (++attempts === 1) throw new Error("dispatcher unavailable");
     };
     await expect(processIngestionOperation(owner, input, deps)).rejects.toThrow();
+    const captured = [...objects].map(([key, bytes]) => [
+      key,
+      Buffer.from(bytes).toString("base64"),
+    ]);
     const jobs = await Promise.all([
       processIngestionOperation(owner, input, deps),
       processIngestionOperation(owner, input, deps),
     ]);
+    expect(
+      [...objects].map(([key, bytes]) => [key, Buffer.from(bytes).toString("base64")]),
+    ).toEqual(captured);
     expect(jobs[0].job_id).toBe(jobs[1].job_id);
     await executeIngestionJob(owner, undefined, jobs[0].job_id, deps);
     expect(
@@ -138,7 +145,7 @@ describe("ingestion operations", () => {
         { action: "read", organization_id: other, job_id: job.job_id },
         h.deps,
       ),
-    ).rejects.toThrow();
+    ).rejects.toThrow("Access denied");
   });
   it("captures originals privately, processes durable artifacts and reads only the authenticated scope", async () => {
     const { deps, objects } = harness();
@@ -182,7 +189,9 @@ describe("ingestion operations", () => {
     const h = harness();
     const job = await processIngestionOperation(owner, input, h.deps);
     h.revoke();
-    await expect(executeIngestionJob(owner, undefined, job.job_id, h.deps)).rejects.toThrow();
+    await expect(executeIngestionJob(owner, undefined, job.job_id, h.deps)).rejects.toThrow(
+      "Access denied",
+    );
     expect([...h.objects.keys()].some(k => k.endsWith("/result.json"))).toBe(false);
   });
   it("requires exact gold selection for delivery and withholds held outputs", async () => {

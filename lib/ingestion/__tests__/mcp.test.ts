@@ -17,7 +17,9 @@ describe("ingestion MCP boundary", () => {
       accountId: null,
       error: "Authentication required",
     });
-    expect((await handleIngestionToolOperation({}, {} as never)).isError).toBe(true);
+    expect(
+      (await handleIngestionToolOperation({ account_id: "other-account" }, {} as never)).isError,
+    ).toBe(true);
     expect(vi.mocked(resolveAccountId).mock.calls[0][0].accountIdOverride).toBeUndefined();
     expect(processIngestionOperation).not.toHaveBeenCalled();
   });

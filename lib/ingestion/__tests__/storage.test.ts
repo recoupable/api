@@ -23,8 +23,15 @@ describe("private artifact storage", () => {
   });
   it("refuses public buckets before any data transfer", async () => {
     mocks.bucket.mockResolvedValue({ data: { public: true }, error: null });
-    await expect(readIngestionObject("key")).rejects.toThrow();
-    await expect(createIngestionObject("key", Buffer.from("private"))).rejects.toThrow();
+    await expect(readIngestionObject("key")).rejects.toThrow("Private ingestion storage required");
+    await expect(createIngestionObject("key", Buffer.from("private"))).rejects.toThrow(
+      "Private ingestion storage required",
+    );
+    expect(mocks.from).not.toHaveBeenCalled();
+  });
+  it("fails closed when bucket privacy metadata is absent", async () => {
+    mocks.bucket.mockResolvedValue({ data: { file_size_limit: 16 * 1024 * 1024 }, error: null });
+    await expect(readIngestionObject("key")).rejects.toThrow("Private ingestion storage required");
     expect(mocks.from).not.toHaveBeenCalled();
   });
   it("distinguishes missing objects from denied or unavailable reads", async () => {

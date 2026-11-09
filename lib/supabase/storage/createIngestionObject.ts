@@ -13,5 +13,11 @@ export async function createIngestionObject(key: string, bytes: Uint8Array): Pro
   });
   if (!error) return true;
   if ("statusCode" in error && String(error.statusCode) === "409") return false;
+  console.error("[ingestion] storage write failed", {
+    status:
+      "statusCode" in error && /^\d{3}$/.test(String(error.statusCode))
+        ? String(error.statusCode)
+        : "unknown",
+  });
   throw new Error("Ingestion storage write failed");
 }
