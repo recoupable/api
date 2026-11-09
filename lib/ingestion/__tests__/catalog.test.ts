@@ -122,6 +122,35 @@ describe("organization ingestion catalog", () => {
     expect(h.catalog.mock.calls.some(c => c[2] === "complete")).toBe(true);
     expect(h.dispatch).not.toHaveBeenCalled();
   });
+  it.each(["missing", "corrupt"])(
+    "does not register a replay whose saved gold is %s",
+    async kind => {
+      const h = harness();
+      const job = await processIngestionOperation(actor, create, h.deps);
+      await executeIngestionJob(actor, organization, job.job_id, h.deps);
+      h.catalog.mockClear();
+      const goldKey = `organization/${organization}/${job.job_id}/gold.json`;
+      if (kind === "missing") h.objects.delete(goldKey);
+      else h.objects.set(goldKey, Buffer.from("corrupt"));
+      await expect(processIngestionOperation(actor, create, h.deps)).rejects.toThrow(
+        "Gold integrity check failed",
+      );
+      expect(h.catalog).not.toHaveBeenCalled();
+    },
+  );
+  it("rejects malformed stored completion metadata before registering a replay", async () => {
+    const h = harness();
+    const job = await processIngestionOperation(actor, create, h.deps);
+    h.catalog.mockClear();
+    h.objects.set(
+      `organization/${organization}/${job.job_id}/result.json`,
+      Buffer.from(JSON.stringify({ status: "ready", gold_sha256: 123 })),
+    );
+    await expect(processIngestionOperation(actor, create, h.deps)).rejects.toThrow(
+      "Invalid ingestion completion",
+    );
+    expect(h.catalog).not.toHaveBeenCalled();
+  });
   it("binds the selected dataset to the immutable import contract", async () => {
     const h = harness();
     const job = await processIngestionOperation(actor, { ...create, dataset_id: dataset }, h.deps);

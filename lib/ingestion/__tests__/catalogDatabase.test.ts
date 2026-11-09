@@ -20,7 +20,7 @@ describe("shared ingestion database gateway", () => {
     rpc.mockResolvedValue({ data: null, error: { code: "42501", message: "secret details" } });
     await expect(
       getIngestionCatalogResult("actor", "organization", "datasets", {}),
-    ).rejects.toThrow("Access denied");
+    ).rejects.toEqual(new Error("Access denied"));
     rpc.mockResolvedValue({
       data: null,
       error: { code: "P0001", message: "Ingestion catalog conflict" },

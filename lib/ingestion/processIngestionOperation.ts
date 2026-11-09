@@ -1,6 +1,7 @@
 import { ingestionOperationSchema } from "./schemas";
 import { hashIngestionValue } from "./hashIngestionValue";
 import { hashIngestionBytes } from "./hashIngestionBytes";
+import { readIngestionCompletion } from "./readIngestionCompletion";
 import { readIngestionManifest } from "./readIngestionManifest";
 import { writeIngestionArtifact } from "./writeIngestionArtifact";
 import { INGESTION_ENGINE_VERSION, INGESTION_MAX_BYTES } from "./const";
@@ -85,35 +86,34 @@ export async function processIngestionOperation(
       manifest.job_id !== jobId
     )
       throw new Error("Idempotency conflict");
+    const completed = await deps.store.read(`${prefix}/result.json`);
+    const result = completed ? readIngestionCompletion(completed, manifest) : null;
+    let gold: GoldArtifact | null = null;
+    if (result?.status === "ready" && args.organization_id) {
+      const bytes = await deps.store.read(`${prefix}/gold.json`);
+      if (!bytes || hashIngestionBytes(bytes) !== result.gold_sha256)
+        throw new Error("Gold integrity check failed");
+      gold = JSON.parse(new TextDecoder().decode(bytes));
+    }
     const catalog = scope.startsWith("organization/")
       ? await deps.catalog(actor, scope.split("/")[1], "register", { manifest })
       : {};
-    const completed = await deps.store.read(`${prefix}/result.json`);
-    if (completed && args.organization_id) {
-      const result = JSON.parse(new TextDecoder().decode(completed));
-      let gold: GoldArtifact | null = null;
-      if (result.status === "ready") {
-        const bytes = await deps.store.read(`${prefix}/gold.json`);
-        if (!bytes || hashIngestionBytes(bytes) !== result.gold_sha256)
-          throw new Error("Gold integrity check failed");
-        gold = JSON.parse(new TextDecoder().decode(bytes));
-      }
+    if (result && args.organization_id)
       await deps.catalog(actor, scope.split("/")[1], "complete", { job_id: jobId, result, gold });
-    }
     await recheck();
     if (!completed) await deps.dispatch(actor, args.organization_id, jobId);
     await recheck();
     return {
-      job_id: jobId,
       ...catalog,
-      ...(completed ? JSON.parse(new TextDecoder().decode(completed)) : { status: "queued" }),
+      ...(result ?? { status: "queued" as const }),
+      job_id: jobId,
     };
   }
   const manifest = await readIngestionManifest(deps.store, scope, args.job_id);
   const prefix = `${scope}/${args.job_id}`;
   const marker = await deps.store.read(`${prefix}/result.json`);
   const result = marker
-    ? JSON.parse(new TextDecoder().decode(marker))
+    ? readIngestionCompletion(marker, manifest)
     : { job_id: args.job_id, status: "queued", gold_sha256: null };
   if (args.action === "read") {
     await recheck();
@@ -136,7 +136,12 @@ export async function processIngestionOperation(
         },
       };
     }
-    const digest = result[`${args.stage}_sha256`];
+    const digest =
+      args.stage === "gold"
+        ? result.gold_sha256
+        : "silver_sha256" in result
+          ? result.silver_sha256
+          : null;
     if (!digest || (args.stage === "gold" && result.status !== "ready"))
       throw new Error("Artifact not ready");
     const bytes = await deps.store.read(`${prefix}/${args.stage}.json`);

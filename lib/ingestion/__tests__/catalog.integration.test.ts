@@ -62,35 +62,33 @@ suite("real shared-database ingestion lifecycle", () => {
         return result.rows[0].result;
       },
     };
-    const job = await processIngestionOperation(
-      actor,
-      {
-        action: "create",
-        organization_id: org,
-        idempotency_key: "shared-income-1",
-        source: {
-          kind: "inline",
-          filename: "income.csv",
-          format: "csv",
-          content_base64: Buffer.from("ID,Amount\n001,0.1\n002,0.2").toString("base64"),
-        },
-        contract: {
-          version: "1",
-          fields: [
-            { name: "id", source: "ID", type: "string" },
-            { name: "amount", source: "Amount", type: "decimal" },
-          ],
-          controls: [{ field: "amount", expected: "0.3" }],
-        },
+    const input = {
+      action: "create",
+      organization_id: org,
+      idempotency_key: "shared-income-1",
+      source: {
+        kind: "inline",
+        filename: "income.csv",
+        format: "csv",
+        content_base64: Buffer.from("ID,Amount\n001,0.1\n002,0.2").toString("base64"),
       },
-      deps,
-    );
+      contract: {
+        version: "1",
+        fields: [
+          { name: "id", source: "ID", type: "string" },
+          { name: "amount", source: "Amount", type: "decimal" },
+        ],
+        controls: [{ field: "amount", expected: "0.3" }],
+      },
+    };
+    const job = await processIngestionOperation(actor, input, deps);
     expect(job.dataset_id).toMatch(/^[a-f0-9-]{36}$/);
     await expect(executeIngestionJob(actor, org, job.job_id as string, deps)).rejects.toThrow(
       "Acknowledgement lost",
     );
     expect([...objects.keys()].some(k => k.endsWith("/result.json"))).toBe(false);
     await executeIngestionJob(actor, org, job.job_id as string, deps);
+    expect((await processIngestionOperation(actor, input, deps)).dataset_id).toBe(job.dataset_id);
     const page = await processIngestionOperation(
       actor,
       { action: "records", organization_id: org, dataset_id: job.dataset_id, job_id: job.job_id },
