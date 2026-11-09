@@ -30,7 +30,9 @@ export async function deliverConfiguredIngestion(
   const connectionString = process.env[config.connection_env];
   if (!connectionString) throw new Error("Destination unavailable");
   const bindingKey = `${scope}/destinations/${hashIngestionValue(destinationId)}/identity.json`;
-  const identityBytes = Buffer.from(JSON.stringify({ database_id: config.database_id }));
+  const identityBytes = Buffer.from(
+    JSON.stringify({ database_id: config.database_id, config_sha256: hashIngestionValue(config) }),
+  );
   const binding = await bindingStore.read(bindingKey);
   if (binding && !Buffer.from(binding).equals(identityBytes)) throw new Error("Artifact conflict");
   const url = new URL(connectionString);

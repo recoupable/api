@@ -73,6 +73,18 @@ describe("configured destination boundaries", () => {
       deliverConfiguredIngestion(scope, "db", "a".repeat(64), gold, "b".repeat(64), storage),
     ).resolves.toMatchObject({ committed: true });
   });
+  it("requires a new destination ID when the target or receipt configuration changes", async () => {
+    const storage = store();
+    await deliverConfiguredIngestion(scope, "db", "a".repeat(64), gold, "b".repeat(64), storage);
+    vi.stubEnv(
+      "INGESTION_DESTINATIONS_JSON",
+      JSON.stringify([{ ...config, receipt_table: "replacement_receipts" }]),
+    );
+    await expect(
+      deliverConfiguredIngestion(scope, "db", "a".repeat(64), gold, "b".repeat(64), storage),
+    ).rejects.toThrow("Artifact conflict");
+    expect(mocks.deliver).toHaveBeenCalledTimes(1);
+  });
   it("refuses rebinding one destination ID to another logical database", async () => {
     const storage = store();
     await deliverConfiguredIngestion(scope, "db", "a".repeat(64), gold, "b".repeat(64), storage);
