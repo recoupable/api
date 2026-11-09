@@ -4,6 +4,7 @@ const digest = z.string().regex(/^[a-f0-9]{64}$/);
 export const ingestionManifestSchema = z
   .strictObject({
     job_id: digest,
+    dataset_id: z.uuid().optional(),
     input_sha256: digest,
     engine_version: z.string().min(1).max(100),
     scope: z.string().regex(/^(account|organization)\/[a-f0-9-]{36}$/),

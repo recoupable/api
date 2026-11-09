@@ -14,6 +14,7 @@ export function getIngestionFailure(error: unknown) {
     "Request too large": [413, "request_size_limit"],
     "Access denied": [403, "access_denied"],
     "Scope changed": [409, "scope_changed"],
+    "Ingestion catalog conflict": [409, "catalog_conflict"],
     "Idempotency conflict": [409, "idempotency_conflict"],
     "Gold selection mismatch": [409, "gold_selection_mismatch"],
     "Artifact not ready": [409, "artifact_not_ready"],

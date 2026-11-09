@@ -7,7 +7,15 @@ export async function limitIngestionRequest(
   scope: string,
   action: Parameters<IngestionDependencies["limit"]>[2],
 ) {
-  const limits = { create: 10, deliver: 10, read: 120, artifact: 30 };
+  const limits = {
+    create: 10,
+    deliver: 10,
+    read: 120,
+    artifact: 30,
+    datasets: 60,
+    imports: 60,
+    records: 30,
+  };
   if (
     !(await takeSiteRequest(
       hashIngestionValue({ domain: "ingestion", actor, scope, action }),

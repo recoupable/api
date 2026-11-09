@@ -21,6 +21,7 @@ function harness() {
   let allowed = true;
   const deps: IngestionDependencies = {
     limit: async () => undefined,
+    catalog: async () => ({ dataset_id: other }),
     authorize: async (actor, organization) => {
       if (!allowed) throw new Error("Access denied");
       return organization ? `organization/${organization}` : `account/${actor}`;

@@ -43,8 +43,14 @@ export interface IngestionDependencies {
   limit(
     actor: string,
     scope: string,
-    action: "create" | "read" | "artifact" | "deliver",
+    action: "create" | "read" | "artifact" | "deliver" | "datasets" | "imports" | "records",
   ): Promise<void>;
+  catalog(
+    actor: string,
+    organization: string,
+    action: "register" | "complete" | "datasets" | "imports" | "records",
+    input: Record<string, unknown>,
+  ): Promise<Record<string, unknown>>;
   dispatch(actor: string, organization: string | undefined, jobId: string): Promise<unknown>;
   acquire(
     scope: string,

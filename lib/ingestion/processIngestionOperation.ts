@@ -19,6 +19,12 @@ export async function processIngestionOperation(
     if ((await deps.authorize(actor, args.organization_id)) !== scope)
       throw new Error("Scope changed");
   };
+  if (args.action === "datasets" || args.action === "imports" || args.action === "records") {
+    const { action, organization_id: _organization, ...query } = args;
+    const result = await deps.catalog(actor, scope.split("/")[1], action, query);
+    await recheck();
+    return result;
+  }
   const encode = (value: unknown) => Buffer.from(JSON.stringify(value));
   if (args.action === "create") {
     const jobId = hashIngestionValue({ scope, idempotency_key: args.idempotency_key });
@@ -27,6 +33,7 @@ export async function processIngestionOperation(
       source: args.source,
       contract: args.contract,
       engine_version: INGESTION_ENGINE_VERSION,
+      ...(args.dataset_id ? { dataset_id: args.dataset_id.toLowerCase() } : {}),
     });
     let saved = await deps.store.read(`${prefix}/manifest.json`);
     if (!saved) {
@@ -51,6 +58,7 @@ export async function processIngestionOperation(
       await writeIngestionArtifact(deps.store, bronzeKey, source.bytes);
       const manifest: IngestionManifest = {
         job_id: jobId,
+        ...(args.dataset_id ? { dataset_id: args.dataset_id.toLowerCase() } : {}),
         input_sha256: fingerprint,
         engine_version: INGESTION_ENGINE_VERSION,
         scope,
@@ -77,12 +85,27 @@ export async function processIngestionOperation(
       manifest.job_id !== jobId
     )
       throw new Error("Idempotency conflict");
+    const catalog = scope.startsWith("organization/")
+      ? await deps.catalog(actor, scope.split("/")[1], "register", { manifest })
+      : {};
     const completed = await deps.store.read(`${prefix}/result.json`);
+    if (completed && args.organization_id) {
+      const result = JSON.parse(new TextDecoder().decode(completed));
+      let gold: GoldArtifact | null = null;
+      if (result.status === "ready") {
+        const bytes = await deps.store.read(`${prefix}/gold.json`);
+        if (!bytes || hashIngestionBytes(bytes) !== result.gold_sha256)
+          throw new Error("Gold integrity check failed");
+        gold = JSON.parse(new TextDecoder().decode(bytes));
+      }
+      await deps.catalog(actor, scope.split("/")[1], "complete", { job_id: jobId, result, gold });
+    }
     await recheck();
     if (!completed) await deps.dispatch(actor, args.organization_id, jobId);
     await recheck();
     return {
       job_id: jobId,
+      ...catalog,
       ...(completed ? JSON.parse(new TextDecoder().decode(completed)) : { status: "queued" }),
     };
   }

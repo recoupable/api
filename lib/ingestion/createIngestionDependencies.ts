@@ -1,3 +1,4 @@
+import { getIngestionCatalogResult } from "@/lib/supabase/ingestion_imports/getIngestionCatalogResult";
 import { authorizeIngestionScope } from "./authorizeIngestionScope";
 import { readIngestionObject } from "@/lib/supabase/storage/readIngestionObject";
 import { createIngestionObject } from "@/lib/supabase/storage/createIngestionObject";
@@ -13,6 +14,7 @@ export function createIngestionDependencies(
   const store = { read: readIngestionObject, create: createIngestionObject };
   return {
     authorize: authorizeIngestionScope,
+    catalog: getIngestionCatalogResult,
     limit: limitIngestionRequest,
     store,
     acquire: acquireIngestionSource,
