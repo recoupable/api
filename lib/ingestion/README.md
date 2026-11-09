@@ -175,6 +175,6 @@ Add source acquisition behind `acquire`, new readers behind `readIngestionRows`,
 
 ### Validation record — 2026-11-09
 
-Implemented in an isolated API feature branch. Verified 49 ingestion tests (including four tests against disposable PostgreSQL 17) and 82 existing OAuth tests: 131 passing. ESLint and ingestion type checking passed. The production build compiled the application and passed TypeScript, then stopped during page-data collection because the local checkout lacks the existing `PRIVY_JWT_VERIFICATION_KEY` configuration.
+Implemented in an isolated API feature branch. Verified 49 ingestion tests (including four tests against disposable PostgreSQL 17) and 82 existing OAuth tests: 131 passing on Node 22.23.4. ESLint and ingestion type checking passed. The Node 22 production compile-only build passed. The production build compiled the application and passed TypeScript, then stopped during page-data collection because the local checkout lacks the existing `PRIVY_JWT_VERIFICATION_KEY` configuration.
 
 No hosted storage, destination, deployment or production-data load was configured or exercised. Next: review the implementation, provision private storage and a synthetic external destination, then qualify the deployed HTTP/MCP/Workflow path before enabling intake. OCR, larger-file processing and additional destination types remain extensions, not shipped capabilities.
