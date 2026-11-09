@@ -29,7 +29,10 @@ function harness() {
   const catalog = vi.fn().mockResolvedValue({ dataset_id: dataset });
   const dispatch = vi.fn();
   const deps: IngestionDependencies = {
-    authorize: async (_actor, org) => (org ? `organization/${org}` : `account/${actor}`),
+    authorize: async (account, org) => {
+      if (account !== actor || (org && org !== organization)) throw new Error("Access denied");
+      return org ? `organization/${org}` : `account/${actor}`;
+    },
     limit: async () => undefined,
     store: {
       read: async k => objects.get(k) ?? null,
@@ -220,6 +223,13 @@ describe("organization ingestion catalog", () => {
     await expect(
       processIngestionOperation(actor, { action: "datasets" }, h.deps),
     ).rejects.toThrow();
+  });
+  it("rejects catalog reads before querying when organization membership is denied", async () => {
+    const h = harness();
+    await expect(
+      processIngestionOperation(actor, { action: "datasets", organization_id: dataset }, h.deps),
+    ).rejects.toThrow("Access denied");
+    expect(h.catalog).not.toHaveBeenCalled();
   });
   it("adapts read-only catalog queries without allowing GET mutations", () => {
     expect(

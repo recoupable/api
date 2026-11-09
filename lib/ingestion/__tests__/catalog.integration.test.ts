@@ -21,7 +21,10 @@ suite("real shared-database ingestion lifecycle", () => {
     await admin.query("INSERT INTO public.accounts(id) SELECT unnest($1::uuid[])", [
       [actor, org, other],
     ]);
-    await admin.query("INSERT INTO public.account_organization_ids VALUES ($1,$2)", [actor, org]);
+    await admin.query(
+      "INSERT INTO public.account_organization_ids(account_id,organization_id) VALUES ($1,$2)",
+      [actor, org],
+    );
     await gateway.connect();
     await gateway.query("SET ROLE service_role");
   });
@@ -33,6 +36,7 @@ suite("real shared-database ingestion lifecycle", () => {
     const objects = new Map<string, Uint8Array>();
     let loseAck = true;
     const deps: IngestionDependencies = {
+      // Deliberately bypass the API membership check here to verify the real database boundary.
       authorize: async (_actor, organization) => `organization/${organization}`,
       limit: async () => undefined,
       store: {
