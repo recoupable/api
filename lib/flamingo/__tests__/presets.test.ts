@@ -39,6 +39,31 @@ describe("getAllPresets", () => {
       expect(["json", "text"]).toContain(preset.responseFormat);
     }
   });
+
+  // Answers stored as data must not change between two runs on the same song,
+  // so they decode greedily; only the three presets that write prose sample.
+  const PROSE_PRESETS = ["song_description", "playlist_pitch", "artist_development_notes"];
+
+  it("decodes greedily for every preset whose answer is data", () => {
+    const data = getAllPresets().filter(p => !PROSE_PRESETS.includes(p.name));
+    expect(data).toHaveLength(10);
+    for (const preset of data) {
+      // Temperature 1.0 is the neutral value greedy decoding ignores; any other
+      // value makes transformers log an "invalid flag" notice on every call.
+      const { do_sample, temperature } = preset.params;
+      expect({ name: preset.name, do_sample, temperature }).toEqual({
+        name: preset.name,
+        do_sample: false,
+        temperature: 1.0,
+      });
+    }
+  });
+
+  it("keeps sampling for the presets that write prose", () => {
+    for (const name of PROSE_PRESETS) {
+      expect(getPreset(name)?.params.do_sample).toBe(true);
+    }
+  });
 });
 
 describe("PRESET_NAMES", () => {
