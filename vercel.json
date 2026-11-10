@@ -21,5 +21,10 @@
       "path": "/api/internal/missed-report-check",
       "schedule": "17 * * * *"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "fix/mcp-oauth-behavior-annotations": false
+    }
+  }
 }

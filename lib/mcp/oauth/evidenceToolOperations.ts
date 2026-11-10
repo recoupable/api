@@ -7,6 +7,8 @@ export const evidenceToolOperations = {
     description:
       "Associate an exact retained source version with existing authorized artist, professional or Context request/subject records. Relevance only; does not confirm identities, rights or mandates. Reuse the same key on retries.",
     readOnly: false,
+    destructive: false,
+    openWorld: false,
     delegated: false,
   },
   read_evidence_attachment: {
@@ -14,6 +16,8 @@ export const evidenceToolOperations = {
     description:
       "Read an evidence association receipt under current workspace, source and target access. Withdrawn or inaccessible evidence is withheld.",
     readOnly: true,
+    destructive: false,
+    openWorld: false,
     delegated: false,
   },
   list_evidence_attachments: {
@@ -21,9 +25,18 @@ export const evidenceToolOperations = {
     description:
       "List a bounded page of associations for an exact source version. Pass the returned next_id as after_id while has_more is true, including empty pages with withheld receipts.",
     readOnly: true,
+    destructive: false,
+    openWorld: false,
     delegated: false,
   },
 } satisfies Record<
   EvidenceAttachmentOperation["action"],
-  { name: string; description: string; readOnly: boolean; delegated: false }
+  {
+    name: string;
+    description: string;
+    readOnly: boolean;
+    destructive: boolean;
+    openWorld: boolean;
+    delegated: false;
+  }
 >;
