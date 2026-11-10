@@ -4,6 +4,7 @@ import { chargeForBatchAnswers } from "@/lib/flamingo/chargeForBatchAnswers";
 import { callFlamingoGenerateBatch } from "@/lib/flamingo/callFlamingoGenerateBatch";
 import { getPreset } from "@/lib/flamingo/presets";
 import { FULL_REPORT_SECTIONS } from "@/lib/flamingo/presets/fullReport";
+import type { FlamingoBatchAnswer } from "@/lib/flamingo/isFlamingoGenerateBatchResult";
 
 vi.mock("@/lib/flamingo/callFlamingoGenerateBatch", () => ({
   callFlamingoGenerateBatch: vi.fn(),
@@ -62,7 +63,7 @@ describe("executeFullReport — failed sections", () => {
 
   it("counts a section whose parsed answer is only an { error } as failed and does not charge it", async () => {
     // A model reply of {"error": "..."} parses into the same shape the report
-    // uses for a failed section, so it must be reported (and billed) as one.
+    // uses for a failed section, so it is reported as failed and not billed.
     vi.mocked(getPreset).mockImplementation(name =>
       name === FULL_REPORT_SECTIONS[1].preset
         ? ({ ...plainPreset(name), parseResponse: (raw: string) => JSON.parse(raw) } as never)
@@ -81,7 +82,9 @@ describe("executeFullReport — failed sections", () => {
 
     expect(failed).toEqual([FULL_REPORT_SECTIONS[1].reportKey]);
     const [charge] = vi.mocked(chargeForBatchAnswers).mock.calls[0];
-    expect(charge.answers).toHaveLength(FULL_REPORT_SECTIONS.length - 1);
+    expect((charge.answers as FlamingoBatchAnswer[]).map(a => a.id)).toEqual(
+      FULL_REPORT_SECTIONS.filter((_, i) => i !== 1).map(s => s.reportKey),
+    );
   });
 
   it("fails every section, with the batch's error, and charges nothing when the batch fails", async () => {

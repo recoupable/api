@@ -1,4 +1,5 @@
 import { registerValidateApplicationRegistrationTool } from "./applications/registerValidateApplicationRegistrationTool";
+import { registerIngestionTool } from "./ingestion/registerIngestionTool";
 import { registerAllPackTools } from "./packs";
 import { registerAllPlayerTools } from "./players";
 import { registerAllSitesTools } from "./sites";
@@ -36,6 +37,7 @@ import { registerAllPulseTools } from "./pulse";
  * @param server - The MCP server instance to register tools on.
  */
 export const registerAllTools = (server: McpServer): void => {
+  registerIngestionTool(server);
   registerValidateApplicationRegistrationTool(server);
   registerAllPackTools(server);
   registerAllSitesTools(server);

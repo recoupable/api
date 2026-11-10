@@ -57,6 +57,7 @@ vi.mock("../../tools", () => ({
       "get_catalog_playcount_history",
       "get_catalog_streams",
       "manage_catalog_stream_tracking",
+      "ingestion",
     ]) {
       server.registerTool(name, { inputSchema: z.object({}) }, operation);
     }
@@ -112,6 +113,7 @@ describe("full OAuth registry", () => {
     ).toBe(false);
     expect(registered.has("artist_deep_research")).toBe(false);
     expect(registered.has("spotify_deep_research")).toBe(false);
+    expect(registered.has("ingestion")).toBe(false);
   });
   it.each([
     undefined,
