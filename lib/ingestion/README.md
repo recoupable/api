@@ -2,6 +2,8 @@
 
 Private, versioned processing from source files or configured JSON APIs through bronze, silver and gold into export artifacts or an external Postgres database. All code lives in this API repository.
 
+Organization-owned imports can also store queryable gold rows in Recoup's existing shared database. See [Organization datasets](./CATALOG.md) for the default internal destination, migration order and list/record operations. No database per organization is required.
+
 ## Operating contract
 
 - **Bronze:** exact original bytes, SHA-256, retrieval time and source occurrence. Private originals are never uploaded to public media storage.
@@ -19,7 +21,7 @@ Disabled by default. Before enabling a deployment:
 
 1. Provision a dedicated empty **private** Supabase Storage bucket with a 16 MiB `file_size_limit` and set `INGESTION_STORAGE_BUCKET`. Allow `application/octet-stream` and ensure the project upload ceiling permits 16 MiB. Keep its object policies server-only; do not give anonymous/authenticated clients direct reads, writes or bucket updates. The service verifies the bucket is private before every storage operation. Retention and region are operator decisions; this implementation never deletes originals automatically.
 2. Configure the API's existing Supabase service credentials and Vercel Workflow runtime. Manifests, originals, results and stage outputs are durable private objects. The existing service-only `take_site_request` primitive from the Sites activity migration is required for per-minute counters. Configure `INGESTION_REDIS_URL` (or the existing `REDIS_URL`) for atomic dispatch leases; acquisition and dispatch fail closed when their controls are unavailable.
-3. Optionally configure source connectors and destinations below. Verify access with synthetic fixtures before production data. No source or destination is inferred from client names or request URLs.
+3. For organization imports, apply `20261110010000_ingestion_catalog.sql` followed by `20261110010100_ingestion_catalog_page_budget.sql` in the existing database first; see [Organization datasets](./CATALOG.md). Optionally configure source connectors and destinations below. Verify access with synthetic fixtures before production data. No source or destination is inferred from client names or request URLs.
 4. Set `INGESTION_ENABLED=true` only after deployment qualification. There is no added billing or recurring schedule.
 
 Operations are exposed by `POST /api/ingestion`, read-only `GET /api/ingestion?job_id=...&stage=gold` (omit `stage` for job state) and the standard authenticated MCP tool `ingestion`. Identity comes from `x-api-key` or Bearer authentication; never supply `account_id`. Optional `organization_id` requires current membership. Requests are limited per authenticated actor, scope and operation: 10 creates/deliveries, 30 artifact reads and 120 status reads per minute, for both HTTP and MCP. Personal and organization namespaces are distinct. Organization-scoped jobs are shared with currently authorized organization members. Workers recheck the initiating actor's access before processing and publication; reads and delivery also recheck access. Delegated OAuth does not expose this tool.

@@ -13,7 +13,9 @@ export async function readIngestionManifest(
   if (!bytes) throw new Error("Ingestion job not found");
   let manifest: IngestionManifest;
   try {
-    manifest = ingestionManifestSchema.parse(JSON.parse(new TextDecoder().decode(bytes)));
+    manifest = ingestionManifestSchema.parse(
+      JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
+    );
   } catch {
     throw new Error("Invalid ingestion manifest");
   }

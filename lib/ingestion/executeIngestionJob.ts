@@ -16,6 +16,7 @@ export async function executeIngestionJob(
   const manifest = await readIngestionManifest(deps.store, scope, jobId);
   const prefix = `${scope}/${jobId}`;
   if (await deps.store.read(`${prefix}/result.json`)) return;
+  if (organization) await deps.catalog(actor, scope.split("/")[1], "register", { manifest });
   if (manifest.engine_version !== INGESTION_ENGINE_VERSION)
     throw new Error("Engine version unavailable");
   const bronze = await deps.store.read(manifest.bronze_key);
@@ -45,22 +46,27 @@ export async function executeIngestionJob(
   await writeIngestionArtifact(deps.store, `${prefix}/silver.json`, silver);
   if (gold) await writeIngestionArtifact(deps.store, `${prefix}/gold.json`, gold);
   if ((await deps.authorize(actor, organization)) !== scope) throw new Error("Scope changed");
-  await writeIngestionArtifact(
-    deps.store,
-    `${prefix}/result.json`,
-    encode({
+  const completion = {
+    job_id: jobId,
+    status: processed.status,
+    engine_version: manifest.engine_version,
+    source_sha256: manifest.bronze_sha256,
+    rows_read: rowsRead,
+    rows_output: processed.gold?.records.length ?? 0,
+    issues: processed.issues,
+    issue_count: processed.issue_count,
+    issues_truncated: Math.max(0, processed.issue_count - processed.issues.length),
+    controls: processed.controls,
+    silver_sha256: hashIngestionBytes(silver),
+    gold_sha256: gold ? hashIngestionBytes(gold) : null,
+  };
+  if (organization) {
+    await deps.catalog(actor, scope.split("/")[1], "complete", {
       job_id: jobId,
-      status: processed.status,
-      engine_version: manifest.engine_version,
-      source_sha256: manifest.bronze_sha256,
-      rows_read: rowsRead,
-      rows_output: processed.gold?.records.length ?? 0,
-      issues: processed.issues,
-      issue_count: processed.issue_count,
-      issues_truncated: Math.max(0, processed.issue_count - processed.issues.length),
-      controls: processed.controls,
-      silver_sha256: hashIngestionBytes(silver),
-      gold_sha256: gold ? hashIngestionBytes(gold) : null,
-    }),
-  );
+      result: completion,
+      gold: processed.gold,
+    });
+    if ((await deps.authorize(actor, organization)) !== scope) throw new Error("Scope changed");
+  }
+  await writeIngestionArtifact(deps.store, `${prefix}/result.json`, encode(completion));
 }

@@ -1,6 +1,7 @@
 import { ingestionOperationSchema } from "./schemas";
 import { hashIngestionValue } from "./hashIngestionValue";
 import { hashIngestionBytes } from "./hashIngestionBytes";
+import { readIngestionCompletion } from "./readIngestionCompletion";
 import { readIngestionManifest } from "./readIngestionManifest";
 import { writeIngestionArtifact } from "./writeIngestionArtifact";
 import { INGESTION_ENGINE_VERSION, INGESTION_MAX_BYTES } from "./const";
@@ -19,6 +20,12 @@ export async function processIngestionOperation(
     if ((await deps.authorize(actor, args.organization_id)) !== scope)
       throw new Error("Scope changed");
   };
+  if (args.action === "datasets" || args.action === "imports" || args.action === "records") {
+    const { action, organization_id: _organization, ...query } = args;
+    const result = await deps.catalog(actor, scope.split("/")[1], action, query);
+    await recheck();
+    return result;
+  }
   const encode = (value: unknown) => Buffer.from(JSON.stringify(value));
   if (args.action === "create") {
     const jobId = hashIngestionValue({ scope, idempotency_key: args.idempotency_key });
@@ -27,6 +34,7 @@ export async function processIngestionOperation(
       source: args.source,
       contract: args.contract,
       engine_version: INGESTION_ENGINE_VERSION,
+      ...(args.dataset_id ? { dataset_id: args.dataset_id.toLowerCase() } : {}),
     });
     let saved = await deps.store.read(`${prefix}/manifest.json`);
     if (!saved) {
@@ -51,6 +59,7 @@ export async function processIngestionOperation(
       await writeIngestionArtifact(deps.store, bronzeKey, source.bytes);
       const manifest: IngestionManifest = {
         job_id: jobId,
+        ...(args.dataset_id ? { dataset_id: args.dataset_id.toLowerCase() } : {}),
         input_sha256: fingerprint,
         engine_version: INGESTION_ENGINE_VERSION,
         scope,
@@ -78,19 +87,33 @@ export async function processIngestionOperation(
     )
       throw new Error("Idempotency conflict");
     const completed = await deps.store.read(`${prefix}/result.json`);
+    const result = completed ? readIngestionCompletion(completed, manifest) : null;
+    let gold: GoldArtifact | null = null;
+    if (result?.status === "ready" && args.organization_id) {
+      const bytes = await deps.store.read(`${prefix}/gold.json`);
+      if (!bytes || hashIngestionBytes(bytes) !== result.gold_sha256)
+        throw new Error("Gold integrity check failed");
+      gold = JSON.parse(new TextDecoder().decode(bytes));
+    }
+    const catalog = scope.startsWith("organization/")
+      ? await deps.catalog(actor, scope.split("/")[1], "register", { manifest })
+      : {};
+    if (result && args.organization_id)
+      await deps.catalog(actor, scope.split("/")[1], "complete", { job_id: jobId, result, gold });
     await recheck();
     if (!completed) await deps.dispatch(actor, args.organization_id, jobId);
     await recheck();
     return {
+      ...catalog,
+      ...(result ?? { status: "queued" as const }),
       job_id: jobId,
-      ...(completed ? JSON.parse(new TextDecoder().decode(completed)) : { status: "queued" }),
     };
   }
   const manifest = await readIngestionManifest(deps.store, scope, args.job_id);
   const prefix = `${scope}/${args.job_id}`;
   const marker = await deps.store.read(`${prefix}/result.json`);
   const result = marker
-    ? JSON.parse(new TextDecoder().decode(marker))
+    ? readIngestionCompletion(marker, manifest)
     : { job_id: args.job_id, status: "queued", gold_sha256: null };
   if (args.action === "read") {
     await recheck();
@@ -113,7 +136,12 @@ export async function processIngestionOperation(
         },
       };
     }
-    const digest = result[`${args.stage}_sha256`];
+    const digest =
+      args.stage === "gold"
+        ? result.gold_sha256
+        : "silver_sha256" in result
+          ? result.silver_sha256
+          : null;
     if (!digest || (args.stage === "gold" && result.status !== "ready"))
       throw new Error("Artifact not ready");
     const bytes = await deps.store.read(`${prefix}/${args.stage}.json`);
