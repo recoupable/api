@@ -16,6 +16,10 @@
     {
       "path": "/api/internal/context-guest-maintenance",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/internal/missed-report-check",
+      "schedule": "17 * * * *"
     }
   ]
 }

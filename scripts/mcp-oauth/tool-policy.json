@@ -725,5 +725,15 @@
     ],
     "status": "development only; delegated unavailable",
     "authorizationWork": "Static read-effect classification only, not a delegated permission grant. Register only with NODE_ENV=development and CATALOG_ENTITLEMENT_DEV=true; keep excluded from delegated OAuth discovery and invocation. Derive actor from standard authentication and recheck current workspace, case revision and source evidence. No persistence, provider action, payment or production enablement."
+  },
+  {
+    "name": "ingestion",
+    "file": "lib/mcp/tools/ingestion/registerIngestionTool.ts",
+    "scopes": [
+      "mcp:read",
+      "mcp:write"
+    ],
+    "status": "standard only; delegated unavailable",
+    "authorizationWork": "Keep excluded from delegated OAuth. Standard authenticated operations bind the actor and current account or organization scope, recheck access before artifact return and delivery, and require an exact ready gold digest plus an operator-configured scoped destination. Private originals and output artifacts are never public. Any future delegated exposure requires separate grant, retention and external-delivery review."
   }
 ]

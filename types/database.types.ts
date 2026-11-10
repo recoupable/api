@@ -2480,6 +2480,7 @@ export type Database = {
           created_at: string;
           id: string;
           raw_body: string | null;
+          reason: string | null;
           resend_id: string | null;
           status: string;
         };
@@ -2489,6 +2490,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           raw_body?: string | null;
+          reason?: string | null;
           resend_id?: string | null;
           status: string;
         };
@@ -2498,6 +2500,7 @@ export type Database = {
           created_at?: string;
           id?: string;
           raw_body?: string | null;
+          reason?: string | null;
           resend_id?: string | null;
           status?: string;
         };
@@ -6216,6 +6219,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      ingestion_catalog_command: {
+        Args: { p_actor: string; p_org: string; p_action: string; p_input?: Json };
+        Returns: Json;
+      };
       accept_context_result: {
         Args: {
           p_document: string;
