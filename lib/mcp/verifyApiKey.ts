@@ -41,6 +41,9 @@ export async function verifyBearerToken(
       };
   } catch {
     // Storage failure never grants delegated access; legacy credentials still validate independently.
+    console.error("OAuth bearer verification unavailable", {
+      event: "oauth_bearer_verification_unavailable",
+    });
   }
 
   // Try Privy JWT first

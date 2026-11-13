@@ -8,6 +8,7 @@ import { validateOAuthClientMetadata } from "./validateOAuthClientMetadata";
 import { validateOAuthRedirectUris } from "./validateOAuthRedirectUris";
 import { getAgentRegistrationProviderOptions } from "./agentAuth/getAgentRegistrationProviderOptions";
 import { configureAgentRegistrationDiscovery } from "./agentAuth/configureAgentRegistrationDiscovery";
+import { getOAuthErrorCode } from "./getOAuthErrorCode";
 
 /** Real-account provider; all secrets and durable storage are supplied explicitly. */
 export function createRecoupOAuthProvider(
@@ -106,6 +107,16 @@ export function createRecoupOAuthProvider(
   provider.on("server_error", () => {
     console.error("OAuth provider unavailable", { event: "oauth_provider_unavailable" });
   });
+  // Name the step a client saw fail (e.g. a token exchange) with only a standard error code.
+  for (const event of ["authorization.error", "grant.error"] as const) {
+    provider.on(event, (_ctx: unknown, error: unknown) => {
+      console.error("OAuth request rejected", {
+        event: "oauth_request_rejected",
+        step: event.split(".")[0],
+        error: getOAuthErrorCode(error),
+      });
+    });
+  }
   configureAgentRegistrationDiscovery(provider, config);
   provider.proxy = true;
   return provider;

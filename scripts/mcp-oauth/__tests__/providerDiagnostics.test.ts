@@ -60,6 +60,8 @@ async function fixture() {
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify(body),
       }),
+    token: (body: Record<string, string>) =>
+      fetch(`${origin}/api/oauth/token`, { method: "POST", body: new URLSearchParams(body) }),
     close: async () => {
       server.closeAllConnections();
       await new Promise<void>(resolve => server.close(() => resolve()));
@@ -113,6 +115,29 @@ it("keeps expected registration denials and successful registration out of failu
     await success.json();
     expect(f.upsert).toHaveBeenCalledOnce();
     expect(f.log).not.toHaveBeenCalled();
+  } finally {
+    await f.close();
+  }
+});
+
+it("names a rejected token exchange with only a standard error code", async () => {
+  const f = await fixture();
+  try {
+    const response = await f.token({
+      grant_type: "authorization_code",
+      client_id: "unknown-client",
+      code: "secret-code-value",
+      code_verifier: "v".repeat(43),
+      redirect_uri: "https://agent.example/callback",
+    });
+    expect(response.status).toBe(401);
+    expect(f.log).toHaveBeenCalledWith("OAuth request rejected", {
+      event: "oauth_request_rejected",
+      step: "grant",
+      error: "invalid_client",
+    });
+    expect(JSON.stringify(f.log.mock.calls)).not.toContain("secret-code-value");
+    expect(JSON.stringify(f.log.mock.calls)).not.toContain("unknown-client");
   } finally {
     await f.close();
   }
