@@ -2,13 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { errorResponse } from "@/lib/networking/errorResponse";
 import { validateArtistSocialsScrapeBody } from "@/lib/artist/validateArtistSocialsScrapeBody";
-import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
-import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
-import { ensureSocialScrapeCredits } from "@/lib/socials/ensureSocialScrapeCredits";
-import { startArtistSocialsScrape } from "@/lib/artist/startArtistSocialsScrape";
-import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
-import { endpointModelId } from "@/lib/credits/endpointModelId";
+import { runArtistSocialsScrape } from "@/lib/artist/runArtistSocialsScrape";
+import { buildInsufficientCreditsResponse } from "@/lib/credits/buildInsufficientCreditsResponse";
 
 /**
  * Handler for scraping artist social profiles.
@@ -36,39 +32,23 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
     const authResult = await validateAuthContext(request);
     if (authResult instanceof NextResponse) return authResult;
 
-    const hasAccess = await checkAccountArtistAccess(
-      authResult.accountId,
-      validatedBody.artist_account_id,
-    );
-    if (!hasAccess) {
+    const result = await runArtistSocialsScrape({
+      accountId: authResult.accountId,
+      artistAccountId: validatedBody.artist_account_id,
+      posts: validatedBody.posts,
+    });
+
+    if (result.kind === "forbidden") {
       return errorResponse("Unauthorized artist socials scrape attempt", 403);
     }
-
-    const socials = await selectAccountSocials({ accountId: validatedBody.artist_account_id });
-
-    if (!socials.length) {
-      return NextResponse.json([], {
-        status: 200,
+    if (result.kind === "insufficient_credits") {
+      return NextResponse.json(buildInsufficientCreditsResponse(result), {
+        status: 402,
         headers: getCorsHeaders(),
       });
     }
 
-    const costPerProfile = getSocialScrapeCreditCost(validatedBody.posts);
-    const short = await ensureSocialScrapeCredits(
-      authResult.accountId,
-      costPerProfile * socials.length,
-    );
-    if (short) return short;
-
-    const results = await startArtistSocialsScrape({
-      accountId: authResult.accountId,
-      socials,
-      posts: validatedBody.posts,
-      costPerProfile,
-      modelId: endpointModelId(request, "/api/artist/socials/scrape"),
-    });
-
-    return NextResponse.json(results, {
+    return NextResponse.json(result.runs, {
       status: 200,
       headers: getCorsHeaders(),
     });

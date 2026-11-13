@@ -7,11 +7,7 @@ import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { artistSocialsScrapeBodySchema } from "@/lib/artist/validateArtistSocialsScrapeBody";
-import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
-import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
-import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
-import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
-import { startArtistSocialsScrape } from "@/lib/artist/startArtistSocialsScrape";
+import { runArtistSocialsScrape } from "@/lib/artist/runArtistSocialsScrape";
 
 const scrapeArtistSocialsSchema = artistSocialsScrapeBodySchema.extend({
   artist_account_id: artistSocialsScrapeBodySchema.shape.artist_account_id.describe(
@@ -52,40 +48,27 @@ export function registerScrapeArtistSocialsTool(server: McpServer): void {
       if (!accountId) return getToolResultError("Authentication required.");
 
       try {
-        if (!(await checkAccountArtistAccess(accountId, args.artist_account_id))) {
+        const result = await runArtistSocialsScrape({
+          accountId,
+          artistAccountId: args.artist_account_id,
+          posts: args.posts,
+        });
+        if (result.kind === "forbidden") {
           return getToolResultError("Access denied to specified artist_account_id");
         }
-
-        const socials = await selectAccountSocials({ accountId: args.artist_account_id });
-        if (!socials.length) {
+        if (result.kind === "insufficient_credits") {
+          return getToolResultError(
+            `Insufficient credits: ${result.remainingCredits} remaining, ${result.requiredCredits} required`,
+          );
+        }
+        if (!result.runs.length) {
           return getToolResultSuccess({
             success: true,
             runs: [],
             message: "This artist has no linked social profiles to scrape.",
           });
         }
-
-        const costPerProfile = getSocialScrapeCreditCost(args.posts);
-        const gate = await checkCreditsAvailable({
-          accountId,
-          creditsToDeduct: costPerProfile * socials.length,
-        });
-        if (gate.kind === "insufficient_credits") {
-          return getToolResultError(
-            `Insufficient credits: ${gate.remainingCredits} remaining, ${gate.requiredCredits} required`,
-          );
-        }
-
-        const runs = await startArtistSocialsScrape({
-          accountId,
-          socials,
-          posts: args.posts,
-          costPerProfile,
-          // Same usage label as the REST route: one billed operation groups under one
-          // documented `METHOD /route/pattern` value whatever the transport.
-          modelId: "POST /api/artist/socials/scrape",
-        });
-        return getToolResultSuccess({ success: true, runs });
+        return getToolResultSuccess({ success: true, runs: result.runs });
       } catch (err) {
         console.error("[scrape_artist_socials] failed:", err);
         return getToolResultError("Failed to start the artist socials scrape.");

@@ -13,7 +13,7 @@ export interface StartArtistSocialsScrapeParams {
   posts?: number;
   /** Per-profile credit cost, already gated by the caller. */
   costPerProfile: number;
-  /** Usage-event label for the charge (route pattern or MCP tool name). */
+  /** Usage-event label for the charge (`METHOD /route/pattern`). */
   modelId: string;
 }
 
@@ -27,9 +27,8 @@ export interface StartedArtistSocialsScrape {
  * Starts one Apify scrape per linked artist social, charges credits for the
  * profiles whose scrape actually started, and registers the started runs as
  * one batch so webhook completions assemble a single new-posts digest
- * (chat#1855). Shared by `POST /api/artist/socials/scrape` and the
- * `scrape_artist_socials` MCP tool. Access and the up-front credit gate stay
- * with the caller, whose response shapes differ.
+ * (chat#1855). Called by `runArtistSocialsScrape`, which does the access
+ * check and the up-front credit gate first.
  *
  * @param params - See {@link StartArtistSocialsScrapeParams}.
  * @returns One `{ runId, datasetId, error }` entry per scraped profile.

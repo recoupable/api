@@ -8,7 +8,7 @@ import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { getArtistPostsParamsSchema } from "@/lib/posts/validateGetArtistPostsRequest";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
-import { selectPosts } from "@/lib/supabase/posts/selectPosts";
+import { getArtistPosts } from "@/lib/posts/getArtistPosts";
 
 // Plain numeric fields keep the published JSON schema typed; the REST query
 // schema then applies the same defaults (page 1, limit 20) and cap (100).
@@ -58,21 +58,13 @@ export function registerGetArtistPostsTool(server: McpServer): void {
           return getToolResultError("Access denied to specified artist_account_id");
         }
 
-        const { posts, totalCount } = await selectPosts({
-          artistAccountId: params.artist_account_id,
-          page: params.page,
-          limit: params.limit,
-        });
-        return getToolResultSuccess({
-          status: "success",
-          posts,
-          pagination: {
-            total_count: totalCount,
+        return getToolResultSuccess(
+          await getArtistPosts({
+            artistAccountId: params.artist_account_id,
             page: params.page,
             limit: params.limit,
-            total_pages: Math.ceil(totalCount / params.limit) || 1,
-          },
-        });
+          }),
+        );
       } catch (err) {
         console.error("[get_artist_posts] failed:", err);
         return getToolResultError("Failed to list artist posts.");

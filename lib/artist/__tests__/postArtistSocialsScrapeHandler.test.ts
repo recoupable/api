@@ -6,7 +6,7 @@ import { scrapeProfileUrlBatch } from "@/lib/apify/scrapeProfileUrlBatch";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
-import { ensureSocialScrapeCredits } from "@/lib/socials/ensureSocialScrapeCredits";
+import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
 import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredits";
 import { upsertApifyScraperRuns } from "@/lib/supabase/apify_scraper_runs/upsertApifyScraperRuns";
 
@@ -19,7 +19,7 @@ vi.mock("@/lib/supabase/account_socials/selectAccountSocials", () => ({
 }));
 vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
 vi.mock("@/lib/artists/checkAccountArtistAccess", () => ({ checkAccountArtistAccess: vi.fn() }));
-vi.mock("@/lib/socials/ensureSocialScrapeCredits", () => ({ ensureSocialScrapeCredits: vi.fn() }));
+vi.mock("@/lib/credits/checkCreditsAvailable", () => ({ checkCreditsAvailable: vi.fn() }));
 vi.mock("@/lib/socials/deductSocialScrapeCredits", () => ({ deductSocialScrapeCredits: vi.fn() }));
 vi.mock("@/lib/networking/getCorsHeaders", () => ({ getCorsHeaders: () => ({}) }));
 
@@ -43,7 +43,7 @@ describe("postArtistSocialsScrapeHandler", () => {
     vi.clearAllMocks();
     vi.mocked(validateAuthContext).mockResolvedValue(authResult);
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
-    vi.mocked(ensureSocialScrapeCredits).mockResolvedValue(null);
+    vi.mocked(checkCreditsAvailable).mockResolvedValue({ kind: "available" });
     vi.mocked(selectAccountSocials).mockResolvedValue(TWO_SOCIALS as never);
     vi.mocked(scrapeProfileUrlBatch).mockResolvedValue([
       { state: "started", runId: "r1", datasetId: "d1", error: null, profileUrl: null },
@@ -76,21 +76,34 @@ describe("postArtistSocialsScrapeHandler", () => {
   });
 
   it("gates on ($0.05 + $0.01 × posts) × profiles and short-circuits with the 402", async () => {
-    const short = NextResponse.json({}, { status: 402 });
-    vi.mocked(ensureSocialScrapeCredits).mockResolvedValue(short);
-    expect(
-      await postArtistSocialsScrapeHandler(
-        makeRequest({ artist_account_id: ARTIST_ID, posts: 20 }),
-      ),
-    ).toBe(short);
-    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 500_000);
+    vi.mocked(checkCreditsAvailable).mockResolvedValue({
+      kind: "insufficient_credits",
+      remainingCredits: 10,
+      requiredCredits: 500_000,
+    });
+    const res = await postArtistSocialsScrapeHandler(
+      makeRequest({ artist_account_id: ARTIST_ID, posts: 20 }),
+    );
+    expect(res.status).toBe(402);
+    expect(await res.json()).toMatchObject({
+      error: "insufficient_credits",
+      remaining_credits: 10,
+      required_credits: 500_000,
+    });
+    expect(checkCreditsAvailable).toHaveBeenCalledWith({
+      accountId: ACCOUNT_ID,
+      creditsToDeduct: 500_000,
+    });
     expect(scrapeProfileUrlBatch).not.toHaveBeenCalled();
   });
 
   it("scrapes without a posts depth by default and deducts $0.05 per scraped profile", async () => {
     const res = await postArtistSocialsScrapeHandler(makeRequest({ artist_account_id: ARTIST_ID }));
     expect(res.status).toBe(200);
-    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 100_000);
+    expect(checkCreditsAvailable).toHaveBeenCalledWith({
+      accountId: ACCOUNT_ID,
+      creditsToDeduct: 100_000,
+    });
     expect(scrapeProfileUrlBatch).toHaveBeenCalledWith(
       [
         { profileUrl: "https://x.com/a", username: "a" },
@@ -111,7 +124,10 @@ describe("postArtistSocialsScrapeHandler", () => {
       { state: "started", runId: "r1", datasetId: "d1", error: null, profileUrl: null },
     ]);
     await postArtistSocialsScrapeHandler(makeRequest({ artist_account_id: ARTIST_ID, posts: 20 }));
-    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 500_000);
+    expect(checkCreditsAvailable).toHaveBeenCalledWith({
+      accountId: ACCOUNT_ID,
+      creditsToDeduct: 500_000,
+    });
     expect(scrapeProfileUrlBatch).toHaveBeenCalledWith(expect.any(Array), 20);
     expect(deductSocialScrapeCredits).toHaveBeenCalledTimes(1);
     expect(deductSocialScrapeCredits).toHaveBeenCalledWith(
@@ -126,7 +142,7 @@ describe("postArtistSocialsScrapeHandler", () => {
     const res = await postArtistSocialsScrapeHandler(makeRequest({ artist_account_id: ARTIST_ID }));
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual([]);
-    expect(ensureSocialScrapeCredits).not.toHaveBeenCalled();
+    expect(checkCreditsAvailable).not.toHaveBeenCalled();
     expect(deductSocialScrapeCredits).not.toHaveBeenCalled();
   });
 
