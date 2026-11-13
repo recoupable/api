@@ -119,6 +119,19 @@ describe("registerScrapeArtistSocialsTool", () => {
     expect(startArtistSocialsScrape).not.toHaveBeenCalled();
   });
 
+  it("returns a tool error with each failure when no run started", async () => {
+    vi.mocked(startArtistSocialsScrape).mockResolvedValue([
+      { runId: null, datasetId: null, error: "Failed to start scrape" },
+      { runId: null, datasetId: null, error: "Unsupported platform" },
+    ]);
+    const result = await handler({ artist_account_id: ARTIST_ID }, extra("acct"));
+    expect(text(result)).toEqual({
+      success: false,
+      message:
+        "No scrape runs started: Failed to start scrape; Unsupported platform. No credits were charged.",
+    });
+  });
+
   it("returns a redacted error when the scrape throws", async () => {
     vi.mocked(startArtistSocialsScrape).mockRejectedValue(new Error("apify token bad"));
     const result = await handler({ artist_account_id: ARTIST_ID }, extra("acct"));

@@ -68,6 +68,11 @@ export function registerScrapeArtistSocialsTool(server: McpServer): void {
             message: "This artist has no linked social profiles to scrape.",
           });
         }
+        // Credits are charged only for started runs, so an all-failed batch cost nothing.
+        if (!result.runs.some(run => run.runId)) {
+          const reasons = result.runs.map(run => run.error ?? "Unknown error").join("; ");
+          return getToolResultError(`No scrape runs started: ${reasons}. No credits were charged.`);
+        }
         return getToolResultSuccess({ success: true, runs: result.runs });
       } catch (err) {
         console.error("[scrape_artist_socials] failed:", err);
