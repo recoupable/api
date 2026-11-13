@@ -81,7 +81,9 @@ export function registerScrapeArtistSocialsTool(server: McpServer): void {
           socials,
           posts: args.posts,
           costPerProfile,
-          modelId: "MCP scrape_artist_socials",
+          // Same usage label as the REST route: one billed operation groups under one
+          // documented `METHOD /route/pattern` value whatever the transport.
+          modelId: "POST /api/artist/socials/scrape",
         });
         return getToolResultSuccess({ success: true, runs });
       } catch (err) {

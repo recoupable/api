@@ -35,7 +35,7 @@ describe("startArtistSocialsScrape", () => {
       socials: SOCIALS,
       posts: 3,
       costPerProfile: 80_000,
-      modelId: "MCP scrape_artist_socials",
+      modelId: "POST /api/artist/socials/scrape",
     });
 
     expect(scrapeProfileUrlBatch).toHaveBeenCalledWith(
@@ -48,7 +48,7 @@ describe("startArtistSocialsScrape", () => {
     expect(deductSocialScrapeCredits).toHaveBeenCalledWith(
       "acct",
       80_000,
-      "MCP scrape_artist_socials",
+      "POST /api/artist/socials/scrape",
     );
     const [runs] = vi.mocked(upsertApifyScraperRuns).mock.calls[0];
     expect(runs).toEqual([

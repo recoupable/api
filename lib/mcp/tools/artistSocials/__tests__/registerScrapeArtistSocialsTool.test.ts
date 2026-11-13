@@ -73,7 +73,7 @@ describe("registerScrapeArtistSocialsTool", () => {
       socials: SOCIALS,
       posts: 5,
       costPerProfile: 100_000,
-      modelId: "MCP scrape_artist_socials",
+      modelId: "POST /api/artist/socials/scrape",
     });
     expect(text(result)).toEqual({
       success: true,
