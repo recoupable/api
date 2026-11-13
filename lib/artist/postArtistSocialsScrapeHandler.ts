@@ -1,15 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { errorResponse } from "@/lib/networking/errorResponse";
-import { scrapeProfileUrlBatch } from "@/lib/apify/scrapeProfileUrlBatch";
 import { validateArtistSocialsScrapeBody } from "@/lib/artist/validateArtistSocialsScrapeBody";
 import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccountSocials";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import { ensureSocialScrapeCredits } from "@/lib/socials/ensureSocialScrapeCredits";
-import { deductSocialScrapeCredits } from "@/lib/socials/deductSocialScrapeCredits";
-import { upsertApifyScraperRuns } from "@/lib/supabase/apify_scraper_runs/upsertApifyScraperRuns";
-import { getSocialPlatformByLink } from "@/lib/artists/getSocialPlatformByLink";
+import { startArtistSocialsScrape } from "@/lib/artist/startArtistSocialsScrape";
 import { getSocialScrapeCreditCost } from "@/lib/socials/getSocialScrapeCreditCost";
 import { endpointModelId } from "@/lib/credits/endpointModelId";
 
@@ -63,48 +60,18 @@ export async function postArtistSocialsScrapeHandler(request: NextRequest): Prom
     );
     if (short) return short;
 
-    const results = await scrapeProfileUrlBatch(
-      socials.map(social => ({
-        profileUrl: social.social?.profile_url,
-        username: social.social?.username,
-      })),
-      validatedBody.posts,
-    );
+    const results = await startArtistSocialsScrape({
+      accountId: authResult.accountId,
+      socials,
+      posts: validatedBody.posts,
+      costPerProfile,
+      modelId: endpointModelId(request, "/api/artist/socials/scrape"),
+    });
 
-    const started = results.filter(result => result.state === "started");
-    if (started.length) {
-      await deductSocialScrapeCredits(
-        authResult.accountId,
-        costPerProfile * started.length,
-        endpointModelId(request, "/api/artist/socials/scrape"),
-      );
-
-      // Register the batch so per-platform webhook completions can assemble
-      // ONE consolidated new-posts digest instead of an email per platform
-      // (chat#1855). Registration failure must not fail the scrape.
-      const batchId = crypto.randomUUID();
-      const socialByUrl = new Map(
-        socials.map(s => [s.social?.profile_url ?? "", s.social?.id ?? null]),
-      );
-      await upsertApifyScraperRuns(
-        started.map(r => ({
-          run_id: r.runId,
-          account_id: authResult.accountId,
-          social_id: r.profileUrl ? (socialByUrl.get(r.profileUrl) ?? null) : null,
-          platform: r.profileUrl ? getSocialPlatformByLink(r.profileUrl).toLowerCase() : null,
-          batch_id: batchId,
-          origin: "artist",
-        })),
-      );
-    }
-
-    return NextResponse.json(
-      results.map(({ runId, datasetId, error }) => ({ runId, datasetId, error })),
-      {
-        status: 200,
-        headers: getCorsHeaders(),
-      },
-    );
+    return NextResponse.json(results, {
+      status: 200,
+      headers: getCorsHeaders(),
+    });
   } catch (error) {
     console.error("[ERROR] postArtistSocialsScrapeHandler error:", error);
     return NextResponse.json(

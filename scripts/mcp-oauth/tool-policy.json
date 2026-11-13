@@ -179,6 +179,15 @@
     "authorizationWork": "Never expose a credential to an OAuth client. Hide and reject this tool for delegated connections; replace raw-REST skill credential flow with scoped server-side operations."
   },
   {
+    "name": "get_artist_posts",
+    "file": "lib/mcp/tools/artistSocials/registerGetArtistPostsTool.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution. Check the target artist/resource through an authorized relationship, not a system-prompt assertion."
+  },
+  {
     "name": "get_artist_socials",
     "file": "lib/mcp/tools/artistSocials/registerGetArtistSocialsTool.ts",
     "scopes": [
@@ -231,6 +240,15 @@
     ],
     "status": "requires OAuth execution audit before enablement",
     "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution."
+  },
+  {
+    "name": "get_scraper_results",
+    "file": "lib/mcp/tools/artistSocials/registerGetScraperResultsTool.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "Require a verified credential. Like GET /api/apify/runs/{runId}, deliberately not owner-scoped (chat#1840): scrape datasets are public social content and Apify run ids are unguessable."
   },
   {
     "name": "get_site",
@@ -413,6 +431,16 @@
     ],
     "status": "requires OAuth execution audit before enablement",
     "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution. Persist account-to-provider-job ownership before accepting provider IDs."
+  },
+  {
+    "name": "scrape_artist_socials",
+    "file": "lib/mcp/tools/artistSocials/registerScrapeArtistSocialsTool.ts",
+    "scopes": [
+      "mcp:write",
+      "mcp:spend"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution. Check the target artist/resource through an authorized relationship, not a system-prompt assertion. Gate credits before starting paid scrapes and charge only for runs that started."
   },
   {
     "name": "search_google_images",
