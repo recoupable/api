@@ -1,0 +1,5 @@
+export const INGESTION_ENGINE_VERSION = "1";
+export const INGESTION_MAX_BYTES = 2 * 1024 * 1024;
+export const INGESTION_MAX_ROWS = 10000;
+export const INGESTION_MAX_COLUMNS = 100;
+export const INGESTION_MAX_ARTIFACT_BYTES = 16 * 1024 * 1024;

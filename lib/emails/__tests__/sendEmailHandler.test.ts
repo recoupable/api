@@ -85,12 +85,18 @@ describe("sendEmailHandler", () => {
     mockValidateSendEmailBody.mockResolvedValue({
       rawBody: "{}",
       error: NextResponse.json({ status: "error", error: "Forbidden" }, { status: 403 }),
+      reason: "recipient_not_allowed: stranger@example.com",
+      accountId: "account-123",
     });
     const response = await sendEmailHandler(createRequest());
     expect(response.status).toBe(403);
     expect(mockProcessAndSendEmail).not.toHaveBeenCalled();
     expect(mockLogEmailAttempt).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "rejected" }),
+      expect.objectContaining({
+        status: "rejected",
+        reason: "recipient_not_allowed: stranger@example.com",
+        accountId: "account-123",
+      }),
     );
   });
 
@@ -101,7 +107,7 @@ describe("sendEmailHandler", () => {
     const json = await response.json();
     expect(json.error).toBe("resend boom");
     expect(mockLogEmailAttempt).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "send_failed" }),
+      expect.objectContaining({ status: "send_failed", reason: "resend_error: resend boom" }),
     );
   });
 });

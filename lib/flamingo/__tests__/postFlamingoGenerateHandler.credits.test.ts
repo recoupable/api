@@ -59,7 +59,7 @@ describe("postFlamingoGenerateHandler — credit gate", () => {
     );
   });
 
-  it("gates full_report on one floor per section", async () => {
+  it("gates full_report on one base fee, since its sections run as one batch", async () => {
     vi.mocked(ensureCreditsOrShortCircuit).mockResolvedValue(null);
     vi.mocked(processAnalyzeMusicRequest).mockResolvedValue({
       type: "success",
@@ -74,7 +74,7 @@ describe("postFlamingoGenerateHandler — credit gate", () => {
 
     expect(ensureCreditsOrShortCircuit).toHaveBeenCalledWith({
       accountId: "acc_1",
-      creditsToDeduct: 650_000,
+      creditsToDeduct: 50_000,
     });
   });
 

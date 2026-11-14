@@ -58,7 +58,7 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
-    expect(tools).toHaveLength(89);
+    expect(tools).toHaveLength(92);
     expect(tools.map(tool => tool.name)).toContain("get_artist_socials");
     expect(tools.map(tool => tool.name)).not.toContain("artist_deep_research");
     expect(tools.map(tool => tool.name)).not.toContain("spotify_deep_research");
