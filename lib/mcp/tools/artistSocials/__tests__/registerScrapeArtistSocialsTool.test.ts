@@ -28,7 +28,10 @@ const extra = (accountId?: string) =>
 const text = (result: { content: Array<{ text: string }> }) => JSON.parse(result.content[0].text);
 
 describe("registerScrapeArtistSocialsTool", () => {
-  let config: { inputSchema: { safeParse: (v: unknown) => { success: boolean } } };
+  let config: {
+    description: string;
+    inputSchema: { safeParse: (v: unknown) => { success: boolean } };
+  };
   let handler: (args: unknown, extra: unknown) => Promise<{ content: Array<{ text: string }> }>;
 
   beforeEach(() => {
@@ -48,6 +51,12 @@ describe("registerScrapeArtistSocialsTool", () => {
       { runId: "r1", datasetId: "d1", error: null },
       { runId: null, datasetId: null, error: "Unsupported platform" },
     ]);
+  });
+
+  it("keeps the description to three sentences and states the cost", () => {
+    const sentences = config.description.split(/(?<=[.!?])\s+/).filter(Boolean);
+    expect(sentences.length).toBeLessThanOrEqual(3);
+    expect(config.description).toContain("$0.05 per profile plus $0.01 per requested post");
   });
 
   it("reuses the REST body limits for posts", () => {

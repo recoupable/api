@@ -33,7 +33,7 @@ export function registerScrapeArtistSocialsTool(server: McpServer): void {
     "scrape_artist_socials",
     {
       description:
-        "Start a fresh scrape of every social profile linked to an artist (profile stats and recent posts). Returns one run per profile with a runId; pass each runId to get_scraper_results to check status and read the scraped data. Scraped posts are also saved and can be listed later with get_artist_posts. Costs credits: $0.05 per profile plus $0.01 per requested post.",
+        "Start a fresh scrape of every social profile linked to an artist (profile stats and recent posts), costing $0.05 per profile plus $0.01 per requested post. Returns one run per profile; pass each runId to get_scraper_results to check status and read the scraped data. Scraped posts are also saved and can be listed later with get_artist_posts.",
       inputSchema: scrapeArtistSocialsSchema,
     },
     async (
