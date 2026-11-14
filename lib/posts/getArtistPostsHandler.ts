@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { errorResponse } from "@/lib/networking/errorResponse";
-import { selectPosts } from "@/lib/supabase/posts/selectPosts";
+import { getArtistPosts } from "@/lib/posts/getArtistPosts";
 import { validateGetArtistPostsRequest } from "@/lib/posts/validateGetArtistPostsRequest";
 
 /**
@@ -17,25 +17,13 @@ export async function getArtistPostsHandler(
       return validated;
     }
 
-    const { posts, totalCount } = await selectPosts({
+    const body = await getArtistPosts({
       artistAccountId: validated.artist_account_id,
       page: validated.page,
       limit: validated.limit,
     });
 
-    return NextResponse.json(
-      {
-        status: "success",
-        posts,
-        pagination: {
-          total_count: totalCount,
-          page: validated.page,
-          limit: validated.limit,
-          total_pages: Math.ceil(totalCount / validated.limit) || 1,
-        },
-      },
-      { status: 200, headers: getCorsHeaders() },
-    );
+    return NextResponse.json(body, { status: 200, headers: getCorsHeaders() });
   } catch (error) {
     console.error("[ERROR] getArtistPostsHandler:", error);
     return errorResponse("Internal server error", 500);

@@ -97,6 +97,13 @@ export const SONG_MOMENTS_MEASURE_URL = "https://shared-78369--song-moments-meas
 export const SONG_MOMENTS_MODEL_ID = "recoup/song-moments";
 
 /**
+ * Written on `usage_events.model_id` for an artist socials scrape, from REST
+ * or the `scrape_artist_socials` MCP tool alike, so the one billed operation
+ * groups under its documented `METHOD /route/pattern` value.
+ */
+export const ARTIST_SOCIALS_SCRAPE_MODEL_ID = "POST /api/artist/socials/scrape";
+
+/**
  * Music Flamingo batch endpoint (Modal): many prompts on one audio download.
  * Same deployment as `FLAMINGO_GENERATE_URL`; Modal names each endpoint's host
  * after its method, with underscores as hyphens (`generate_batch` → `generate-batch`).

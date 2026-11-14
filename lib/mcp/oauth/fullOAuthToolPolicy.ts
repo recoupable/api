@@ -23,6 +23,11 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
   export_release_pack: { readOnly: true },
   list_artists: { readOnly: true },
   get_artist_socials: { readOnly: true },
+  get_artist_posts: { readOnly: true },
+  get_scraper_results: {
+    readOnly: true,
+    notice: "Reads a run started by scrape_artist_socials. Scraped data is public social content.",
+  },
   artist_deep_research: { readOnly: true },
   spotify_deep_research: { readOnly: true },
   get_spotify_album: { readOnly: true },
@@ -85,6 +90,12 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
   create_new_artist: { readOnly: false, destructive: false },
   update_account_info: { readOnly: false },
   update_artist_socials: { readOnly: false },
+  scrape_artist_socials: {
+    readOnly: false,
+    destructive: false,
+    notice:
+      "Spends account credits: $0.05 per linked profile plus $0.01 per requested post. Confirm before scraping.",
+  },
   update_pulse: { readOnly: false },
   create_task: { readOnly: false, destructive: false },
   update_task: { readOnly: false },

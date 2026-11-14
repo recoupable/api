@@ -11,6 +11,7 @@ import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { checkAccountArtistAccess } from "@/lib/artists/checkAccountArtistAccess";
 import { ensureSocialScrapeCredits } from "@/lib/socials/ensureSocialScrapeCredits";
 import { recordCreditDeduction } from "@/lib/credits/recordCreditDeduction";
+import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
 import { upsertApifyScraperRuns } from "@/lib/supabase/apify_scraper_runs/upsertApifyScraperRuns";
 
 vi.mock("@/lib/apify/tiktok/startTiktokProfileScraping", () => ({ default: vi.fn() }));
@@ -30,6 +31,7 @@ vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() 
 vi.mock("@/lib/artists/checkAccountArtistAccess", () => ({ checkAccountArtistAccess: vi.fn() }));
 vi.mock("@/lib/socials/ensureSocialScrapeCredits", () => ({ ensureSocialScrapeCredits: vi.fn() }));
 vi.mock("@/lib/credits/recordCreditDeduction", () => ({ recordCreditDeduction: vi.fn() }));
+vi.mock("@/lib/credits/checkCreditsAvailable", () => ({ checkCreditsAvailable: vi.fn() }));
 vi.mock("@/lib/supabase/apify_scraper_runs/upsertApifyScraperRuns", () => ({
   upsertApifyScraperRuns: vi.fn(),
 }));
@@ -49,6 +51,7 @@ describe("social scrape route billing with fixture providers and accounts", () =
     });
     vi.mocked(checkAccountArtistAccess).mockResolvedValue(true);
     vi.mocked(ensureSocialScrapeCredits).mockResolvedValue(null);
+    vi.mocked(checkCreditsAvailable).mockResolvedValue({ kind: "available" });
     vi.mocked(selectSocials).mockResolvedValue([social as never]);
     vi.mocked(selectAccountSocials).mockResolvedValue([
       { account_id: ARTIST_ID, social },
@@ -82,7 +85,10 @@ describe("social scrape route billing with fixture providers and accounts", () =
       { runId: "r2", datasetId: "d2", error: null },
       { runId: null, datasetId: null, error: "Failed to start scrape" },
     ]);
-    expect(ensureSocialScrapeCredits).toHaveBeenCalledWith(ACCOUNT_ID, 750_000);
+    expect(checkCreditsAvailable).toHaveBeenCalledWith({
+      accountId: ACCOUNT_ID,
+      creditsToDeduct: 750_000,
+    });
     expect(recordCreditDeduction).toHaveBeenCalledExactlyOnceWith({
       accountId: ACCOUNT_ID,
       creditsToDeduct: 500_000,
