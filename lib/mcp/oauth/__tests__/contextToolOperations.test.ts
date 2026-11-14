@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vitest";
 import { z } from "zod";
-import { contextOperationSchema } from "@/lib/context/processContextOperation";
+import { contextOperationSchema } from "@/lib/context/contextOperationSchema";
 import { contextToolOperations } from "../contextToolOperations";
 
 vi.mock("@/lib/context/authorizeContextOwner", () => ({ authorizeContextOwner: vi.fn() }));

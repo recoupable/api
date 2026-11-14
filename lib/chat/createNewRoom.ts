@@ -1,5 +1,5 @@
 import { upsertRoom } from "@/lib/supabase/rooms/upsertRoom";
-import { generateChatTitle } from "@/lib/chat/generateChatTitle";
+import { generateChatTitle } from "@/lib/chats/generateChatTitle";
 import { sendNewConversationNotification } from "@/lib/telegram/sendNewConversationNotification";
 import { UIMessage } from "ai";
 import selectAccountEmails from "@/lib/supabase/account_emails/selectAccountEmails";

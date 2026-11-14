@@ -1,5 +1,6 @@
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
-import { contextOperationSchema, processContextOperation } from "../processContextOperation";
+import { contextOperationSchema } from "../contextOperationSchema";
+import { processContextOperation } from "../processContextOperation";
 import type { ReleaseCaseProjection, ReleaseCaseReview } from "../releaseCaseTypes";
 import {
   contextReleaseCaseSchema,

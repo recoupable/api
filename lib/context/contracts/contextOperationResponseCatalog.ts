@@ -1,6 +1,6 @@
 import { catalogCaseReceiptSchema, catalogCasePageSchema } from "../catalogCaseResponseSchemas";
 import { z } from "zod";
-import type { contextOperationSchema } from "../processContextOperation";
+import type { contextOperationSchema } from "../contextOperationSchema";
 import { catalogPlanningResponseSchema } from "../catalogPlanningResponseSchema";
 import {
   contextBriefResponseSchema,

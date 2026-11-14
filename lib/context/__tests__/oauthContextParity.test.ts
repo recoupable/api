@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { contextOperationSchema, processContextOperation } from "../processContextOperation";
+import { contextOperationSchema } from "../contextOperationSchema";
+import { processContextOperation } from "../processContextOperation";
 import { authorizeContextOwner } from "../authorizeContextOwner";
 import { registerFullOAuthTools } from "@/lib/mcp/oauth/registerFullOAuthTools";
 import { contextToolOperations } from "@/lib/mcp/oauth/contextToolOperations";
