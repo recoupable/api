@@ -154,12 +154,14 @@ it.each([
       body: JSON.stringify({ action: "read", request_id: "11111111-1111-4111-8111-111111111111" }),
     }),
   );
-  expect(response.status).toBe(409);
+  expect(response.status).toBe(message === "Material evidence owner changed" ? 403 : 500);
   expect(response.headers.get("Cache-Control")).toBe("private, no-store");
-  expect(await response.json()).toEqual({
-    error:
-      "Context operation could not complete. Check scope, request ID and provider availability; retry ingestion with the same idempotency key.",
-  });
+  const body = await response.json();
+  expect(body.code).toBe(
+    message === "Material evidence owner changed" ? "permission_denied" : "internal",
+  );
+  expect(JSON.stringify(body)).not.toContain(message);
+  expect(body.guidance).not.toContain("idempotency");
   expect(diagnostic.mock.calls).toEqual([["[context] read failed", { reason }]]);
 });
 

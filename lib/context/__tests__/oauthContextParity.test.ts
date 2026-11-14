@@ -182,7 +182,9 @@ describe.each(operations)("OAuth Context parity: $action", ({ action, input, exp
   });
 
   it("returns an opaque result when the domain layer denies the actor", async () => {
-    vi.mocked(authorizeContextOwner).mockRejectedValue(new Error(`Access denied: ${canary}`));
+    vi.mocked(authorizeContextOwner).mockRejectedValue(
+      new Error("Access denied to context owner", { cause: new Error(canary) }),
+    );
     const { registered } = setup();
     const result = await registered.get(metadata.name)!.run(input, extra);
     // The envelope belongs to the Context error contract; ownership pins only opacity.
