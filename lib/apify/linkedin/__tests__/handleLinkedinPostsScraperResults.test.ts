@@ -155,4 +155,13 @@ describe("handleLinkedinPostsScraperResults", () => {
       }),
     ]);
   });
+
+  it("persists nothing when every item is a repost, since no author is known to be the scraped page", async () => {
+    listItems.mockResolvedValue({
+      items: [{ ...REAL_ITEM, repostId: "9", repostedBy: { publicIdentifier: "x" } }],
+    });
+    expect(await handleLinkedinPostsScraperResults(payload)).toEqual({ social: null });
+    expect(upsertSocialsWithSnapshot).not.toHaveBeenCalled();
+    expect(persistPostsForSocial).not.toHaveBeenCalled();
+  });
 });

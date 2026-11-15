@@ -40,14 +40,15 @@ type LinkedinPostItem = {
  * The author URL carries a `?miniProfileUrn=` query; it is stripped so the
  * upsert hits the stored `linkedin.com/in/<slug>` row. A company page author
  * is canonicalized to `linkedin.com/company/<slug>` (app#2398). The author
- * comes from an original post where there is one, since a repost's author is
- * whoever wrote the post being reposted.
+ * comes from an original post, since a repost's author is whoever wrote the
+ * post being reposted.
  */
 export async function handleLinkedinPostsScraperResults(parsed: ApifyWebhookPayload) {
   const { items } = await apifyClient.dataset(parsed.resource.defaultDatasetId).listItems();
   const postItems = items as LinkedinPostItem[];
   const isRepost = (item: LinkedinPostItem) => !!(item.repostId || item.repost || item.repostedBy);
-  const author = (postItems.find(item => !isRepost(item)) ?? postItems[0])?.author;
+  // With only reposts there is no author known to be the scraped page; persist nothing.
+  const author = postItems.find(item => !isRepost(item))?.author;
   if (!author?.linkedinUrl) return { social: null };
 
   const social = {
