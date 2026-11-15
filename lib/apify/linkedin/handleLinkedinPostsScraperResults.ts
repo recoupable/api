@@ -48,7 +48,7 @@ export async function handleLinkedinPostsScraperResults(parsed: ApifyWebhookPayl
   const postItems = items as LinkedinPostItem[];
   const isRepost = (item: LinkedinPostItem) => !!(item.repostId || item.repost || item.repostedBy);
   // With only reposts there is no author known to be the scraped page; persist nothing.
-  const author = postItems.find(item => !isRepost(item))?.author;
+  const author = postItems.find(item => !isRepost(item) && item.author?.linkedinUrl)?.author;
   if (!author?.linkedinUrl) return { social: null };
 
   const social = {

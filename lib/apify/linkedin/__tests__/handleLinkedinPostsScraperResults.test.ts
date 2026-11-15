@@ -164,4 +164,12 @@ describe("handleLinkedinPostsScraperResults", () => {
     expect(upsertSocialsWithSnapshot).not.toHaveBeenCalled();
     expect(persistPostsForSocial).not.toHaveBeenCalled();
   });
+
+  it("skips an original post without an author and takes the next one", async () => {
+    listItems.mockResolvedValue({ items: [{ ...REAL_ITEM, author: undefined }, REAL_ITEM] });
+    await handleLinkedinPostsScraperResults(payload);
+    expect(upsertSocialsWithSnapshot).toHaveBeenCalledWith([
+      expect.objectContaining({ profile_url: "linkedin.com/in/sweetmantech" }),
+    ]);
+  });
 });
