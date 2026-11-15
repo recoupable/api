@@ -17,6 +17,7 @@ type LinkedinPostItem = {
     publicIdentifier?: string | null;
     /** Company page authors carry their slug here; publicIdentifier is null. */
     universalName?: string;
+    type?: string;
     linkedinUrl?: string;
     info?: string;
     avatar?: { url?: string };
@@ -46,7 +47,8 @@ export async function handleLinkedinPostsScraperResults(parsed: ApifyWebhookPayl
     ),
     username: author.publicIdentifier ?? author.universalName,
     avatar: author.avatar?.url ?? null,
-    bio: author.info || null,
+    // A company author's `info` is its follower count text ("388 followers"), not a bio.
+    bio: author.type === "company" ? undefined : author.info || null,
   };
   await upsertSocialsWithSnapshot([social]);
 

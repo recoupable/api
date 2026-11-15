@@ -89,6 +89,7 @@ describe("handleLinkedinPostsScraperResults", () => {
             type: "company",
             publicIdentifier: null,
             universalName: "recoupable",
+            info: "388 followers",
             linkedinUrl: "https://www.linkedin.com/company/recoupable/posts",
             avatar: { url: "https://media.licdn.com/dms/image/logo.jpg" },
           },
@@ -100,6 +101,7 @@ describe("handleLinkedinPostsScraperResults", () => {
       expect.objectContaining({
         profile_url: "linkedin.com/company/recoupable",
         username: "recoupable",
+        bio: undefined,
       }),
     ]);
     expect(persistPostsForSocial).toHaveBeenCalledWith(
