@@ -83,8 +83,12 @@ describe("handleLinkedinPostsScraperResults", () => {
       items: [
         {
           ...REAL_ITEM,
+          // Author shape from a real company page run (MdH6eQmL4xd0vk9rR, 2026-11-15).
           author: {
-            name: "Recoupable",
+            name: "Recoup",
+            type: "company",
+            publicIdentifier: null,
+            universalName: "recoupable",
             linkedinUrl: "https://www.linkedin.com/company/recoupable/posts",
             avatar: { url: "https://media.licdn.com/dms/image/logo.jpg" },
           },
@@ -93,7 +97,10 @@ describe("handleLinkedinPostsScraperResults", () => {
     });
     await handleLinkedinPostsScraperResults(payload);
     expect(upsertSocialsWithSnapshot).toHaveBeenCalledWith([
-      expect.objectContaining({ profile_url: "linkedin.com/company/recoupable" }),
+      expect.objectContaining({
+        profile_url: "linkedin.com/company/recoupable",
+        username: "recoupable",
+      }),
     ]);
     expect(persistPostsForSocial).toHaveBeenCalledWith(
       expect.objectContaining({ profileUrl: "linkedin.com/company/recoupable" }),

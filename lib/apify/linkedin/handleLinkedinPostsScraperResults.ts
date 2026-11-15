@@ -14,7 +14,9 @@ type LinkedinPostItem = {
   postedAt?: { date?: string };
   engagement?: { likes?: number; comments?: number; shares?: number };
   author?: {
-    publicIdentifier?: string;
+    publicIdentifier?: string | null;
+    /** Company page authors carry their slug here; publicIdentifier is null. */
+    universalName?: string;
     linkedinUrl?: string;
     info?: string;
     avatar?: { url?: string };
@@ -42,7 +44,7 @@ export async function handleLinkedinPostsScraperResults(parsed: ApifyWebhookPayl
     profile_url: normalizeProfileUrl(
       getLinkedinCompanyUrl(author.linkedinUrl) ?? author.linkedinUrl.split("?")[0],
     ),
-    username: author.publicIdentifier,
+    username: author.publicIdentifier ?? author.universalName,
     avatar: author.avatar?.url ?? null,
     bio: author.info || null,
   };
