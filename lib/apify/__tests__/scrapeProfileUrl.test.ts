@@ -62,6 +62,12 @@ describe("scrapeProfileUrl", () => {
     expect(log).toHaveBeenCalledWith("[ERROR] Failed to start profile scrape:", error);
     log.mockRestore();
   });
+  it("passes a LinkedIn company page as its full URL, not the bare slug (app#2398)", async () => {
+    await scrapeProfileUrl("linkedin.com/company/recoupable", "recoupable", 10);
+    expect(li).toHaveBeenCalledWith("https://www.linkedin.com/company/recoupable", 10, {
+      origin: "artist",
+    });
+  });
   it("forwards posts to the platform scraper", async () => {
     await scrapeProfileUrl("https://www.linkedin.com/in/drew-thurlow", "drew-thurlow", 20);
     expect(li).toHaveBeenCalledWith("drew-thurlow", 20, { origin: "artist" });

@@ -77,4 +77,99 @@ describe("handleLinkedinPostsScraperResults", () => {
     expect(await handleLinkedinPostsScraperResults(payload)).toEqual({ social: null });
     expect(upsertSocialsWithSnapshot).not.toHaveBeenCalled();
   });
+
+  it("keys a company page author on its canonical /company/ url so posts link to the stored row", async () => {
+    listItems.mockResolvedValue({
+      items: [
+        {
+          ...REAL_ITEM,
+          // Author shape from a real company page run (MdH6eQmL4xd0vk9rR, 2026-11-15).
+          author: {
+            name: "Recoup",
+            type: "company",
+            publicIdentifier: null,
+            universalName: "recoupable",
+            info: "388 followers",
+            linkedinUrl: "https://www.linkedin.com/company/recoupable/posts",
+            avatar: { url: "https://media.licdn.com/dms/image/logo.jpg" },
+          },
+        },
+      ],
+    });
+    await handleLinkedinPostsScraperResults(payload);
+    expect(upsertSocialsWithSnapshot).toHaveBeenCalledWith([
+      expect.objectContaining({
+        profile_url: "linkedin.com/company/recoupable",
+        username: "recoupable",
+        bio: undefined,
+      }),
+    ]);
+    expect(persistPostsForSocial).toHaveBeenCalledWith(
+      expect.objectContaining({ profileUrl: "linkedin.com/company/recoupable" }),
+    );
+  });
+
+  it("falls back to the company page slug when a company author has no universalName", async () => {
+    listItems.mockResolvedValue({
+      items: [
+        {
+          ...REAL_ITEM,
+          author: {
+            type: "company",
+            publicIdentifier: null,
+            linkedinUrl: "https://www.linkedin.com/company/recoupable/posts",
+          },
+        },
+      ],
+    });
+    await handleLinkedinPostsScraperResults(payload);
+    expect(upsertSocialsWithSnapshot).toHaveBeenCalledWith([
+      expect.objectContaining({
+        profile_url: "linkedin.com/company/recoupable",
+        username: "recoupable",
+      }),
+    ]);
+    expect(persistPostsForSocial).toHaveBeenCalledOnce();
+  });
+
+  it("takes the author from an original post, not from a repost of someone else's post", async () => {
+    const original = {
+      ...REAL_ITEM,
+      author: {
+        ...REAL_ITEM.author,
+        publicIdentifier: "someone-else",
+        linkedinUrl: "https://www.linkedin.com/in/someone-else",
+      },
+    };
+    listItems.mockResolvedValue({
+      items: [
+        { ...original, id: "1", repostId: "9", repostedBy: { publicIdentifier: "sweetmantech" } },
+        REAL_ITEM,
+      ],
+    });
+    await handleLinkedinPostsScraperResults(payload);
+    expect(upsertSocialsWithSnapshot).toHaveBeenCalledWith([
+      expect.objectContaining({
+        profile_url: "linkedin.com/in/sweetmantech",
+        username: "sweetmantech",
+      }),
+    ]);
+  });
+
+  it("persists nothing when every item is a repost, since no author is known to be the scraped page", async () => {
+    listItems.mockResolvedValue({
+      items: [{ ...REAL_ITEM, repostId: "9", repostedBy: { publicIdentifier: "x" } }],
+    });
+    expect(await handleLinkedinPostsScraperResults(payload)).toEqual({ social: null });
+    expect(upsertSocialsWithSnapshot).not.toHaveBeenCalled();
+    expect(persistPostsForSocial).not.toHaveBeenCalled();
+  });
+
+  it("skips an original post without an author and takes the next one", async () => {
+    listItems.mockResolvedValue({ items: [{ ...REAL_ITEM, author: undefined }, REAL_ITEM] });
+    await handleLinkedinPostsScraperResults(payload);
+    expect(upsertSocialsWithSnapshot).toHaveBeenCalledWith([
+      expect.objectContaining({ profile_url: "linkedin.com/in/sweetmantech" }),
+    ]);
+  });
 });
