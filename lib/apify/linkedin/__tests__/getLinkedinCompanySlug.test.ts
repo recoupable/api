@@ -6,6 +6,7 @@ describe("getLinkedinCompanySlug", () => {
     ["linkedin.com/company/recoupable", "recoupable"],
     ["http://www.linkedin.com/company/Recoupable/posts?x=1", "recoupable"],
     ["https://LinkedIn.com/company/recoup-able#about", "recoup-able"],
+    ["  linkedin.com/company/recoupable \n", "recoupable"],
   ])("returns the lower-case slug of %s", (input, slug) => {
     expect(getLinkedinCompanySlug(input)).toBe(slug);
   });

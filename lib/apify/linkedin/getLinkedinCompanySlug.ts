@@ -9,6 +9,8 @@
  */
 export function getLinkedinCompanySlug(input: string | null | undefined): string | null {
   if (!input) return null;
-  const match = input.match(/^(?:https?:\/\/)?(?:[a-z]+\.)?linkedin\.com\/company\/([^/?#]+)/i);
+  const match = input
+    .trim()
+    .match(/^(?:https?:\/\/)?(?:[a-z]+\.)?linkedin\.com\/company\/([^/?#]+)/i);
   return match ? match[1].toLowerCase() : null;
 }
