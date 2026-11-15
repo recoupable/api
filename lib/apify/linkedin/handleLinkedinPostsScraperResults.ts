@@ -5,6 +5,7 @@ import { persistPostsForSocial } from "@/lib/apify/persistPostsForSocial";
 import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
 import { toIsoDate } from "@/lib/apify/toIsoDate";
 import { getLinkedinCompanyUrl } from "@/lib/apify/linkedin/getLinkedinCompanyUrl";
+import { getLinkedinCompanySlug } from "@/lib/apify/linkedin/getLinkedinCompanySlug";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import type { TablesInsert } from "@/types/database.types";
 
@@ -13,6 +14,10 @@ type LinkedinPostItem = {
   linkedinUrl?: string;
   postedAt?: { date?: string };
   engagement?: { likes?: number; comments?: number; shares?: number };
+  /** Set on a repost; its `author` is then the original poster, not the scraped page. */
+  repostId?: string;
+  repost?: unknown;
+  repostedBy?: unknown;
   author?: {
     publicIdentifier?: string | null;
     /** Company page authors carry their slug here; publicIdentifier is null. */
@@ -34,25 +39,30 @@ type LinkedinPostItem = {
  *
  * The author URL carries a `?miniProfileUrn=` query; it is stripped so the
  * upsert hits the stored `linkedin.com/in/<slug>` row. A company page author
- * is canonicalized to `linkedin.com/company/<slug>` (app#2398).
+ * is canonicalized to `linkedin.com/company/<slug>` (app#2398). The author
+ * comes from an original post where there is one, since a repost's author is
+ * whoever wrote the post being reposted.
  */
 export async function handleLinkedinPostsScraperResults(parsed: ApifyWebhookPayload) {
   const { items } = await apifyClient.dataset(parsed.resource.defaultDatasetId).listItems();
-  const author = (items[0] as LinkedinPostItem | undefined)?.author;
+  const postItems = items as LinkedinPostItem[];
+  const isRepost = (item: LinkedinPostItem) => !!(item.repostId || item.repost || item.repostedBy);
+  const author = (postItems.find(item => !isRepost(item)) ?? postItems[0])?.author;
   if (!author?.linkedinUrl) return { social: null };
 
   const social = {
     profile_url: normalizeProfileUrl(
       getLinkedinCompanyUrl(author.linkedinUrl) ?? author.linkedinUrl.split("?")[0],
     ),
-    username: author.publicIdentifier ?? author.universalName,
+    username:
+      author.publicIdentifier || author.universalName || getLinkedinCompanySlug(author.linkedinUrl),
     avatar: author.avatar?.url ?? null,
     // A company author's `info` is its follower count text ("388 followers"), not a bio.
     bio: author.type === "company" ? undefined : author.info || null,
   };
   await upsertSocialsWithSnapshot([social]);
 
-  const postRows: TablesInsert<"posts">[] = (items as LinkedinPostItem[]).flatMap(item =>
+  const postRows: TablesInsert<"posts">[] = postItems.flatMap(item =>
     item.linkedinUrl
       ? [
           {

@@ -56,12 +56,33 @@ describe("handleLinkedinCompanyScraperResults", () => {
     ]);
   });
 
-  it.each([[[]], [[{ error: "Company not found", status: 404 }]]])(
-    "persists nothing for an empty or error dataset: %j",
-    async items => {
-      listItems.mockResolvedValue({ items });
-      expect(await handleLinkedinCompanyScraperResults(payload)).toEqual({ social: null });
-      expect(upsertSocialsWithSnapshot).not.toHaveBeenCalled();
-    },
-  );
+  it("takes the username from the company page slug when universalName is missing", async () => {
+    listItems.mockResolvedValue({
+      items: [
+        {
+          ...COMPANY,
+          universalName: undefined,
+          linkedinUrl: "https://www.linkedin.com/company/Recoupable/",
+        },
+      ],
+    });
+    await handleLinkedinCompanyScraperResults(payload);
+    expect(upsertSocialsWithSnapshot).toHaveBeenCalledWith([
+      expect.objectContaining({
+        profile_url: "linkedin.com/company/recoupable",
+        username: "recoupable",
+      }),
+    ]);
+  });
+
+  it.each([
+    [[]],
+    [[{ error: "Company not found", status: 404 }]],
+    [[{}]],
+    [[{ ...COMPANY, linkedinUrl: "https://www.linkedin.com/in/someone" }]],
+  ])("persists nothing for an empty, error or incomplete dataset: %j", async items => {
+    listItems.mockResolvedValue({ items });
+    expect(await handleLinkedinCompanyScraperResults(payload)).toEqual({ social: null });
+    expect(upsertSocialsWithSnapshot).not.toHaveBeenCalled();
+  });
 });

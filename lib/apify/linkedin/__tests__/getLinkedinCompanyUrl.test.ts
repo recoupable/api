@@ -8,6 +8,9 @@ describe("getLinkedinCompanyUrl", () => {
     "https://www.linkedin.com/company/recoupable/",
     "https://www.linkedin.com/company/recoupable/posts/?feedView=all",
     "www.LinkedIn.com/company/recoupable?trk=x",
+    "http://linkedin.com/company/recoupable",
+    // LinkedIn slugs are case-insensitive; the actors echo them lower-case.
+    "https://www.linkedin.com/company/Recoupable/about",
   ])("returns the canonical company page URL for %s", input => {
     expect(getLinkedinCompanyUrl(input)).toBe("https://www.linkedin.com/company/recoupable");
   });

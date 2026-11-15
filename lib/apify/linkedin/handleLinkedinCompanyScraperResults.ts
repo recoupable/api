@@ -1,6 +1,8 @@
 import apifyClient from "@/lib/apify/client";
 import { upsertSocialsWithSnapshot } from "@/lib/socials/upsertSocialsWithSnapshot";
 import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
+import { getLinkedinCompanyUrl } from "@/lib/apify/linkedin/getLinkedinCompanyUrl";
+import { getLinkedinCompanySlug } from "@/lib/apify/linkedin/getLinkedinCompanySlug";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 
 /** One company item from the harvestapi/linkedin-company dataset (README sample shape). */
@@ -27,13 +29,15 @@ export async function handleLinkedinCompanyScraperResults(parsed: ApifyWebhookPa
   const { items } = await apifyClient.dataset(parsed.resource.defaultDatasetId).listItems();
   const company = items[0] as HarvestApiLinkedinCompany | undefined;
 
-  if (!company || company.error || !company.linkedinUrl) {
+  const companyUrl = getLinkedinCompanyUrl(company?.linkedinUrl);
+  if (!company || company.error || !companyUrl) {
     return { social: null };
   }
 
   const social = {
-    profile_url: normalizeProfileUrl(company.linkedinUrl),
-    username: company.universalName,
+    profile_url: normalizeProfileUrl(companyUrl),
+    // `socials.username` is required; the page slug stands in when the actor omits it.
+    username: company.universalName || getLinkedinCompanySlug(companyUrl)!,
     avatar: company.logo ?? null,
     bio: company.description || company.tagline || null,
     followerCount: company.followerCount ?? null,

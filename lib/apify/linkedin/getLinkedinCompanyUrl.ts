@@ -1,3 +1,5 @@
+import { getLinkedinCompanySlug } from "@/lib/apify/linkedin/getLinkedinCompanySlug";
+
 /**
  * Returns the canonical company page URL (`https://www.linkedin.com/company/<slug>`)
  * when the input is a LinkedIn company page in any form (bare, with protocol,
@@ -9,7 +11,6 @@
  * @returns The canonical company page URL, or null when the input is not one.
  */
 export function getLinkedinCompanyUrl(input: string | null | undefined): string | null {
-  if (!input) return null;
-  const match = input.match(/^(?:https?:\/\/)?(?:[a-z]+\.)?linkedin\.com\/company\/([^/?#]+)/i);
-  return match ? `https://www.linkedin.com/company/${match[1]}` : null;
+  const slug = getLinkedinCompanySlug(input);
+  return slug ? `https://www.linkedin.com/company/${slug}` : null;
 }
