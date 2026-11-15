@@ -4,6 +4,7 @@ import { handleInstagramProfileScraperResults } from "@/lib/apify/instagram/hand
 import { handleInstagramCommentsScraper } from "@/lib/apify/instagram/handleInstagramCommentsScraper";
 import { handleLinkedinProfileScraperResults } from "@/lib/apify/linkedin/handleLinkedinProfileScraperResults";
 import { handleLinkedinPostsScraperResults } from "@/lib/apify/linkedin/handleLinkedinPostsScraperResults";
+import { handleLinkedinCompanyScraperResults } from "@/lib/apify/linkedin/handleLinkedinCompanyScraperResults";
 import { handleTiktokProfileScraperResults } from "@/lib/apify/tiktok/handleTiktokProfileScraperResults";
 import { handleTwitterProfileScraperResults } from "@/lib/apify/twitter/handleTwitterProfileScraperResults";
 import { handleYoutubeProfileScraperResults } from "@/lib/apify/youtube/handleYoutubeProfileScraperResults";
@@ -21,6 +22,9 @@ vi.mock("@/lib/apify/linkedin/handleLinkedinProfileScraperResults", () => ({
 }));
 vi.mock("@/lib/apify/linkedin/handleLinkedinPostsScraperResults", () => ({
   handleLinkedinPostsScraperResults: vi.fn(),
+}));
+vi.mock("@/lib/apify/linkedin/handleLinkedinCompanyScraperResults", () => ({
+  handleLinkedinCompanyScraperResults: vi.fn(),
 }));
 vi.mock("@/lib/apify/tiktok/handleTiktokProfileScraperResults", () => ({
   handleTiktokProfileScraperResults: vi.fn(),
@@ -41,6 +45,9 @@ vi.mock("@/lib/apify/facebook/handleFacebookProfileScraperResults", () => ({
 describe("getApifyResultHandler", () => {
   it("maps the LinkedIn posts actor (what ?posts=N runs) to its handler", () => {
     expect(getApifyResultHandler("A3cAPGpwBEG8RJwse")).toBe(handleLinkedinPostsScraperResults);
+  });
+  it("maps the LinkedIn company details actor (company pages without posts) to its handler", () => {
+    expect(getApifyResultHandler("UwSdACBp7ymaGUJjS")).toBe(handleLinkedinCompanyScraperResults);
   });
   it("maps the Instagram actor ids to their result handlers", () => {
     expect(getApifyResultHandler("dSCLg0C3YEZ83HzYX")).toBe(handleInstagramProfileScraperResults);

@@ -63,4 +63,23 @@ describe("startLinkedinProfileScraping", () => {
       { webhooks: expect.any(Array) },
     );
   });
+
+  it("scrapes a company page with the company details actor, keeping its /company/ path", async () => {
+    const r = await startLinkedinProfileScraping("linkedin.com/company/recoupable");
+    expect(apifyClient.actor).toHaveBeenCalledWith("harvestapi/linkedin-company");
+    expect(start).toHaveBeenCalledWith(
+      { companies: ["https://www.linkedin.com/company/recoupable"] },
+      { webhooks: expect.any(Array) },
+    );
+    expect(r).toEqual({ runId: "run-1", datasetId: "ds-1" });
+  });
+
+  it("sends a company page URL to the posts actor when a posts depth is requested", async () => {
+    await startLinkedinProfileScraping("https://www.linkedin.com/company/recoupable/", 10);
+    expect(apifyClient.actor).toHaveBeenCalledWith("harvestapi/linkedin-profile-posts");
+    expect(start).toHaveBeenCalledWith(
+      { targetUrls: ["https://www.linkedin.com/company/recoupable"], maxPosts: 10 },
+      { webhooks: expect.any(Array) },
+    );
+  });
 });

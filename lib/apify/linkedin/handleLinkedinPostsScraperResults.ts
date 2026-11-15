@@ -4,6 +4,7 @@ import { normalizeProfileUrl } from "@/lib/socials/normalizeProfileUrl";
 import { persistPostsForSocial } from "@/lib/apify/persistPostsForSocial";
 import { filterNewPostUrls } from "@/lib/socials/filterNewPostUrls";
 import { toIsoDate } from "@/lib/apify/toIsoDate";
+import { getLinkedinCompanyUrl } from "@/lib/apify/linkedin/getLinkedinCompanyUrl";
 import type { ApifyWebhookPayload } from "@/lib/apify/validateApifyWebhookRequest";
 import type { TablesInsert } from "@/types/database.types";
 
@@ -29,7 +30,8 @@ type LinkedinPostItem = {
  * (a scrape without `posts`) is the follower-count path.
  *
  * The author URL carries a `?miniProfileUrn=` query; it is stripped so the
- * upsert hits the stored `linkedin.com/in/<slug>` row.
+ * upsert hits the stored `linkedin.com/in/<slug>` row. A company page author
+ * is canonicalized to `linkedin.com/company/<slug>` (app#2398).
  */
 export async function handleLinkedinPostsScraperResults(parsed: ApifyWebhookPayload) {
   const { items } = await apifyClient.dataset(parsed.resource.defaultDatasetId).listItems();
@@ -37,7 +39,9 @@ export async function handleLinkedinPostsScraperResults(parsed: ApifyWebhookPayl
   if (!author?.linkedinUrl) return { social: null };
 
   const social = {
-    profile_url: normalizeProfileUrl(author.linkedinUrl.split("?")[0]),
+    profile_url: normalizeProfileUrl(
+      getLinkedinCompanyUrl(author.linkedinUrl) ?? author.linkedinUrl.split("?")[0],
+    ),
     username: author.publicIdentifier,
     avatar: author.avatar?.url ?? null,
     bio: author.info || null,

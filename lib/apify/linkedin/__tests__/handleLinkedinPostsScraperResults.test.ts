@@ -77,4 +77,26 @@ describe("handleLinkedinPostsScraperResults", () => {
     expect(await handleLinkedinPostsScraperResults(payload)).toEqual({ social: null });
     expect(upsertSocialsWithSnapshot).not.toHaveBeenCalled();
   });
+
+  it("keys a company page author on its canonical /company/ url so posts link to the stored row", async () => {
+    listItems.mockResolvedValue({
+      items: [
+        {
+          ...REAL_ITEM,
+          author: {
+            name: "Recoupable",
+            linkedinUrl: "https://www.linkedin.com/company/recoupable/posts",
+            avatar: { url: "https://media.licdn.com/dms/image/logo.jpg" },
+          },
+        },
+      ],
+    });
+    await handleLinkedinPostsScraperResults(payload);
+    expect(upsertSocialsWithSnapshot).toHaveBeenCalledWith([
+      expect.objectContaining({ profile_url: "linkedin.com/company/recoupable" }),
+    ]);
+    expect(persistPostsForSocial).toHaveBeenCalledWith(
+      expect.objectContaining({ profileUrl: "linkedin.com/company/recoupable" }),
+    );
+  });
 });
