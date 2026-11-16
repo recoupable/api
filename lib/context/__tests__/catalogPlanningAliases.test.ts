@@ -286,12 +286,12 @@ describe("catalog planning aliases through real HTTP and MCP processors", () => 
 
   it.each(pairs)("%s cannot bypass workspace or current-member checks", async alias => {
     mocks.access.mockResolvedValue(false);
-    expect((await http(input(alias))).status).toBe(409);
+    expect((await http(input(alias))).status).toBe(403);
     expect((await mcp(input(alias))).isError).toBe(true);
     expect(mocks.targets).not.toHaveBeenCalled();
     mocks.access.mockResolvedValue(true);
     mocks.targets.mockRejectedValue(new Error("Catalog membership denied"));
-    expect((await http(input(alias))).status).toBe(409);
+    expect((await http(input(alias))).status).toBe(500);
     expect((await mcp(input(alias))).isError).toBe(true);
     noDispatch();
   });

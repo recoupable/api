@@ -106,7 +106,7 @@ describe("catalog cases HTTP and standard MCP", () => {
     expect((await http(operations[0])).status).toBe(401);
     expect(
       (await http({ ...operations[0], snapshot: { ...snapshot, workspace_id: actor } })).status,
-    ).toBe(409);
+    ).toBe(403);
     vi.mocked(resolveAccountId).mockResolvedValueOnce({ accountId: null, error: "Unauthorized" });
     expect((await mcp()(operations[0], {})).isError).toBe(true);
     expect(callContextRpc).not.toHaveBeenCalled();
@@ -114,13 +114,13 @@ describe("catalog cases HTTP and standard MCP", () => {
   it.each(operations)("does not leak private storage failure for $action", async operation => {
     vi.mocked(callContextRpc).mockRejectedValue(new Error("private-provider-source-name"));
     const response = await http({ ...operation, organization_id: owner });
-    expect(response.status).toBe(409);
+    expect(response.status).toBe(500);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
     const body = await response.json();
     expect(JSON.stringify(body)).not.toContain("private-provider");
     expect(body.error).not.toContain("ingestion");
     if (operation.action === "save_catalog_case")
-      expect(body.error).toContain("same idempotency key");
+      expect(body.guidance).toContain("same idempotency key");
     else expect(body.error).not.toContain("idempotency");
   });
   it("rejects a direct delegated call before storage", async () => {

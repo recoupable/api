@@ -69,7 +69,7 @@ it.each(["brief", "save_brief", "read_brief"])(
             ...(action === "save_brief" ? { idempotency_key: "revoked" } : {}),
           };
     const response = await http(input);
-    expect(response.status).toBe(409);
+    expect(response.status).toBe(500);
     expect(JSON.stringify(await response.json())).not.toContain("private canary");
     revoked = false;
     const result = await mcp(input);

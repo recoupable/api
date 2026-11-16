@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -75,6 +75,7 @@ const http = (body: unknown = input) =>
   );
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.spyOn(console, "error").mockImplementation(() => {});
   vi.mocked(validateAuthContext).mockResolvedValue({ accountId: actor } as never);
   vi.mocked(resolveAccountId).mockResolvedValue({ accountId: actor, error: null });
   vi.mocked(authorizeContextOwner).mockResolvedValue({
@@ -149,15 +150,99 @@ it("requires authentication and valid IDs without exposing evidence", async () =
   expect(await handleContextToolOperation(input, {} as never)).toMatchObject({ isError: true });
   expect(callContextRpc).not.toHaveBeenCalled();
 });
-it("masks inaccessible storage and offers preparation-specific guidance", async () => {
+afterEach(() => vi.restoreAllMocks());
+
+it("keeps unknown preparation failures opaque and non-retryable on both transports", async () => {
   vi.mocked(callContextRpc).mockRejectedValue(new Error("Private source and credentials"));
   const response = await http();
-  expect(response.status).toBe(409);
+  expect(response.status).toBe(500);
   expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   const body = await response.json();
-  expect(body.error).toContain("saved company-onboarding brief");
+  expect(body).toMatchObject({
+    code: "internal",
+    retryable: false,
+    error: "Context operation failed.",
+  });
+  expect(body.guidance).toContain("Do not automatically retry");
   expect(body.error).not.toMatch(/Private source|ingestion|idempotency/);
   const result = await handleContextToolOperation(input, {} as never);
   expect(result).toMatchObject({ isError: true });
-  expect(JSON.stringify(result)).not.toContain("Private source");
+  const mcp = JSON.parse(result.content[0].text);
+  expect(mcp).toEqual({
+    success: false,
+    code: body.code,
+    message: body.error,
+    retryable: false,
+    guidance: body.guidance,
+  });
+  expect(JSON.stringify([result, vi.mocked(console.error).mock.calls])).not.toContain(
+    "Private source",
+  );
+});
+
+it.each(["superseded", "incomplete", "foreign owner", "manifest", "changed", "metadata"])(
+  "keeps real preparation %s rejection opaque without implying retry or saving",
+  async mode => {
+    const rejected = structuredClone(saved);
+    if (mode === "superseded") rejected.superseded = true;
+    if (mode === "incomplete") rejected.brief.documents = [];
+    if (mode === "foreign owner") rejected.brief.documents[0].ownerId = actor;
+    if (mode === "manifest") rejected.brief.input_manifest.documents = [];
+    if (mode === "changed") {
+      rejected.brief.text = "private-changing-evidence-777";
+      rejected.brief.text_characters = rejected.brief.text.length;
+    }
+    if (mode === "metadata")
+      vi.mocked(readRetainedContextSourceVersions).mockRejectedValue(
+        new Error("Retained Context sources unavailable", { cause: "private-source-token-888" }),
+      );
+    vi.mocked(callContextRpc).mockImplementation(async name => {
+      expect(name).toBe("read_context_brief");
+      if (mode === "metadata") return saved;
+      if (mode === "changed" && vi.mocked(callContextRpc).mock.calls.length % 2 === 1) return saved;
+      return rejected;
+    });
+    const response = await http();
+    const body = await response.json();
+    expect(response.status).toBe(500);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(body).toMatchObject({ code: "internal", retryable: false });
+    const result = await handleContextToolOperation(input, {} as never);
+    expect(result.isError).toBe(true);
+    const mcp = JSON.parse(result.content[0].text);
+    expect(mcp).toEqual({
+      success: false,
+      message: body.error,
+      code: body.code,
+      retryable: false,
+      guidance: body.guidance,
+    });
+    expect(JSON.stringify([body, result, vi.mocked(console.error).mock.calls])).not.toMatch(
+      /private-changing-evidence-777|private-source-token-888|Retained Context sources|Catalog audit|idempotency/,
+    );
+    if (!["changed", "metadata"].includes(mode))
+      expect(readRetainedContextSourceVersions).not.toHaveBeenCalled();
+    expect(callContextRpc).toHaveBeenCalledTimes(mode === "changed" ? 4 : 2);
+  },
+);
+
+it("retains typed permission denial when workspace access changes after metadata reads", async () => {
+  vi.mocked(authorizeContextOwner).mockImplementation(async () => {
+    if (vi.mocked(authorizeContextOwner).mock.calls.length % 3 === 0)
+      throw new Error("Access denied to context owner");
+    return { accountId: actor, ownerId: owner, organizationId: owner };
+  });
+  const response = await http();
+  const body = await response.json();
+  expect(response.status).toBe(403);
+  expect(body).toMatchObject({ code: "permission_denied", retryable: false });
+  const result = await handleContextToolOperation(input, {} as never);
+  expect(result.isError).toBe(true);
+  expect(JSON.parse(result.content[0].text)).toMatchObject({
+    code: body.code,
+    retryable: false,
+    guidance: body.guidance,
+  });
+  expect(callContextRpc).toHaveBeenCalledTimes(4);
+  expect(readRetainedContextSourceVersions).toHaveBeenCalledTimes(2);
 });

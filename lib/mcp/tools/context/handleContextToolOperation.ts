@@ -9,6 +9,8 @@ import { callContextRpc } from "@/lib/supabase/context_requests/callContextRpc";
 import { dispatchContextRequest } from "@/lib/context/dispatchContextRequest";
 import { dispatchContextReleaseVerification } from "@/lib/context/dispatchContextReleaseVerification";
 import { dispatchContextReleaseTrackIsrcs } from "@/lib/context/dispatchContextReleaseTrackIsrcs";
+import { classifyContextOperationError } from "@/lib/context/classifyContextOperationError";
+import { getContextToolResultError } from "./getContextToolResultError";
 import { catalogCaseToolOperations } from "@/lib/mcp/oauth/catalogCaseToolOperations";
 import { getContextFailureReason } from "@/lib/context/getContextFailureReason";
 
@@ -49,11 +51,10 @@ export async function handleContextToolOperation(
     );
   } catch (error) {
     console.error("[context] MCP operation failed", { reason: getContextFailureReason(error) });
-    return {
-      ...getToolResultError(
-        "Context operation unavailable. Check workspace access and operation arguments.",
-      ),
-      isError: true,
-    };
+    const action =
+      args && typeof args === "object" && "action" in args && typeof args.action === "string"
+        ? args.action
+        : undefined;
+    return getContextToolResultError(classifyContextOperationError(error), action);
   }
 }

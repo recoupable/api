@@ -120,12 +120,12 @@ describe("evidence HTTP and standard Context MCP", () => {
       new Error("Synthetic private dependency detail"),
     );
     const response = await http(operation);
-    expect(response.status).toBe(409);
+    expect(response.status).toBe(500);
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
-    const { error } = await response.json();
+    const { error, guidance } = await response.json();
     expect(error).not.toMatch(/Synthetic private|ingestion/);
     if (operation.action === "attach_evidence")
-      expect(error).toContain("same source version, targets and idempotency key");
+      expect(guidance).toContain("same source version, targets and idempotency key");
     else expect(error).not.toContain("idempotency");
   });
   it("rejects identity overrides on both interfaces", async () => {
@@ -137,7 +137,7 @@ describe("evidence HTTP and standard Context MCP", () => {
   it("withholds sensitive storage denial details", async () => {
     vi.mocked(callContextRpc).mockRejectedValue(new Error("Private provider/source/target detail"));
     const response = await http(operations[0]);
-    expect(response.status).toBe(409);
+    expect(response.status).toBe(500);
     expect(JSON.stringify(await response.json())).not.toContain("Private provider");
     const result = await mcp()(operations[0], {});
     expect(result.isError).toBe(true);
@@ -146,7 +146,7 @@ describe("evidence HTTP and standard Context MCP", () => {
   it("withholds cross-workspace receipts through both interfaces", async () => {
     vi.mocked(callContextRpc).mockResolvedValue({ ...receipt, owner_id: actor });
     const response = await http(operations[0]);
-    expect(response.status).toBe(409);
+    expect(response.status).toBe(500);
     expect(await response.json()).not.toHaveProperty("targets");
     const result = await mcp()(operations[0], {});
     expect(result.isError).toBe(true);
