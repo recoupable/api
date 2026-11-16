@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import apifyClient from "@/lib/apify/client";
+import { getScraperRunResults } from "@/lib/apify/getScraperRunResults";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateGetScraperResultsRequest } from "@/lib/apify/validateGetScraperResultsRequest";
 
@@ -18,16 +18,8 @@ export async function getScraperResultsHandler(
     const validated = await validateGetScraperResultsRequest(request, runId);
     if (validated instanceof NextResponse) return validated;
 
-    const run = await apifyClient.run(validated.runId).get();
-    const status = run?.status ?? "UNKNOWN";
-    const dataset_id = run?.defaultDatasetId ?? null;
-
-    if (status === "SUCCEEDED" && dataset_id) {
-      const result = await apifyClient.dataset(dataset_id).listItems();
-      if (result?.items) {
-        return NextResponse.json({ status, dataset_id, data: result.items }, { headers });
-      }
-    }
+    const { status, dataset_id, data } = await getScraperRunResults(validated.runId);
+    if (data) return NextResponse.json({ status, dataset_id, data }, { headers });
 
     const failed = status === "FAILED" || status === "ABORTED" || status === "SUCCEEDED";
     return NextResponse.json({ status, dataset_id }, { status: failed ? 500 : 200, headers });

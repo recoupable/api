@@ -4,6 +4,14 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { postFlamingoGenerateHandler } from "@/lib/flamingo/postFlamingoGenerateHandler";
 
 /**
+ * `full_report` runs its 13 sections as one batch, one after another on one
+ * model container, so it can outlast the default function duration. Kept
+ * above the Modal endpoint's 600 s timeout so the API never abandons a report
+ * the model finishes.
+ */
+export const maxDuration = 800;
+
+/**
  * OPTIONS handler for CORS preflight requests.
  *
  * @returns A NextResponse with CORS headers.

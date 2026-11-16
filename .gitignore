@@ -51,3 +51,6 @@ supabase/.temp/
 /ui/recoup/host.js
 
 /ui/recoup/node_modules/
+
+# Python bytecode from running modal/ tests locally
+__pycache__/

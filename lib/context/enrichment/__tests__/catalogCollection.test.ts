@@ -92,3 +92,61 @@ it("does not save when access is revoked during collection", async () => {
   ).rejects.toThrow("revoked");
   expect(d.rpc.mock.calls.map(c => c[0])).not.toContain("complete_context_enrichment");
 });
+it.each([true, false])(
+  "saves labeled content under a new reuse key when measured=%s",
+  async measured => {
+    const d = deps();
+    d.collect.mockImplementation(async () =>
+      collectContextCatalogValuation(actor, catalog, {
+        authorize: async () => {},
+        aggregate: async () => ({
+          measuredSongCount: measured ? 1 : 0,
+          totalStreams: measured ? 100 : 0,
+        }),
+        songCount: async () => 3,
+        earliestDate: async () => null,
+      }),
+    );
+    await collectContextCatalogEstimate(
+      actor,
+      actor,
+      "request",
+      { subjectId: subject, collectionVersion: "v1" },
+      d,
+    );
+    // A saved v1 valuation lacks provenance, so it must not be reused as-is.
+    expect(d.rpc).toHaveBeenCalledWith(
+      "claim_context_enrichment",
+      expect.objectContaining({
+        p_module: expect.objectContaining({ key: "catalog-valuation-v2" }),
+      }),
+    );
+    const calls = d.rpc.mock.calls as unknown as [
+      string,
+      { p_result?: { content: unknown; coverage: string } },
+    ][];
+    const saved = calls.find(([name]) => name === "complete_context_enrichment")?.[1];
+    // Exercise the JSON representation returned by read_context_documents.
+    const content = JSON.parse(JSON.stringify(saved?.p_result?.content));
+    expect(saved?.p_result?.coverage).toBe(measured ? "partial" : "unknown");
+    expect(content.status).toBe(measured ? "estimated" : "not_measured");
+    expect(content.estimate).toMatchObject({
+      revenueBasis: "modeled_estimate",
+      observedRevenue: { status: "not_collected" },
+      scope: "workspace_private",
+      shareable: false,
+      methodology: { id: "recoup-master-catalog-band", version: 1 },
+      period: {
+        catalogAgeYears: content.catalogAgeYears,
+        ageFlooredToOneYear: content.ageFlooredToOneYear,
+        ageSource: content.ageSource,
+        measuredThrough: null,
+      },
+      source: { freshness: "unknown" },
+    });
+    expect(content.estimate.period.catalogAgeYears).toBe(measured ? 5 : null);
+    expect(content.estimate.period.ageSource).toBe(measured ? "model_default" : null);
+    expect(content.estimate.currency).toBe(content.trace.currency);
+    expect(content.estimate.scope).toBe(content.scope);
+  },
+);
