@@ -20,9 +20,12 @@ export async function contextOperationHandler(request: NextRequest) {
     "read_evidence_attachment",
     "list_evidence_attachments",
   ].includes(parsed.action);
-  const catalogCase = ["save_catalog_case", "read_catalog_case", "list_catalog_cases"].includes(
-    parsed.action,
-  );
+  const catalogCase = [
+    "prepare_catalog_audit",
+    "save_catalog_case",
+    "read_catalog_case",
+    "list_catalog_cases",
+  ].includes(parsed.action);
   const headers = {
     ...getCorsHeaders(),
     ...(parsed.action === "read" || evidence || catalogCase

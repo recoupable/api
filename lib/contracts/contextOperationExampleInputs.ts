@@ -3,6 +3,7 @@ const request = "00000000-0000-4000-8000-000000000003";
 const subject = "00000000-0000-4000-8000-000000000004";
 const record = "00000000-0000-4000-8000-000000000005";
 const examples = [
+  { action: "prepare_catalog_audit", brief_id: record },
   {
     action: "save_catalog_case",
     case_id: record,

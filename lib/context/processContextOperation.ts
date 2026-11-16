@@ -1,3 +1,4 @@
+import { prepareCatalogAuditOperationSchema } from "./prepareCatalogAuditOperationSchema";
 import { selectedBriefEvidenceSchema } from "./selectedBriefEvidenceSchema";
 import { validateSelectedBriefEvidence } from "./validateSelectedBriefEvidence";
 import { catalogCaseOperationSchemas } from "./catalogCaseOperationSchemas";
@@ -31,6 +32,7 @@ const briefFields = {
 
 export const contextOperationSchema = z.discriminatedUnion("action", [
   ...catalogCaseOperationSchemas,
+  prepareCatalogAuditOperationSchema,
   ...evidenceAttachmentOperationSchemas,
   ...releaseCaseOperationSchemas,
   z.strictObject({
@@ -246,6 +248,10 @@ export async function processContextOperation(
     if (current.ownerId.toLowerCase() !== ownerId.toLowerCase())
       throw new Error("Context owner changed");
   };
+  if (args.action === "prepare_catalog_audit") {
+    const { prepareCatalogAudit } = await import("./prepareCatalogAudit");
+    return prepareCatalogAudit(ownerId, args.brief_id, deps.rpc, recheckOwner);
+  }
   if (args.action === "read_brief") {
     const snapshot = await deps.rpc("read_context_brief", {
       p_owner: ownerId,
