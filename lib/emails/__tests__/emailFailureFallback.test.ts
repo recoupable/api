@@ -81,6 +81,7 @@ describe("email failure fallback through the real Resend adapter", () => {
       status: "send_failed",
       accountId: "synthetic-account",
       chatId: undefined,
+      reason: "resend_error: Failed to send email.",
     });
   });
 

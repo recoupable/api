@@ -34,6 +34,7 @@ These are the scripts in [package.json](package.json):
 - [Coding-agent setup](docs/coding-agent-setup.md): current webhook, callback and shared-state behavior.
 - [MCP OAuth runtime](docs/mcp-oauth-runtime.md): OAuth discovery, consent and delegated access.
 - [Response contracts](lib/contracts/README.md): shared schemas and published contract checks.
+- [Data ingestion](lib/ingestion/README.md): private bronze/silver/gold processing, API/MCP operations and external database delivery.
 - [proxy.ts](proxy.ts) and [lib/x402/](lib/x402/): request middleware and x402 payment integration. Consult these sources for protected routes and payment behavior.
 
 New background/scheduled platform work uses Vercel Workflows inside this API. The coding-agent and update-pr integrations documented here still call existing Trigger.dev tasks; documenting them does not migrate or deploy those workers.

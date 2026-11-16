@@ -8,12 +8,19 @@ export interface TriggerRun {
   durationMs: number | null;
 }
 
-export type TriggerRunFilter = { "filter[tag]": string } | { "filter[schedule]": string };
+export type TriggerRunFilter =
+  | { "filter[tag]": string }
+  | { "filter[schedule]": string }
+  | {
+      "filter[taskIdentifier]": string;
+      "filter[createdAt][from]": string;
+      "filter[createdAt][to]": string;
+    };
 
 /**
  * Fetches runs from the Trigger.dev Management REST API.
  *
- * @param params - Filter params (tag or schedule)
+ * @param params - Filter params (tag, schedule, or one task within a created-at window)
  * @param limit - Maximum number of runs to return
  * @returns Array of run objects
  */

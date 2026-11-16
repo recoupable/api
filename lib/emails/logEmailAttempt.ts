@@ -9,6 +9,8 @@ export type EmailAttemptLog = {
   accountId?: string | null;
   chatId?: string | null;
   resendId?: string;
+  /** Why the send was rejected or failed: a short code, then detail. */
+  reason?: string | null;
 };
 
 /**
@@ -28,6 +30,9 @@ export async function logEmailAttempt(attempt: EmailAttemptLog): Promise<void> {
       status: attempt.status,
       resend_id: attempt.resendId ?? null,
       raw_body: attempt.rawBody,
+      // Only rejected/failed sends carry a reason; omitting the key otherwise keeps
+      // ordinary sends logging if this ships before the column exists.
+      ...(attempt.reason ? { reason: attempt.reason } : {}),
     });
     if (error) {
       console.error("email_send_log insert failed:", error);

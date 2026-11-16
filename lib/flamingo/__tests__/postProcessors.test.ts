@@ -27,6 +27,75 @@ describe("parseJsonLike", () => {
     expect(result).toEqual({ tags: ["dreamy", "sad"], mood: "melancholic" });
   });
 
+  it("preserves literal-looking words in quoted keys and nested text", () => {
+    expect(
+      parseJsonLike(
+        "{'True': 'True Love', 'artist': 'Nonetheless', 'nested': [True, False, None, {'False None': 'Falsehood True None'}]}",
+      ),
+    ).toEqual({
+      True: "True Love",
+      artist: "Nonetheless",
+      nested: [true, false, null, { "False None": "Falsehood True None" }],
+    });
+  });
+
+  it("preserves double-quoted strings when another value requires Python literal normalization", () => {
+    expect(
+      parseJsonLike(
+        String.raw`{"title": "Don't say \"True\"", "path": "C:\\None\\False", "ready": True}`,
+      ),
+    ).toEqual({ title: 'Don\'t say "True"', path: "C:\\None\\False", ready: true });
+  });
+
+  it("decodes supported escapes in single-quoted strings without changing their text", () => {
+    expect(
+      parseJsonLike(
+        String.raw`{'title': 'Don\'t say "True"', 'path': 'C:\\None\\False', 'quote': '\"yes\"', 'controls': '\b\f\n\r\t', 'unicode': '\u00e9', 'slash': '\/'}`,
+      ),
+    ).toEqual({
+      title: 'Don\'t say "True"',
+      path: "C:\\None\\False",
+      quote: '"yes"',
+      controls: "\b\f\n\r\t",
+      unicode: "é",
+      slash: "/",
+    });
+  });
+
+  it.each([
+    String.raw`{"apostrophe":"don't", "backslash":"\\", "quote":"\"", "unicode":"\u263a"}`,
+    '[true, false, null, -1.2e3, "True None False"]',
+    '"standalone True"',
+    "0",
+    '{"same":1,"same":2}',
+  ])("retains JSON.parse behavior for standard JSON: %s", raw => {
+    expect(parseJsonLike(raw)).toEqual(JSON.parse(raw));
+  });
+
+  it.each([
+    "{'title': 'don't'}",
+    "{'title': 'unterminated}",
+    "{'x': TrueFalse}",
+    "{'x': Nonetheless}",
+    "{'x': None_}",
+    "{'x': 'a' 'b'}",
+    "{'x': True,}",
+    "{'x': (True, False)}",
+    "{'x': set()}",
+    "{'x': b'text'}",
+    "{'x': 0x10}",
+    "{'x': NaN}",
+    "{'x': True # comment\n}",
+    String.raw`{'x': '\x41'}`,
+    String.raw`{'x': '\q'}`,
+    String.raw`{'x': '\123'}`,
+    String.raw`{'x': '\u12'}`,
+    "{'x': 'line\nbreak'}",
+    "{'x': 'trailing\\",
+  ])("rejects malformed or unsupported syntax: %s", raw => {
+    expect(() => parseJsonLike(raw)).toThrow();
+  });
+
   it("throws on invalid input", () => {
     expect(() => parseJsonLike("not json at all")).toThrow();
   });

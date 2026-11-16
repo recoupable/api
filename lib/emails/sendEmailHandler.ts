@@ -46,7 +46,12 @@ export async function sendEmailHandler(request: NextRequest): Promise<NextRespon
         { status: "error", error: result.error },
         { status: 502, headers: getCorsHeaders() },
       );
-      attempt = { status: "send_failed", accountId, chatId: chat_id };
+      attempt = {
+        status: "send_failed",
+        accountId,
+        chatId: chat_id,
+        reason: `resend_error: ${result.error}`,
+      };
     } else {
       response = NextResponse.json(
         { success: true, message: result.message, id: result.id },
@@ -56,7 +61,7 @@ export async function sendEmailHandler(request: NextRequest): Promise<NextRespon
     }
   } else {
     response = validated.error;
-    attempt = { status: "rejected" };
+    attempt = { status: "rejected", accountId: validated.accountId, reason: validated.reason };
   }
 
   await logEmailAttempt({ rawBody: validated.rawBody, ...attempt });

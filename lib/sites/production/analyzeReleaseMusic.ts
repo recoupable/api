@@ -3,7 +3,7 @@ import type { ReleaseContext } from "./schema";
 import { verifyAudioUrl } from "@/lib/flamingo/verifyAudioUrl";
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
 import { flamingoGenerateBodySchema } from "@/lib/flamingo/flamingoGenerateBodySchema";
-import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsForAnalyzeRequest";
+import { FLAMINGO_BASE_CREDITS } from "@/lib/flamingo/creditsForFlamingoCall";
 import { requireCredits } from "./requireCredits";
 import { SiteError } from "../SiteError";
 export async function analyzeReleaseMusic(
@@ -31,7 +31,7 @@ export async function analyzeReleaseMusic(
       "Analyze this audio for a creative fan experience. Describe audible instrumentation, energy, mood, texture, rhythmic feel and changes within the supplied clip. Summarize clearly audible lyrical themes without quoting lyrics. State uncertainty and do not invent lyrics or extrapolate a preview into a full-song structure.",
     max_new_tokens: 1200,
   });
-  await requireCredits(accountId, minimumCreditsForAnalyzeRequest(params));
+  await requireCredits(accountId, FLAMINGO_BASE_CREDITS);
   try {
     const result = await processAnalyzeMusicRequest(params, { accountId });
     if (result.type !== "success") return unavailable("Music analysis was unavailable.");

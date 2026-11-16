@@ -15,6 +15,9 @@ vi.mock("../instagram/handleInstagramCommentsScraper", () => ({
 vi.mock("../linkedin/handleLinkedinPostsScraperResults", () => ({
   handleLinkedinPostsScraperResults: vi.fn(),
 }));
+vi.mock("../linkedin/handleLinkedinCompanyScraperResults", () => ({
+  handleLinkedinCompanyScraperResults: vi.fn(),
+}));
 vi.mock("../linkedin/handleLinkedinProfileScraperResults", () => ({
   handleLinkedinProfileScraperResults: vi.fn(),
 }));
