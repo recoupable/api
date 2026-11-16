@@ -30,7 +30,11 @@ export function validateCatalogAuditBrief(raw: unknown, ownerId: string, briefId
     new Set(brief.documents.map(doc => doc.id)).size !== brief.documents.length ||
     brief.documents.some(
       doc =>
-        !sameCatalogUuid(doc.ownerId, ownerId) || !doc.resultId || !doc.sourceVersionIds.length,
+        !sameCatalogUuid(doc.ownerId, ownerId) ||
+        !doc.resultId ||
+        !doc.sourceVersionIds.length ||
+        new Set(doc.sourceVersionIds.map(id => id.toLowerCase())).size !==
+          doc.sourceVersionIds.length,
     )
   )
     throw new Error("Catalog audit brief evidence is unavailable");

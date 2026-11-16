@@ -514,30 +514,34 @@ it("covers each remaining original action rather than duplicating the four compl
   );
 });
 
-it("rejects identities supplied by callers and stops denied HTTP/MCP calls before storage", async () => {
-  const input = contextOperationExampleInputs[0];
-  const invalid = { ...input, account_id: actor };
-  expect(contextOperationSchema.safeParse(invalid).success).toBe(false);
-  mocks.auth.mockResolvedValue(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
-  mocks.resolve.mockResolvedValue({ error: "Unauthorized" });
-  expect(
-    (
-      await POST(
-        new NextRequest("https://fixture.invalid/api/context", {
-          method: "POST",
-          body: JSON.stringify(input),
-        }),
-      )
-    ).status,
-  ).toBe(401);
-  const result = await handleContextToolOperation(
-    input,
-    {} as Parameters<typeof handleContextToolOperation>[1],
-  );
-  expect(result).toHaveProperty("isError", true);
-  expect(mocks.rpc).not.toHaveBeenCalled();
-  noUnexpectedDispatch("");
-});
+it.each(["save_catalog_case", "prepare_catalog_audit"])(
+  "rejects caller identity and denied HTTP/MCP %s before storage",
+  async action => {
+    const input = contextOperationExampleInputs.find(example => example.action === action)!;
+    expect(input.action).toBe(action);
+    const invalid = { ...input, account_id: actor };
+    expect(contextOperationSchema.safeParse(invalid).success).toBe(false);
+    mocks.auth.mockResolvedValue(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
+    mocks.resolve.mockResolvedValue({ error: "Unauthorized" });
+    expect(
+      (
+        await POST(
+          new NextRequest("https://fixture.invalid/api/context", {
+            method: "POST",
+            body: JSON.stringify(input),
+          }),
+        )
+      ).status,
+    ).toBe(401);
+    const result = await handleContextToolOperation(
+      input,
+      {} as Parameters<typeof handleContextToolOperation>[1],
+    );
+    expect(result).toHaveProperty("isError", true);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    noUnexpectedDispatch("");
+  },
+);
 
 it("does not imply enabled verification or queue work when its existing flags are off", async () => {
   vi.stubEnv("CONTEXT_SPOTIFY_RELEASE_VERIFY_ENABLED", "false");

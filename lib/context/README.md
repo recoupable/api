@@ -371,7 +371,8 @@ the underlying evidence has not changed.
 `POST /api/context` and the dedicated standard MCP tool. Delegated OAuth is
 excluded. It returns `{ state: "prepared", persisted: false,
 external_actions: "unsupported", snapshot }`: a new revision-0 catalog workpaper,
-not a saved case or a completed audit. Review the response, then explicitly call
+not a saved case or a completed audit. Every preparation call generates a new random
+case UUID; it is not reserved or stable across retries. Review the response, then explicitly call
 `save_catalog_case` with the returned case ID, expected revision 0 and a fresh
 idempotency key. Existing save/read/list, optimistic concurrency and retained-source
 redaction rules remain unchanged.
@@ -383,7 +384,7 @@ Exact source fingerprints come from retained Context versions, never a hash of t
 derived brief. Each source carries only its own provenance. The initial partial audit
 assessment contains the saved text, manifest and gaps and references every backing
 source, so withdrawal of any input withholds the derived assessment on later reads.
-The unredacted case scope is deliberately generic. No provider, model, write,
+The case scope is a fixed generic label and does not reproduce brief text or company names. No provider, model, write,
 database migration, rights verification or collection runs during preparation.
 
 Preparation rechecks owner access and saved-evidence visibility after asynchronous

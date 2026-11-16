@@ -1,3 +1,4 @@
+import { ZodError } from "zod";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { compileContextBrief } from "../compileContextBrief";
 import { processContextOperation } from "../processContextOperation";
@@ -163,9 +164,23 @@ describe("prepare a catalog audit from selected saved evidence", () => {
         return s;
       },
     ],
-  ])("rejects %s briefs before looking up sources", async (_name, mutate) => {
+  ])("rejects %s briefs before looking up sources", async (name, mutate) => {
     rpc.mockResolvedValue(mutate());
-    await expect(prepare()).rejects.toThrow();
+    const expected: Record<string, string | typeof ZodError> = {
+      missing: ZodError,
+      unavailable: "Catalog audit requires a current saved company-onboarding brief",
+      superseded: "Catalog audit requires a current saved company-onboarding brief",
+      "wrong brief": "Catalog audit requires a current saved company-onboarding brief",
+      "wrong purpose": "Catalog audit requires a current saved company-onboarding brief",
+      "wrong inner purpose": "Catalog audit brief evidence is incomplete",
+      "foreign owner": "Catalog audit brief evidence is unavailable",
+      "no documents": "Catalog audit brief evidence is incomplete",
+      "no sources": "Catalog audit brief evidence is unavailable",
+      "no result": "Catalog audit brief evidence is unavailable",
+      "incomplete schema": ZodError,
+      "manifest mismatch": "Catalog audit brief manifest differs from saved evidence",
+    };
+    await expect(prepare()).rejects.toThrow(expected[name]);
     expect(readRetainedContextSourceVersions).not.toHaveBeenCalled();
   });
   it("fails closed when an exact source version is unavailable", async () => {
@@ -186,20 +201,29 @@ describe("prepare a catalog audit from selected saved evidence", () => {
       else {
         const changed = saved();
         if (mode === "superseded") changed.superseded = true;
-        if (mode === "changed") changed.brief.text = "changed while reading";
+        if (mode === "changed") {
+          changed.brief.text = "changed while reading";
+          changed.brief.text_characters = changed.brief.text.length;
+        }
         rpc
           .mockResolvedValueOnce(saved())
           .mockResolvedValueOnce(
             mode === "source" ? { ...changed, state: "unavailable", brief: null } : changed,
           );
       }
-      await expect(prepare()).rejects.toThrow();
+      await expect(prepare()).rejects.toThrow(
+        mode === "membership"
+          ? "Access denied"
+          : mode === "changed"
+            ? "Catalog audit evidence changed during preparation"
+            : "Catalog audit requires a current saved company-onboarding brief",
+      );
     },
   );
   it("rejects spoofed request fields before authorization", async () => {
     await expect(
       processContextOperation(actor, { ...input, account_id: actor }, { rpc, dispatch, authorize }),
-    ).rejects.toThrow();
+    ).rejects.toThrow(ZodError);
     expect(authorize).not.toHaveBeenCalled();
   });
   it("retains the shared 1 MiB output boundary", async () => {
@@ -236,4 +260,42 @@ describe("prepare a catalog audit from selected saved evidence", () => {
       },
     });
   });
+});
+
+it.each([false, true])(
+  "rejects duplicate normalized IDs within one document before source lookup (mixed case: %s)",
+  async mixed => {
+    const snapshot = saved();
+    const id = "abcdefab-abcd-4abc-8abc-abcdefabcdef";
+    snapshot.brief.documents[0].sourceVersionIds = [id, mixed ? id.toUpperCase() : id];
+    snapshot.brief.input_manifest.documents[0].sourceVersionIds = [
+      ...snapshot.brief.documents[0].sourceVersionIds,
+    ];
+    rpc.mockResolvedValue(snapshot);
+    await expect(prepare()).rejects.toThrow("Catalog audit brief evidence is unavailable");
+    expect(readRetainedContextSourceVersions).not.toHaveBeenCalled();
+  },
+);
+it("preserves shared-source lineage across distinct documents", async () => {
+  const snapshot = saved();
+  const second = {
+    ...structuredClone(snapshot.brief.documents[0]),
+    id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  };
+  snapshot.brief.documents.push(second);
+  snapshot.brief.input_manifest.documents.push({
+    ...structuredClone(snapshot.brief.input_manifest.documents[0]),
+    documentId: second.id,
+  });
+  rpc.mockResolvedValue(snapshot);
+  const result = (await prepare()) as {
+    snapshot: {
+      assessments: Record<string, { source_refs: unknown[]; data: { input_manifest: unknown } }>;
+    };
+  };
+  expect(readRetainedContextSourceVersions).toHaveBeenCalledExactlyOnceWith(owner, sourceIds);
+  expect(result.snapshot.assessments["assessment:context"].source_refs).toHaveLength(2);
+  expect(result.snapshot.assessments["assessment:context"].data.input_manifest).toEqual(
+    snapshot.brief.input_manifest,
+  );
 });

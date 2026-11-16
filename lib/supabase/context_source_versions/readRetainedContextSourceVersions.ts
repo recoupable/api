@@ -1,5 +1,5 @@
 import { z } from "zod";
-import supabase from "@/lib/supabase/serverClient";
+import { selectRetainedContextMetadata } from "./selectRetainedContextMetadata";
 import { sameCatalogUuid } from "@/lib/context/sameCatalogUuid";
 
 const versionSchema = z.strictObject({
@@ -28,15 +28,12 @@ export async function readRetainedContextSourceVersions(ownerId: string, version
         .map(id => id.toLowerCase()),
     ),
   ];
-  const versions = await supabase
-    .from("context_source_versions")
-    .select("id,owner_id,source_id,fingerprint,removed_at")
-    .eq("owner_id", ownerId)
-    .in("id", ids)
-    .is("removed_at", null)
-    .limit(ids.length);
-  if (versions.error) throw new Error("Retained Context sources unavailable");
-  const rows = z.array(versionSchema).max(1000).parse(versions.data);
+  const versions = z
+    .array(versionSchema)
+    .max(1000)
+    .safeParse(await selectRetainedContextMetadata("context_source_versions", ownerId, ids));
+  if (!versions.success) throw new Error("Retained Context sources unavailable");
+  const rows = versions.data;
   if (
     rows.length !== ids.length ||
     new Set(rows.map(row => row.id.toLowerCase())).size !== ids.length ||
@@ -44,15 +41,12 @@ export async function readRetainedContextSourceVersions(ownerId: string, version
   )
     throw new Error("Retained Context sources unavailable");
   const sourceIds = [...new Set(rows.map(row => row.source_id.toLowerCase()))];
-  const sources = await supabase
-    .from("context_sources")
-    .select("id,owner_id,withdrawn_at")
-    .eq("owner_id", ownerId)
-    .in("id", sourceIds)
-    .is("withdrawn_at", null)
-    .limit(sourceIds.length);
-  if (sources.error) throw new Error("Retained Context sources unavailable");
-  const active = z.array(sourceSchema).max(1000).parse(sources.data);
+  const sources = z
+    .array(sourceSchema)
+    .max(1000)
+    .safeParse(await selectRetainedContextMetadata("context_sources", ownerId, sourceIds));
+  if (!sources.success) throw new Error("Retained Context sources unavailable");
+  const active = sources.data;
   if (
     active.length !== sourceIds.length ||
     new Set(active.map(row => row.id.toLowerCase())).size !== sourceIds.length ||
