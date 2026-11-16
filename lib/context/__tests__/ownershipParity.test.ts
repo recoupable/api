@@ -14,6 +14,7 @@ import { buildContextOperationFixture } from "./buildContextOperationFixture";
 // Current private boundaries used by the action matrix. None may run after a denial.
 const sinks = vi.hoisted(() => ({
   callContextRpc: vi.fn(),
+  readRetainedContextSourceVersions: vi.fn(),
   dispatchContextRequest: vi.fn(),
   dispatchContextReleaseVerification: vi.fn(),
   dispatchContextReleaseTrackIsrcs: vi.fn(),
@@ -30,6 +31,9 @@ const ids = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/supabase/context_requests/callContextRpc", () => ({
   callContextRpc: sinks.callContextRpc,
+}));
+vi.mock("@/lib/supabase/context_source_versions/readRetainedContextSourceVersions", () => ({
+  readRetainedContextSourceVersions: sinks.readRetainedContextSourceVersions,
 }));
 vi.mock("../dispatchContextRequest", () => ({
   dispatchContextRequest: sinks.dispatchContextRequest,
@@ -128,6 +132,7 @@ const scopeOf: Record<SinkName, (args: unknown[]) => { owner: unknown; actor?: u
       );
     return { owner: p_owner, ...(requiresActor ? { actor: p_actor } : {}) };
   },
+  readRetainedContextSourceVersions: ([owner]) => ({ owner }),
   dispatchContextRequest: ([account, owner]) => ({ actor: account, owner }),
   dispatchContextReleaseVerification: ([account, owner]) => ({ actor: account, owner }),
   dispatchContextReleaseTrackIsrcs: ([account, owner]) => ({ actor: account, owner }),

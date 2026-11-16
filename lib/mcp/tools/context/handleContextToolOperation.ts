@@ -9,6 +9,7 @@ import { callContextRpc } from "@/lib/supabase/context_requests/callContextRpc";
 import { dispatchContextRequest } from "@/lib/context/dispatchContextRequest";
 import { dispatchContextReleaseVerification } from "@/lib/context/dispatchContextReleaseVerification";
 import { dispatchContextReleaseTrackIsrcs } from "@/lib/context/dispatchContextReleaseTrackIsrcs";
+import { catalogCaseToolOperations } from "@/lib/mcp/oauth/catalogCaseToolOperations";
 import { getContextFailureReason } from "@/lib/context/getContextFailureReason";
 
 /** Shared authenticated handler for combined and individually discoverable Context tools. */
@@ -29,7 +30,9 @@ export async function handleContextToolOperation(
       args &&
       typeof args === "object" &&
       "action" in args &&
-      ["save_catalog_case", "read_catalog_case", "list_catalog_cases"].includes(String(args.action))
+      Object.hasOwn(catalogCaseToolOperations, String(args.action)) &&
+      catalogCaseToolOperations[String(args.action) as keyof typeof catalogCaseToolOperations]
+        .delegated === false
     )
       return {
         ...getToolResultError("Catalog case operations are unavailable for delegated OAuth."),
