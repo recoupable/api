@@ -1,4 +1,5 @@
 import { getSitePlaybackAudio } from "./getSitePlaybackAudio";
+import { serializePublicSiteSnapshot } from "./serializePublicSiteSnapshot";
 import { selectFanConfig } from "@/lib/supabase/site_fan_connections/selectFanConfig";
 import { getFanOAuthConfig } from "./fanConnection/getFanOAuthConfig";
 import { z } from "zod";
@@ -26,12 +27,8 @@ export async function processPublicSite(id: string, input?: unknown) {
     );
     return { success: true };
   }
-  // Internal creative guidance can contain customer instructions; never publish it.
-  const snapshot = { ...site.published };
-  snapshot.artistName =
-    site.published.production?.context?.release?.artists?.join(", ") || snapshot.artistName;
-  delete snapshot.brandWorld;
-  delete snapshot.production;
+  // Internal creative guidance can contain customer instructions; copy only allowlisted fields.
+  const snapshot = serializePublicSiteSnapshot(site.published);
   const config = await selectFanConfig(id);
   const fanConnectUrl = config?.enabled
     ? `${getFanOAuthConfig().origin}/api/sites/public/${id}/spotify`

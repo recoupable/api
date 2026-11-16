@@ -30,7 +30,7 @@ describe("registerArtistDeepResearchTool", () => {
     expect(mockServer.registerTool).toHaveBeenCalledWith(
       "artist_deep_research",
       expect.objectContaining({
-        description: expect.stringContaining("comprehensive research"),
+        description: expect.stringContaining("saved social profiles"),
       }),
       expect.any(Function),
     );
@@ -83,9 +83,11 @@ describe("registerArtistDeepResearchTool", () => {
     });
   });
 
-  it("includes research requirements in description", () => {
-    expect(registeredConfig.description).toContain("Spotify");
-    expect(registeredConfig.description).toContain("Socials");
+  it("describes the saved data and report limitation", () => {
+    expect(registeredConfig.description).toContain("saved follower counts");
+    expect(registeredConfig.description).toContain(
+      "does not refresh metrics or generate a research report",
+    );
   });
 
   it("returns success flag in response", async () => {

@@ -1,3 +1,5 @@
+import { packAudioAnalysisTextSchema } from "./packAudioAnalysisTextSchema";
+import { parsePackAudioAnalysis } from "./parsePackAudioAnalysis";
 import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
 import { packExecutionSettings } from "@/lib/const";
 import { z } from "zod";
@@ -15,8 +17,8 @@ const contextSchema = z.object({
   state: z.literal("complete"),
   audio: z.object({ storage_key: z.string() }),
   references: z.array(z.object({ storage_key: z.string() })),
-  summary: z.string(),
-  visual_direction: z.string(),
+  summary: packAudioAnalysisTextSchema.max(6000),
+  visual_direction: packAudioAnalysisTextSchema.max(2000),
   proposed_start_seconds: z.number(),
   selected_start_seconds: z.number(),
   duration_seconds: z.number(),
@@ -26,6 +28,10 @@ export async function preparePackProduction(actor: PackActor, job: PackJob): Pro
   job = { ...job, brief: resolvePackCreativeContext(job.brief) };
   let context = contextSchema.safeParse(job.production_context);
   if (!context.success) {
+    if ((job.production_context as { state?: string } | undefined)?.state === "complete")
+      throw new Error(
+        "Saved audio analysis is invalid; reconcile the retained context before production. No analysis was repeated.",
+      );
     assertPackQuoteConfiguration(job.quote);
     if ((job.production_context as { state?: string } | undefined)?.state === "analyzing")
       throw new Error(
@@ -89,24 +95,11 @@ export async function preparePackProduction(actor: PackActor, job: PackJob): Pro
       }),
       { signal: AbortSignal.timeout(90_000) },
     );
-    let raw: unknown;
-    try {
-      raw = JSON.parse(analysis.response.replace(/^```(?:json)?\s*|\s*```$/g, ""));
-    } catch {
-      throw new Error(
-        "Audio analysis did not return a usable bounded excerpt proposal; no visual generation started",
-      );
-    }
-    const interpreted = z
-      .object({
-        summary: z.string().min(1).max(6000),
-        visual_direction: z.string().min(1).max(2000),
-        proposed_start_seconds: z
-          .number()
-          .min(0)
-          .max(duration - job.deliverables.video_seconds),
-      })
-      .parse(raw);
+    const interpreted = parsePackAudioAnalysis(
+      analysis.response,
+      duration,
+      job.deliverables.video_seconds,
+    );
     const value = {
       state: "complete",
       audio,

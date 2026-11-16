@@ -2,6 +2,7 @@ import apifyClient from "@/lib/apify/client";
 import { getApifyWebhooks } from "@/lib/apify/getApifyWebhooks";
 import { OUTSTANDING_ERROR } from "@/lib/apify/errors";
 import { ApifyRunInfo, ApifyRunLineage } from "@/lib/apify/types";
+import { getLinkedinCompanyUrl } from "@/lib/apify/linkedin/getLinkedinCompanyUrl";
 
 /**
  * Starts a LinkedIn scrape via the harvestapi actors.
@@ -12,11 +13,16 @@ import { ApifyRunInfo, ApifyRunLineage } from "@/lib/apify/types";
  * the same semantics as X/YouTube: depth requested → post items in the
  * dataset; omitted → the legacy profile snapshot.
  *
- * @param handle - A LinkedIn vanity slug (e.g. `drew-thurlow`) or full profile URL.
+ * Company pages keep their `/company/` URL (app#2398): the posts actor takes
+ * company URLs as-is, and without a posts depth they run the company details
+ * actor, since the profile actor only reads personal profiles.
+ *
+ * @param handle - A LinkedIn vanity slug (e.g. `drew-thurlow`), full profile URL or company page URL.
  * @param posts - Max recent posts to scrape; omitted → profile snapshot.
  * @returns Apify run info, or null if the run failed to start.
  * @see https://apify.com/harvestapi/linkedin-profile-scraper
  * @see https://apify.com/harvestapi/linkedin-profile-posts
+ * @see https://apify.com/harvestapi/linkedin-company
  */
 const startLinkedinProfileScraping = async (
   handle: string,
@@ -30,16 +36,20 @@ const startLinkedinProfileScraping = async (
     throw new Error(`Invalid LinkedIn handle: "${handle}"`);
   }
 
-  const targetUrl = cleanHandle.startsWith("http")
-    ? cleanHandle
-    : `https://www.linkedin.com/in/${cleanHandle}`;
+  const companyUrl = getLinkedinCompanyUrl(cleanHandle);
+  const targetUrl =
+    companyUrl ??
+    (cleanHandle.startsWith("http") ? cleanHandle : `https://www.linkedin.com/in/${cleanHandle}`);
 
-  const actorId =
-    posts === undefined
-      ? "harvestapi/linkedin-profile-scraper"
-      : "harvestapi/linkedin-profile-posts";
-  const input =
-    posts === undefined ? { urls: [targetUrl] } : { targetUrls: [targetUrl], maxPosts: posts };
+  const { actorId, input } =
+    posts !== undefined
+      ? {
+          actorId: "harvestapi/linkedin-profile-posts",
+          input: { targetUrls: [targetUrl], maxPosts: posts },
+        }
+      : companyUrl
+        ? { actorId: "harvestapi/linkedin-company", input: { companies: [targetUrl] } }
+        : { actorId: "harvestapi/linkedin-profile-scraper", input: { urls: [targetUrl] } };
 
   try {
     const run = await apifyClient

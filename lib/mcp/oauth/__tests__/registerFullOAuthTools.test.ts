@@ -51,9 +51,13 @@ vi.mock("../../tools", () => ({
       operation,
     );
     for (const name of [
+      "get_artist_socials",
+      "artist_deep_research",
+      "spotify_deep_research",
       "get_catalog_playcount_history",
       "get_catalog_streams",
       "manage_catalog_stream_tracking",
+      "ingestion",
     ]) {
       server.registerTool(name, { inputSchema: z.object({}) }, operation);
     }
@@ -96,6 +100,7 @@ describe("full OAuth registry", () => {
       [
         "create_new_artist",
         "get_daily_email_status",
+        "get_artist_socials",
         "get_tasks",
         "list_artists",
         "read_music_context",
@@ -106,6 +111,9 @@ describe("full OAuth registry", () => {
     expect(
       registered.get("get_tasks")!.config.inputSchema.safeParse({ account_id: "victim" }).success,
     ).toBe(false);
+    expect(registered.has("artist_deep_research")).toBe(false);
+    expect(registered.has("spotify_deep_research")).toBe(false);
+    expect(registered.has("ingestion")).toBe(false);
   });
   it.each([
     undefined,

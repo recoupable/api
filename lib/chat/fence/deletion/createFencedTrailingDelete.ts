@@ -1,21 +1,11 @@
 import { z } from "zod";
 import type { executeChatFenceCommand } from "@/lib/supabase/chat_fence/executeChatFenceCommand";
-import { chatFenceIdentitySchema, type ChatFenceCommand } from "../chatFenceSchemas";
+import { type ChatFenceCommand } from "../chatFenceSchemas";
 import { encodeStrictJson } from "../encodeStrictJson";
 import { parseChatFenceReceipt } from "../parseChatFenceReceipt";
 import { FencedPersistenceError } from "../persistence/FencedPersistenceError";
 
-const intentSchema = chatFenceIdentitySchema
-  .extend({
-    expectedEpoch: z
-      .number()
-      .int()
-      .min(0)
-      .max(Number.MAX_SAFE_INTEGER - 1),
-    requestId: z.uuid(),
-    anchorId: z.string().min(1),
-  })
-  .strict();
+import { fencedTrailingDeleteIntentSchema as intentSchema } from "../chatFenceInputSchemas";
 export { intentSchema as fencedTrailingDeleteIntentSchema };
 export type FencedTrailingDeleteIntent = Readonly<z.infer<typeof intentSchema>>;
 

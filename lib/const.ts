@@ -50,6 +50,9 @@ export const FOUNDER_FROM_EMAIL = `Patrick from Recoup <sweetman${OUTBOUND_EMAIL
 /** Where Reply lands for founder-voiced outreach (personal inbox). */
 export const FOUNDER_REPLY_TO_EMAIL = "sweetmantech@gmail.com";
 
+/** Marker in email_send_log.raw_body for a missed scheduled-report notice. */
+export const MISSED_REPORT_NOTICE_LOG_TYPE = "missed_report_notice";
+
 /** Marker in email_send_log.raw_body for the abandoned-checkout follow-up. */
 export const ABANDONED_CHECKOUT_EMAIL_LOG_TYPE = "abandoned_checkout_email";
 
@@ -87,6 +90,29 @@ export const FLAMINGO_MODEL_ID = "nvidia/music-flamingo-2601-hf";
 export const FLAMINGO_GENERATE_URL =
   "https://shared-78369--music-flamingo-musicflamingo-generate.modal.run";
 
+/** Song moments measurement endpoint (Modal, CPU): sections, moments and cuts from the audio. */
+export const SONG_MOMENTS_MEASURE_URL = "https://shared-78369--song-moments-measure.modal.run";
+
+/** Written on `usage_events.model_id` for the song moments measurement charge. */
+export const SONG_MOMENTS_MODEL_ID = "recoup/song-moments";
+
+/**
+ * Written on `usage_events.model_id` for an artist socials scrape, from REST
+ * or the `scrape_artist_socials` MCP tool alike, so the one billed operation
+ * groups under its documented `METHOD /route/pattern` value.
+ */
+export const ARTIST_SOCIALS_SCRAPE_MODEL_ID = "POST /api/artist/socials/scrape";
+
+/**
+ * Music Flamingo batch endpoint (Modal): many prompts on one audio download.
+ * Same deployment as `FLAMINGO_GENERATE_URL`; Modal names each endpoint's host
+ * after its method, with underscores as hyphens (`generate_batch` → `generate-batch`).
+ */
+export const FLAMINGO_GENERATE_BATCH_URL = FLAMINGO_GENERATE_URL.replace(
+  /-generate\.modal\.run$/,
+  "-generate-batch.modal.run",
+);
+
 /** Snapshot expiration duration (7 days) */
 export const SNAPSHOT_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -103,6 +129,9 @@ export const TERMINAL_WORKFLOW_RUN_STATUSES: readonly string[] = Object.freeze([
 ]);
 
 // Existing Release Pack routes and settings, shared by quotation and execution.
+// Keep Pack migrations independent of the application-wide lightweight alias.
+export const PACK_CAPTION_MODEL = "openai/gpt-4o-mini";
+export const PACK_STILL_INSPECTION_MODEL = "openai/gpt-4o-mini";
 export const HOUSE_VIDEO_MODEL = "minimax/h3-max/image-to-video";
 export const TWELVELABS_ANALYSIS_MODEL = "pegasus1.5";
 
@@ -121,4 +150,15 @@ export const packExecutionSettings = {
   stillInspection: { maxOutputTokens: 600, maxRetries: 0 },
   videoInspection: { temperature: 0, max_tokens: 600 },
   analysis: { max_new_tokens: 768, temperature: 0, do_sample: false },
+} as const;
+
+// Unwired candidate adapters: these are NOT approved quote/execution configuration.
+export const packCandidateAdapterSettings = {
+  audio: { modelId: "gemini-3.8-flash", provider: "google.generative-ai", maxOutputTokens: 2048 },
+  text: {
+    modelId: "gpt-6-luna",
+    provider: "openai.chat",
+    captionTokens: 350,
+    inspectionTokens: 600,
+  },
 } as const;

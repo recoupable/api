@@ -76,7 +76,10 @@ Use `playlist_pitch` for the second consumer. Creative direction prioritizes son
 summary, lyrics and artwork; playlist pitching prioritizes catalog/audio metadata
 and song summary. Both include relevant artist/release evidence. Shared subjects
 are included once. Each request has its own missing-topic/partial-coverage report,
-so evidence for one song cannot make another request look complete.
+so evidence for one song cannot make another request look complete. The readable
+text also reports the final included document count and how many selected requests
+have missing topics or partial evidence, including when no evidence fits. This
+summary counts toward the rendered-text limit.
 
 The response retains `documents`, `characters`, `missingTopics`, `gaps`, `guidance`
 and `readiness`, and adds bounded Markdown `text`, `text_characters`, `request_ids`,
@@ -84,7 +87,17 @@ and `readiness`, and adds bounded Markdown `text`, `text_characters`, `request_i
 versions. `max_characters` independently bounds evidence JSON and rendered text;
 it is not a cap on the entire response including metadata. Documents are omitted
 whole to fit the limit; evidence is never cut mid-claim. A missing topic may mean
-absent, ineligible or over-budget evidence.
+absent, ineligible or over-budget evidence. `input_manifest.freshness` reports the
+oldest and newest retrieval timestamps across every dated source of the selected
+documents, the documents with no dated source, and each selected document's own
+`oldestRetrievedAt`/`newestRetrievedAt`; every document section in `text` ends with a
+`Retrieved:` line (one timestamp, `<oldest> to <newest>` when its sources differ, or
+`unknown`) and never a source location. Freshness is reported, not enforced: no age
+limit drops evidence yet. `compilerVersion` remains `context-brief-v1` because `save_context_brief`
+pins that value and compares the document manifest exactly; freshness is additive.
+The response contract makes `freshness` optional so historical snapshots remain readable
+without adding dates or recompiling their saved text. New compilations include the field;
+unknown retrieval bounds are null, and retrieval times are not publication/event dates.
 
 These are attributed evidence briefs for downstream work, not generated creative
 proposals or finished outreach. `brief` is read-only and recompilation can reflect
@@ -134,6 +147,10 @@ API configuration: `CONTEXT_GUEST_ENABLED=true`, `CONTEXT_GUEST_ORIGINS` with th
 Guest admission is capped at 100 new workspaces/day globally, metadata only. Unclaimed records expire after seven days and are purged daily. Claimed payloads are removed after expiry while a small receipt remains for claim retries. Failed claimed jobs report failure to the account and retry through the original guest job. This is a limited pilot, not a complete anti-abuse system or production availability claim.
 
 Still outside this addition: automatic paid enrichment/credit settlement, Sites creation from saved context, signup completion email delivery, cross-device claim links, and a UI organization destination picker. Do not promise an emailed or generated experience from this metadata screen.
+
+Workspace routing source contract: claim without `organization_id` passes the authenticated account as both `p_actor` and `p_owner` to `adopt_context_guest`. With an organization destination, current membership is checked and the account remains `p_actor` while the organization becomes `p_owner`. `guestWorkspaceRouting.test.ts` exercises the real handler, authentication-context validation, owner authorization and processor with mocked credential/membership lookups and RPC/dispatch boundaries. Denied or malformed destinations do not reach private Context storage or dispatch; claim success, retries and storage refusals retain the existing cookie.
+
+Replay and expired/foreign-claim cases use mocked RPC answers. They verify unchanged routing and dispatch only of the existing guest ID, not database idempotency, actual extraction deduplication, transaction-level revocation or hosted-account/browser behavior. Existing guest-worker and transport tests separately cover duplicate-worker skipping and fresh capabilities on a new start. These fixtures introduce no destination UI, attribution policy or runtime activation.
 
 ### Expand a catalog request
 
@@ -373,3 +390,70 @@ Preparation rechecks owner access and saved-evidence visibility after asynchrono
 reads; it is not a durable reservation. The explicit save independently rechecks
 membership, source retention and fingerprints. This source contract alone does not
 establish hosted acceptance or deployment.
+### Selected saved assessment evidence
+
+`read_brief` optionally accepts `selected_evidence`: one to eight exact six-key
+`input_manifest.documents` references from the same saved `brief_id`. Source UUID
+sets contain one to 32 unique IDs; document IDs must be unique. These are document
+references, not inferred recording identities or portable UI selection state.
+
+Only this optional consumer requires a non-superseded `company_onboarding` snapshot.
+It compares each selected reference with both saved evidence and current authorized
+request documents, and resolves an unambiguous confirmed subject kind from targets
+in the same request. It returns additive `evidence_validation` with `state: available`
+and attributed documents, or `state: unavailable`. Existing calls omit that field
+and keep historical snapshot behavior. Authorization/storage errors remain errors.
+
+Validation reads at most ten server-derived requests, with at most 100 targets and
+1,000 returned documents per request; exceeding a bound yields unavailable. It does
+not dispatch work, save evidence, infer rights or interpret UI revisions as database
+versions. Available describes the scoped reads, not an atomic cross-request snapshot
+or a guarantee that evidence cannot change after the response. The host must disable
+capture while pending and discard responses after its snapshot or scope changes.
+
+To request a coarse explanation, add `explain_evidence_validation: true` alongside
+`selected_evidence`; true without a selection is invalid. When omitted or false,
+unavailable remains exactly `{ "state": "unavailable" }`. Available responses are
+unchanged. Only an opted-in unavailable result adds `reason`:
+
+- `saved_assessment_unavailable`: the saved assessment fails the existing snapshot checks.
+- `selection_mismatch`: a selected reference does not match the saved assessment.
+- `current_evidence_unavailable`: current request documents cannot validate the selection;
+  this does not prove withdrawal.
+- `identity_unconfirmed`: the matching request target lacks unambiguous confirmation;
+  this includes absent or conflicting target confirmation, not a guessed identity.
+- `validation_limit_exceeded`: the existing request, document or target bound was exceeded.
+
+The reason describes the first failed validation check, not every possible cause.
+It uses only existing authorized reads, exposes no raw records or internal errors,
+and adds no logging. Authorization, final owner rechecks and storage errors retain
+their existing behavior; they are not converted into diagnostic reasons.
+
+### Catalog valuation estimate provenance
+
+The existing private `catalog_valuation` collector
+(`providers/collectContextCatalogValuation.ts`, enrichment key `catalog-valuation-v2`)
+reuses `computeValuationBand` over stored song measurements. Saved content now carries
+an additive `estimate` descriptor: USD currency, lifetime-average annual-run-rate
+basis, modeled catalog age and one-year floor, age source, assumptions, methodology
+version/executor, and source provenance. Assumptions are frozen, including nested
+bands, and read the same constants as the calculation. This documents the existing
+model; it does not validate or endorse its commercial assumptions.
+
+`revenueBasis: modeled_estimate` is separate from `observedRevenue.status:
+not_collected`. Neither a zero band nor `not_measured` is a zero observed-revenue
+claim. When no band was modeled, catalog age, floor and age-source values are null.
+`measuredThrough` remains null and source freshness remains `unknown`: the aggregate
+has no capture timestamp. The existing top-level fields and trace are preserved;
+repeated currency, scope and age labels agree with the same modeled result.
+
+The v2 enrichment key changes reuse identity so unlabeled v1 results are not silently
+reused. `scope: workspace_private` and `shareable: false` are descriptive labels,
+not new permission enforcement. Existing catalog authorization, workspace-owner
+checks and owner-scoped document selection remain the access boundaries.
+
+This change adds no action, dispatcher support, collection, provider call or brief
+recipe. `planning/dispatchPlannedContextModule.ts` still accepts only its existing
+MusicBrainz, MLC recording and Spotify release modules; no brief recipe selects
+`catalog_valuation`. Local fixtures verify label persistence, not hosted deployment,
+licensed analytics access, actual revenue or an appraisal.

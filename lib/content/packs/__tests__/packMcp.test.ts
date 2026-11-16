@@ -3,6 +3,11 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { registerFullOAuthTools } from "@/lib/mcp/oauth/registerFullOAuthTools";
+import { registerAllPackTools } from "@/lib/mcp/tools/packs";
+import { processPackOperation } from "../processPackOperation";
+vi.mock("@/lib/mcp/resolveAccountId", () => ({
+  resolveAccountId: vi.fn(async () => ({ accountId: "owner" })),
+}));
 vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
 vi.mock("@/lib/mcp/tools", async () => ({
   registerAllTools: (await import("@/lib/mcp/tools/packs")).registerAllPackTools,
@@ -21,6 +26,33 @@ vi.mock("@/lib/content/packs/processPackOperation", async () => {
       export: s.releasePackLocatorSchema,
     },
   };
+});
+
+it("returns a saved-pack credit failure without a purchase or billing destination", async () => {
+  vi.mocked(processPackOperation).mockRejectedValueOnce(
+    new Error("Insufficient credits; your brief and quote are saved"),
+  );
+  const server = new McpServer({ name: "pack-commerce-test", version: "1" });
+  registerAllPackTools(server);
+  const client = new Client({ name: "test", version: "1" });
+  const [ct, st] = InMemoryTransport.createLinkedPair();
+  await server.connect(st);
+  await client.connect(ct);
+  try {
+    const result = await client.callTool({
+      name: "get_release_pack",
+      arguments: { job_id: "a1111111-1111-4111-8111-111111111111" },
+    });
+    expect(result.isError).toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      success: false,
+      error: expect.stringContaining("brief and quote are saved"),
+    });
+    expect(JSON.stringify(result)).not.toMatch(/billingUrl|checkoutUrl|https?:/);
+  } finally {
+    await client.close();
+    await server.close();
+  }
 });
 it("discovers seven pack operations with explicit schemas through delegated OAuth registration", async () => {
   const server = new McpServer({ name: "pack-test", version: "1" });
@@ -63,3 +95,39 @@ it("discovers seven pack operations with explicit schemas through delegated OAut
     await server.close();
   }
 });
+
+it.each(["get_release_pack", "export_release_pack"])(
+  "preserves saved progress through %s MCP",
+  async name => {
+    const progress = {
+      counts: { usable_pieces: 0 },
+      milestones: { first_usable_asset_at: null },
+      timings: { remaining_ms: null },
+    };
+    vi.mocked(processPackOperation).mockResolvedValueOnce({
+      job: { id: "saved" },
+      assets: [],
+      progress,
+    } as never);
+    const server = new McpServer({ name: "pack-progress-test", version: "1" });
+    registerAllPackTools(server);
+    const client = new Client({ name: "test", version: "1" });
+    const [ct, st] = InMemoryTransport.createLinkedPair();
+    await server.connect(st);
+    await client.connect(ct);
+    try {
+      const result = await client.callTool({
+        name,
+        arguments: { job_id: "a1111111-1111-4111-8111-111111111111" },
+      });
+      expect(result.isError).not.toBe(true);
+      const content = result.content as { type: string; text: string }[];
+      expect(JSON.parse(content.find(item => item.type === "text")!.text)).toMatchObject({
+        progress,
+      });
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  },
+);

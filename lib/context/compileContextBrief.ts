@@ -1,5 +1,7 @@
 import { selectContextDocuments, type ContextBriefDocument } from "./selectContextDocuments";
 
+import { summarizeContextBriefFreshness } from "./summarizeContextBriefFreshness";
+
 const recipes = {
   company_onboarding: {
     title: "Company-onboarding assessment",
@@ -75,33 +77,59 @@ export function compileContextBrief(input: {
     withdrawnSourceVersionIds: [],
   });
   const documents = [...selection.documents];
-  const render = () =>
-    header +
-    documents
-      .map(
-        doc =>
-          `\n## ${doc.topic.replaceAll("_", " ")} — ${doc.subjectId}\nCoverage: ${doc.coverage}; evidence: ${doc.evidenceKind}\n\n${doc.text
-            .split("\n")
-            .map(line => `> ${line}`)
-            .join("\n")}\n\nSources: ${doc.sourceVersionIds.join(", ")}\n`,
-      )
-      .join("");
+  const retrievedAt = new Map(
+    summarizeContextBriefFreshness(documents).documents.map(entry => [
+      entry.documentId,
+      entry.oldestRetrievedAt === entry.newestRetrievedAt
+        ? (entry.newestRetrievedAt ?? "unknown")
+        : `${entry.oldestRetrievedAt} to ${entry.newestRetrievedAt}`,
+    ]),
+  );
+  const getRequestCoverage = () =>
+    input.requests.map(request => {
+      const matching = documents.filter(doc => request.subjectIds.includes(doc.subjectId));
+      const missingTopics = recipe.topics.filter(
+        topic => !matching.some(doc => doc.topic === topic),
+      );
+      return {
+        requestId: request.id,
+        readiness:
+          missingTopics.length || matching.some(doc => doc.coverage !== "full")
+            ? "partial"
+            : "ready",
+        missingTopics,
+      };
+    });
+  const render = () => {
+    const partialRequests = getRequestCoverage().filter(
+      request => request.readiness === "partial",
+    ).length;
+    const coverageSummary = partialRequests
+      ? `Requests with missing topics or partial evidence: ${partialRequests} of ${input.requests.length}. Gaps may reflect unavailable evidence or the size limit.`
+      : "All selected saved requests have the required topics with full coverage.";
+    return (
+      header +
+      `\nIncluded evidence: ${documents.length} ${documents.length === 1 ? "document" : "documents"}. ${coverageSummary}\n` +
+      documents
+        .map(
+          doc =>
+            `\n## ${doc.topic.replaceAll("_", " ")} — ${doc.subjectId}\nCoverage: ${doc.coverage}; evidence: ${doc.evidenceKind}\n\n${doc.text
+              .split("\n")
+              .map(line => `> ${line}`)
+              .join(
+                "\n",
+              )}\n\nSources: ${doc.sourceVersionIds.join(", ")}\nRetrieved: ${retrievedAt.get(doc.id)}\n`,
+        )
+        .join("")
+    );
+  };
   // Keep complete evidence and attribution together; never cut a document mid-claim.
   let text = render();
   while (text.length > input.maxCharacters && documents.length) {
     documents.pop();
     text = render();
   }
-  const requestCoverage = input.requests.map(request => {
-    const matching = documents.filter(doc => request.subjectIds.includes(doc.subjectId));
-    const missingTopics = recipe.topics.filter(topic => !matching.some(doc => doc.topic === topic));
-    return {
-      requestId: request.id,
-      readiness:
-        missingTopics.length || matching.some(doc => doc.coverage !== "full") ? "partial" : "ready",
-      missingTopics,
-    };
-  });
+  const requestCoverage = getRequestCoverage();
   const missingTopics = recipe.topics.filter(topic => !documents.some(doc => doc.topic === topic));
   const gaps = input.requests.flatMap(request =>
     recipe.topics.flatMap(topic => {
@@ -155,6 +183,7 @@ export function compileContextBrief(input: {
     guidance,
     request_coverage: requestCoverage,
     input_manifest: {
+      // Storage pins this version and the exact six-key document manifest.
       compilerVersion: "context-brief-v1",
       method: "saved_evidence_selection",
       requestIds: input.requests.map(request => request.id),
@@ -166,6 +195,7 @@ export function compileContextBrief(input: {
         version: doc.version,
         sourceVersionIds: doc.sourceVersionIds,
       })),
+      freshness: summarizeContextBriefFreshness(documents),
       excludedTopics: [
         ...new Set(
           input.documents

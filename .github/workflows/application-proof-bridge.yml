@@ -1,0 +1,51 @@
+name: Application proof API SQL bridge (offline only)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/application-proof/**"
+      - "lib/applications/**"
+      - "pnpm-lock.yaml"
+      - "package.json"
+      - "vitest.config.ts"
+      - ".github/workflows/application-proof-bridge.yml"
+permissions:
+  contents: read
+jobs:
+  disposable-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: [15, 17]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: recoupable/database
+          ref: 372de990156739dda1b605d18a40333cd6f1bdba
+          path: .worktrees/database-proof-source
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - run: pnpm install --frozen-lockfile
+      - name: Install PostgreSQL
+        timeout-minutes: 12
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get update
+          sudo apt-get install -y postgresql-${{ matrix.postgres }}
+      - name: Qualify pinned API and actual SQL receipt bridge
+        timeout-minutes: 3
+        run: |
+          export PATH="/usr/lib/postgresql/${{ matrix.postgres }}/bin:$PATH"
+          python3 scripts/application-proof/sql-bridge/run.py --database-repo "$GITHUB_WORKSPACE/.worktrees/database-proof-source"

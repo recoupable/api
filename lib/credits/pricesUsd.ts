@@ -18,4 +18,5 @@ export const PRICES_USD = {
   researchEnrich: { base: 0.05, core: 0.1, ultra: 0.25 },
   socialScrapeBase: 0.05,
   socialScrapePerPost: 0.01,
+  songMomentsMeasure: 0.01,
 } as const;

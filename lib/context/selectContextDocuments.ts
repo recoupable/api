@@ -15,6 +15,8 @@ export interface ContextBriefDocument {
   text: string;
   sourceVersionIds: string[];
   coverage: "full" | "partial" | "unknown" | "unavailable";
+  /** Source rows as read_context_documents returns them; locations stay out of brief text and manifests. */
+  sources?: { versionId: string; url?: string | null; retrievedAt?: string | null }[];
 }
 
 export interface ContextBriefSelection {
@@ -42,6 +44,8 @@ export function selectContextDocuments(
       request.subjectIds.includes(doc.subjectId) &&
       request.topics.includes(doc.topic) &&
       doc.status === "accepted" &&
+      // Check substance without changing format characters inside retained claims.
+      /[^\s\p{Cf}\p{Default_Ignorable_Code_Point}]/u.test(doc.text) &&
       doc.evidenceKind !== "creative_proposal" &&
       doc.sourceVersionIds.length > 0 &&
       !doc.sourceVersionIds.some(id => withdrawn.has(id)) &&

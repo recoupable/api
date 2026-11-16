@@ -1,0 +1,74 @@
+name: Data ingestion
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/ingestion/**"
+      - "lib/supabase/ingestion_imports/**"
+      - "types/database.types.ts"
+      - "lib/mcp/tools/ingestion/**"
+      - "lib/mcp/tools/index.ts"
+      - "lib/supabase/storage/*Ingestion*.ts"
+      - "app/api/ingestion/**"
+      - "app/workflows/ingestion/**"
+      - "tsconfig.ingestion*.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/ingestion.yml"
+  push:
+    branches: [main]
+    paths:
+      - "lib/ingestion/**"
+      - "lib/supabase/ingestion_imports/**"
+      - "types/database.types.ts"
+      - "lib/mcp/tools/ingestion/**"
+      - "lib/mcp/tools/index.ts"
+      - "lib/supabase/storage/*Ingestion*.ts"
+      - "app/api/ingestion/**"
+      - "app/workflows/ingestion/**"
+      - "tsconfig.ingestion*.json"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/ingestion.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  ingestion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: [15, 17]
+    services:
+      postgres:
+        image: postgres:${{ matrix.postgres }}
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ingestion_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d ingestion_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      INGESTION_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/ingestion_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck:ingestion
+      - run: pnpm test:ingestion

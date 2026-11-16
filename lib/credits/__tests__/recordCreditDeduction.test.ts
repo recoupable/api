@@ -20,12 +20,25 @@ describe("recordCreditDeduction", () => {
     maybeAutoTopUpMock.mockResolvedValue({ kind: "skipped" });
   });
 
-  it("runs the auto top-up check after a successful debit", async () => {
+  it("preserves opted-in web auto top-up after a successful debit", async () => {
     deductCreditsWithAuditMock.mockResolvedValue({ ok: true });
 
-    await recordCreditDeduction({ accountId: ACCOUNT, creditsToDeduct: 1, source: "api" });
+    await recordCreditDeduction({ accountId: ACCOUNT, creditsToDeduct: 1, source: "web" });
 
     expect(maybeAutoTopUpMock).toHaveBeenCalledWith({ accountId: ACCOUNT });
+  });
+
+  it("spends existing API credits without initiating an automatic purchase", async () => {
+    deductCreditsWithAuditMock.mockResolvedValue({ ok: true });
+    maybeAutoTopUpMock.mockResolvedValue({ kind: "charged", paymentIntentId: "pi_fixture" });
+    const result = await recordCreditDeduction({
+      accountId: ACCOUNT,
+      creditsToDeduct: 1,
+      source: "api",
+    });
+    expect(result).toEqual({ success: true });
+    expect(deductCreditsWithAuditMock).toHaveBeenCalledOnce();
+    expect(maybeAutoTopUpMock).not.toHaveBeenCalled();
   });
 
   it("does not run the auto top-up check when the debit failed", async () => {
@@ -45,7 +58,7 @@ describe("recordCreditDeduction", () => {
     const result = await recordCreditDeduction({
       accountId: ACCOUNT,
       creditsToDeduct: 1,
-      source: "api",
+      source: "web",
     });
 
     expect(result).toEqual({ success: true });

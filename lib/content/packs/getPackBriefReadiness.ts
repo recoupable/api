@@ -50,7 +50,9 @@ export function getPackBriefReadiness(brief: ReleasePackBrief) {
   const inputGaps = missing.filter(key => key !== "creative_direction_selection");
   const directionAction = needsDirectionSelection
     ? creative?.working_mode === "guided"
-      ? "Show the saved direction board options and retain this pack while the customer chooses or revises a direction. Do not quote or generate final assets yet."
+      ? creative.directions.length
+        ? "Show the saved direction options and retain this pack while the customer chooses or revises a direction. Do not quote or generate final assets yet."
+        : "Save direction options in this pack before asking the customer to choose. No direction options are saved yet. Do not quote or generate final assets yet."
       : "Choose and save a creative direction under the customer's delegated creative authority, then continue this same pack. Do not ask for a mandatory direction preview."
     : "";
   return {

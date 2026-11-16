@@ -110,10 +110,25 @@ describe("persistent request orchestration", () => {
   });
   it("revoked access prevents accepted writes", async () => {
     const deps = setup();
-    deps.authorize.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("revoked"));
-    await expect(runContextRequest("actor", "owner", "request", deps as never)).rejects.toThrow(
-      "revoked",
+    const denial = new Error("CANARY-private-membership-detail");
+    deps.authorize.mockResolvedValueOnce(undefined).mockRejectedValueOnce(denial);
+    await expect(runContextRequest("actor", "owner", "request", deps as never)).rejects.toBe(
+      denial,
     );
     expect(deps.rpc.mock.calls.some(([name]) => name === "commit_spotify_context")).toBe(false);
+    expect(deps.authorize.mock.calls).toEqual([
+      ["actor", "owner"],
+      ["actor", "owner"],
+    ]);
+    expect(deps.rpc).toHaveBeenCalledWith(
+      "fail_context_request",
+      expect.objectContaining({
+        p_owner: "owner",
+        p_request: "request",
+        p_token: expect.any(String),
+        p_error: expect.any(String),
+      }),
+    );
+    expect(JSON.stringify(deps.rpc.mock.calls)).not.toContain(denial.message);
   });
 });

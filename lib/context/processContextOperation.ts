@@ -1,4 +1,6 @@
 import { prepareCatalogAuditOperationSchema } from "./prepareCatalogAuditOperationSchema";
+import { selectedBriefEvidenceSchema } from "./selectedBriefEvidenceSchema";
+import { validateSelectedBriefEvidence } from "./validateSelectedBriefEvidence";
 import { catalogCaseOperationSchemas } from "./catalogCaseOperationSchemas";
 import { processCatalogCaseOperation } from "./processCatalogCaseOperation";
 import { releaseCaseOperationSchemas } from "./releaseCaseOperationSchemas";
@@ -42,11 +44,18 @@ export const contextOperationSchema = z.discriminatedUnion("action", [
       .max(128)
       .regex(/^[A-Za-z0-9._:-]+$/),
   }),
-  z.strictObject({
-    action: z.literal("read_brief"),
-    brief_id: z.uuid(),
-    organization_id: z.uuid().optional(),
-  }),
+  z
+    .strictObject({
+      action: z.literal("read_brief"),
+      brief_id: z.uuid(),
+      selected_evidence: selectedBriefEvidenceSchema.optional(),
+      explain_evidence_validation: z.boolean().optional(),
+      organization_id: z.uuid().optional(),
+    })
+    .refine(args => !args.explain_evidence_validation || !!args.selected_evidence, {
+      message: "explain_evidence_validation requires selected_evidence",
+      path: ["explain_evidence_validation"],
+    }),
   z.strictObject({
     action: z.literal("plan"),
     request_id: z.string().uuid(),
@@ -248,8 +257,18 @@ export async function processContextOperation(
       p_owner: ownerId,
       p_brief: args.brief_id,
     });
+    const evidence_validation = args.selected_evidence
+      ? await validateSelectedBriefEvidence({
+          ownerId,
+          briefId: args.brief_id,
+          snapshot,
+          selected: args.selected_evidence,
+          explain: args.explain_evidence_validation === true,
+          rpc: deps.rpc,
+        })
+      : undefined;
     await recheckOwner();
-    return { snapshot };
+    return { snapshot, ...(evidence_validation ? { evidence_validation } : {}) };
   }
   if (args.action === "plan") {
     const { planStoredContextModules } = await import("./planning/planStoredContextModules");

@@ -39,7 +39,7 @@ it("rejects publishing for an unpaid workspace before configuring Spotify", asyn
   await expect(prepareSiteFanConnection(site)).rejects.toMatchObject({
     status: 402,
     message:
-      "An active paid Recoup subscription is required to publish a site. Subscribe in this site’s workspace, then publish again.",
+      "Site publishing is unavailable with this workspace's current entitlements. The draft is preserved.",
   });
   expect(m.oauth).not.toHaveBeenCalled();
   expect(m.config).not.toHaveBeenCalled();

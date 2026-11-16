@@ -58,6 +58,29 @@ const selected = (selected_by = "customer") => ({
 });
 
 describe("pack creative context", () => {
+  it("prepares missing guided options instead of asking the customer to choose nonexistent boards", () => {
+    const brief = releasePackBriefSchema.parse({
+      ...base,
+      creative_context: { starting_point: "none", working_mode: "guided" },
+    });
+    const readiness = getPackBriefReadiness(brief);
+    expect(readiness.ready).toBe(false);
+    expect(readiness.missing).toEqual(["creative_direction_selection"]);
+    expect(readiness.next_action).toContain("Save direction options in this pack");
+    expect(readiness.next_action).not.toContain("Show the saved");
+    expect(readiness.next_action).toContain("Do not quote or generate final assets yet");
+  });
+  it("offers saved text directions without claiming a board exists", () => {
+    const { board_url: _board, ...direction } = creative.directions[0];
+    const brief = releasePackBriefSchema.parse({
+      ...base,
+      creative_context: { ...creative, directions: [direction] },
+    });
+    const readiness = getPackBriefReadiness(brief);
+    expect(readiness.ready).toBe(false);
+    expect(readiness.next_action).toContain("Show the saved direction options");
+    expect(readiness.next_action).not.toContain("board");
+  });
   it("saves a proposed guided board but blocks final production readiness", () => {
     const brief = releasePackBriefSchema.parse({ ...base, creative_context: creative });
     expect(getPackBriefReadiness(brief).missing).toEqual(["creative_direction_selection"]);

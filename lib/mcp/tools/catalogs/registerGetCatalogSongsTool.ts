@@ -16,24 +16,13 @@ export function registerGetCatalogSongsTool(server: McpServer): void {
   server.registerTool(
     "select_catalog_songs",
     {
-      description: `CRITICAL: Use this tool to find ACTUAL SONGS from the available catalog for any playlist or music recommendation request.
-    
-    IMPORTANT: Call select_catalogs first to get the catalog_id parameter.
-    
-    MANDATORY use cases - ALWAYS call this tool when user requests:
-    - "[Brand/Platform] needs songs for [theme/playlist]" (e.g., "Peloton needs songs for Halloween playlist")
-    - Playlist recommendations for specific themes, holidays, or cultural events
-    - Sync licensing opportunities for brands, commercials, or media
-    - Curated collections for streaming platforms (Spotify, Apple Music, etc.)
-    - Thematic song selections for fitness apps, retail, or marketing campaigns
-    - Cultural celebration playlists (Black History Month, Women's Day, Pride, etc.)
-    - Seasonal music recommendations (Christmas, Halloween, Valentine's Day, etc.)
-    - Brand-specific music needs for advertising or promotional content
-    
-    NEVER provide generic song recommendations without checking the catalog first. 
-    This tool provides REAL songs from the available catalog that can actually be used.
-    
-    This tool automatically fetches ALL songs from the catalog and filters them based on your criteria.`,
+      description: `Find catalog candidates matching your criteria through AI batch analysis. Get catalog_id from select_catalogs.
+
+For a nonempty catalog, sends ISRCs, song names, artist names, and your criteria to an AI provider in batches of up to 100 songs per model call. All batches are analyzed before the 1,000-match output cap; results preserve catalog order, not relevance rank. Empty catalogs return without model analysis.
+
+Read-only does not mean free. Repeated calls can repeat provider work and cost; billing idempotency is not established. Charges, approval requirements, spending ceilings, and retry handling remain unmeasured or unapproved for this operation. This description does not authorize spending or use of a song.
+
+Catalog presence does not establish licensing clearance or permission for a proposed use.`,
       inputSchema: getCatalogSongsQuerySchema,
     },
     async (args: GetCatalogSongsQuery) => {

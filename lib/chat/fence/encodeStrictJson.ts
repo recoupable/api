@@ -1,9 +1,20 @@
 /** Encode strict JSON with UTF-16 sorted keys, without invoking getters or toJSON. */
 export function encodeStrictJson(
   input: unknown,
-  options: { omitUndefinedObjectProperties?: boolean } = {},
+  options: { omitUndefinedObjectProperties?: boolean; maxBytes?: number } = {},
 ): string {
   const ancestors = new Set<object>();
+  let remaining = options.maxBytes ?? Infinity;
+  if (options.maxBytes !== undefined && (!Number.isSafeInteger(remaining) || remaining < 0))
+    throw new Error("Invalid JSON byte budget");
+  function consume(bytes: number) {
+    remaining -= bytes;
+    if (remaining < 0) throw new Error("JSON exceeds byte budget");
+  }
+  function literal(text: string) {
+    consume(Buffer.byteLength(text, "utf8"));
+    return text;
+  }
   function checkString(value: string): void {
     for (let i = 0; i < value.length; i++) {
       const unit = value.charCodeAt(i);
@@ -16,15 +27,18 @@ export function encodeStrictJson(
   }
   function encode(value: unknown, depth: number): string {
     if (depth > 100) throw new Error("JSON nesting exceeds 100 levels");
-    if (typeof value === "string") checkString(value);
+    if (typeof value === "string") {
+      if (Buffer.byteLength(value, "utf8") > remaining) throw new Error("JSON exceeds byte budget");
+      checkString(value);
+    }
     if (value === null || typeof value === "boolean" || typeof value === "string") {
-      return JSON.stringify(value);
+      return literal(JSON.stringify(value));
     }
     if (typeof value === "number") {
       if (!Number.isFinite(value) || (Number.isInteger(value) && !Number.isSafeInteger(value))) {
         throw new Error("JSON requires finite numbers and safe integers");
       }
-      return JSON.stringify(value);
+      return literal(JSON.stringify(value));
     }
     if (typeof value !== "object") throw new Error("Unsupported JSON value");
     if (ancestors.has(value)) throw new Error("Cyclic JSON value");
@@ -51,6 +65,7 @@ export function encodeStrictJson(
       if (Array.isArray(value)) {
         if (Object.keys(descriptors).length !== value.length + 1)
           throw new Error("Sparse or extended JSON array");
+        consume(2 + Math.max(0, value.length - 1));
         const items: string[] = [];
         for (let i = 0; i < value.length; i++) {
           if (!descriptors[String(i)]) throw new Error("Sparse JSON array");
@@ -59,13 +74,13 @@ export function encodeStrictJson(
         return `[${items.join(",")}]`;
       }
       // Serialize keys directly: JSON.stringify(object) reorders integer-like keys.
-      return `{${Object.keys(descriptors)
+      const keys = Object.keys(descriptors)
         .filter(
           key => !options.omitUndefinedObjectProperties || descriptors[key].value !== undefined,
         )
-        .sort()
-        .map(key => `${JSON.stringify(key)}:${encode(descriptors[key].value, depth + 1)}`)
-        .join(",")}}`;
+        .sort();
+      consume(2 + Math.max(0, keys.length - 1) + keys.length);
+      return `{${keys.map(key => `${literal(JSON.stringify(key))}:${encode(descriptors[key].value, depth + 1)}`).join(",")}}`;
     } finally {
       ancestors.delete(value);
     }

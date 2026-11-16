@@ -41,6 +41,12 @@ export function registerFullOAuthTools(
     if (
       [
         "get_api_key",
+        // Private ingestion and external delivery have no delegated grant contract.
+        "ingestion",
+        // These legacy aliases read saved socials, not deep research. OAuth
+        // clients use the existing, accurately named get_artist_socials tool.
+        "spotify_deep_research",
+        "artist_deep_research",
         // Registration preflight awaits the application/OAuth contract review.
         "validate_application_registration",
         "list_professional_roster",

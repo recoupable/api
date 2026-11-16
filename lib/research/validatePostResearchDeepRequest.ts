@@ -18,7 +18,7 @@ export type ValidatedPostResearchDeepRequest = {
 /**
  * Validates `POST /api/research/deep` — auth + body (`query` required) +
  * 25-credit budget (deep research is expensive). A short balance returns a
- * 402 NextResponse with a `checkoutUrl`; the gate never charges a card.
+ * 402 NextResponse with the standard credit-error body; the gate never charges a card.
  */
 export async function validatePostResearchDeepRequest(
   request: NextRequest,

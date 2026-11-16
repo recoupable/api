@@ -61,14 +61,14 @@ export const recordCreditDeduction = async (
       console.error("[recordCreditDeduction] atomic debit failed:", result.error);
       return { success: false };
     }
-    // Awaited, not fire-and-forget: this runs inside a workflow step or a
-    // serverless function, where a dangling promise is dropped at return.
-    // maybeAutoTopUp never throws and only reaches Stripe when the balance
-    // crossed the account's threshold, so the common path adds one read.
-    try {
-      await maybeAutoTopUp({ accountId: params.accountId });
-    } catch (error) {
-      console.error("[recordCreditDeduction] auto top-up check failed:", error);
+    // API/plugin workflows spend existing entitlements only. An account's web
+    // billing preference must not turn a tool call into a new credit purchase.
+    if (params.source === "web") {
+      try {
+        await maybeAutoTopUp({ accountId: params.accountId });
+      } catch (error) {
+        console.error("[recordCreditDeduction] auto top-up check failed:", error);
+      }
     }
     return { success: true };
   } catch (error) {

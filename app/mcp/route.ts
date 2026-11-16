@@ -2,16 +2,19 @@ import { createRecoupServerInfo } from "@/lib/mcp/createRecoupServerInfo";
 import { registerRecoupExtension } from "@/lib/mcp/extension/registerRecoupExtension";
 import { registerFullOAuthTools } from "@/lib/mcp/oauth/registerFullOAuthTools";
 import { createFullOAuthToolServices } from "@/lib/mcp/oauth/createFullOAuthToolServices";
+import { getLimitedOAuthRequestScopes } from "@/lib/mcp/oauth/getLimitedOAuthRequestScopes";
 import { setOAuthMcpHeaders } from "@/lib/mcp/oauth/setOAuthMcpHeaders";
 import { registerAllTools } from "@/lib/mcp/tools";
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { verifyBearerToken } from "@/lib/mcp/verifyApiKey";
 import { registerOAuthTools } from "@/lib/mcp/oauth/registerOAuthTools";
 import { createOAuthToolServices } from "@/lib/mcp/oauth/createOAuthToolServices";
+import { validateMcpJsonBody } from "@/lib/mcp/validateMcpJsonBody";
 import { verifyOAuthBearer } from "@/lib/oauth/verifyOAuthBearer";
 
-// Site generation can take several minutes, matching the HTTP generation route.
-export const maxDuration = 300;
+// Site generation and analyze_music's full_report (13 sections run one after
+// another in one model batch) can take several minutes, matching their HTTP routes.
+export const maxDuration = 800;
 
 const baseHandler = createMcpHandler(
   server => {
@@ -43,6 +46,12 @@ const fullOAuthHandler = createMcpHandler(
 async function handler(req: Request) {
   const bearer = /^Bearer +([^\s]+)$/i.exec(req.headers.get("authorization") ?? "")?.[1];
   const auth = await verifyBearerToken(req, bearer);
+  const parsed = auth ? await validateMcpJsonBody(req) : { body: undefined };
+  if (parsed instanceof Response) return setOAuthMcpHeaders(parsed);
+  const requiredScopes =
+    auth?.extra.oauth && !auth.scopes.includes("mcp:tools")
+      ? getLimitedOAuthRequestScopes(parsed.body)
+      : [];
   const response = await withMcpAuth(
     auth?.extra.oauth
       ? auth.scopes.includes("mcp:tools")
@@ -52,12 +61,14 @@ async function handler(req: Request) {
     async () => auth,
     {
       required: true,
+      requiredScopes,
       resourceMetadataPath: "/.well-known/oauth-protected-resource/mcp",
     },
   )(req);
   return setOAuthMcpHeaders(
     response,
     process.env.OAUTH_ENABLED === "true" ? process.env.OAUTH_ISSUER : undefined,
+    requiredScopes,
   );
 }
 

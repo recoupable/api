@@ -27,6 +27,12 @@ describe("MCP OAuth tool authorization inventory", () => {
     expect(isStandardOnlyContextTool(name)).toBe(true);
     expect(fullOAuthToolPolicy).not.toHaveProperty(name);
   });
+  it("classifies ingestion as standard-only without granting delegated permission", () => {
+    const entry = inventory.find(tool => tool.name === "ingestion");
+    expect(entry?.status).toBe("standard only; delegated unavailable");
+    expect(entry?.scopes).toEqual(["mcp:read", "mcp:write"]);
+    expect(fullOAuthToolPolicy).not.toHaveProperty("ingestion");
+  });
   it("classifies the development calculator without granting delegated permission", () => {
     const name = "dev_calculate_catalog_entitlements";
     const entry = inventory.find(tool => tool.name === name);

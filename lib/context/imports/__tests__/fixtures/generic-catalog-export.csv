@@ -1,0 +1,6 @@
+track_title,artist_name,release_title,isrc,upc,release_date,label,track_number,notes
+Example Song One,Example Artist,Example Release,ZZ-TST-26-00001,000000000017,2026-01-16,Example Label,1,first row
+"Example Song, Two",Example Artist,Example Release,ZZTST2600002,000000000017,2026-01-16,Example Label,2,"quoted, with comma"
+Example Song Three,Test Artist Two,Another Release,,,2025-11-02,,3,no identifiers
+Example Song Four,Test Artist Two,Another Release,not-an-isrc,12345,2025-11-02,Example Label,4,malformed identifiers
+Example Song One,Example Artist,Example Release,ZZ-TST-26-00001,000000000017,2026-01-16,Example Label,1,first row

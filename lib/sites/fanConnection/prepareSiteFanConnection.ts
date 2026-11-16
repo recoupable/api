@@ -13,7 +13,7 @@ export async function prepareSiteFanConnection(
   if (!(await hasPaidSiteSubscription(site.owner_id)))
     throw new SiteError(
       402,
-      "An active paid Recoup subscription is required to publish a site. Subscribe in this site’s workspace, then publish again.",
+      "Site publishing is unavailable with this workspace's current entitlements. The draft is preserved.",
     );
   getFanOAuthConfig();
   if (!site.artist_id)

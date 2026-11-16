@@ -6,6 +6,7 @@ import startYoutubeProfileScraping from "@/lib/apify/youtube/startYoutubeProfile
 import startFacebookProfileScraping from "@/lib/apify/facebook/startFacebookProfileScraping";
 import startLinkedinProfileScraping from "@/lib/apify/linkedin/startLinkedinProfileScraping";
 import { getUsernameFromProfileUrl } from "@/lib/socials/getUsernameFromProfileUrl";
+import { getLinkedinCompanyUrl } from "@/lib/apify/linkedin/getLinkedinCompanyUrl";
 import type { ApifyRunInfo, ApifyRunLineage } from "@/lib/apify/types";
 import type { ProfileScrapeResult } from "@/lib/apify/profileScrapeResult";
 
@@ -29,6 +30,8 @@ export type ScrapeProfileResult = ProfileScrapeResult & {
 const PLATFORM_SCRAPERS: Array<{
   match: (url: string) => boolean;
   scraper: ScrapeRunner;
+  /** Overrides the username as the scrape target when the URL itself is needed. */
+  targetFromUrl?: (url: string) => string | null;
 }> = [
   {
     match: (url: string) => url.includes("tiktok.com"),
@@ -59,6 +62,8 @@ const PLATFORM_SCRAPERS: Array<{
   {
     match: (url: string) => url.includes("linkedin.com"),
     scraper: startLinkedinProfileScraping,
+    // A company page's slug alone would be scraped as a personal profile (app#2398).
+    targetFromUrl: getLinkedinCompanyUrl,
   },
 ];
 
@@ -79,7 +84,8 @@ export const scrapeProfileUrl = async (
     return null;
   }
 
-  const finalUsername = username || getUsernameFromProfileUrl(profileUrl);
+  const finalUsername =
+    platform.targetFromUrl?.(profileUrl) || username || getUsernameFromProfileUrl(profileUrl);
 
   try {
     // Both scrape routes dispatch here, always for a roster artist (app#2018).

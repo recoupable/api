@@ -4,6 +4,7 @@ import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sd
 import { z } from "zod";
 import type { OAuthAccess } from "../../oauth/resolveOAuthAccess";
 import type { OAuthToolServices } from "./OAuthToolServices";
+import { limitedOAuthToolScopes } from "./limitedOAuthToolScopes";
 import type { McpAuthInfo } from "../verifyApiKey";
 
 /** Separate allowlisted delegated server: legacy credentials and tools are never registered here. */
@@ -14,7 +15,7 @@ export function registerOAuthTools(
 ) {
   const run = async (
     extra: RequestHandlerExtra<ServerRequest, ServerNotification>,
-    scope: string,
+    tool: keyof typeof limitedOAuthToolScopes,
     operation: (accountId: string) => Promise<unknown>,
   ) => {
     try {
@@ -26,7 +27,7 @@ export function registerOAuthTools(
         !current ||
         current.grantId !== auth.extra.oauth.grantId ||
         current.accountId !== auth.extra.accountId ||
-        !current.scopes.includes(scope)
+        !current.scopes.includes(limitedOAuthToolScopes[tool])
       )
         throw new Error();
       return {
@@ -53,7 +54,7 @@ export function registerOAuthTools(
       inputSchema: z.object({}).strict(),
       annotations: { readOnlyHint: true },
     },
-    (_args, extra) => run(extra, "mcp:read", id => services.listArtists(id)),
+    (_args, extra) => run(extra, "list_artists", id => services.listArtists(id)),
   );
   server.registerTool(
     "create_new_artist",
@@ -62,7 +63,7 @@ export function registerOAuthTools(
       inputSchema: z.object({ name: z.string().trim().min(1).max(200) }).strict(),
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
-    (args, extra) => run(extra, "mcp:write", id => services.createArtist(id, args.name)),
+    (args, extra) => run(extra, "create_new_artist", id => services.createArtist(id, args.name)),
   );
   server.registerTool(
     "update_account_info",
@@ -86,7 +87,7 @@ export function registerOAuthTools(
       annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
     },
     ({ artistId, ...updates }, extra) =>
-      run(extra, "mcp:write", id => services.updateArtist(id, artistId, updates)),
+      run(extra, "update_account_info", id => services.updateArtist(id, artistId, updates)),
   );
   server.registerTool(
     "get_artist_socials",
@@ -95,7 +96,8 @@ export function registerOAuthTools(
       inputSchema: z.object({ artist_account_id: z.string().uuid() }).strict(),
       annotations: { readOnlyHint: true },
     },
-    (args, extra) => run(extra, "mcp:read", id => services.getSocials(id, args.artist_account_id)),
+    (args, extra) =>
+      run(extra, "get_artist_socials", id => services.getSocials(id, args.artist_account_id)),
   );
   server.registerTool(
     "get_chats",
@@ -104,6 +106,6 @@ export function registerOAuthTools(
       inputSchema: z.object({}).strict(),
       annotations: { readOnlyHint: true },
     },
-    (_args, extra) => run(extra, "mcp:read", id => services.getChats(id)),
+    (_args, extra) => run(extra, "get_chats", id => services.getChats(id)),
   );
 }

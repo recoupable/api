@@ -322,6 +322,25 @@ describe("new-buyer pack acceptance fixture", () => {
       false,
     );
   });
+  it("resumes an empty guided pack with an actionable preparation step and no production", async () => {
+    const prepared = await prepareWorld({ starting_point: "none", working_mode: "guided" });
+    const read = (await processPackOperation("owner", "get", { job_id: prepared.job.id })) as any;
+    expect(read.job.id).toBe(prepared.job.id);
+    expect(read.job.brief.audio_url).toBe(prepared.job.brief.audio_url);
+    expect(read.job.brief.creative_context?.directions).toEqual([]);
+    expect(read.next_action).toContain("Save direction options in this pack");
+    expect(read.readiness.ready).toBe(false);
+    await expect(
+      processPackOperation("owner", "estimate", { job_id: prepared.job.id }),
+    ).rejects.toThrow("Complete the saved brief");
+    expect(importPackSources).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
+    expect(vi.mocked(runPackCommand).mock.calls.map(([, action]) => action)).toEqual([
+      "prepare",
+      "read",
+      "read",
+    ]);
+  });
   it.each(["guided", "autonomous"])(
     "uses the selected %s world without polluting the saved source inputs",
     async mode => {
