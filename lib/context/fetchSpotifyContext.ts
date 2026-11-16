@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ContextIngestFailure } from "./ContextIngestFailure";
 
 const providerId = z.string().regex(/^[A-Za-z0-9]{22}$/);
 const trackSchema = z.object({
@@ -27,17 +28,59 @@ export async function fetchSpotifyContext(
   accessToken: string,
   fetcher: typeof fetch = fetch,
 ) {
-  providerId.parse(id);
-  const response = await fetcher(`https://api.spotify.com/v1/tracks/${id}`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    redirect: "error",
-    signal: AbortSignal.timeout(20000),
-  });
-  if (!response.ok) throw new Error(`Spotify metadata request failed: ${response.status}`);
-  const raw: unknown = await response.json();
-  const track = trackSchema.parse(raw);
+  if (!providerId.safeParse(id).success)
+    throw new ContextIngestFailure("unsupported_input", "Spotify track IDs are 22 characters");
+  let response: Response;
+  try {
+    response = await fetcher(`https://api.spotify.com/v1/tracks/${id}`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      redirect: "error",
+      signal: AbortSignal.timeout(20000),
+    });
+  } catch (error) {
+    if (
+      (error instanceof DOMException && ["TimeoutError", "AbortError"].includes(error.name)) ||
+      (error instanceof TypeError && error.message === "fetch failed")
+    )
+      throw new ContextIngestFailure("provider_outage", "Spotify metadata transport interrupted");
+    throw error;
+  }
+  if (!response.ok) {
+    const { status } = response;
+    throw new ContextIngestFailure(
+      status === 404 || status === 410
+        ? "recording_unavailable"
+        : status === 429 || status >= 500
+          ? "provider_outage"
+          : "provider_rejected",
+      `Spotify metadata request failed: ${status}`,
+    );
+  }
+  let raw: unknown;
+  try {
+    raw = await response.json();
+  } catch (error) {
+    if (error instanceof SyntaxError)
+      throw new ContextIngestFailure(
+        "provider_response_invalid",
+        "Spotify metadata was not valid JSON",
+      );
+    if (error instanceof DOMException && ["TimeoutError", "AbortError"].includes(error.name))
+      throw new ContextIngestFailure("provider_outage", "Spotify metadata body interrupted");
+    throw error;
+  }
+  const parsed = trackSchema.safeParse(raw);
+  if (!parsed.success)
+    throw new ContextIngestFailure(
+      "provider_response_invalid",
+      "Spotify metadata did not match the required shape",
+    );
+  const track = parsed.data;
   if (track.id !== id)
-    throw new Error("Spotify returned a different recording; identity review required");
+    throw new ContextIngestFailure(
+      "identity_conflict",
+      "Spotify returned a different recording; identity review required",
+    );
   return {
     trackId: track.id,
     title: track.name,

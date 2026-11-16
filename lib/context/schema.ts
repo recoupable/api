@@ -1,3 +1,4 @@
+import { ContextIngestFailure } from "./ContextIngestFailure";
 import { z } from "zod";
 import { parseContextUrl } from "./parseContextUrl";
 
@@ -19,14 +20,20 @@ export const contextIngestSchema = z.strictObject({
     .string()
     .url()
     .max(2048)
-    .refine(value => {
+    .superRefine((value, ctx) => {
       try {
         parseContextUrl(value);
-        return true;
-      } catch {
-        return false;
+      } catch (error) {
+        // Surface the parser's routing message (album → ingest_release, playlist unsupported) in issues[].
+        ctx.addIssue({
+          code: "custom",
+          message:
+            error instanceof ContextIngestFailure && error.code === "unsupported_input"
+              ? error.message
+              : "Use a Spotify track or a single YouTube video URL",
+        });
       }
-    }, "Use a Spotify track or a single YouTube video URL"),
+    }),
   idempotency_key: z
     .string()
     .min(1)
