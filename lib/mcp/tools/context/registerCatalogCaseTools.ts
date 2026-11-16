@@ -1,5 +1,6 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { prepareCatalogAuditOperationSchema } from "@/lib/context/prepareCatalogAuditOperationSchema";
 import { catalogCaseOperationSchemas } from "@/lib/context/catalogCaseOperationSchemas";
 import { catalogCaseToolOperations } from "@/lib/mcp/oauth/catalogCaseToolOperations";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
@@ -7,7 +8,11 @@ import { handleContextToolOperation } from "./handleContextToolOperation";
 
 /** Object inputs expose catalog artifact operations to standalone standard MCP clients. */
 export function registerCatalogCaseTools(server: McpServer) {
-  const prepare = (operation: (typeof catalogCaseOperationSchemas)[number]) => {
+  const prepare = (
+    operation:
+      | (typeof catalogCaseOperationSchemas)[number]
+      | typeof prepareCatalogAuditOperationSchema,
+  ) => {
     const { action: actionSchema, ...shape } = operation.shape;
     const action = actionSchema.value;
     const metadata = catalogCaseToolOperations[action];
@@ -37,6 +42,8 @@ export function registerCatalogCaseTools(server: McpServer) {
     };
     return { config, handler };
   };
+  const audit = prepare(prepareCatalogAuditOperationSchema);
+  server.registerTool("prepare_catalog_audit", audit.config, audit.handler);
   const save = prepare(catalogCaseOperationSchemas[0]);
   const read = prepare(catalogCaseOperationSchemas[1]);
   const list = prepare(catalogCaseOperationSchemas[2]);

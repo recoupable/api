@@ -365,6 +365,32 @@ approval; releasing these types does not activate its projection. Applying that
 migration changes every case fingerprint and makes prior reviews stale, even when
 the underlying evidence has not changed.
 
+### Prepare a catalog audit from a saved company brief
+
+`prepare_catalog_audit` accepts `brief_id` and optional `organization_id` through
+`POST /api/context` and the dedicated standard MCP tool. Delegated OAuth is
+excluded. It returns `{ state: "prepared", persisted: false,
+external_actions: "unsupported", snapshot }`: a new revision-0 catalog workpaper,
+not a saved case or a completed audit. Every preparation call generates a new random
+case UUID; it is not reserved or stable across retries. Review the response, then explicitly call
+`save_catalog_case` with the returned case ID, expected revision 0 and a fresh
+idempotency key. Existing save/read/list, optimistic concurrency and retained-source
+redaction rules remain unchanged.
+
+Only current, accessible `company_onboarding` saved briefs with complete retained
+documents and source-version references qualify. Unavailable, superseded, empty or
+malformed evidence is rejected; the API does not recompile or guess missing evidence.
+Exact source fingerprints come from retained Context versions, never a hash of the
+derived brief. Each source carries only its own provenance. The initial partial audit
+assessment contains the saved text, manifest and gaps and references every backing
+source, so withdrawal of any input withholds the derived assessment on later reads.
+The case scope is a fixed generic label and does not reproduce brief text or company names. No provider, model, write,
+database migration, rights verification or collection runs during preparation.
+
+Preparation rechecks owner access and saved-evidence visibility after asynchronous
+reads; it is not a durable reservation. The explicit save independently rechecks
+membership, source retention and fingerprints. This source contract alone does not
+establish hosted acceptance or deployment.
 ### Selected saved assessment evidence
 
 `read_brief` optionally accepts `selected_evidence`: one to eight exact six-key
