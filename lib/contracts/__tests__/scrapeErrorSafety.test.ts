@@ -24,6 +24,9 @@ vi.mock("@/lib/socials/ensureSocialScrapeCredits", () => ({
   ensureSocialScrapeCredits: vi.fn(async () => null),
 }));
 vi.mock("@/lib/socials/deductSocialScrapeCredits", () => ({ deductSocialScrapeCredits: vi.fn() }));
+vi.mock("@/lib/credits/checkCreditsAvailable", () => ({
+  checkCreditsAvailable: vi.fn(async () => ({ kind: "available" })),
+}));
 vi.mock("@/lib/supabase/socials/selectSocials", () => ({ selectSocials: vi.fn() }));
 vi.mock("@/lib/supabase/account_socials/selectAccountSocials", () => ({
   selectAccountSocials: vi.fn(),

@@ -29,6 +29,10 @@ vi.mock("@/lib/flamingo/chargeForFlamingoCall", () => ({
   chargeForFlamingoCall: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@/lib/flamingo/chargeForBatchAnswers", () => ({
+  chargeForBatchAnswers: vi.fn().mockResolvedValue(undefined),
+}));
+
 /**
  * Creates a mock NextRequest with a JSON body.
  *

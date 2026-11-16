@@ -3,8 +3,9 @@ import { NextResponse } from "next/server";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { validateFlamingoGenerateRequest } from "@/lib/flamingo/validateFlamingoGenerateRequest";
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
+import { FlamingoServiceError } from "@/lib/flamingo/FlamingoServiceError";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsForAnalyzeRequest";
+import { FLAMINGO_BASE_CREDITS } from "@/lib/flamingo/creditsForFlamingoCall";
 
 /**
  * Handler for POST /api/songs/analyze.
@@ -13,6 +14,10 @@ import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsFo
  * `validateFlamingoGenerateRequest`), gates the balance on the base price
  * of the request (402 when short), then delegates to the shared
  * processAnalyzeMusicRequest domain function, which charges per model call.
+ *
+ * A rejection from the model service answers 502 with `upstream_status` and
+ * `detail`; a full report whose every section failed answers 502 with
+ * `failed`; one with some failed sections answers 200 with `status: "partial"`.
  *
  * @param request - The incoming request with a JSON body.
  * @returns A NextResponse with the model output or an error.
@@ -26,7 +31,7 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
   try {
     short = await ensureCreditsOrShortCircuit({
       accountId,
-      creditsToDeduct: minimumCreditsForAnalyzeRequest(body),
+      creditsToDeduct: FLAMINGO_BASE_CREDITS,
     });
   } catch (err) {
     console.error("[postFlamingoGenerateHandler] credit gate failed:", err);
@@ -41,6 +46,12 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
   try {
     result = await processAnalyzeMusicRequest(body, { accountId });
   } catch (err) {
+    if (err instanceof FlamingoServiceError) {
+      return NextResponse.json(
+        { status: "error", error: err.message, upstream_status: err.status, detail: err.detail },
+        { status: 502, headers: getCorsHeaders() },
+      );
+    }
     const message = err instanceof Error ? err.message : "Music analysis failed";
     return NextResponse.json(
       { status: "error", error: message },
@@ -52,6 +63,13 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
     return NextResponse.json(
       { status: "error", error: result.error },
       { status: 400, headers: getCorsHeaders() },
+    );
+  }
+
+  if (result.type === "upstream_error") {
+    return NextResponse.json(
+      { status: "error", error: result.error, failed: result.failed },
+      { status: 502, headers: getCorsHeaders() },
     );
   }
 
