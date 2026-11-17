@@ -6,6 +6,7 @@ export function getPackFoundationContinuation(
   job: PackJob | undefined,
   deferred: boolean,
   error?: string,
+  nowMs = Date.now(),
 ) {
   const expiry =
     typeof job?.hold_expires_at === "string" && Number.isFinite(Date.parse(job.hold_expires_at))
@@ -13,7 +14,10 @@ export function getPackFoundationContinuation(
       : null;
   let status = "batch_finished";
   let action = "get_pack";
-  if (error || !record) {
+  if (record?.blocked_reason === "reference_limit") {
+    status = "needs_reference_selection";
+    action = "get_pack_then_reconcile_hold_and_choose_reference_scope_for_new_quote_or_pack";
+  } else if (error || !record) {
     status = "needs_reconciliation";
     action = "get_pack_then_reconcile_saved_state";
   } else if (deferred) {
@@ -29,7 +33,7 @@ export function getPackFoundationContinuation(
     } else if (record.reason === "uncertain") {
       status = "needs_reconciliation";
       action = "get_pack_then_reconcile_or_resume_accepted_receipt";
-    } else if (expiry) {
+    } else if (expiry && Date.parse(expiry) > nowMs) {
       status = "waiting_for_existing_attempt";
     } else {
       status = "needs_reconciliation";

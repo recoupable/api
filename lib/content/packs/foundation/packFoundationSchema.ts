@@ -18,6 +18,7 @@ export const packFoundationRecordSchema = z
     plan: packFoundationPlanSchema,
     state: z.enum(["pending", "ready", "none_requested", "unavailable"]),
     asset_sha256: digest.optional(),
+    blocked_reason: z.literal("reference_limit").optional(),
     dependency_bindings: z
       .array(z.strictObject({ asset_id: z.string(), attempt: z.number().int().positive() }))
       .optional(),
@@ -34,6 +35,22 @@ export const packFoundationRecordSchema = z
       .optional(),
   })
   .superRefine((record, ctx) => {
+    if ((record.state === "unavailable") !== Boolean(record.reason))
+      ctx.addIssue({ code: "custom", message: "Only unavailable records require a reason" });
+    if (record.state === "ready") {
+      const ids = record.dependency_bindings?.map(binding => binding.asset_id) ?? [];
+      if (
+        !record.dependency_bindings ||
+        new Set(ids).size !== ids.length ||
+        ids.length !== record.plan.dependent_asset_ids.length ||
+        record.plan.dependent_asset_ids.some(id => !ids.includes(id))
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "Ready records require exact dependent attempt bindings",
+        });
+    }
+
     if (
       record.state === "ready" &&
       (!record.plan.asset_id || !record.asset_sha256 || !record.files.length || record.reason)

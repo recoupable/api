@@ -1,3 +1,4 @@
+import { releasePackAssetKinds } from "../releasePackSchema";
 import { getPackConfigurationDigest } from "../getPackConfigurationDigest";
 import { getPackBriefFingerprint } from "../getPackBriefFingerprint";
 import type { PackSnapshot } from "../packTypes";
@@ -39,11 +40,7 @@ export function createPackFoundationPlan(
   for (const id of dependents) {
     const asset = quoted.find(a => a.id === id);
     // All current kinds generate stills through the existing image_urls adapter.
-    if (
-      !asset ||
-      !["video", "artwork", "quote_card", "carousel", "visualizer"].includes(asset.kind) ||
-      id === selected?.id
-    )
+    if (!asset || !releasePackAssetKinds.includes(asset.kind) || id === selected?.id)
       throw new Error("Invalid foundation dependency");
   }
   const selection = input.foundationAssetId

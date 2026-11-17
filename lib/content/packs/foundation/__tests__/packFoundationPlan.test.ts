@@ -47,3 +47,11 @@ it("rejects stale brief approval and inconsistent no-artwork quotes", () => {
   other.job.quote!.assets = other.job.quote!.assets.filter(a => a.kind !== "artwork");
   expect(() => createPackFoundationPlan(other, { dependentAssetIds: [] })).toThrow("artwork");
 });
+
+it("uses ID as a stable tie-breaker for equal artwork ordinals", () => {
+  const snapshot = foundationFixture();
+  const art = snapshot.assets.find(a => a.kind === "artwork")!;
+  snapshot.assets.push({ ...art, id: "a-artwork" });
+  snapshot.assets.reverse();
+  expect(createPackFoundationPlan(snapshot, { dependentAssetIds: [] }).asset_id).toBe("a-artwork");
+});

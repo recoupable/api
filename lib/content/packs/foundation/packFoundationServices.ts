@@ -10,3 +10,11 @@ export type PackFoundationServices = {
   signFile: (file: PackFile) => Promise<string>;
   settle: (actor: PackActor, jobId: string, error?: string) => Promise<unknown>;
 };
+
+export type PackFoundationBatchState = {
+  savedJob?: PackJob;
+  foundation?: PackFoundationRecord;
+  blockedAssetIds: string[];
+  settlementDeferred: boolean;
+  references: string[];
+};

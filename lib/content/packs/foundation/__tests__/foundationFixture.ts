@@ -35,7 +35,16 @@ export function foundationFixture(artwork = 1): PackSnapshot {
       consumed_credits: 0,
       workflow_run_id: "run",
       error: null,
-      production_context: { state: "complete", summary: "Retained audio" },
+      production_context: {
+        state: "complete",
+        summary: "Retained audio",
+        audio: { storage_key: "owner/release-packs/song.mp3" },
+        references: [],
+        visual_direction: "Blue paper",
+        proposed_start_seconds: 0,
+        selected_start_seconds: 0,
+        duration_seconds: 120,
+      },
     },
     assets: quote.assets.map(a => ({
       ...a,

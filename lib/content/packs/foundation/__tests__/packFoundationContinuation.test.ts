@@ -19,7 +19,13 @@ it.each([
       files: [],
       reason,
     };
-    const result = getPackFoundationContinuation(record, snapshot.job, true);
+    const result = getPackFoundationContinuation(
+      record,
+      snapshot.job,
+      true,
+      undefined,
+      Date.parse("2026-11-17T21:00:00Z"),
+    );
     expect(result.status).toBe(status);
     expect(result.action).toBe(action);
     expect(result.hold_expires_at).toBe("2026-11-17T22:00:00Z");
@@ -63,4 +69,24 @@ it("independent-only completed batch does not claim absent shared foundation acc
   const result = getPackFoundationContinuation(record, snapshot.job, false);
   expect(result.status).toBe("batch_finished");
   expect(result.shared_foundation_ready).toBe(false);
+});
+
+it("expired holds require the existing read/reconciliation path", () => {
+  const snapshot = foundationFixture();
+  snapshot.job.hold_expires_at = "2026-11-17T20:00:00Z";
+  const record: PackFoundationRecord = {
+    plan: createPackFoundationPlan(snapshot, { dependentAssetIds: [] }),
+    state: "unavailable",
+    files: [],
+    reason: "in_flight",
+  };
+  expect(
+    getPackFoundationContinuation(
+      record,
+      snapshot.job,
+      true,
+      undefined,
+      Date.parse("2026-11-17T21:00:00Z"),
+    ).status,
+  ).toBe("needs_reconciliation");
 });

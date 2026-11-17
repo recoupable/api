@@ -16,15 +16,18 @@ kinds begin with `createPackProductionServices.generateImages`, which already su
 `image_urls` to `buildImageInput`. That adapter uses its existing edit route for references.
 The foundation adds a retained image reference to the same already-quoted image call;
 it does not add another image-generation call. Original references remain and the existing
-10-reference adapter limit is enforced. Extra recipes, new provider capabilities and
+five-reference pack limit is enforced. Extra recipes, new provider capabilities and
 incremental funding are outside this candidate. Provider expenses remain unmeasured;
 using an already-configured edit route is not evidence of equal provider cost.
 
 The persisted record lives at `production_context.shared_foundation`, through the existing
 owner-scoped `read`/`context` command adapter. It preserves the completed audio context.
+The existing production-context schema is shared unchanged with preparation. A pending
+reference-capacity conflict may be saved before analysis without claiming a completed
+context; ordinary readiness persistence requires the full valid context.
 Its plan hashes the full quote, normalized original brief/direction, job/owner/revision,
 selected asset and explicit dependent IDs. Readiness requires inspected completed artwork,
-owned retained image files and hashes of their actual bytes. The asset digest also includes
+owned retained image files, existing MIME/10 MiB validation and hashes of their actual bytes. The asset digest also includes
 its attempt, provider receipts, outcome and file hashes; temporary signed file URLs do not
 serve as file identity. JSONB object-key order does not change those digests.
 
@@ -54,6 +57,7 @@ and does not present deferred work as pack success:
 | Foundation in flight with a recorded expiry | Read the same job; await/reconcile the already accepted attempt. No new claim. |
 | Missing expiry or conflicting retained identity | Read and reconcile saved state; no indefinite waiting promise. |
 | No artwork requested or quoted foundation missing | Read/reconcile the hold before revising unstarted work or creating a new pack. No silent foundation generation. |
+| Existing references leave no room within the five-reference pack limit | Read/reconcile the hold, then explicitly choose reference scope for a new quote/pack. No input is silently dropped. |
 | Confirmed failed foundation | Read the job, request a fresh per-asset estimate and explicitly approve a retry. No automatic paid retry. |
 | Uncertain foundation | Read and reconcile; existing resume requires accepted request ID and saved route. Missing acceptance evidence requires manual reconciliation. |
 | Completed but unusable/inconsistent foundation | Read and reconcile; this is not automatically a retry-eligible failed asset. |

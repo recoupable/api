@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { getPackConfigurationDigest } from "../getPackConfigurationDigest";
+import { validatePackMediaBytes } from "../validatePackMediaBytes";
 import { isPackAssetUsable } from "../isPackAssetUsable";
 import type { PackAsset, PackFile } from "../packTypes";
 import type { PackFoundationPlan, PackFoundationRecord } from "./packFoundationSchema";
@@ -31,8 +32,14 @@ export async function bindPackFoundationFiles(
       throw new Error("Foundation file ownership mismatch");
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.content_type))
       throw new Error("Foundation must contain existing image reference inputs");
-    const bytes = await readFile(file);
+    if (file.bytes > 10 * 1024 * 1024) throw new Error("Reference images must be at most 10 MiB");
+    const bytes = await readFile({
+      storage_key: file.storage_key,
+      content_type: file.content_type,
+      bytes: file.bytes,
+    });
     if (bytes.byteLength !== file.bytes) throw new Error("Foundation file byte length changed");
+    validatePackMediaBytes(Buffer.from(bytes), file.content_type);
     files.push({
       storage_key: file.storage_key,
       content_type: file.content_type,
@@ -60,6 +67,7 @@ export async function bindPackFoundationFiles(
   return {
     plan,
     state: "ready",
+    dependency_bindings: [],
     files,
     asset_sha256: getPackConfigurationDigest(identity),
   };

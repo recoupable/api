@@ -1,3 +1,4 @@
+import { packProductionContextSchema } from "../packProductionContextSchema";
 import { runPackCommand } from "@/lib/supabase/release_pack_jobs/runPackCommand";
 import { createPackFoundationPlan } from "./createPackFoundationPlan";
 import { packFoundationRecordSchema, type PackFoundationRecord } from "./packFoundationSchema";
@@ -20,12 +21,12 @@ export async function savePackFoundationRecord(
     plan.digest !== record.plan.digest
   )
     throw new Error("Foundation quote, direction or admitted job changed");
-  const context = current.job.production_context;
+  const context = current.job.production_context ?? {};
   if (
-    !context ||
     typeof context !== "object" ||
     Array.isArray(context) ||
-    (context as { state?: unknown }).state !== "complete"
+    (!packProductionContextSchema.safeParse(context).success &&
+      !(record.blocked_reason === "reference_limit" && record.state === "pending"))
   )
     throw new Error("Persist foundation only after retained shared preparation completes");
   await runPackCommand(actor, "context", job.id, {

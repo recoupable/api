@@ -1,3 +1,4 @@
+import { foundationImageBytes } from "./foundationImageBytes";
 import { expect, it, vi } from "vitest";
 import { runPackFoundationBatch } from "../runPackFoundationBatch";
 import { foundationFixture } from "./foundationFixture";
@@ -31,11 +32,15 @@ function setup(artwork = 1) {
         caption: "Caption",
         qa: { passed: true },
         files: [
-          { storage_key: `owner/release-packs/${id}.png`, content_type: "image/png", bytes: 3 },
+          {
+            storage_key: `owner/release-packs/${id}.png`,
+            content_type: "image/png",
+            bytes: foundationImageBytes().length,
+          },
         ],
       });
     }),
-    readFile: vi.fn(async () => Buffer.from("art")),
+    readFile: vi.fn(async () => foundationImageBytes()),
     signFile: vi.fn(async () => "https://example.com/retained.png"),
     settle: vi.fn(async () => undefined),
   };
@@ -113,7 +118,7 @@ it("changed retained bytes or direction fails closed before new asset work", asy
   const selection = { dependentAssetIds: ["video-0"] };
   await runPackFoundationBatch(f.actor, "job", 2, selection, f.services);
   f.services.produce.mockClear();
-  f.services.readFile.mockResolvedValue(Buffer.from("new"));
+  f.services.readFile.mockResolvedValue(foundationImageBytes(true));
   const changed = await runPackFoundationBatch(f.actor, "job", 2, selection, f.services);
   expect(changed.error).toBeTruthy();
   expect(f.services.produce).not.toHaveBeenCalled();
@@ -212,5 +217,93 @@ it("persists dependent attempt bindings before production and rejects changed at
   f.snapshot.assets.find(a => a.id === "video-0")!.attempt = 2;
   const replay = await runPackFoundationBatch(f.actor, "job", 2, selection, f.services);
   expect(replay.status).toBe("needs_reconciliation");
+  expect(f.services.produce).not.toHaveBeenCalled();
+});
+it("keeps the pack's five-reference ceiling and never drops approved inputs", async () => {
+  const f = setup();
+  f.snapshot.job.brief.reference_image_urls = Array.from(
+    { length: 5 },
+    (_, i) => `https://example.com/ref-${i}.png`,
+  );
+  const { buildReleasePackQuote } = await import("../../buildReleasePackQuote");
+  f.snapshot.job.quote = {
+    ...f.snapshot.job.quote!,
+    ...buildReleasePackQuote(f.snapshot.job.brief, f.snapshot.job.deliverables),
+  };
+  const result = await runPackFoundationBatch(
+    f.actor,
+    "job",
+    2,
+    { dependentAssetIds: ["video-0"] },
+    f.services,
+  );
+  expect(result.status).toBe("needs_reference_selection");
+  expect(f.services.prepare).not.toHaveBeenCalled();
+  expect(f.services.persist).toHaveBeenLastCalledWith(
+    f.actor,
+    expect.anything(),
+    expect.objectContaining({ blocked_reason: "reference_limit" }),
+  );
+  expect(f.services.produce).not.toHaveBeenCalled();
+  expect(f.snapshot.job.brief.reference_image_urls).toHaveLength(5);
+  expect(f.services.settle).not.toHaveBeenCalled();
+});
+it("adds the foundation within five references only for declared dependents", async () => {
+  const f = setup();
+  f.snapshot.job.brief.reference_image_urls = Array.from(
+    { length: 4 },
+    (_, i) => `https://example.com/ref-${i}.png`,
+  );
+  const { buildReleasePackQuote } = await import("../../buildReleasePackQuote");
+  f.snapshot.job.quote = {
+    ...f.snapshot.job.quote!,
+    ...buildReleasePackQuote(f.snapshot.job.brief, f.snapshot.job.deliverables),
+  };
+  const result = await runPackFoundationBatch(
+    f.actor,
+    "job",
+    2,
+    { dependentAssetIds: ["video-0"] },
+    f.services,
+  );
+  expect(result.status).toBe("batch_finished");
+  expect(f.produced.find(p => p.id === "video-0")!.references).toHaveLength(5);
+  expect(f.produced.find(p => p.id === "quote_card-0")!.references).toHaveLength(4);
+});
+it("deduplicates an already retained foundation reference and replays without re-signing completed dependents", async () => {
+  const f = setup();
+  const artwork = f.snapshot.assets.find(a => a.kind === "artwork")!;
+  Object.assign(artwork, {
+    status: "completed",
+    attempt: 1,
+    caption: "Art",
+    qa: { passed: true },
+    files: [
+      {
+        storage_key: "owner/release-packs/art.png",
+        content_type: "image/png",
+        bytes: foundationImageBytes().length,
+      },
+    ],
+  });
+  f.snapshot.job.brief.reference_image_urls = [
+    "https://example.com/retained.png",
+    ...Array.from({ length: 4 }, (_, i) => `https://example.com/ref-${i}.png`),
+  ];
+  const { buildReleasePackQuote } = await import("../../buildReleasePackQuote");
+  f.snapshot.job.quote = {
+    ...f.snapshot.job.quote!,
+    ...buildReleasePackQuote(f.snapshot.job.brief, f.snapshot.job.deliverables),
+  };
+  const selection = { dependentAssetIds: ["video-0"] };
+  const first = await runPackFoundationBatch(f.actor, "job", 2, selection, f.services);
+  expect(first.status).toBe("batch_finished");
+  expect(f.produced.find(p => p.id === "video-0")!.references).toHaveLength(5);
+  f.services.produce.mockClear();
+  f.services.signFile.mockClear();
+  f.services.signFile.mockResolvedValue("https://example.com/refreshed.png");
+  const replay = await runPackFoundationBatch(f.actor, "job", 2, selection, f.services);
+  expect(replay.status).toBe("batch_finished");
+  expect(f.services.signFile).not.toHaveBeenCalled();
   expect(f.services.produce).not.toHaveBeenCalled();
 });

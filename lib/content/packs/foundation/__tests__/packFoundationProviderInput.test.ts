@@ -11,7 +11,10 @@ vi.mock("../../inspectPackMedia", () => ({ inspectPackMedia: vi.fn() }));
 it("existing image production consumes the foundation through its real reference input, with no extra image stage", async () => {
   const snapshot = foundationFixture();
   const asset = snapshot.assets.find(a => a.kind === "video")!;
-  snapshot.job.brief.reference_image_urls = ["https://example.com/retained.png"];
+  snapshot.job.brief.reference_image_urls = [
+    "https://example.com/original.png",
+    "https://example.com/retained.png",
+  ];
   vi.mocked(runPackFalRequest).mockResolvedValue({
     images: [{ url: "https://example.com/output.png" }],
   });
@@ -22,7 +25,7 @@ it("existing image production consumes the foundation through its real reference
     expect.objectContaining({
       model: snapshot.job.quote!.execution_config.models.image_edit,
       input: expect.objectContaining({
-        image_urls: ["https://example.com/retained.png"],
+        image_urls: ["https://example.com/original.png", "https://example.com/retained.png"],
         num_images: 1,
       }),
       chargeCredits: creditCostForImageUnits(1),

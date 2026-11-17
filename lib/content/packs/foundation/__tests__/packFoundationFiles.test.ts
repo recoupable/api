@@ -1,3 +1,4 @@
+import { foundationImageBytes } from "./foundationImageBytes";
 import { expect, it, vi } from "vitest";
 import { createHash } from "node:crypto";
 import { bindPackFoundationFiles } from "../bindPackFoundationFiles";
@@ -15,20 +16,27 @@ it("hashes actual retained bytes and asset identity, never a temporary URL", asy
       {
         storage_key: "owner/release-packs/art.png",
         content_type: "image/png",
-        bytes: 3,
+        bytes: foundationImageBytes().length,
         url: "https://example.com/temporary",
       },
     ],
   });
   const plan = createPackFoundationPlan(snapshot, { dependentAssetIds: ["video-0"] });
-  const read = vi.fn().mockResolvedValue(Buffer.from("art"));
+  const read = vi.fn().mockResolvedValue(foundationImageBytes());
   const bound = await bindPackFoundationFiles(plan, asset, read);
   expect(bound.state).toBe("ready");
-  expect(bound.files[0].sha256).toBe(createHash("sha256").update("art").digest("hex"));
+  expect(read).toHaveBeenCalledWith({
+    storage_key: "owner/release-packs/art.png",
+    content_type: "image/png",
+    bytes: foundationImageBytes().length,
+  });
+  expect(bound.files[0].sha256).toBe(
+    createHash("sha256").update(foundationImageBytes()).digest("hex"),
+  );
   expect(JSON.stringify(bound)).not.toContain("temporary");
   asset.files[0].url = "https://example.com/refreshed";
   expect(await bindPackFoundationFiles(plan, asset, read)).toEqual(bound);
-  read.mockResolvedValue(Buffer.from("new"));
+  read.mockResolvedValue(foundationImageBytes(true));
   expect((await bindPackFoundationFiles(plan, asset, read)).asset_sha256).not.toBe(
     bound.asset_sha256,
   );
@@ -48,10 +56,16 @@ it("rejects foreign paths and changed byte length", async () => {
     status: "completed",
     caption: "Art",
     qa: { passed: true },
-    files: [{ storage_key: "foreign/art.png", content_type: "image/png", bytes: 3 }],
+    files: [
+      {
+        storage_key: "foreign/art.png",
+        content_type: "image/png",
+        bytes: foundationImageBytes().length,
+      },
+    ],
   });
   const plan = createPackFoundationPlan(snapshot, { dependentAssetIds: [] });
-  const read = vi.fn().mockResolvedValue(Buffer.from("art"));
+  const read = vi.fn().mockResolvedValue(foundationImageBytes());
   await expect(bindPackFoundationFiles(plan, asset, read)).rejects.toThrow("ownership");
   expect(read).not.toHaveBeenCalled();
   asset.files[0].storage_key = "owner/release-packs/art.png";
@@ -67,16 +81,47 @@ it("binds accepted receipt identity while tolerating JSONB key order", async () 
     caption: "Artwork",
     qa: { passed: true },
     provider_state: { image_submission_0: { state: "complete", request_id: "one" } },
-    files: [{ storage_key: "owner/release-packs/art.png", content_type: "image/png", bytes: 3 }],
+    files: [
+      {
+        storage_key: "owner/release-packs/art.png",
+        content_type: "image/png",
+        bytes: foundationImageBytes().length,
+      },
+    ],
   });
   const plan = createPackFoundationPlan(snapshot, { dependentAssetIds: [] });
-  const first = await bindPackFoundationFiles(plan, asset, async () => Buffer.from("art"));
+  const first = await bindPackFoundationFiles(plan, asset, async () => foundationImageBytes());
   asset.provider_state = { image_submission_0: { request_id: "one", state: "complete" } };
   expect(
-    (await bindPackFoundationFiles(plan, asset, async () => Buffer.from("art"))).asset_sha256,
+    (await bindPackFoundationFiles(plan, asset, async () => foundationImageBytes())).asset_sha256,
   ).toBe(first.asset_sha256);
   asset.provider_state = { image_submission_0: { request_id: "two", state: "complete" } };
   expect(
-    (await bindPackFoundationFiles(plan, asset, async () => Buffer.from("art"))).asset_sha256,
+    (await bindPackFoundationFiles(plan, asset, async () => foundationImageBytes())).asset_sha256,
   ).not.toBe(first.asset_sha256);
+});
+it("rejects non-image bytes and oversized reference metadata", async () => {
+  const snapshot = foundationFixture();
+  const asset = snapshot.assets.find(a => a.kind === "artwork")!;
+  Object.assign(asset, {
+    status: "completed",
+    caption: "Art",
+    qa: { passed: true },
+    files: [
+      {
+        storage_key: "owner/release-packs/art.png",
+        content_type: "image/png",
+        bytes: foundationImageBytes().length,
+      },
+    ],
+  });
+  const plan = createPackFoundationPlan(snapshot, { dependentAssetIds: [] });
+  asset.files[0].bytes = 3;
+  await expect(
+    bindPackFoundationFiles(plan, asset, async () => Buffer.from("bad")),
+  ).rejects.toThrow("MIME");
+  asset.files[0].bytes = 10 * 1024 * 1024 + 1;
+  const read = vi.fn();
+  await expect(bindPackFoundationFiles(plan, asset, read)).rejects.toThrow("10 MiB");
+  expect(read).not.toHaveBeenCalled();
 });
