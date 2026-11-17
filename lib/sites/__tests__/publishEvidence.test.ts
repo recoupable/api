@@ -178,6 +178,30 @@ describe("unwired exact-candidate publication assessment", () => {
     const f = fixture();
     f.server.readCandidate.mockRejectedValue(new Error("Access denied"));
     await expect(f.assess()).rejects.toThrow("Access denied");
+    const stored = fixture();
+    stored.server.readEvidence.mockRejectedValue(new Error("Evidence unavailable"));
+    await expect(stored.assess()).rejects.toThrow("Evidence unavailable");
+  });
+  it("rejects a supplied incomplete opening pass", async () => {
+    const f = fixture();
+    Object.assign(f.record.review.verification, { opening: { verdict: "pass", issues: [] } });
+    f.rehash();
+    expect(await f.assess()).toMatchObject({ status: "unsatisfied" });
+    Object.assign(f.record.review.verification, {
+      opening: {
+        verdict: "pass",
+        issues: [],
+        summary: "Opening fixture",
+        observations: ["mobile", "desktop"].map(viewport => ({
+          viewport,
+          invitation: "Start",
+          firstAction: "Start",
+          expectedResponse: "Result",
+        })),
+      },
+    });
+    f.rehash();
+    expect(await f.assess()).toMatchObject({ status: "satisfied" });
   });
   it("accepts an explicit server-recorded override with no review", async () => {
     const f = fixture();

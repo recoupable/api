@@ -4,6 +4,7 @@ import { getSitePublishIdentity, type SitePublishCandidate } from "./getSitePubl
 import { hashSiteEvidence } from "./hashSiteEvidence";
 import { prepareSiteRenderArtifacts } from "./prepareSiteRenderArtifacts";
 import { reviewSchema } from "./schema";
+import { openingReviewSchema } from "./openingReviewSchema";
 
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
 const recordSchema = z.object({
@@ -32,8 +33,8 @@ const verificationSchema = z.object({
       }),
     )
     .length(2),
-  opening: z
-    .object({ verdict: z.literal("pass"), issues: z.array(z.unknown()).length(0) })
+  opening: openingReviewSchema
+    .extend({ verdict: z.literal("pass"), issues: z.array(z.unknown()).length(0) })
     .optional(),
 });
 const evidenceSchema = z.discriminatedUnion("kind", [
