@@ -43,7 +43,9 @@ jobs:
         run: pnpm test:pack-foundation-workflow
 
       - name: Check actual unwired pack foundation port compilation
-        run: node scripts/pack-foundation-durable-ports-compile.mjs
+        run: |
+          PACK_FOUNDATION_PORTS_COMPILE_OUTPUT=./pack-foundation-ports-compile.json node scripts/pack-foundation-durable-ports-compile.mjs
+          test -s pack-foundation-ports-compile.json
 
       - name: Check production TypeScript configuration
         run: pnpm exec tsc --noEmit --project tsconfig.build.json

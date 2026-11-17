@@ -7,6 +7,9 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { createHash } from "node:crypto";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const previousDirectory = process.cwd();
+const outputPath = process.env.PACK_FOUNDATION_PORTS_COMPILE_OUTPUT
+  ? resolve(previousDirectory, process.env.PACK_FOUNDATION_PORTS_COMPILE_OUTPUT)
+  : undefined;
 const { denyNetwork } = await import(
   pathToFileURL(join(root, "scripts/pack-scheduler-workflow-fixture/denyNetwork.mjs"))
 );
@@ -58,9 +61,9 @@ try {
       sha256: createHash("sha256").update(bytes).digest("hex"),
     });
   }
-  if (process.env.PACK_FOUNDATION_PORTS_COMPILE_OUTPUT)
+  if (outputPath)
     await writeFile(
-      process.env.PACK_FOUNDATION_PORTS_COMPILE_OUTPUT,
+      outputPath,
       JSON.stringify(
         {
           source,
