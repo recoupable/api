@@ -10,6 +10,7 @@ export default defineConfig({
       "scripts/mcp-oauth/**",
       // This fixture owns node:test lifecycle cases and a separate compiled runtime runner.
       "scripts/pack-scheduler-workflow-fixture/**",
+      "scripts/pack-foundation-workflow-fixture/**",
     ],
     env: {
       PRIVY_PROJECT_SECRET: "test-secret",

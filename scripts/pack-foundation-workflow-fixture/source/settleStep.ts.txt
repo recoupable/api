@@ -1,0 +1,9 @@
+import type { PackActor } from "@/lib/content/packs/packTypes";
+import { fixtureState } from "./fixtureState";
+export async function settleStep(_actor: PackActor, _jobId: string, error?: string) {
+  "use step";
+  return fixtureState("settle", state => {
+    state.settlements++;
+    return { error: error ?? null };
+  });
+}

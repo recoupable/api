@@ -1,0 +1,14 @@
+import { readFileSync, writeFileSync, appendFileSync } from "node:fs";
+import { join } from "node:path";
+import type { PackSnapshot } from "@/lib/content/packs/packTypes";
+export type FixtureState = PackSnapshot & { scenario: string; settlements: number };
+// One synchronous transaction per synthetic port; no database or provider adapter.
+export function fixtureState<T>(action: string, operation: (state: FixtureState) => T): T {
+  const dir = process.env.PACK_SCHEDULER_EFFECTS;
+  if (!dir) throw new Error("Missing controlled effects directory");
+  const state: FixtureState = JSON.parse(readFileSync(join(dir, "state.json"), "utf8"));
+  const result = operation(state);
+  writeFileSync(join(dir, "state.json"), JSON.stringify(state));
+  appendFileSync(join(dir, "events.jsonl"), JSON.stringify({ action, result }) + "\n");
+  return result;
+}

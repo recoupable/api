@@ -1,0 +1,10 @@
+import type { PackActor } from "@/lib/content/packs/packTypes";
+import { fixtureState } from "./fixtureState";
+export async function readStep(actor: PackActor, jobId: string) {
+  "use step";
+  return fixtureState("read", state => {
+    if (actor.accountId !== state.job.owner_id || jobId !== state.job.id)
+      throw new Error("Wrong fixture identity");
+    return { job: state.job, assets: state.assets };
+  });
+}

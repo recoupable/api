@@ -1,0 +1,12 @@
+import { bindPackFoundationFiles } from "@/lib/content/packs/foundation/bindPackFoundationFiles";
+import { foundationImageBytes } from "@/lib/content/packs/foundation/__tests__/foundationImageBytes";
+import type { PackAsset } from "@/lib/content/packs/packTypes";
+import type { PackFoundationPlan } from "@/lib/content/packs/foundation/packFoundationSchema";
+export async function bindStep(plan: PackFoundationPlan, asset: PackAsset | undefined) {
+  "use step";
+  return bindPackFoundationFiles(plan, asset, async file => {
+    if (!asset?.files.some(f => f.storage_key === file.storage_key && f.bytes === file.bytes))
+      throw new Error("Unknown retained bytes");
+    return foundationImageBytes();
+  });
+}
