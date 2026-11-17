@@ -13,6 +13,7 @@ it("routes an unclear opening into implementation repair even when art and scrip
   vi.mocked(renderReviewedJourney).mockResolvedValue({
     journey: {},
     rendered: {
+      evidence: { sourceSha256: "source", journeySha256: "plan", runnerSha256: "runner" },
       images: ["m", "ma", "d", "da"],
       report: ["mobile", "desktop"].map(name => ({
         name,
@@ -50,12 +51,19 @@ it("routes an unclear opening into implementation repair even when art and scrip
   expect(result.verdict).toBe("revise");
   expect(result.issues).toContainEqual(opening.issues[0]);
   expect(result.verification?.opening).toEqual(opening);
+  expect(result.verification?.evidence).toEqual({
+    sourceSha256: "source",
+    journeySha256: "plan",
+    runnerSha256: "runner",
+  });
+  expect(result.verification?.humanApproval).toBe("not-recorded");
 });
 
 it("does not allow model approval to override a visible hidden-element failure", async () => {
   vi.mocked(renderReviewedJourney).mockResolvedValue({
     journey: {},
     rendered: {
+      evidence: { sourceSha256: "source", journeySha256: "plan", runnerSha256: "runner" },
       images: ["m", "ma", "d", "da"],
       report: ["mobile", "desktop"].map(name => ({
         name,
