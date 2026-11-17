@@ -1,0 +1,6 @@
+import { readFileSync } from "node:fs";
+import { fixturePath } from "./fixturePath";
+import { fixtureSchemas } from "./fixtureSchemas";
+export function readFixtureState() {
+  return fixtureSchemas.state.parse(JSON.parse(readFileSync(fixturePath("state.json"), "utf8")));
+}

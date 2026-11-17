@@ -5,7 +5,12 @@ export default defineConfig({
   test: {
     globals: true,
     // The OAuth provider requires Node 22 LTS; its HTTP lab has a dedicated CI job.
-    exclude: [...configDefaults.exclude, "scripts/mcp-oauth/**"],
+    exclude: [
+      ...configDefaults.exclude,
+      "scripts/mcp-oauth/**",
+      // This fixture owns node:test lifecycle cases and a separate compiled runtime runner.
+      "scripts/pack-scheduler-workflow-fixture/**",
+    ],
     env: {
       PRIVY_PROJECT_SECRET: "test-secret",
     },
