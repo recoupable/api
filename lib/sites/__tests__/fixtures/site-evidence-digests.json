@@ -1,0 +1,201 @@
+{
+  "apiCommit": "9fb18d854e927777886c5cd7ed1b2a165a9c669c",
+  "sourceHashes": {
+    "getSitePublishIdentity.ts": "fafcaffc8b51333b7a320328c7d53eba26de8ed406f49284e88da8025bff1798",
+    "hashSiteEvidence.ts": "6482f20729a762e027d94f4d5c695349171ae51a0a1899a73d388af5cde09f95",
+    "prepareSiteRenderArtifacts.ts": "da8a025de2db179436b9b5c87a91dcc178aeca26dcffddc907359a8e11e52964",
+    "assessSitePublishEvidence.ts": "610956438219d0ac680b13672e1e90ae4c393de914c74597b2ffe51e755849e1"
+  },
+  "vectors": [
+    {
+      "name": "ordinary",
+      "candidate": {
+        "name": "Synthetic preview",
+        "releaseUrl": "",
+        "assets": [],
+        "design": {
+          "experience": {
+            "html": "<button>Start</button>",
+            "css": "",
+            "javascript": "void 0"
+          }
+        },
+        "production": {
+          "version": 1,
+          "context": {},
+          "direction": {},
+          "reviews": [],
+          "status": "reviewed"
+        }
+      },
+      "candidateCanonical": "{\"assets\":[],\"design\":{\"experience\":{\"css\":\"\",\"html\":\"<button>Start</button>\",\"javascript\":\"void 0\"}},\"name\":\"Synthetic preview\",\"production\":{\"context\":{},\"direction\":{},\"version\":1},\"releaseUrl\":\"\"}",
+      "candidateSha256": "0cc032b80c00a8c7df33a00b4d0e7abebe0a6d426782b057bac7054f0d96f3b5",
+      "review": {
+        "verdict": "pass",
+        "issues": [],
+        "summary": "Synthetic; no browser ran",
+        "verification": {
+          "scope": "generated-experience",
+          "humanApproval": "not-recorded",
+          "nativeShareDelivery": "not-tested",
+          "spotifyAuthentication": "not-tested",
+          "evidence": {
+            "sourceSha256": "f98f88337fb5d5efea7189422ba066c1763e346f070394f65011f32b5241960b",
+            "journeySha256": "011538573b0cf47b60781ebf7fa8ad487332208fd8eb71495acb524a72ad16da",
+            "runnerSha256": "b924d0dd2f120b580b7273f11535d3aded08df4741a192c7764200f88b5f1294"
+          },
+          "journey": {
+            "releaseConnection": "A concrete release connection",
+            "evidence": [
+              "Synthetic"
+            ],
+            "motivation": "A concrete motivation for participation",
+            "payoff": "A concrete payoff from participation",
+            "capabilities": [
+              "browser-interaction"
+            ],
+            "steps": [
+              {
+                "action": "click",
+                "target": "Start",
+                "value": "",
+                "expected": "",
+                "checkpoint": "participate"
+              },
+              {
+                "action": "click",
+                "target": "Start",
+                "value": "",
+                "expected": "",
+                "checkpoint": "result"
+              },
+              {
+                "action": "click",
+                "target": "Start",
+                "value": "",
+                "expected": "",
+                "checkpoint": "delivery"
+              }
+            ]
+          },
+          "viewports": [
+            {
+              "name": "mobile",
+              "journeyPassed": true,
+              "errors": [],
+              "overflow": false
+            },
+            {
+              "name": "desktop",
+              "journeyPassed": true,
+              "errors": [],
+              "overflow": false
+            }
+          ]
+        }
+      },
+      "reviewCanonical": "{\"issues\":[],\"summary\":\"Synthetic; no browser ran\",\"verdict\":\"pass\",\"verification\":{\"evidence\":{\"journeySha256\":\"011538573b0cf47b60781ebf7fa8ad487332208fd8eb71495acb524a72ad16da\",\"runnerSha256\":\"b924d0dd2f120b580b7273f11535d3aded08df4741a192c7764200f88b5f1294\",\"sourceSha256\":\"f98f88337fb5d5efea7189422ba066c1763e346f070394f65011f32b5241960b\"},\"humanApproval\":\"not-recorded\",\"journey\":{\"capabilities\":[\"browser-interaction\"],\"evidence\":[\"Synthetic\"],\"motivation\":\"A concrete motivation for participation\",\"payoff\":\"A concrete payoff from participation\",\"releaseConnection\":\"A concrete release connection\",\"steps\":[{\"action\":\"click\",\"checkpoint\":\"participate\",\"expected\":\"\",\"target\":\"Start\",\"value\":\"\"},{\"action\":\"click\",\"checkpoint\":\"result\",\"expected\":\"\",\"target\":\"Start\",\"value\":\"\"},{\"action\":\"click\",\"checkpoint\":\"delivery\",\"expected\":\"\",\"target\":\"Start\",\"value\":\"\"}]},\"nativeShareDelivery\":\"not-tested\",\"scope\":\"generated-experience\",\"spotifyAuthentication\":\"not-tested\",\"viewports\":[{\"errors\":[],\"journeyPassed\":true,\"name\":\"mobile\",\"overflow\":false},{\"errors\":[],\"journeyPassed\":true,\"name\":\"desktop\",\"overflow\":false}]}}",
+      "reviewSha256": "0fa29ee1a6ce36eab359f50ecec75f8ee86727d1aedfad61781241cf9376448b"
+    },
+    {
+      "name": "unicode-and-numbers",
+      "candidate": {
+        "name": "Synthetic preview",
+        "releaseUrl": "",
+        "assets": [],
+        "design": {
+          "experience": {
+            "html": "<button>Start</button>",
+            "css": "",
+            "javascript": "void 0"
+          }
+        },
+        "production": {
+          "version": 1,
+          "context": {
+            "𐀀": 1,
+            "": 2,
+            "numbers": [
+              0,
+              1e+21,
+              1e-7,
+              1.5
+            ],
+            "text": "🎵 café"
+          },
+          "direction": {},
+          "reviews": [],
+          "status": "reviewed"
+        }
+      },
+      "candidateCanonical": "{\"assets\":[],\"design\":{\"experience\":{\"css\":\"\",\"html\":\"<button>Start</button>\",\"javascript\":\"void 0\"}},\"name\":\"Synthetic preview\",\"production\":{\"context\":{\"numbers\":[0,1e+21,1e-7,1.5],\"text\":\"🎵 café\",\"𐀀\":1,\"\":2},\"direction\":{},\"version\":1},\"releaseUrl\":\"\"}",
+      "candidateSha256": "543df88ccfb1714a8a28836065d2749e34492bc0caaf921a5a04a8528ab16740",
+      "review": {
+        "verdict": "pass",
+        "issues": [],
+        "summary": "Synthetic; no browser ran",
+        "verification": {
+          "scope": "generated-experience",
+          "humanApproval": "not-recorded",
+          "nativeShareDelivery": "not-tested",
+          "spotifyAuthentication": "not-tested",
+          "evidence": {
+            "sourceSha256": "f98f88337fb5d5efea7189422ba066c1763e346f070394f65011f32b5241960b",
+            "journeySha256": "011538573b0cf47b60781ebf7fa8ad487332208fd8eb71495acb524a72ad16da",
+            "runnerSha256": "b924d0dd2f120b580b7273f11535d3aded08df4741a192c7764200f88b5f1294"
+          },
+          "journey": {
+            "releaseConnection": "A concrete release connection",
+            "evidence": [
+              "Synthetic"
+            ],
+            "motivation": "A concrete motivation for participation",
+            "payoff": "A concrete payoff from participation",
+            "capabilities": [
+              "browser-interaction"
+            ],
+            "steps": [
+              {
+                "action": "click",
+                "target": "Start",
+                "value": "",
+                "expected": "",
+                "checkpoint": "participate"
+              },
+              {
+                "action": "click",
+                "target": "Start",
+                "value": "",
+                "expected": "",
+                "checkpoint": "result"
+              },
+              {
+                "action": "click",
+                "target": "Start",
+                "value": "",
+                "expected": "",
+                "checkpoint": "delivery"
+              }
+            ]
+          },
+          "viewports": [
+            {
+              "name": "mobile",
+              "journeyPassed": true,
+              "errors": [],
+              "overflow": false
+            },
+            {
+              "name": "desktop",
+              "journeyPassed": true,
+              "errors": [],
+              "overflow": false
+            }
+          ]
+        }
+      },
+      "reviewCanonical": "{\"issues\":[],\"summary\":\"Synthetic; no browser ran\",\"verdict\":\"pass\",\"verification\":{\"evidence\":{\"journeySha256\":\"011538573b0cf47b60781ebf7fa8ad487332208fd8eb71495acb524a72ad16da\",\"runnerSha256\":\"b924d0dd2f120b580b7273f11535d3aded08df4741a192c7764200f88b5f1294\",\"sourceSha256\":\"f98f88337fb5d5efea7189422ba066c1763e346f070394f65011f32b5241960b\"},\"humanApproval\":\"not-recorded\",\"journey\":{\"capabilities\":[\"browser-interaction\"],\"evidence\":[\"Synthetic\"],\"motivation\":\"A concrete motivation for participation\",\"payoff\":\"A concrete payoff from participation\",\"releaseConnection\":\"A concrete release connection\",\"steps\":[{\"action\":\"click\",\"checkpoint\":\"participate\",\"expected\":\"\",\"target\":\"Start\",\"value\":\"\"},{\"action\":\"click\",\"checkpoint\":\"result\",\"expected\":\"\",\"target\":\"Start\",\"value\":\"\"},{\"action\":\"click\",\"checkpoint\":\"delivery\",\"expected\":\"\",\"target\":\"Start\",\"value\":\"\"}]},\"nativeShareDelivery\":\"not-tested\",\"scope\":\"generated-experience\",\"spotifyAuthentication\":\"not-tested\",\"viewports\":[{\"errors\":[],\"journeyPassed\":true,\"name\":\"mobile\",\"overflow\":false},{\"errors\":[],\"journeyPassed\":true,\"name\":\"desktop\",\"overflow\":false}]}}",
+      "reviewSha256": "0fa29ee1a6ce36eab359f50ecec75f8ee86727d1aedfad61781241cf9376448b"
+    }
+  ]
+}
