@@ -33,7 +33,7 @@ export async function repairSiteProduction(
           ? "repair time limit"
           : undefined;
   const failure = (reason: string) => ({
-    error: `Site production stopped: ${reason}. Your saved draft and published version are unchanged.`,
+    error: `Site production stopped: ${reason}. This run did not save its candidate.`,
   });
   while (true) {
     const reason = stop();

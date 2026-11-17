@@ -413,3 +413,26 @@ it.each(["revision", "deleted", "access"])(
     expect(m.save).not.toHaveBeenCalled();
   },
 );
+
+it.each(["revision", "deleted"])(
+  "does not claim external state is unchanged after durable %s stop",
+  async change => {
+    m.checkpoint.mockResolvedValue({
+      revision: change === "revision" ? 8 : 7,
+      cancelled: change === "deleted",
+      now: 1000,
+    });
+    const result = await siteProductionWorkflow(
+      { id: "site", revision: 7 } as Site,
+      "",
+      "account",
+      undefined,
+      approvedConcept,
+    );
+    expect(result).toEqual({
+      error: expect.stringContaining("This run did not save its candidate."),
+    });
+    expect(result).toEqual({ error: expect.not.stringContaining("unchanged") });
+    expect(m.save).not.toHaveBeenCalled();
+  },
+);
