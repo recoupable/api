@@ -89,7 +89,7 @@ export function assertOutcome(
     if (scenario === "deadline" || scenario === "hold-expiry") {
       assert(trace.length >= 2 && trace.length <= 31);
       assert(
-        trace.at(-1).at >=
+        observations.at(-1).observedAt >=
           (scenario === "deadline" ? value.deadline_at : Date.parse(state.holdExpiresAt)),
       );
       assert(waits.length >= 1);

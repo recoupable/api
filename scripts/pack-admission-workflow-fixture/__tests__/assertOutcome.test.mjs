@@ -158,3 +158,39 @@ for (const [name, mutate] of [
     mutate(f);
     assert.throws(() => checkDelayed(f));
   });
+
+for (const scenario of ["hold-expiry", "deadline"]) {
+  test(`accepts ${scenario} crossed during the final read`, () => {
+    const f = delayed();
+    const boundary = scenario === "deadline" ? f.value.deadline_at : 2002;
+    if (scenario === "hold-expiry") f.state.holdExpiresAt = new Date(boundary).toISOString();
+    f.value = {
+      ...f.value,
+      job_id: scenario,
+      status: "needs-reconciliation",
+      reason: scenario === "hold-expiry" ? "expired-hold" : "deadline",
+      hold_expires_at: f.state.holdExpiresAt,
+    };
+    for (const entry of f.trace) entry.jobId = scenario;
+    f.trace.at(-1).at = boundary - 1;
+    for (const observation of f.observations) {
+      observation.job.workflow_run_id = null;
+      observation.job.hold_expires_at = f.state.holdExpiresAt;
+    }
+    f.observations.at(-1).observedAt = boundary;
+    const verify = () =>
+      assertOutcome(
+        scenario,
+        f.runId,
+        f.state,
+        f.trace,
+        f.journal,
+        f.value,
+        f.clock,
+        f.observations,
+      );
+    verify();
+    f.observations.at(-1).observedAt = boundary - 1;
+    assert.throws(verify, "must reject reconciliation before the observation reaches its boundary");
+  });
+}
