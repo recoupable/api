@@ -315,3 +315,25 @@ it("rejects a hold ending exactly at the signing lifetime boundary", async () =>
     clock.mockRestore();
   }
 });
+it.each([false, true])(
+  "accepts UUID owner casing without changing RPC authority arguments (organization=%s)",
+  async organization => {
+    const owner = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
+    const scopedActor = organization
+      ? { accountId: "11111111-2222-4333-8444-555555555555", organizationId: owner.toUpperCase() }
+      : { accountId: owner.toUpperCase() };
+    snapshot.job.owner_id = owner;
+    mocks.rpc.mockResolvedValue({ data: structuredClone(snapshot), error: null });
+    const result = await createPackFoundationServices(scopedActor, "job").read(scopedActor, "job");
+    expect(result.job.owner_id).toBe(owner);
+    expect(mocks.rpc).toHaveBeenCalledWith(
+      "release_pack_command",
+      expect.objectContaining({
+        p_actor: scopedActor.accountId,
+        p_org: organization ? owner.toUpperCase() : null,
+        p_action: "read",
+        p_job: "job",
+      }),
+    );
+  },
+);

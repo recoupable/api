@@ -10,7 +10,7 @@ export async function readAdmittedPackSnapshot(
   if (
     !workflowRunId ||
     saved.job.id !== jobId ||
-    saved.job.owner_id !== (actor.organizationId ?? actor.accountId) ||
+    saved.job.owner_id.toLowerCase() !== (actor.organizationId ?? actor.accountId).toLowerCase() ||
     saved.job.status !== "running" ||
     saved.job.workflow_run_id !== workflowRunId
   )
