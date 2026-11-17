@@ -35,7 +35,9 @@ Before any dependent work, the ready record saves each dependent's expected orig
 attempt. Retained dependent work without a matching durable binding is rejected before
 new foundation generation; it is never relabeled or regenerated. Replay checks the saved
 quote/direction, actual foundation bytes/asset identity and dependent attempt bindings.
-Signed reference URLs may be refreshed only after that identity check.
+Signed reference URLs may be refreshed only after that identity check. Retained
+reference storage keys deduplicate a reused foundation before signing, so a new signed
+URL does not consume another reference slot; completed dependents need no refreshed inputs.
 
 `runPackFoundationBatch` completes/persists the selected foundation before admitting
 ready dependent IDs through the unchanged bounded scheduler. Independent pending IDs

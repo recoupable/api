@@ -307,3 +307,49 @@ it("deduplicates an already retained foundation reference and replays without re
   expect(f.services.signFile).not.toHaveBeenCalled();
   expect(f.services.produce).not.toHaveBeenCalled();
 });
+it("deduplicates the same retained storage file even when signing would return a different URL", async () => {
+  const f = setup();
+  const artwork = f.snapshot.assets.find(a => a.kind === "artwork")!;
+  Object.assign(artwork, {
+    status: "completed",
+    attempt: 1,
+    caption: "Art",
+    qa: { passed: true },
+    files: [
+      {
+        storage_key: "owner/release-packs/art.png",
+        content_type: "image/png",
+        bytes: foundationImageBytes().length,
+      },
+    ],
+  });
+  f.snapshot.job.brief.reference_image_urls = Array.from(
+    { length: 5 },
+    (_, i) => `https://example.com/current-${i}.png`,
+  );
+  f.snapshot.job.production_context = {
+    ...(f.snapshot.job.production_context as object),
+    references: [
+      { storage_key: "owner/release-packs/art.png" },
+      ...Array.from({ length: 4 }, (_, i) => ({ storage_key: `owner/release-packs/ref-${i}.png` })),
+    ],
+  };
+  const { buildReleasePackQuote } = await import("../../buildReleasePackQuote");
+  f.snapshot.job.quote = {
+    ...f.snapshot.job.quote!,
+    ...buildReleasePackQuote(f.snapshot.job.brief, f.snapshot.job.deliverables),
+  };
+  f.services.signFile.mockResolvedValue("https://example.com/newly-signed-art.png");
+  const result = await runPackFoundationBatch(
+    f.actor,
+    "job",
+    2,
+    { dependentAssetIds: ["video-0"] },
+    f.services,
+  );
+  expect(result.status).toBe("batch_finished");
+  expect(f.services.signFile).not.toHaveBeenCalled();
+  expect(f.produced.find(p => p.id === "video-0")!.references).toEqual(
+    f.snapshot.job.brief.reference_image_urls,
+  );
+});

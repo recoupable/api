@@ -83,3 +83,9 @@ mid-step failure behavior, the existing single-run and budget invariants, approv
 a provider/tier/license/cap policy, and satisfy the existing funding and human-quality acceptance gates. Shared artwork, lyric alignment
 and downstream dependency readiness beyond today's preparation snapshot remain
 separate acceptance work. These source fixtures do not close issue 2273.
+
+The separate [retained artwork foundation candidate](foundation/README.md) composes
+this helper with persisted dependency readiness for an already-quoted artwork asset.
+It remains unwired, preserves independent eligibility, and reports explicit owner
+continuations when prerequisites or reference capacity prevent dependent production.
+Its source/unit qualification is separate from this helper's compiled replay evidence.

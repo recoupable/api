@@ -1,3 +1,4 @@
+import { packProductionContextSchema } from "../packProductionContextSchema";
 import type { PackActor, PackJob } from "../packTypes";
 import type { PackFoundationRecord } from "./packFoundationSchema";
 import type { PackFoundationServices } from "./packFoundationServices";
@@ -12,10 +13,19 @@ export async function getPackFoundationReferences(
 ) {
   if (record.state !== "ready" || !hasPendingDependents) return [];
   const { signFile, persist } = services;
+  const context = packProductionContextSchema.parse(savedJob.production_context);
+  // preparePackProduction signs this retained reference list in order. Only use
+  // its identity mapping when the prepared list has the same cardinality.
+  const retainedKeys = new Set(
+    context.references.length === preparedJob.brief.reference_image_urls.length
+      ? context.references.map(file => file.storage_key)
+      : [],
+  );
+  const additionalFiles = record.files.filter(file => !retainedKeys.has(file.storage_key));
   const references = [
     ...new Set([
       ...preparedJob.brief.reference_image_urls,
-      ...(await Promise.all(record.files.map(signFile))),
+      ...(await Promise.all(additionalFiles.map(signFile))),
     ]),
   ];
   if (references.length > 5) {
