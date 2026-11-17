@@ -1,0 +1,7 @@
+import { fixtureSchemas } from "./fixtureSchemas";
+import { recordFixtureEvent } from "./recordFixtureEvent";
+export async function preparePackProduction(_actor: unknown, input: unknown) {
+  const job = fixtureSchemas.job.parse(input);
+  recordFixtureEvent("shared-preparation", { snapshot: job.production_context });
+  return job;
+}

@@ -1,0 +1,40 @@
+import type { PackProductionServices } from "@/lib/content/packs/producePackAsset";
+import { fixtureSchemas, type FixtureAsset } from "./fixtureSchemas";
+import { recordFixtureEvent } from "./recordFixtureEvent";
+import { readFixtureState } from "./readFixtureState";
+import { runPackCommand } from "./runPackCommand";
+export function createPackProductionServices(
+  actor: unknown,
+  jobInput: unknown,
+  assetInput: unknown,
+): PackProductionServices {
+  const job = fixtureSchemas.job.parse(jobInput);
+  fixtureSchemas.asset.parse(assetInput);
+  // Validate without replacing the object the real step reads on failure.
+  const asset = assetInput as FixtureAsset;
+  return {
+    phase: async (phase, value) => {
+      await runPackCommand(actor, "phase", job.id, { asset_id: asset.id, phase, value });
+      asset.provider_state[phase] = value;
+    },
+    generateImages: async () => {
+      recordFixtureEvent("provider", { assetId: asset.id });
+      return ["https://fixture.invalid/image"];
+    },
+    generateMotion: async () => {
+      throw new Error("Unexpected motion");
+    },
+    caption: async () => "Fixture caption",
+    compose: async () => ({
+      files: [{ storage_key: asset.id, content_type: "image/png", bytes: 10 }],
+      probe: {},
+    }),
+    inspect: async () => {
+      if (readFixtureState().scenario === "composition-failure" && asset.id === "asset-0")
+        throw new Error("Fixture inspection unavailable after composition");
+      return { passed: true, reason: "Controlled fixture" };
+    },
+    finish: async result =>
+      runPackCommand(actor, "finish_asset", job.id, { asset_id: asset.id, ...result }),
+  };
+}

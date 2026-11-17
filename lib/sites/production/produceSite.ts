@@ -1,10 +1,7 @@
-import { runBoundedSiteRepairs } from "./runBoundedSiteRepairs";
-import { readSiteRepairControl } from "./readSiteRepairControl";
-import { SiteError } from "../SiteError";
+import { repairDirectSite } from "./repairDirectSite";
 import { prepareSiteSkill } from "../skills/prepareSiteSkill";
 import { conceptPitchSchema, type ConceptPitch } from "@/lib/sites/production/conceptSchema";
 import { selectExperienceConcept } from "./selectExperienceConcept";
-import { reviseProduction } from "./reviseProduction";
 import type { Site } from "../schema";
 import { collectReleaseContext } from "./collectReleaseContext";
 import { directExperience } from "./directExperience";
@@ -47,7 +44,7 @@ export async function produceSite(
     direction = await directExperience(site, instruction, context, accountId, selected);
     assets = await produceAssets(site, direction, accountId);
   }
-  let snapshot = await buildExperience(
+  const snapshot = await buildExperience(
     site,
     instruction,
     { release: context, direction },
@@ -61,64 +58,24 @@ export async function produceSite(
     site.id,
     context.siteSkill,
   );
-  // Engineering stage limits reduce the existing repair loop; they are not a monetary quote.
-  const repairResult = await runBoundedSiteRepairs({
+  const repaired = await repairDirectSite({
+    site,
+    instruction,
+    accountId,
+    context,
+    direction,
+    assets,
     snapshot,
-    review: firstReview,
-    baseRevision: site.revision,
-    limits: { maxAttempts: 2, deadlineMs: Date.now() + 20 * 60 * 1000 },
-    now: Date.now,
-    readControl: () => readSiteRepairControl(site, accountId),
-    repair: async (candidate, review) => {
-      const next = await reviseProduction(
-        site,
-        instruction,
-        context,
-        direction,
-        assets,
-        candidate,
-        review,
-        accountId,
-      );
-      direction = next.direction;
-      assets = next.assets;
-      return next.snapshot;
-    },
-    reviewCandidate: candidate =>
-      reviewExperience(candidate, direction, accountId, site.id, context.siteSkill),
+    firstReview,
   });
-  if (repairResult.status === "stopped" && repairResult.reason !== "direction-required") {
-    const reason = repairResult.reason;
-    const status =
-      reason === "review-blocked"
-        ? 402
-        : reason === "revision-changed" || reason === "cancelled"
-          ? 409
-          : 422;
-    const detail =
-      reason === "attempts-exhausted"
-        ? "repair attempt limit"
-        : reason === "time-exhausted"
-          ? "repair time limit"
-          : reason === "review-blocked"
-            ? "credit limit"
-            : "site revision or availability changed";
-    throw new SiteError(
-      status,
-      `Site production stopped: ${detail}. Your saved draft and published version are unchanged. Revise the brief or try again.`,
-    );
-  }
-  snapshot = repairResult.candidate;
-  const reviews = repairResult.history.map(item => item.review);
   return {
-    ...snapshot,
+    ...repaired.snapshot,
     production: {
       version: 1 as const,
       context,
-      direction,
-      reviews,
-      status:
-        reviews.at(-1)!.verdict === "pass" ? ("reviewed" as const) : ("needs-review" as const),
+      direction: repaired.direction,
+      reviews: repaired.reviews,
+      status: repaired.status,
     },
   };
 }

@@ -1,0 +1,85 @@
+import { z } from "zod";
+const file = z.strictObject({
+  storage_key: z.string(),
+  content_type: z.string(),
+  bytes: z.number().int().nonnegative(),
+});
+const status = z.enum(["pending", "running", "completed", "failed", "uncertain"]);
+const asset = z.strictObject({
+  id: z.string(),
+  job_id: z.string(),
+  kind: z.literal("quote_card"),
+  ordinal: z.number().int(),
+  status,
+  attempt: z.number().int().nonnegative(),
+  provider_state: z.record(z.string(), z.unknown()),
+  files: z.array(file),
+  credits: z.number(),
+  maximum_usd: z.number(),
+  caption: z.string().nullable(),
+  qa: z.object({ passed: z.boolean(), reason: z.string() }).nullable(),
+  error: z.string().nullable(),
+});
+const job = z.strictObject({
+  id: z.string(),
+  owner_id: z.string(),
+  created_by: z.string(),
+  revision: z.number(),
+  status: z.string(),
+  quote: z.null(),
+  consumed_credits: z.number(),
+  workflow_run_id: z.string().nullable(),
+  error: z.string().nullable(),
+  held_credits: z.number().nonnegative(),
+  brief: z.strictObject({
+    primary_action: z.string(),
+    allow_creative_defaults: z.boolean(),
+    reference_image_urls: z.array(z.string()),
+    platforms: z.array(z.literal("instagram")),
+    evidence: z.array(z.never()),
+    artist_name: z.string(),
+    song_title: z.string(),
+    constraints: z.array(z.string()),
+    audio_url: z.string(),
+  }),
+  deliverables: z.strictObject({
+    videos: z.number(), quote_cards: z.number(), artwork: z.number(),
+    carousels: z.number(), visualizers: z.number(), video_seconds: z.number().positive(),
+  }),
+  production_context: z.strictObject({
+    state: z.literal("complete"),
+    summary: z.string(),
+    source_sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  }),
+});
+const state = z.strictObject({
+  scenario: z.enum(["success", "claim-failure", "settlement-failure", "composition-failure"]),
+  settlements: z.number().int().nonnegative(),
+  assets: z.array(asset),
+  job,
+});
+const command = z.discriminatedUnion("action", [
+  z.strictObject({ action: z.literal("run"), workflow_run_id: z.string() }),
+  z.strictObject({ action: z.literal("read") }),
+  z.strictObject({ action: z.literal("claim"), asset_id: z.string() }),
+  z.strictObject({
+    action: z.literal("phase"),
+    asset_id: z.string(),
+    phase: z.string(),
+    value: z.unknown(),
+  }),
+  z.strictObject({
+    action: z.literal("finish_asset"),
+    asset_id: z.string(),
+    status,
+    files: z.array(file),
+    caption: z.string().optional(),
+    qa: z.object({ passed: z.boolean(), reason: z.string() }).optional(),
+    error: z.string().nullable(),
+  }),
+  z.strictObject({ action: z.literal("settle"), error: z.string().nullable() }),
+]);
+export const fixtureSchemas = { file, asset, job, state, command };
+export type FixtureState = z.infer<typeof state>;
+export type FixtureJob = z.infer<typeof job>;
+export type FixtureAsset = z.infer<typeof asset>;
