@@ -28,8 +28,8 @@ type Result = {
   history: AttemptEvidence[];
 } & ({ status: "passed" } | { status: "stopped"; reason: StopReason });
 
-/** Offline integration contract. Callers must supply adopted limits and authoritative control reads.
- * No persistence, provider imports, default policy, or live production call site is supplied here.
+/** Stage-bounded repair coordinator. Callers supply limits and authoritative control reads.
+ * This helper owns no persistence, provider imports, or default policy.
  * Deadline checks gate stages; they cannot abort a callback already in flight.
  */
 export async function runBoundedSiteRepairs(input: {
