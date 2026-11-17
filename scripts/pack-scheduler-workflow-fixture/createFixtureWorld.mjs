@@ -1,3 +1,4 @@
+import { observeFailureDelivery } from "./observeFailureDelivery.mjs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -13,6 +14,7 @@ export async function createFixtureWorld(temp, effects) {
   const { setWorld, reenqueueRun } = await import("@workflow/core/runtime");
   const { start, getRun, resumeHook, getHookByToken } = await import("workflow/api");
   const world = createLocalWorld({ dataDir: join(effects, "journal") });
+  const failureDelivery = observeFailureDelivery(world);
   setWorld(world);
   const steps = await import(pathToFileURL(join(temp, "generated/steps.cjs")));
   const workflows = await import(pathToFileURL(join(temp, "generated/workflows.cjs")));
@@ -22,7 +24,7 @@ export async function createFixtureWorld(temp, effects) {
   world.registerHandler("__wkf_workflow_", async req => {
     activeDeliveries++;
     try {
-      const response = await workflows.POST(req);
+      const response = await failureDelivery.deliver(workflows.POST, req);
       deliveries++;
       return response;
     } finally {
@@ -40,6 +42,8 @@ export async function createFixtureWorld(temp, effects) {
     getHookByToken,
     reenqueueRun,
     packSchedulerFixture,
+    hasObservedFailure: failureDelivery.hasObservedFailure,
+    failureEvidence: failureDelivery.failureEvidence,
     counts: () => ({ deliveries, activeDeliveries }),
   };
 }

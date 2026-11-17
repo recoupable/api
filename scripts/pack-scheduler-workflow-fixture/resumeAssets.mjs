@@ -1,3 +1,4 @@
+import { writeFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { join } from "node:path";
 import { readJson } from "./readJson.mjs";
@@ -18,10 +19,19 @@ export async function resumeAssets(ctx, effects, scenario, waitHook) {
   console.log(`RESUME ${scenario}: hooks recovered`);
   await resumeHook(hook("asset-0"), "continue");
   if (scenario === "claim-failure") {
-    await waitFor(async () =>
-      (await events(effects)).some(e => e.action === "claim" && e.data.asset_id === "asset-2"),
-    );
+    // A claim trace precedes the thrown step and is not scheduler-observed rejection.
+    // Hold the peer until a completed replay consumed that step's terminal failure.
+    await waitFor(() => ctx.hasObservedFailure(saved.runId) && ctx.counts().activeDeliveries === 0);
+    const stopped = await readJson(join(effects, "state.json"));
+    assert.equal(stopped.assets[2].status, "running");
+    assert.equal(stopped.assets[2].attempt, 1);
+    assert.equal(stopped.assets[3].status, "pending");
+    assert.equal((await events(effects)).filter(e => e.action === "provider").length, 2);
     assert.equal((await events(effects)).filter(e => e.action === "settle").length, 0);
+    await writeFile(
+      join(effects, "failure-barrier.json"),
+      JSON.stringify(ctx.failureEvidence(saved.runId)),
+    );
     await resumeHook(hook("asset-1"), "continue");
   } else {
     await waitFor(
