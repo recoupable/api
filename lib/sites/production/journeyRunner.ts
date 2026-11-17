@@ -21,6 +21,13 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
   if(visible.length){const message='Hidden elements remain visible: '+visible.join(', ');if(!errors.includes(message))errors.push(message);}
  }
  await checkHidden();
+ let overflow=false;
+ async function checkOverflow(checkpoint){
+  if(await ui.locator('body').evaluate(()=>document.documentElement.scrollWidth>innerWidth)){
+   overflow=true;errors.push('Horizontal overflow at '+checkpoint);
+  }
+ }
+ await checkOverflow('initial');
  async function verifyImage(bytes,label){
   if(bytes.length<100 || bytes.length>20000000)throw Error(label+': empty or oversized image');
   const encoded=Buffer.from(bytes).toString('base64');
@@ -46,6 +53,7 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
    interacted=true;
    await checkHidden();
    if(step.expected)await ui.getByText(step.expected,{exact:false}).first().waitFor({state:'visible',timeout:5000});
+   await checkOverflow('step '+(index+1)+' '+step.checkpoint);
    await page.screenshot({path:name+'-checkpoint-'+step.checkpoint+'.png'});
    steps.push({index,checkpoint:step.checkpoint,passed:true});
   }catch(e){errors.push('Step '+(index+1)+' '+step.target+': '+e.message.slice(0,300));steps.push({index,checkpoint:step.checkpoint,passed:false});break;}
@@ -56,6 +64,7 @@ for(const [name,width,height] of [['mobile',390,844],['desktop',1440,900]]){
  if(media.some(v=>!v.muted))errors.push('Production video must be muted so it does not compete with the release player');
  const activity=await ui.locator('body').evaluate(()=>window.__recoupEvents||[]);
  if(plan?.steps?.some(s=>s.checkpoint==='result')&&!activity.includes('complete'))errors.push('Result completed without reporting window.recoup.track(\"complete\")');
+ await checkOverflow('final');
  await page.screenshot({path:name+'-active.png'});
- results.push({name,errors,media,activity,interacted,changed:before!==await ui.locator('body').innerText(),journeyPassed:!!plan?.steps?.length&&steps.length===plan.steps.length&&steps.every(s=>s.passed),steps,artifacts,overflow:await ui.locator('body').evaluate(()=>document.documentElement.scrollWidth>innerWidth),text:(await ui.locator('body').innerText()).slice(0,4000)});await page.close();
+ results.push({name,errors,media,activity,interacted,changed:before!==await ui.locator('body').innerText(),journeyPassed:!!plan?.steps?.length&&steps.length===plan.steps.length&&steps.every(s=>s.passed),steps,artifacts,overflow,text:(await ui.locator('body').innerText()).slice(0,4000)});await page.close();
 }await browser.close();fs.writeFileSync('review.json',JSON.stringify(results));})().catch(e=>{console.error(e);process.exit(1)});`;

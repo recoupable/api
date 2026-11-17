@@ -1,3 +1,4 @@
+import type { CreativeReview } from "../production/schema";
 import { expect, it } from "vitest";
 import { validateExperienceContract } from "../production/validateExperienceContract";
 import { enforceJourneyReview } from "../production/enforceJourneyReview";
@@ -54,4 +55,29 @@ it("requires both viewport journeys", () => {
       { name: "desktop", journeyPassed: true, errors: [], overflow: false },
     ]).verdict,
   ).toBe("pass");
+});
+
+it("accepts legacy stored verification without new metadata and records the default on a new review", () => {
+  const legacy: CreativeReview = {
+    verdict: "pass",
+    issues: [],
+    summary: "Previously reviewed",
+    verification: {
+      scope: "generated-experience",
+      nativeShareDelivery: "not-tested",
+      spotifyAuthentication: "not-tested",
+      viewports: ["mobile", "desktop"].map(name => ({
+        name,
+        journeyPassed: true,
+        errors: [],
+        overflow: false,
+      })),
+    },
+  };
+  expect(legacy.verification).not.toHaveProperty("humanApproval");
+  expect(legacy.verification).not.toHaveProperty("evidence");
+  const next = enforceJourneyReview(legacy, legacy.verification!.viewports);
+  expect(next.verification?.humanApproval).toBe("not-recorded");
+  expect(next.verdict).toBe("pass");
+  expect(legacy.verification).not.toHaveProperty("humanApproval");
 });
