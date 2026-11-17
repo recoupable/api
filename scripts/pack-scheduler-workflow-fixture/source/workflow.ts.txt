@@ -1,0 +1,26 @@
+import { createHook } from "workflow";
+import { runBoundedPackProduction } from "./runBoundedPackProduction";
+import { preparePackStep } from "./preparePackStep";
+import { producePackAssetStep } from "./producePackAssetStep";
+import { settleBoundedPackStep } from "./settleBoundedPackStep";
+
+// Fixture only: compiled in a disposable folder, never registered in the app.
+export async function packSchedulerFixture(jobId: string, limit: number) {
+  "use workflow";
+  const gates = Object.fromEntries(
+    [0, 1, 2, 3].map(index => {
+      const id = `asset-${index}`;
+      return [id, createHook({ token: `${jobId}:${id}` })];
+    }),
+  );
+  return runBoundedPackProduction({ accountId: "fixture-owner" }, jobId, limit, {
+    prepare: preparePackStep,
+    produce: async (actor, job, assetId) => {
+      await producePackAssetStep(actor, job, assetId);
+      // Deliberate second step delivery must lose the existing durable asset claim.
+      await producePackAssetStep(actor, job, assetId);
+      await gates[assetId];
+    },
+    settle: settleBoundedPackStep,
+  });
+}

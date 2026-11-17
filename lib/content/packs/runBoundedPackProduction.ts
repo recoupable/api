@@ -7,7 +7,7 @@ type PackBatchServices = {
 };
 
 /**
- * Unwired candidate: callers supply a qualified bound and existing durable steps.
+ * Unwired candidate: supply a qualified bound, durable asset steps, and no-retry settlement.
  * A bound limits this invocation, not separate workflow runs or provider capacity.
  * No retries, reservations, provider adapters, or production policy are introduced.
  */
@@ -16,22 +16,26 @@ export async function runBoundedPackProduction(
   jobId: string,
   concurrency: number,
   services: PackBatchServices,
-): Promise<{ job_id: string; error?: string }> {
+): Promise<{ job_id: string; error?: string; failed_asset_ids?: string[] }> {
   if (!Number.isSafeInteger(concurrency) || concurrency < 1)
     throw new Error("Pack concurrency must be a positive safe integer");
 
+  // Workflow serializes a method call receiver; never pass the services object as this.
+  const { prepare, produce, settle } = services;
+  const failedAssetIds: string[] = [];
   let stopped = false;
   let failure: unknown;
   try {
-    const prepared = await services.prepare(actor, jobId);
+    const prepared = await prepare(actor, jobId);
     const assetIds = [...new Set(prepared.assetIds)];
     let next = 0;
     async function worker() {
       while (!stopped && next < assetIds.length) {
         const assetId = assetIds[next++];
         try {
-          await services.produce(actor, prepared.job, assetId);
+          await produce(actor, prepared.job, assetId);
         } catch (error) {
+          failedAssetIds.push(assetId);
           if (!stopped) failure = error;
           stopped = true;
         }
@@ -45,12 +49,16 @@ export async function runBoundedPackProduction(
   }
 
   // Outside the catch: a lost settlement acknowledgement must not invoke it again.
-  await services.settle(
+  await settle(
     actor,
     jobId,
     stopped ? (failure instanceof Error ? failure.message : "Pack workflow failed") : undefined,
   );
   return stopped
-    ? { job_id: jobId, error: "Pack stopped; inspect saved status and outputs before retrying" }
+    ? {
+        job_id: jobId,
+        error: "Pack stopped; inspect saved status and outputs before retrying",
+        failed_asset_ids: failedAssetIds,
+      }
     : { job_id: jobId };
 }

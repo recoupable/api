@@ -1,0 +1,79 @@
+import { readFileSync, writeFileSync, appendFileSync } from "node:fs";
+import { join } from "node:path";
+function path(name: string) {
+  return join(process.env.PACK_SCHEDULER_EFFECTS!, name);
+}
+function load() {
+  return JSON.parse(readFileSync(path("state.json"), "utf8"));
+}
+function save(state: unknown) {
+  writeFileSync(path("state.json"), JSON.stringify(state));
+}
+function record(action: string, data: unknown = null) {
+  appendFileSync(path("events.jsonl"), JSON.stringify({ action, data }) + "\n");
+}
+export async function runPackCommand(
+  _actor: unknown,
+  action: string,
+  _jobId: string,
+  input: any = {},
+) {
+  const state = load();
+  record(action, input);
+  const asset = state.assets.find((a: any) => a.id === input.asset_id);
+  if (action === "claim") {
+    if (state.scenario === "claim-failure" && asset.id === "asset-2")
+      throw new Error("Fixture claim acknowledgement lost");
+    const claimed = asset.status === "pending";
+    if (claimed) {
+      asset.status = "running";
+      asset.attempt++;
+      save(state);
+    }
+    return { ...state, asset, claimed };
+  }
+  if (action === "phase") {
+    asset.provider_state[input.phase] = input.value;
+    save(state);
+  }
+  if (action === "finish_asset") {
+    Object.assign(asset, input);
+    save(state);
+  }
+  if (action === "settle") {
+    state.settlements++;
+    save(state);
+    if (state.scenario === "settlement-failure")
+      throw new Error("Fixture settlement acknowledgement lost");
+  }
+  if (!["run", "read", "claim", "phase", "finish_asset", "settle"].includes(action))
+    throw new Error("Unexpected budget command");
+  return state;
+}
+export async function preparePackProduction(_actor: unknown, job: any) {
+  record("shared-preparation", { snapshot: job.production_context });
+  return job;
+}
+export function createPackProductionServices(actor: any, job: any, asset: any) {
+  return {
+    phase: async (phase: string, value: unknown) => {
+      await runPackCommand(actor, "phase", job.id, { asset_id: asset.id, phase, value });
+      asset.provider_state[phase] = value;
+    },
+    generateImages: async () => {
+      record("provider", { assetId: asset.id });
+      return ["https://fixture.invalid/image"];
+    },
+    generateMotion: async () => {
+      throw new Error("Unexpected motion");
+    },
+    caption: async () => "Fixture caption",
+    compose: async () => ({
+      files: [{ storage_key: asset.id, content_type: "image/png", bytes: 10 }],
+      probe: {},
+    }),
+    inspect: async () => ({ passed: true, reason: "Controlled fixture" }),
+    finish: async (result: any) =>
+      runPackCommand(actor, "finish_asset", job.id, { asset_id: asset.id, ...result }),
+  };
+}

@@ -2,7 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { runBoundedPackProduction } from "../runBoundedPackProduction";
 import { preparePackStep } from "@/app/workflows/packs/preparePackStep";
 import { producePackAssetStep } from "@/app/workflows/packs/producePackAssetStep";
-import { settlePackStep } from "@/app/workflows/packs/settlePackStep";
+import { settleBoundedPackStep } from "@/app/workflows/packs/settleBoundedPackStep";
 import { releasePackWorkflow } from "@/app/workflows/packs/releasePackWorkflow";
 import { runPackCommand } from "@/lib/supabase/release_pack_jobs/runPackCommand";
 import { preparePackProduction } from "../preparePackProduction";
@@ -27,7 +27,7 @@ function deferred() {
 const services = {
   prepare: preparePackStep,
   produce: producePackAssetStep,
-  settle: settlePackStep,
+  settle: settleBoundedPackStep,
 };
 let job: PackJob;
 let assets: PackAsset[];
@@ -36,6 +36,10 @@ let dispatched: string[];
 let active: number;
 let peak: number;
 let settlementActive: number[];
+let commandActions: string[];
+let budget: { wallet: number; reserved: number; refunded: number };
+let charged: Set<string>;
+let settled: boolean;
 let failures: Record<string, "failed" | "uncertain">;
 
 beforeEach(() => {
@@ -82,8 +86,13 @@ beforeEach(() => {
   peak = 0;
   settlementActive = [];
   failures = {};
+  commandActions = [];
+  budget = { wallet: 900, reserved: 100, refunded: 0 };
+  charged = new Set();
+  settled = false;
   vi.mocked(preparePackProduction).mockImplementation(async (_actor, prepared) => prepared);
   vi.mocked(runPackCommand).mockImplementation(async (_actor, action, _id, input = {}) => {
+    commandActions.push(action);
     const asset = assets.find(a => a.id === input.asset_id);
     if (action === "claim") {
       const claimed = asset?.status === "pending";
@@ -93,9 +102,24 @@ beforeEach(() => {
       }
       return { job, assets, asset, claimed };
     }
-    if (action === "phase" && asset) asset.provider_state[String(input.phase)] = input.value;
+    if (action === "phase" && asset) {
+      asset.provider_state[String(input.phase)] = input.value;
+      if (input.phase === "image_submission_0" && !charged.has(asset.id)) {
+        charged.add(asset.id);
+        job.consumed_credits += 10;
+      }
+    }
     if (action === "finish_asset" && asset) Object.assign(asset, input);
-    if (action === "settle") settlementActive.push(active);
+    if (action === "settle") {
+      settlementActive.push(active);
+      if (!settled) {
+        const refund = job.held_credits - job.consumed_credits;
+        budget.wallet += refund;
+        budget.refunded += refund;
+        job.held_credits = 0;
+        settled = true;
+      }
+    }
     if (!["run", "read", "claim", "phase", "finish_asset", "settle"].includes(action))
       throw new Error(`Unexpected budget or dispatch command: ${action}`);
     return { job, assets };
@@ -109,10 +133,12 @@ beforeEach(() => {
       dispatched.push(asset.id);
       active++;
       peak = Math.max(peak, active);
-      asset.provider_state.image_submission_0 = {
-        state: "accepted",
-        request_id: `receipt-${asset.id}`,
-      };
+      const receipt = { state: "accepted", request_id: `receipt-${asset.id}` };
+      await runPackCommand(actor, "phase", job.id, {
+        asset_id: asset.id,
+        phase: "image_submission_0",
+        value: receipt,
+      });
       try {
         await gates[asset.ordinal].promise;
         if (failures[asset.id] === "uncertain") throw new Error("Provider outcome unknown");
@@ -167,7 +193,7 @@ it("waits for shared preparation, bounds ready work, refills freed slots and set
   expect(peak).toBe(2);
   expect(settlementActive).toEqual([0]);
   expect(assets.every(a => a.status === "completed")).toBe(true);
-  expect(job.held_credits).toBe(100);
+  expect(job.held_credits).toBe(0);
 });
 
 it("retains completed items, failed inspections and uncertain receipts without automatic retry or another budget", async () => {
@@ -183,10 +209,18 @@ it("retains completed items, failed inspections and uncertain receipts without a
     state: "accepted",
     request_id: "receipt-asset-2",
   });
+  const priorBudget = { ...budget, consumed: job.consumed_credits, held: job.held_credits };
+  const priorCommands = commandActions.length;
   await runBoundedPackProduction(actor, job.id, 2, services);
+  expect(commandActions.slice(priorCommands)).toEqual(["run", "read", "settle"]);
+  expect({ ...budget, consumed: job.consumed_credits, held: job.held_credits }).toEqual(
+    priorBudget,
+  );
+  expect(budget).toEqual({ wallet: 970, reserved: 100, refunded: 70 });
+  expect(job.consumed_credits).toBe(30);
   expect(dispatched).toEqual(["asset-1", "asset-2", "asset-3"]);
   expect(assets.map(a => a.attempt)).toEqual([0, 1, 1, 1]);
-  expect(job.held_credits).toBe(100);
+  expect(job.held_credits).toBe(0);
   expect(settlementActive).toEqual([0, 0]);
 });
 
@@ -323,4 +357,26 @@ it("leaves the existing production workflow sequential", async () => {
   await run;
   expect(peak).toBe(1);
   expect(settlementActive).toEqual([0]);
+});
+
+it("returns all concurrent failed asset IDs without raw errors or extra admission", async () => {
+  const first = deferred();
+  const second = deferred();
+  const produce = vi.fn(async (_actor, _job, id: string) => {
+    await (id === "one" ? first.promise : second.promise);
+  });
+  const settle = vi.fn();
+  const run = runBoundedPackProduction(actor, job.id, 2, {
+    prepare: async () => ({ job, assetIds: ["one", "two", "never"] }),
+    produce,
+    settle,
+  });
+  await vi.waitFor(() => expect(produce).toHaveBeenCalledTimes(2));
+  first.reject(new Error("Private first failure"));
+  second.reject(new Error("Private second failure"));
+  const result = await run;
+  expect(result.failed_asset_ids).toEqual(["one", "two"]);
+  expect(JSON.stringify(result)).not.toContain("Private");
+  expect(produce).toHaveBeenCalledTimes(2);
+  expect(settle).toHaveBeenCalledTimes(1);
 });
