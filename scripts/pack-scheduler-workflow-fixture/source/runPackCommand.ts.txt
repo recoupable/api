@@ -1,0 +1,51 @@
+import type { PackSnapshot } from "@/lib/content/packs/packTypes";
+import { z } from "zod";
+import { fixtureSchemas } from "./fixtureSchemas";
+import { readFixtureState } from "./readFixtureState";
+import { writeFixtureState } from "./writeFixtureState";
+import { recordFixtureEvent } from "./recordFixtureEvent";
+export async function runPackCommand(
+  _actor: unknown,
+  action: string,
+  _jobId: string,
+  input: unknown = {},
+): Promise<PackSnapshot> {
+  const command = fixtureSchemas.command.parse({
+    ...z.record(z.string(), z.unknown()).parse(input),
+    action,
+  });
+  const state = readFixtureState();
+  recordFixtureEvent(action, input);
+  if (
+    command.action === "claim" ||
+    command.action === "phase" ||
+    command.action === "finish_asset"
+  ) {
+    const asset = state.assets.find(a => a.id === command.asset_id);
+    if (!asset) throw new Error("Unknown fixture asset");
+    if (command.action === "claim") {
+      if (state.scenario === "claim-failure" && asset.id === "asset-2")
+        throw new Error("Fixture claim acknowledgement lost");
+      const claimed = asset.status === "pending";
+      if (claimed) {
+        asset.status = "running";
+        asset.attempt++;
+        writeFixtureState(state);
+      }
+      return { ...state, asset, claimed };
+    }
+    if (command.action === "phase") asset.provider_state[command.phase] = command.value;
+    else {
+      const { action: _action, asset_id: _assetId, ...outcome } = command;
+      Object.assign(asset, outcome);
+    }
+    writeFixtureState(state);
+  }
+  if (command.action === "settle") {
+    state.settlements++;
+    writeFixtureState(state);
+    if (state.scenario === "settlement-failure")
+      throw new Error("Fixture settlement acknowledgement lost");
+  }
+  return state;
+}

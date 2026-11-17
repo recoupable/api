@@ -380,3 +380,33 @@ it("returns all concurrent failed asset IDs without raw errors or extra admissio
   expect(produce).toHaveBeenCalledTimes(2);
   expect(settle).toHaveBeenCalledTimes(1);
 });
+
+it("does not settle while final asset persistence is still in flight", async () => {
+  const finishGate = deferred();
+  const factory = vi.mocked(createPackProductionServices).getMockImplementation()!;
+  let waitingForFinish = false;
+  vi.mocked(createPackProductionServices).mockImplementation((...args) => {
+    const base = factory(...args);
+    return {
+      ...base,
+      finish: async result => {
+        if (args[2].id === "asset-0") {
+          waitingForFinish = true;
+          await finishGate.promise;
+        }
+        return base.finish(result);
+      },
+    };
+  });
+  gates.forEach(g => g.resolve());
+  const run = runBoundedPackProduction(actor, job.id, 2, services);
+  await vi.waitFor(() => expect(waitingForFinish).toBe(true));
+  await vi.waitFor(() => expect(assets.slice(1).every(a => a.status === "completed")).toBe(true));
+  expect(active).toBe(0); // images are done, but the complete asset step is not
+  expect(assets[0].status).toBe("running");
+  expect(settlementActive).toEqual([]);
+  finishGate.resolve();
+  await run;
+  expect(assets[0].status).toBe("completed");
+  expect(settlementActive).toEqual([0]);
+});

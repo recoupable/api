@@ -43,7 +43,8 @@ Tests exercise the real existing prepare/produce/settle functions and asset pipe
 with controlled persistence and production-service fixtures. They check the bound,
 preparation barrier, slot refill, retained files/receipts, failed and uncertain
 outcomes, duplicate step claims, no new budget command, and drain-before-settlement.
-A production-workflow fixture verifies that its current concurrency stays one.
+A gated final-persistence case verifies that settlement waits after image generation
+has finished. A production-workflow fixture verifies that its concurrency stays one.
 This is not a real database transaction or live-provider concurrency qualification.
 
 The bound is **per orchestration invocation**, not a global provider semaphore or a
@@ -60,10 +61,16 @@ provider receipt handling, not a scheduler timeout that could release its budget
 with the installed Workflow standalone builder and local world. It denies network
 transports in the parent and owned child processes. A synthetic wrapper supplies
 deterministically created hooks, duplicate asset-step delivery, and filesystem
-persistence/provider seams. Each scenario kills its owned worker at a journaled
+persistence/provider seams. Each adapter has its own module; fixture-local schemas
+validate retained state and command payloads, rejecting malformed or drifting inputs
+before effects. Before bundling, the TypeScript compiler checks every copied/generated
+fixture module in strict mode against the real production types. A deliberate string
+in the numeric file-bytes field must fail that check. Diagnostics in transitive
+production files remain covered by the separate repository-configured type check;
+the fixture does not impose strict mode on the production repository. The runner separates build, process lifecycle, replay and assertions. Each scenario kills its owned worker at a journaled
 hook suspension, reopens the same durable journal in a new process, and completes
 or fails the run. Terminal journal replay repeats no effects. Success, claim
-failure with a draining peer, and lost settlement acknowledgement all assert a
+failure with a draining peer, retained composition after inspection failure, and lost settlement acknowledgement all assert a
 single settlement attempt. The original default-retry adapter produced four
 attempts in the retained failing qualification receipt.
 
