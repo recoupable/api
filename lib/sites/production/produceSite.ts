@@ -1,7 +1,7 @@
+import { repairDirectSite } from "./repairDirectSite";
 import { prepareSiteSkill } from "../skills/prepareSiteSkill";
 import { conceptPitchSchema, type ConceptPitch } from "@/lib/sites/production/conceptSchema";
 import { selectExperienceConcept } from "./selectExperienceConcept";
-import { reviseProduction } from "./reviseProduction";
 import type { Site } from "../schema";
 import { collectReleaseContext } from "./collectReleaseContext";
 import { directExperience } from "./directExperience";
@@ -44,43 +44,38 @@ export async function produceSite(
     direction = await directExperience(site, instruction, context, accountId, selected);
     assets = await produceAssets(site, direction, accountId);
   }
-  let snapshot = await buildExperience(
+  const snapshot = await buildExperience(
     site,
     instruction,
     { release: context, direction },
     assets,
     accountId,
   );
-  const reviews = [
-    await reviewExperience(snapshot, direction, accountId, site.id, context.siteSkill),
-  ];
-  while (
-    reviews.at(-1)!.verdict === "revise" &&
-    !reviews.at(-1)!.issues.some(issue => issue.module === "direction")
-  ) {
-    ({ snapshot, direction, assets } = await reviseProduction(
-      site,
-      instruction,
-      context,
-      direction,
-      assets,
-      snapshot,
-      reviews.at(-1)!,
-      accountId,
-    ));
-    reviews.push(
-      await reviewExperience(snapshot, direction, accountId, site.id, context.siteSkill),
-    );
-  }
+  const firstReview = await reviewExperience(
+    snapshot,
+    direction,
+    accountId,
+    site.id,
+    context.siteSkill,
+  );
+  const repaired = await repairDirectSite({
+    site,
+    instruction,
+    accountId,
+    context,
+    direction,
+    assets,
+    snapshot,
+    firstReview,
+  });
   return {
-    ...snapshot,
+    ...repaired.snapshot,
     production: {
       version: 1 as const,
       context,
-      direction,
-      reviews,
-      status:
-        reviews.at(-1)!.verdict === "pass" ? ("reviewed" as const) : ("needs-review" as const),
+      direction: repaired.direction,
+      reviews: repaired.reviews,
+      status: repaired.status,
     },
   };
 }

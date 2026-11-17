@@ -19,15 +19,26 @@ const m = vi.hoisted(() => ({
   assets: vi.fn(),
   build: vi.fn(),
   review: vi.fn(),
+  select: vi.fn(),
+  authorize: vi.fn(),
 }));
+vi.mock("@/lib/supabase/sites/selectSite", () => ({ selectSite: m.select }));
+vi.mock("../authorizeSiteWorkspace", () => ({ authorizeSiteWorkspace: m.authorize }));
 vi.mock("../production/collectReleaseContext", () => ({ collectReleaseContext: m.collect }));
 vi.mock("../production/directExperience", () => ({ directExperience: m.direct }));
 vi.mock("../production/produceAssets", () => ({ produceAssets: m.assets }));
 vi.mock("../production/buildExperience", () => ({ buildExperience: m.build }));
 vi.mock("../production/reviewExperience", () => ({ reviewExperience: m.review }));
-const site = { id: "site", assets: [], draft: null } as unknown as Site;
+const site = {
+  id: "site",
+  owner_id: "workspace",
+  revision: 3,
+  assets: [],
+  draft: null,
+} as unknown as Site;
 beforeEach(() => {
   vi.resetAllMocks();
+  m.select.mockResolvedValue(site);
   vi.mocked(selectExperienceConcept).mockResolvedValue(approvedConcept);
   m.collect.mockResolvedValue({ music: { status: "unavailable" } });
   m.direct.mockResolvedValue({ concept: "A listening garden" });
@@ -53,21 +64,68 @@ it("revises once with concrete review feedback and keeps both reviews", async ()
   expect(JSON.stringify(m.build.mock.calls[1])).toContain("Mobile start button clipped");
   expect(result.production.reviews).toHaveLength(2);
 });
-it("keeps repairing beyond four reviews until the implementation passes", async () => {
-  for (let i = 0; i < 6; i++)
-    m.review.mockResolvedValueOnce({
-      verdict: "revise",
-      issues: [{ module: "implementation", detail: `Fix ${i}` }],
+it("stops endless repairs after two attempts and preserves the original stored content", async () => {
+  let reviews = 0;
+  m.review.mockImplementation(async () => {
+    if (++reviews > 4) throw new Error("Synthetic runaway sentinel");
+    return { verdict: "revise", issues: [{ module: "implementation", detail: "Still broken" }] };
+  });
+  const before = structuredClone(site);
+  await expect(produceSite(site, "", "account", undefined, approvedConcept)).rejects.toMatchObject({
+    status: 422,
+    message: expect.stringContaining("repair attempt limit"),
+  });
+  expect(m.build).toHaveBeenCalledTimes(3);
+  expect(m.review).toHaveBeenCalledTimes(3);
+  expect(site).toEqual(before);
+});
+it("stops an expired repair window before the next review", async () => {
+  let time = 1000;
+  const spy = vi.spyOn(Date, "now").mockImplementation(() => time);
+  m.review.mockResolvedValueOnce({
+    verdict: "revise",
+    issues: [{ module: "implementation", detail: "Broken" }],
+  });
+  m.build
+    .mockResolvedValueOnce({ design: { headline: "Initial" } })
+    .mockImplementationOnce(async () => {
+      time += 20 * 60 * 1000;
+      return { design: { headline: "Late" } };
     });
-  const result = await produceSite(site, "", "account", "saved-brief", approvedConcept);
-  expect(m.build).toHaveBeenCalledTimes(7);
-  expect(result.production.reviews).toHaveLength(7);
-  expect(result.production.status).toBe("reviewed");
-  expect(m.direct).toHaveBeenCalledTimes(1);
-  for (let i = 0; i < 6; i++)
-    expect(m.build.mock.calls[i + 1][6]).toEqual(
-      expect.objectContaining({ issues: [{ module: "implementation", detail: `Fix ${i}` }] }),
-    );
+  try {
+    await expect(
+      produceSite(site, "", "account", undefined, approvedConcept),
+    ).rejects.toMatchObject({ status: 422, message: expect.stringContaining("repair time limit") });
+    expect(m.review).toHaveBeenCalledOnce();
+    expect(m.build).toHaveBeenCalledTimes(2);
+  } finally {
+    spy.mockRestore();
+  }
+});
+it("stops on a revision change before starting another repair", async () => {
+  m.review.mockResolvedValueOnce({
+    verdict: "revise",
+    issues: [{ module: "implementation", detail: "Broken" }],
+  });
+  m.select.mockResolvedValue({ ...site, revision: 4 });
+  await expect(produceSite(site, "", "account", undefined, approvedConcept)).rejects.toMatchObject({
+    status: 409,
+  });
+  expect(m.build).toHaveBeenCalledOnce();
+});
+it("stops deleted sites before starting another repair", async () => {
+  m.select.mockResolvedValue(null);
+  await expect(produceSite(site, "", "account", undefined, approvedConcept)).rejects.toMatchObject({
+    status: 409,
+  });
+  expect(m.build).toHaveBeenCalledOnce();
+});
+it("stops when workspace access is revoked", async () => {
+  m.authorize.mockRejectedValue(new Error("Access revoked"));
+  await expect(produceSite(site, "", "account", undefined, approvedConcept)).rejects.toThrow(
+    "Access revoked",
+  );
+  expect(m.build).toHaveBeenCalledOnce();
 });
 it("asset failures stop before code generation rather than inventing asset URLs", async () => {
   m.assets.mockRejectedValue(new Error("Image provider unavailable"));
@@ -87,20 +145,62 @@ it("routes asset feedback to asset production without changing direction", async
   expect(m.direct).toHaveBeenCalledTimes(1);
   expect(m.assets.mock.calls[1][3]).toContain("Blurry scene");
 });
-it("keeps the selected activity and stops paid repair when concept review fails", async () => {
-  m.review.mockResolvedValueOnce({
-    verdict: "revise",
-    issues: [{ module: "direction", detail: "No fan payoff" }],
-  });
-  const result = await produceSite(site, "", "account", undefined, approvedConcept);
-  expect(m.direct).toHaveBeenCalledTimes(1);
-  expect(m.assets).toHaveBeenCalledTimes(1);
-  expect(m.build).toHaveBeenCalledTimes(1);
-  expect(m.review).toHaveBeenCalledTimes(1);
-  expect(result.production.status).toBe("needs-review");
-});
+it.each(["revise", "pass"])(
+  "keeps direction rejection needs-review even with a %s verdict",
+  async verdict => {
+    m.review.mockResolvedValueOnce({
+      verdict,
+      issues: [{ module: "direction", detail: "No fan payoff" }],
+    });
+    const result = await produceSite(site, "", "account", undefined, approvedConcept);
+    expect(m.direct).toHaveBeenCalledTimes(1);
+    expect(m.assets).toHaveBeenCalledTimes(1);
+    expect(m.build).toHaveBeenCalledTimes(1);
+    expect(m.review).toHaveBeenCalledTimes(1);
+    expect(result.production.status).toBe("needs-review");
+  },
+);
 it("selects a concept inside production when the client omits it", async () => {
   await produceSite(site, "", "account");
   expect(m.collect).toHaveBeenCalledOnce();
   expect(m.direct).toHaveBeenCalledWith(site, "", expect.anything(), "account", expect.anything());
 });
+
+it("stops if ownership changed without authorizing work in the replacement workspace", async () => {
+  m.select.mockResolvedValue({ ...site, owner_id: "different-workspace" });
+  await expect(produceSite(site, "", "account", undefined, approvedConcept)).rejects.toMatchObject({
+    status: 409,
+  });
+  expect(m.authorize).not.toHaveBeenCalled();
+  expect(m.build).toHaveBeenCalledOnce();
+});
+it("preserves credit blocks instead of beginning another repair", async () => {
+  m.review.mockResolvedValue({ verdict: "revise", blocked: "credits", issues: [] });
+  await expect(produceSite(site, "", "account", undefined, approvedConcept)).rejects.toMatchObject({
+    status: 402,
+  });
+  expect(m.build).toHaveBeenCalledOnce();
+});
+
+it.each(["revision", "deleted", "access"])(
+  "rechecks %s after a successful first repair",
+  async change => {
+    m.review.mockResolvedValueOnce({
+      verdict: "revise",
+      issues: [{ module: "implementation", detail: "Broken" }],
+    });
+    m.select
+      .mockResolvedValueOnce(site)
+      .mockResolvedValue(
+        change === "deleted" ? null : change === "revision" ? { ...site, revision: 4 } : site,
+      );
+    if (change === "access")
+      m.authorize.mockResolvedValueOnce(undefined).mockRejectedValue(new Error("Access revoked"));
+    await expect(
+      produceSite(site, "", "account", undefined, approvedConcept),
+    ).rejects.toMatchObject(change === "access" ? { message: "Access revoked" } : { status: 409 });
+    expect(m.build).toHaveBeenCalledTimes(2);
+    expect(m.select).toHaveBeenCalledTimes(2);
+    expect(m.review).toHaveBeenCalledOnce();
+  },
+);
