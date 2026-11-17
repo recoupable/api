@@ -56,10 +56,12 @@ export interface AnalyzeMusicContext {
  * Shared business logic for music analysis.
  * Used by both POST /api/songs/analyze and the analyze_music MCP tool.
  *
- * Every successful model call is charged to `context.accountId` after it
+ * A successful single call is charged to `context.accountId` after it
  * returns, priced on the seconds the model reported (recoupable/app#2061).
- * Callers verify `params.audio_url` (`verifyAudioUrl`) and gate the balance
- * (`minimumCreditsForAnalyzeRequest`) before calling this.
+ * `full_report` is one batch request, charged only when at least one section
+ * came back usable, on those sections' seconds. Callers verify `params.audio_url`
+ * (`verifyAudioUrl`) and gate the balance on one base price
+ * (`FLAMINGO_BASE_CREDITS`) before calling this.
  *
  * @param params - Validated request parameters.
  * @param context - The account the model calls are charged to.

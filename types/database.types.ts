@@ -6219,6 +6219,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      ingestion_catalog_command: {
+        Args: { p_actor: string; p_org: string; p_action: string; p_input?: Json };
+        Returns: Json;
+      };
       accept_context_result: {
         Args: {
           p_document: string;

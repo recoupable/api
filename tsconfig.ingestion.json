@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": { "incremental": false },
+  "include": [
+    "lib/ingestion/**/*.ts",
+    "lib/mcp/tools/ingestion/**/*.ts",
+    "lib/supabase/storage/*Ingestion*.ts",
+    "app/workflows/ingestion/**/*.ts",
+    "app/api/ingestion/route.ts"
+  ],
+  "exclude": ["node_modules", "lib/ingestion/__tests__/**"]
+}

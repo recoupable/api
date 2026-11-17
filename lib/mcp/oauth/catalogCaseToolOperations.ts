@@ -2,6 +2,15 @@ import type { CatalogCaseOperation } from "@/lib/context/catalogCaseOperationSch
 
 /** Catalog artifacts remain standard-only until delegated workspace retention is audited. */
 export const catalogCaseToolOperations = {
+  prepare_catalog_audit: {
+    name: "prepare_catalog_audit",
+    description:
+      "Prepare an unsaved catalog audit from one current saved company-onboarding brief. Uses exact retained evidence and fingerprints; requires brief_id. Returns revision 0 for explicit save_catalog_case. Does not persist, collect, execute providers or verify rights. Superseded or unavailable briefs are rejected.",
+    readOnly: true,
+    destructive: false,
+    openWorld: false,
+    delegated: false,
+  },
   save_catalog_case: {
     name: "save_catalog_case",
     description:
@@ -30,7 +39,7 @@ export const catalogCaseToolOperations = {
     delegated: false,
   },
 } satisfies Record<
-  CatalogCaseOperation["action"],
+  CatalogCaseOperation["action"] | "prepare_catalog_audit",
   {
     name: string;
     description: string;

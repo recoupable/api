@@ -19,6 +19,20 @@ function files(directory: string): string[] {
 }
 
 describe("MCP OAuth tool authorization inventory", () => {
+  it("classifies catalog audit preparation as read-only but not delegated permission", () => {
+    const name = "prepare_catalog_audit";
+    const entry = inventory.find(tool => tool.name === name);
+    expect(entry?.status).toBe("excluded until delegated workspace-retention audit");
+    expect(entry?.scopes).toEqual(["mcp:read"]);
+    expect(isStandardOnlyContextTool(name)).toBe(true);
+    expect(fullOAuthToolPolicy).not.toHaveProperty(name);
+  });
+  it("classifies ingestion as standard-only without granting delegated permission", () => {
+    const entry = inventory.find(tool => tool.name === "ingestion");
+    expect(entry?.status).toBe("standard only; delegated unavailable");
+    expect(entry?.scopes).toEqual(["mcp:read", "mcp:write"]);
+    expect(fullOAuthToolPolicy).not.toHaveProperty("ingestion");
+  });
   it("classifies the development calculator without granting delegated permission", () => {
     const name = "dev_calculate_catalog_entitlements";
     const entry = inventory.find(tool => tool.name === name);

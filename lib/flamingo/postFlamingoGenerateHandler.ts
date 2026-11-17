@@ -5,7 +5,7 @@ import { validateFlamingoGenerateRequest } from "@/lib/flamingo/validateFlamingo
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
 import { FlamingoServiceError } from "@/lib/flamingo/FlamingoServiceError";
 import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
-import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsForAnalyzeRequest";
+import { FLAMINGO_BASE_CREDITS } from "@/lib/flamingo/creditsForFlamingoCall";
 
 /**
  * Handler for POST /api/songs/analyze.
@@ -31,7 +31,7 @@ export async function postFlamingoGenerateHandler(request: NextRequest): Promise
   try {
     short = await ensureCreditsOrShortCircuit({
       accountId,
-      creditsToDeduct: minimumCreditsForAnalyzeRequest(body),
+      creditsToDeduct: FLAMINGO_BASE_CREDITS,
     });
   } catch (err) {
     console.error("[postFlamingoGenerateHandler] credit gate failed:", err);

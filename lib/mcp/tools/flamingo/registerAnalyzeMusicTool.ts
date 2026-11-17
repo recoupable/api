@@ -9,7 +9,7 @@ import { type FlamingoGenerateBody } from "@/lib/flamingo/flamingoGenerateBodySc
 import { analyzeMusicToolSchema, type AnalyzeMusicToolInput } from "./analyzeMusicToolSchema";
 import { processAnalyzeMusicRequest } from "@/lib/flamingo/processAnalyzeMusicRequest";
 import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
-import { minimumCreditsForAnalyzeRequest } from "@/lib/flamingo/minimumCreditsForAnalyzeRequest";
+import { FLAMINGO_BASE_CREDITS } from "@/lib/flamingo/creditsForFlamingoCall";
 import { verifyAudioUrl } from "@/lib/flamingo/verifyAudioUrl";
 
 /**
@@ -78,7 +78,7 @@ export function registerAnalyzeMusicTool(server: McpServer): void {
       try {
         gate = await checkCreditsAvailable({
           accountId,
-          creditsToDeduct: minimumCreditsForAnalyzeRequest(params),
+          creditsToDeduct: FLAMINGO_BASE_CREDITS,
         });
       } catch (err) {
         console.error("[analyze_music] credit gate failed:", err);

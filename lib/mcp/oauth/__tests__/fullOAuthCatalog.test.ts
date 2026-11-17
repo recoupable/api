@@ -21,6 +21,7 @@ const standardOnlyContextActions = [
   "attach_evidence",
   "read_evidence_attachment",
   "list_evidence_attachments",
+  "prepare_catalog_audit",
   "save_catalog_case",
   "read_catalog_case",
   "list_catalog_cases",
@@ -33,7 +34,9 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       .sort(),
   ).toEqual([...standardOnlyContextActions].sort());
   const server = new McpServer({ name: "recoup-test", version: "1" });
-  registerFullOAuthTools(server, vi.fn(), { prepare: vi.fn(), listArtists: vi.fn() });
+  const verify = vi.fn();
+  const services = { prepare: vi.fn(), listArtists: vi.fn() };
+  registerFullOAuthTools(server, verify, services);
   registerRecoupExtension(server);
   const client = new Client({ name: "test", version: "1" });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
@@ -62,13 +65,29 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
-    expect(tools).toHaveLength(91);
+    expect(tools).toHaveLength(94);
+    expect(
+      tools.filter(
+        tool => !(tool._meta?.ui as { visibility?: string[] })?.visibility?.includes("app"),
+      ),
+    ).toHaveLength(93);
+    expect(verify).not.toHaveBeenCalled();
+    for (const service of Object.values(services)) expect(service).not.toHaveBeenCalled();
+    expect(contextToolOperations.prepare_catalog_audit).toMatchObject({
+      readOnly: true,
+      destructive: false,
+      openWorld: false,
+      delegated: false,
+    });
     for (const tool of tools) {
       for (const hint of ["readOnlyHint", "destructiveHint", "openWorldHint"] as const)
         expect(typeof tool.annotations?.[hint], `${tool.name}.${hint}`).toBe("boolean");
     }
     const expectedAnnotations: Record<string, [boolean, boolean, boolean]> = {
       list_artists: [true, false, false],
+      get_artist_posts: [true, false, false],
+      get_scraper_results: [true, false, true],
+      scrape_artist_socials: [false, true, true],
       get_tasks: [true, false, false],
       get_youtube_revenue: [true, false, false],
       search_web: [true, false, true],
@@ -117,6 +136,8 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
     const artist = tools.find(tool => tool.name === "create_new_artist")!;
     expect(artist.inputSchema.properties).not.toHaveProperty("active_conversation_id");
     expect(JSON.stringify(artist)).not.toMatch(/system prompt|copy.*conversation/i);
+    expect(tools.map(tool => tool.name)).not.toContain("ingestion");
+    expect(tools.map(tool => tool.name)).not.toContain("prepare_catalog_audit");
     expect(tools.map(tool => tool.name)).not.toContain("validate_application_registration");
     expect(tools.map(tool => tool.name)).not.toContain("list_professional_roster");
     expect(tools.map(tool => tool.name)).not.toContain("confirm_professional_roster");

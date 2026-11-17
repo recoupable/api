@@ -1,10 +1,10 @@
-import { chargeForFlamingoCall } from "@/lib/flamingo/chargeForFlamingoCall";
+import { chargeForBatchAnswers } from "@/lib/flamingo/chargeForBatchAnswers";
 import { callMeasureSongMoments } from "@/lib/songMoments/callMeasureSongMoments";
 import { chargeForSongMeasure } from "@/lib/songMoments/chargeForSongMeasure";
-import { describeMoment } from "@/lib/songMoments/describeMoment";
+import { describeMoments, type DescribedMoment } from "@/lib/songMoments/describeMoments";
 import type { MeasuredMoment, MeasuredSong } from "@/lib/songMoments/isMeasuredSong";
 import type { MomentDescription } from "@/lib/songMoments/parseMomentDescription";
-import type { SongMomentsBody } from "@/lib/songMoments/songMomentsBodySchema";
+import type { SongMomentsBody, SongMomentType } from "@/lib/songMoments/songMomentsBodySchema";
 
 /** A moment with Music Flamingo's words added when it was described. */
 export type SongMoment = MeasuredMoment & Partial<MomentDescription>;
@@ -15,12 +15,14 @@ export interface SongMomentsResult extends Omit<MeasuredSong, "moments"> {
 
 /**
  * Measures a song's sections and moments, then has Music Flamingo describe
- * the chosen moments, each from a clip of just that moment.
+ * the chosen moments in one batch, each prompt hearing a clip of just that
+ * moment.
  *
  * Charges `accountId` the flat measurement price once the measurement returns,
- * and each model call on its own reported seconds, like /api/songs/analyze.
- * A moment whose description fails is returned without words and is not
- * charged. Callers verify `audio_url` and gate the balance first.
+ * and the batch once: one base price plus the seconds of the moments it
+ * described. A moment the model did not describe (or every moment, when the
+ * batch fails) is returned without words and is not charged. Callers verify
+ * `audio_url` and gate the balance first.
  *
  * @param body - Validated request body.
  * @param context - The account the work is charged to.
@@ -39,30 +41,30 @@ export async function processSongMomentsRequest(
   });
   await chargeForSongMeasure({ accountId: context.accountId, audioUrl: body.audio_url });
 
-  const wanted = (moment: MeasuredMoment) =>
-    body.describe === true || (Array.isArray(body.describe) && body.describe.includes(moment.type));
-
-  const moments = await Promise.all(
-    song.moments.map(async (moment): Promise<SongMoment> => {
-      if (!wanted(moment)) return moment;
-      try {
-        const { description, elapsed_seconds } = await describeMoment({
-          audioUrl: body.audio_url,
-          start: moment.start,
-          end: moment.end,
-        });
-        await chargeForFlamingoCall({
-          accountId: context.accountId,
-          elapsedSeconds: elapsed_seconds,
-          audioUrl: body.audio_url,
-        });
-        return { ...moment, ...description };
-      } catch (error) {
-        console.error(`[processSongMomentsRequest] describing ${moment.type} failed:`, error);
-        return moment;
-      }
-    }),
+  const wanted = song.moments.filter(
+    moment =>
+      body.describe === true ||
+      (Array.isArray(body.describe) && body.describe.includes(moment.type)),
   );
+
+  let described = new Map<SongMomentType, DescribedMoment>();
+  if (wanted.length > 0) {
+    try {
+      described = await describeMoments({ audioUrl: body.audio_url, moments: wanted });
+    } catch (error) {
+      console.error("[processSongMomentsRequest] describing moments failed:", error);
+    }
+  }
+  await chargeForBatchAnswers({
+    accountId: context.accountId,
+    answers: [...described.values()],
+    audioUrl: body.audio_url,
+  });
+
+  const moments = song.moments.map((moment): SongMoment => {
+    const words = described.get(moment.type);
+    return words ? { ...moment, ...words.description } : moment;
+  });
 
   return {
     ...song,

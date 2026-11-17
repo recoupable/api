@@ -1,8 +1,8 @@
 # OAuth MCP annotation behavior inventory
 
-Source baseline: API `b371f5ed2f2cda150de6156d5a3d6b0c5f7afb21`, November 9, 2026. This inventory documents the proposed explicit annotations, not the deployed endpoint or a release approval. Handler behavior, schemas, authentication and scopes are unchanged.
+Composition baseline: API `c37e7e4e29bd5418ae43399aa45457c5da4b6c1e`, November 17, 2026, composed with annotation candidate `62c427095903436c203b70c7ae034135734f6139`. Inherited behavior references remain pinned to the original November 9 baseline `b371f5ed2f2cda150de6156d5a3d6b0c5f7afb21`; new social-tool references use the composition baseline. This inventory documents the proposed explicit annotations, not the deployed endpoint or a release approval. Handler behavior, schemas, authentication and scopes are unchanged.
 
-The full OAuth registry contains 89 business tools and two workflow UI entrypoints (91 registered, 90 model-visible). The limited registry contains five business tools and the same two UI entrypoints (7 registered, 6 model-visible). The sidebar entrypoint is app-only. Two legacy deep-research aliases remain in internal policy but are excluded from the full registry. The separate API-key/Privy standard registry has additional tools and is not fully remediated here.
+The full OAuth registry contains 92 business tools and two workflow UI entrypoints (94 registered, 93 model-visible). The limited registry contains five business tools and the same two UI entrypoints (7 registered, 6 model-visible). The sidebar entrypoint is app-only. Two legacy deep-research aliases remain in internal policy but are excluded from the full registry. The separate API-key/Privy standard registry has additional tools and is not fully remediated here.
 
 ## Classification rules
 
@@ -49,6 +49,9 @@ Columns `R`, `D` and `O` mean `readOnlyHint`, `destructiveHint` and `openWorldHi
 | `generate_site` | false | true | true | Collects public context, runs charged generation, and replaces the saved site draft. | [source](https://github.com/recoupable/api/blob/b371f5ed2f2cda150de6156d5a3d6b0c5f7afb21/lib/sites/processSiteOperation.ts) |
 | `generate_sora_2_video` | false | false | false | Creates a new provider video-generation job; no source replacement or public publishing path is exposed here. The OAuth result is an account-bound job locator. Provider compute alone is not a separate customer-credit debit in this handler. | [source](https://github.com/recoupable/api/blob/b371f5ed2f2cda150de6156d5a3d6b0c5f7afb21/lib/video/generateVideo.ts) |
 | `generate_txt_file` | false | true | true | Uploads submitted text to public media storage, creating public-by-URL exposure rather than a private scratch note. New writes are public even though old Arweave references remain readable. | [source](https://github.com/recoupable/api/blob/b371f5ed2f2cda150de6156d5a3d6b0c5f7afb21/lib/files/generateAndStoreTxtFile.ts) |
+| `get_artist_posts` | true | false | false | Reads saved posts for an authorized artist; does not start a scrape or change posts. | [source](https://github.com/recoupable/api/blob/c37e7e4e29bd5418ae43399aa45457c5da4b6c1e/lib/mcp/tools/artistSocials/registerGetArtistPostsTool.ts) |
+| `get_scraper_results` | true | false | true | Retrieves public social scrape data by supplied run ID from Apify. The lookup requires authentication but is not scoped to the connected account's runs; it does not start scraping or debit credits. | [source](https://github.com/recoupable/api/blob/c37e7e4e29bd5418ae43399aa45457c5da4b6c1e/lib/mcp/tools/artistSocials/registerGetScraperResultsTool.ts) |
+| `scrape_artist_socials` | false | true | true | Starts fresh public-profile scraping for an authorized artist, deducts account credits for started profiles and persists run records. | [source](https://github.com/recoupable/api/blob/c37e7e4e29bd5418ae43399aa45457c5da4b6c1e/lib/artist/startArtistSocialsScrape.ts) |
 | `get_artist_socials` | true | false | false | Reads already-saved artist/social associations; does not collect new public profiles or change them. | [source](https://github.com/recoupable/api/blob/b371f5ed2f2cda150de6156d5a3d6b0c5f7afb21/lib/artist/getArtistSocials.ts) |
 | `get_chats` | true | false | false | Reads authorized saved chat summaries; no persistence; bounded account resources. | [source](https://github.com/recoupable/api/blob/b371f5ed2f2cda150de6156d5a3d6b0c5f7afb21/lib/mcp/tools/chats/registerGetChatsTool.ts) |
 | `get_daily_email_status` | true | false | false | Reads the connected account’s saved daily-email preference; no messages sent or preference change. | [source](https://github.com/recoupable/api/blob/b371f5ed2f2cda150de6156d5a3d6b0c5f7afb21/lib/mcp/tools/pulse/registerGetPulsesTool.ts) |
@@ -133,8 +136,15 @@ Columns `R`, `D` and `O` mean `readOnlyHint`, `destructiveHint` and `openWorldHi
 | `open_recoup_workflows` | true | false | false | Returns the static Recoup workflow-library UI; no account change, job creation or external entity lookup. | [source](https://github.com/recoupable/api/blob/b371f5ed2f2cda150de6156d5a3d6b0c5f7afb21/lib/mcp/extension/registerRecoupExtension.ts) |
 | `open_recoup_workflows_sidebar` | true | false | false | App-only sidebar entrypoint for the same static workflow UI; no business-state mutation or outside entity lookup. | [source](https://github.com/recoupable/api/blob/b371f5ed2f2cda150de6156d5a3d6b0c5f7afb21/lib/mcp/extension/registerRecoupExtension.ts) |
 
+## Current-main composition
+
+The three social tools above remain full-permission (`mcp:tools`) tools; no limited scopes or execution permissions change. `prepare_catalog_audit` remains standard-only with read-only/non-destructive/closed-world metadata. `ingestion` remains excluded from delegated registration. Their standard-only contracts do not add OAuth tools.
+
+Main's release-pack accounting labels are retained: quotes describe customer charges, provider expense is `null`/`not_measured`, and concepts/contingency/refinements are not budgeted. These labels do not remove pack settlement or export side effects. The current `analyze_music` full-report batch still charges for usable answers. The MCP route retains its 800-second maximum duration.
+
 ## Validation and limits
 
+- Original candidate evidence below applies to `62c4270`, not automatically to the composed successor. The successor adds registration-only SDK discovery of all seven limited tools, explicit social-tool semantic assertions, 94 full registrations / 93 model-visible checks, and standard-only exclusion checks. Its focused discovery/annotation run passed three files and seven tests after reproducing the missing social annotations.
 - Regression tests first reproduced blanket open-world annotations, missing limited-mode booleans, and the incorrect pack-read classification.
 - Full repository suite on the final runtime changes: 1,460 files and 9,322 tests passed; 15 files and 45 tests skipped.
 - OAuth suite: 52 files and 313 tests passed; two files and five tests skipped. A fresh checkout first needed the normal extension build; the suite passed after that step.
@@ -148,4 +158,4 @@ Existing cost, approval and replay limitations in [the delegated-tool qualificat
 
 ## Draft branch deployment guard
 
-`vercel.json` disables automatic deployments only for `fix/mcp-oauth-behavior-annotations`, using Vercel's documented [branch-specific deployment control](https://vercel.com/docs/project-configuration/git-configuration#git.deploymentEnabled). All other branches retain their existing behavior. This lets review and GitHub CI proceed without creating a preview deployment. Removing the guard or deploying the branch requires a separate release decision.
+`vercel.json` disables automatic deployments for the original `fix/mcp-oauth-behavior-annotations` branch and the isolated successor `codex/oauth-annotations-current-main`, using Vercel's documented [branch-specific deployment control](https://vercel.com/docs/project-configuration/git-configuration#git.deploymentEnabled). All other branches retain their existing behavior. This lets review and GitHub CI proceed without creating a preview deployment. Removing the guard or deploying either branch requires a separate release decision.

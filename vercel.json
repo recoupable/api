@@ -24,7 +24,8 @@
   ],
   "git": {
     "deploymentEnabled": {
-      "fix/mcp-oauth-behavior-annotations": false
+      "fix/mcp-oauth-behavior-annotations": false,
+      "codex/oauth-annotations-current-main": false
     }
   }
 }

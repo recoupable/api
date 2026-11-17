@@ -58,7 +58,7 @@ describe("processAnalyzeMusicRequest — credits", () => {
     expect(callFlamingoGenerate).not.toHaveBeenCalled();
   });
 
-  it("hands the account to executeFullReport, which charges per section", async () => {
+  it("hands the account to executeFullReport, which charges the batch itself", async () => {
     vi.mocked(executeFullReport).mockResolvedValue({ report: {}, elapsed_seconds: 12, failed: [] });
 
     await processAnalyzeMusicRequest(
@@ -67,7 +67,7 @@ describe("processAnalyzeMusicRequest — credits", () => {
     );
 
     expect(executeFullReport).toHaveBeenCalledWith("https://example.com/song.mp3", "acc_1", true);
-    // The single-call charge must not double up on top of the per-section ones.
+    // The single-call charge must not double up on top of the batch's.
     expect(chargeForFlamingoCall).not.toHaveBeenCalled();
   });
   it("omits private attachment URLs from single-call usage records", async () => {
