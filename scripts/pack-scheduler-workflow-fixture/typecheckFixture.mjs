@@ -46,12 +46,14 @@ if (diagnostics.length) {
   process.exitCode = 1;
 }
 require("node:assert/strict").equal(networkAttempts(), 0);
+console.log(JSON.stringify({ networkAttempts: networkAttempts() }));
 })().catch(error => { console.error(error); process.exitCode = 1; });
 `,
   );
   const check = () => execute(process.execPath, [checker], { cwd: source });
   try {
-    await check();
+    const result = await check();
+    assert.equal(JSON.parse(result.stdout).networkAttempts, 0);
   } catch (error) {
     throw new Error(error.stderr || error.message);
   }
@@ -64,6 +66,7 @@ require("node:assert/strict").equal(networkAttempts(), 0);
     await assert.rejects(
       check(),
       error =>
+        JSON.parse(error.stdout).networkAttempts === 0 &&
         error.stderr.includes("payload-drift.ts") &&
         error.stderr.includes("TS2322") &&
         error.stderr.includes("Type 'string' is not assignable to type 'number'"),
