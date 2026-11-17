@@ -246,7 +246,7 @@ try {
         assert.deepEqual(result, {
           error:
             name === "access-after-repair"
-              ? "Site production stopped during bounded repair. Your existing draft is unchanged."
+              ? "Site production stopped during bounded repair."
               : `Site production stopped: ${reasons[name]}. This run did not save its candidate.`,
         });
       }

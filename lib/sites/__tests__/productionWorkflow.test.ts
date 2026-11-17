@@ -298,7 +298,7 @@ it("reports a repair failure without saving an unfinished candidate", async () =
     approvedConcept,
   );
   expect(result).toEqual({
-    error: "Site production stopped during bounded repair. Your existing draft is unchanged.",
+    error: "Site production stopped during bounded repair.",
   });
   expect(m.save).not.toHaveBeenCalled();
 });
@@ -508,4 +508,19 @@ it("rechecks the deadline after revealing a repaired candidate before paid revie
   expect(result).toEqual({ error: expect.stringContaining("repair time limit") });
   expect(reviewStep).toHaveBeenCalledOnce();
   expect(m.save).not.toHaveBeenCalled();
+});
+
+it("does not infer commit outcome when the save stage fails ambiguously", async () => {
+  m.save.mockRejectedValueOnce(
+    new Error("Private transport detail: response lost after possible commit"),
+  );
+  const result = await siteProductionWorkflow(
+    { id: "site" } as Site,
+    "",
+    "account",
+    undefined,
+    approvedConcept,
+  );
+  expect(m.save).toHaveBeenCalledOnce();
+  expect(result).toEqual({ error: "Site production stopped during save." });
 });

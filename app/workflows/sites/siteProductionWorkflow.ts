@@ -191,7 +191,7 @@ export async function siteProductionWorkflow(
           "The site builder reached its generation limit before finishing the code. Your saved draft is unchanged.",
       };
     return {
-      error: `Site production stopped during ${stage}. Your existing draft is unchanged.`,
+      error: `Site production stopped during ${stage}.`,
     };
   }
 }
