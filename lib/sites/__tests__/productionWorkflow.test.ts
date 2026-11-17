@@ -276,6 +276,10 @@ it("accepts a repaired pass and carries the original context and assets", async 
     approvedConcept,
   );
   expect(m.save).toHaveBeenCalledOnce();
+  expect(m.save.mock.calls[0][1]).toMatchObject({
+    ...candidate,
+    production: { status: "reviewed" },
+  });
   expect(m.save.mock.calls[0][1].production.reviews).toHaveLength(2);
   expect(m.revise.mock.calls[0][2]).toEqual(m.build.mock.calls[0][2].release);
   expect(m.revise.mock.calls[0][4]).toEqual(m.build.mock.calls[0][3]);
