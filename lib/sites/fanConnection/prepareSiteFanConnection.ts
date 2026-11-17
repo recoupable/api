@@ -3,7 +3,7 @@ import { selectFanConfig } from "@/lib/supabase/site_fan_connections/selectFanCo
 import { updateFanConfig } from "@/lib/supabase/site_fan_connections/updateFanConfig";
 import { hasPaidSiteSubscription } from "./hasPaidSiteSubscription";
 import { getFanOAuthConfig } from "./getFanOAuthConfig";
-import { returnUrlSchema } from "./schema";
+import { resolveSiteFanReturnUrl } from "./resolveSiteFanReturnUrl";
 import { SiteError } from "../SiteError";
 /** Publishing requires a paid workspace and automatically includes Spotify fan connection. */
 export async function prepareSiteFanConnection(
@@ -22,11 +22,7 @@ export async function prepareSiteFanConnection(
       "Choose an artist for this site before publishing so Spotify fans are attributed correctly.",
     );
   const config = await selectFanConfig(site.id);
-  const destination = returnUrlSchema.parse(
-    returnUrl ??
-      config?.return_url ??
-      `${process.env.SITES_PUBLIC_ORIGIN || "https://app.recoupable.dev"}/s/${site.id}`,
-  );
+  const destination = resolveSiteFanReturnUrl(site.id, config?.return_url, returnUrl);
   if (config?.enabled && config.return_url === destination) return "enabled" as const;
   const [artist] = await selectAccounts(site.artist_id);
   if (!artist?.name?.trim()) throw new SiteError(400, "Add the artist's name before publishing.");

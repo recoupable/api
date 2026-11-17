@@ -1,8 +1,14 @@
 # Unwired Sites evidence adapters
 
-These helpers target **proposal-only Database PR136**, commit
-`4caac3cc8a15a47b348109b2fa4f571423d8beb0` (`proposals/sites-publish-evidence-2094/`).
-They have no route, workflow, UI or publishing caller. The proposal remains draft;
+These helpers target **proposal-only Database PR136**, current commit
+`afd214aa73dfd70b0f2b860fce90c12ceb23f28b` (`proposals/sites-publish-evidence-2094/`).
+The original capture/read qualification used `4caac3cc8a15a47b348109b2fa4f571423d8beb0`.
+Its successor adds the expected-artist publication fence without changing capture/read
+contracts or golden vectors. The separate [unwired publication orchestration](./site-selected-publication.md)
+now consumes the scoped reader; no route, workflow or UI invokes the new flow.
+The coverage and publication-wrapper exclusions below describe the #1263
+capture/read contribution specifically; the linked orchestration page owns the
+subsequent publisher, artist fence and their qualification. The proposal remains draft;
 this source does not deploy a migration, expose a PostgREST schema, grant execution,
 activate retention, add storage or change the advisory working-preview behavior.
 
