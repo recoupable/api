@@ -15,6 +15,7 @@ import { registerAllSpotifyTools } from "./spotify";
 import { registerContactTeamTool } from "./registerContactTeamTool";
 import { registerUpdateAccountInfoTool } from "./registerUpdateAccountInfoTool";
 import { registerAllArtistSocialsTools } from "./artistSocials";
+import { registerAllPostsTools } from "./posts";
 import { registerAllSearchTools } from "./search";
 import { registerWebDeepResearchTool } from "./registerWebDeepResearchTool";
 import { registerArtistDeepResearchTool } from "./registerArtistDeepResearchTool";
@@ -50,6 +51,7 @@ export const registerAllTools = (server: McpServer): void => {
   registerAllFileTools(server);
   registerAllFlamingoTools(server);
   registerAllImageTools(server);
+  registerAllPostsTools(server);
   registerAllPulseTools(server);
   registerAllSearchTools(server);
   registerAllSora2Tools(server);

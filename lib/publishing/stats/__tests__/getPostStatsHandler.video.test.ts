@@ -6,7 +6,7 @@ import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import { selectScheduledPosts } from "@/lib/supabase/scheduled_posts/selectScheduledPosts";
 import { findConnectedAccountId } from "@/lib/publishing/findConnectedAccountId";
 import { getLinkedInPostAnalytics } from "@/lib/publishing/stats/getLinkedInPostAnalytics";
-import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
+import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
 import { chargePostStatsRead } from "@/lib/publishing/stats/chargePostStatsRead";
 
 vi.mock("@/lib/networking/getCorsHeaders", () => ({ getCorsHeaders: vi.fn(() => ({})) }));
@@ -19,8 +19,8 @@ vi.mock("@/lib/publishing/findConnectedAccountId", () => ({ findConnectedAccount
 vi.mock("@/lib/publishing/stats/getLinkedInPostAnalytics", () => ({
   getLinkedInPostAnalytics: vi.fn(),
 }));
-vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
-  ensureCreditsOrShortCircuit: vi.fn(),
+vi.mock("@/lib/credits/checkCreditsAvailable", () => ({
+  checkCreditsAvailable: vi.fn().mockResolvedValue({ kind: "available" }),
 }));
 vi.mock("@/lib/publishing/stats/chargePostStatsRead", () => ({ chargePostStatsRead: vi.fn() }));
 
@@ -57,7 +57,7 @@ describe("getPostStatsHandler: video analytics", () => {
     vi.mocked(canAccessAccount).mockResolvedValue(true);
     vi.mocked(selectScheduledPosts).mockResolvedValue([row] as never);
     vi.mocked(findConnectedAccountId).mockResolvedValue("ca_1");
-    vi.mocked(ensureCreditsOrShortCircuit).mockResolvedValue(null);
+    vi.mocked(checkCreditsAvailable).mockResolvedValue({ kind: "available" });
     vi.mocked(getLinkedInPostAnalytics).mockResolvedValue(analytics);
   });
 

@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import { getPostStatsHandler } from "../getPostStatsHandler";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { canAccessAccount } from "@/lib/organizations/canAccessAccount";
 import { selectScheduledPosts } from "@/lib/supabase/scheduled_posts/selectScheduledPosts";
 import { findConnectedAccountId } from "@/lib/publishing/findConnectedAccountId";
 import { getLinkedInPostStats } from "@/lib/publishing/stats/getLinkedInPostStats";
-import { ensureCreditsOrShortCircuit } from "@/lib/credits/ensureCreditsOrShortCircuit";
+import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
 import { chargePostStatsRead } from "@/lib/publishing/stats/chargePostStatsRead";
 import { POST_STATS_CREDITS } from "@/lib/publishing/stats/postStatsCredits";
 
@@ -21,9 +21,7 @@ vi.mock("@/lib/publishing/stats/getLinkedInPostStats", () => ({ getLinkedInPostS
 vi.mock("@/lib/publishing/stats/getLinkedInVideoStats", () => ({
   getLinkedInVideoStats: vi.fn(),
 }));
-vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
-  ensureCreditsOrShortCircuit: vi.fn(),
-}));
+vi.mock("@/lib/credits/checkCreditsAvailable", () => ({ checkCreditsAvailable: vi.fn() }));
 vi.mock("@/lib/publishing/stats/chargePostStatsRead", () => ({ chargePostStatsRead: vi.fn() }));
 
 const callerId = "550e8400-e29b-41d4-a716-446655440000";
@@ -60,7 +58,7 @@ describe("getPostStatsHandler: credits", () => {
       shares: 0,
       engagement: 0,
     });
-    vi.mocked(ensureCreditsOrShortCircuit).mockResolvedValue(null);
+    vi.mocked(checkCreditsAvailable).mockResolvedValue({ kind: "available" });
   });
 
   it("costs $0.001", () => {
@@ -70,7 +68,7 @@ describe("getPostStatsHandler: credits", () => {
   it("checks the caller's credits, then charges them once after a successful read", async () => {
     const res = await getPostStatsHandler(request(), postId);
     expect(res.status).toBe(200);
-    expect(ensureCreditsOrShortCircuit).toHaveBeenCalledWith({
+    expect(checkCreditsAvailable).toHaveBeenCalledWith({
       accountId: callerId,
       creditsToDeduct: POST_STATS_CREDITS,
     });
@@ -79,11 +77,18 @@ describe("getPostStatsHandler: credits", () => {
   });
 
   it("returns the 402 without reading LinkedIn when credits are short", async () => {
-    vi.mocked(ensureCreditsOrShortCircuit).mockResolvedValue(
-      NextResponse.json({ status: "error" }, { status: 402 }),
-    );
+    vi.mocked(checkCreditsAvailable).mockResolvedValue({
+      kind: "insufficient_credits",
+      remainingCredits: 10,
+      requiredCredits: POST_STATS_CREDITS,
+    });
     const res = await getPostStatsHandler(request(), postId);
     expect(res.status).toBe(402);
+    expect(await res.json()).toMatchObject({
+      error: "insufficient_credits",
+      remaining_credits: 10,
+      required_credits: POST_STATS_CREDITS,
+    });
     expect(getLinkedInPostStats).not.toHaveBeenCalled();
     expect(chargePostStatsRead).not.toHaveBeenCalled();
   });
@@ -99,7 +104,7 @@ describe("getPostStatsHandler: credits", () => {
     vi.mocked(selectScheduledPosts).mockResolvedValue([{ ...row, platform: "youtube" }] as never);
     const res = await getPostStatsHandler(request(), postId);
     expect(res.status).toBe(422);
-    expect(ensureCreditsOrShortCircuit).not.toHaveBeenCalled();
+    expect(checkCreditsAvailable).not.toHaveBeenCalled();
     expect(chargePostStatsRead).not.toHaveBeenCalled();
   });
 });

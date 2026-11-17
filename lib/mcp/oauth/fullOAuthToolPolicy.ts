@@ -28,6 +28,12 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
     readOnly: true,
     notice: "Reads a run started by scrape_artist_socials. Scraped data is public social content.",
   },
+  get_published_posts: { readOnly: true },
+  get_published_post_stats: {
+    readOnly: true,
+    notice:
+      "Spends account credits: $0.001 per successful read. Read each post once and keep the result.",
+  },
   artist_deep_research: { readOnly: true },
   spotify_deep_research: { readOnly: true },
   get_spotify_album: { readOnly: true },
