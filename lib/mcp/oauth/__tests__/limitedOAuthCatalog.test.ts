@@ -34,7 +34,11 @@ it("discovers all seven limited registrations without invoking business services
     };
     expect(tools.map(tool => tool.name).sort()).toEqual(Object.keys(expected).sort());
     expect(tools).toHaveLength(7);
-    expect(tools.filter(tool => tool.name !== "open_recoup_workflows_sidebar")).toHaveLength(6);
+    const modelVisibleTools = tools.filter(tool => tool.name !== "open_recoup_workflows_sidebar");
+    expect(modelVisibleTools).toHaveLength(6);
+    for (const tool of modelVisibleTools) {
+      expect(tool._meta?.ui ?? {}).not.toHaveProperty("visibility");
+    }
     expect(
       tools.find(tool => tool.name === "open_recoup_workflows_sidebar")?._meta?.ui,
     ).toMatchObject({ visibility: ["app"] });
