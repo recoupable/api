@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { journeyRunner } from "./journeyRunner";
 import type { ExperienceContract } from "./experienceContract";
 import { Sandbox } from "@vercel/sandbox";
@@ -66,9 +67,16 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
       ].join(" ") || "'none'";
     const experience = snapshot.design.experience!;
     const source = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src https: data:; font-src data:; connect-src 'none'; media-src ${mediaOrigins}; form-action 'none'; frame-src 'none'; base-uri 'none'"><style>${experience.css.replace(/<\/style/gi, "<\\/style")}</style></head><body>${experience.html}<script>window.__recoupEvents=[];window.recoup={track:event=>window.__recoupEvents.push(event),join:()=>window.__recoupEvents.push("join")};</script><script>${experience.javascript.replace(/<\/script/gi, "<\\/script")}</script></body></html>`;
+    const journeySource = JSON.stringify(contract ?? null);
+    const digest = (value: string) => createHash("sha256").update(value).digest("hex");
+    const evidence = {
+      sourceSha256: digest(source),
+      journeySha256: digest(journeySource),
+      runnerSha256: digest(journeyRunner),
+    };
     await sandbox.writeFiles([
       { path: "experience.html", content: Buffer.from(source) },
-      { path: "journey.json", content: Buffer.from(JSON.stringify(contract ?? null)) },
+      { path: "journey.json", content: Buffer.from(journeySource) },
       { path: "review.cjs", content: Buffer.from(journeyRunner) },
     ]);
     stage = "browser playthrough";
@@ -104,6 +112,7 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
         });
     }
     return {
+      evidence,
       firstActionImages,
       report: JSON.parse(report.toString()) as {
         name: string;
