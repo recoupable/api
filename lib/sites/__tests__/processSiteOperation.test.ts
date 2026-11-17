@@ -17,6 +17,8 @@ vi.mock("@/lib/supabase/artist_organization_ids/selectArtistOrganizationIds", ()
   selectArtistOrganizationIds: m.artistOrgs,
 }));
 const m = vi.hoisted(() => ({
+  build: vi.fn(),
+  review: vi.fn(),
   publication: vi.fn(),
   savedBuild: vi.fn(),
   fanSetup: vi.fn().mockResolvedValue("enabled"),
@@ -46,6 +48,14 @@ vi.mock("@/lib/supabase/sites/insertSite", () => ({ insertSite: m.insert }));
 vi.mock("@/lib/supabase/sites/updateSite", () => ({ updateSite: m.update }));
 vi.mock("@/lib/supabase/sites/selectSignups", () => ({ selectSignups: m.signups }));
 vi.mock("../production/readSiteContextBrief", () => ({ readSiteContextBrief: m.brief }));
+vi.mock("../skills/prepareSiteSkill", () => ({ prepareSiteSkill: vi.fn(async () => ({})) }));
+vi.mock("../production/selectExperienceConcept", () => ({ selectExperienceConcept: vi.fn() }));
+vi.mock("../production/directExperience", () => ({
+  directExperience: vi.fn(async () => ({ concept: "Original" })),
+}));
+vi.mock("../production/produceAssets", () => ({ produceAssets: vi.fn(async () => []) }));
+vi.mock("../production/buildExperience", () => ({ buildExperience: m.build }));
+vi.mock("../production/reviewExperience", () => ({ reviewExperience: m.review }));
 vi.mock("../production/produceSite", () => ({ produceSite: m.generate }));
 vi.mock("../production/startSiteProduction", () => ({ startSiteProduction: m.generate }));
 vi.mock("../production/getSiteProduction", () => ({ getSiteProduction: vi.fn() }));
@@ -364,3 +374,47 @@ it("does not write a draft or publication when direct repair limits are exhauste
   expect(m.update).not.toHaveBeenCalled();
   expect(m.publication).not.toHaveBeenCalled();
 });
+
+it.each(["revision", "deleted", "access"])(
+  "never saves after %s changes between a completed repair and review",
+  async change => {
+    const { produceSite } = await vi.importActual<typeof import("../production/produceSite")>(
+      "../production/produceSite",
+    );
+    m.generate.mockImplementation(produceSite);
+    const site = { id, owner_id: org, revision: 2, draft, published: { name: "Live" } };
+    const before = structuredClone(site);
+    // First read admits the operation; second admits repair; third follows its successful build.
+    m.select
+      .mockResolvedValueOnce(site)
+      .mockResolvedValueOnce(site)
+      .mockResolvedValue(
+        change === "deleted" ? null : change === "revision" ? { ...site, revision: 3 } : site,
+      );
+    m.access
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValue(change !== "access");
+    m.collect.mockResolvedValue({});
+    m.build.mockResolvedValueOnce({ name: "Initial" }).mockResolvedValueOnce({ name: "Repaired" });
+    m.review.mockResolvedValue({
+      verdict: "revise",
+      issues: [{ module: "implementation", detail: "Broken" }],
+    });
+    await expect(
+      processSiteOperation(account, "generate", {
+        id,
+        revision: 2,
+        approvedConcept,
+        instruction: "Fix",
+        background: false,
+      }),
+    ).rejects.toMatchObject({ status: change === "access" ? 403 : 409 });
+    expect(m.build).toHaveBeenCalledTimes(2);
+    expect(m.review).toHaveBeenCalledOnce();
+    expect(m.select).toHaveBeenCalledTimes(3);
+    expect(m.update).not.toHaveBeenCalled();
+    expect(m.publication).not.toHaveBeenCalled();
+    expect(site).toEqual(before);
+  },
+);

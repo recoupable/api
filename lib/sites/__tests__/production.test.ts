@@ -145,18 +145,21 @@ it("routes asset feedback to asset production without changing direction", async
   expect(m.direct).toHaveBeenCalledTimes(1);
   expect(m.assets.mock.calls[1][3]).toContain("Blurry scene");
 });
-it("keeps the selected activity and stops paid repair when concept review fails", async () => {
-  m.review.mockResolvedValueOnce({
-    verdict: "revise",
-    issues: [{ module: "direction", detail: "No fan payoff" }],
-  });
-  const result = await produceSite(site, "", "account", undefined, approvedConcept);
-  expect(m.direct).toHaveBeenCalledTimes(1);
-  expect(m.assets).toHaveBeenCalledTimes(1);
-  expect(m.build).toHaveBeenCalledTimes(1);
-  expect(m.review).toHaveBeenCalledTimes(1);
-  expect(result.production.status).toBe("needs-review");
-});
+it.each(["revise", "pass"])(
+  "keeps direction rejection needs-review even with a %s verdict",
+  async verdict => {
+    m.review.mockResolvedValueOnce({
+      verdict,
+      issues: [{ module: "direction", detail: "No fan payoff" }],
+    });
+    const result = await produceSite(site, "", "account", undefined, approvedConcept);
+    expect(m.direct).toHaveBeenCalledTimes(1);
+    expect(m.assets).toHaveBeenCalledTimes(1);
+    expect(m.build).toHaveBeenCalledTimes(1);
+    expect(m.review).toHaveBeenCalledTimes(1);
+    expect(result.production.status).toBe("needs-review");
+  },
+);
 it("selects a concept inside production when the client omits it", async () => {
   await produceSite(site, "", "account");
   expect(m.collect).toHaveBeenCalledOnce();
@@ -178,3 +181,24 @@ it("preserves credit blocks instead of beginning another repair", async () => {
   });
   expect(m.build).toHaveBeenCalledOnce();
 });
+
+it.each(["revision", "deleted", "access"])(
+  "rechecks %s after a successful first repair",
+  async change => {
+    m.review.mockResolvedValueOnce({
+      verdict: "revise",
+      issues: [{ module: "implementation", detail: "Broken" }],
+    });
+    m.select
+      .mockResolvedValueOnce(site)
+      .mockResolvedValue(
+        change === "deleted" ? null : change === "revision" ? { ...site, revision: 4 } : site,
+      );
+    if (change === "access")
+      m.authorize.mockResolvedValueOnce(undefined).mockRejectedValue(new Error("Access revoked"));
+    await expect(produceSite(site, "", "account", undefined, approvedConcept)).rejects.toThrow();
+    expect(m.build).toHaveBeenCalledTimes(2);
+    expect(m.select).toHaveBeenCalledTimes(2);
+    expect(m.review).toHaveBeenCalledOnce();
+  },
+);
