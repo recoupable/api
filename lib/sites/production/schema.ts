@@ -62,6 +62,8 @@ export type CreativeReview = z.infer<typeof reviewSchema> & {
   blocked?: "credits";
   verification?: {
     scope: "generated-experience";
+    humanApproval?: "not-recorded";
+    evidence?: { sourceSha256: string; journeySha256: string; runnerSha256: string };
     nativeShareDelivery: "not-tested";
     spotifyAuthentication: "not-tested";
     opening?: Awaited<ReturnType<typeof import("./reviewOpeningSequence").reviewOpeningSequence>>;
