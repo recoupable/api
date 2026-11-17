@@ -20,7 +20,7 @@ A completed zero-customer-charge operation releases rather than settling zero. S
 
 ## Validation and remaining gates
 
-The focused strict check below is a manual review check, not a new CI job; existing CI checks production types and executes the fixtures.
+The separate `Context Accounting Strict Types` workflow runs the focused strict check below on pull requests to main and pushes to main. It includes the fixture tests' negative assertions for Promise-returning and value-or-Promise transaction callbacks; removing that type restriction makes the expected-error assertions fail. Existing CI also checks production types and executes the fixtures.
 
 Run `pnpm exec tsc --project tsconfig.context-accounting.json` for strict source and fixture type checking. Run `pnpm exec vitest run lib/context/accounting` for synthetic concurrency, payer isolation, duplicate delivery, cancellation, retained uncertainty, lost replies, receipt validation and reuse coverage. Tests invoke no real wallet or provider.
 
