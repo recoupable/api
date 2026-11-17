@@ -87,8 +87,8 @@ file validation and digest helpers; persistence and generation are local fixture
 The runner reuses the scheduler fixture's local world, network denial, strict generated
 TypeScript checker and polling/restart primitives without changing that shared harness.
 
-For the six readiness scenarios, it kills only its owned worker after acknowledged
-readiness persistence at a journaled hook created after the persist step returns. It
+For the six ordinary scenarios, it kills only its owned worker after acknowledged
+foundation-outcome persistence at a journaled hook created after the persist step returns. It
 restarts against the same local journal, explicitly re-enqueues, and resumes. Assertions
 cover persisted dependent attempt/hash binding before dispatch, retained foundation and
 independent receipts, failed/uncertain/missing/no-artwork deferred settlement, and lost
@@ -96,8 +96,12 @@ readiness acknowledgement failing closed. That seventh scenario saves readiness 
 throws a fatal step error; it pauses at the final-result hook after the composition handles
 the failure. It does not claim a crash during a persistence effect. Terminal replay must not repeat any recorded
 effect. A synthetic environment sentinel satisfies the constants module's import guard;
-no real credentials are read. Quote amounts and holds remain unchanged fixture values.
+no real credential is supplied or required. Quote amounts and holds remain unchanged fixture values.
 
 This qualifies local compiled orchestration with synthetic durable ports. It does not
 qualify hosted recovery, production persistence adapters, crashes during provider/SQL
 operations, cross-workflow atomicity, model quality or production admission/cap policy.
+
+The fixture has its own initializer-specific process-lifecycle wrapper. The shared runner
+is not generalized in this contribution because it is also used by concurrent work;
+its local-world, network-denial, polling and strict-type primitives are reused unchanged.

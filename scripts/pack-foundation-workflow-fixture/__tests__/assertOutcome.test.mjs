@@ -11,16 +11,23 @@ function fixture() {
   };
   const initial = {
     job: { held_credits: 10, quote: { id: "q" } },
-    assets: [{ id: "video-0", attempt: 0 }],
+    assets: ["artwork-0", "video-0", "quote_card-0"].map(id => ({ id, attempt: 0 })),
   };
   const state = { ...structuredClone(initial), settlements: 1 };
+  state.assets = state.assets.map(a => ({ ...a, attempt: 1, status: "completed" }));
   const trace = [
     { action: "prepare" },
+    { action: "produce", result: { assetId: "artwork-0", status: "completed" } },
     { action: "persist", result: record },
     {
       action: "produce",
-      result: { assetId: "video-0", binding: { plan_sha256: "plan", asset_sha256: "asset" } },
+      result: {
+        assetId: "video-0",
+        status: "completed",
+        binding: { plan_sha256: "plan", asset_sha256: "asset" },
+      },
     },
+    { action: "produce", result: { assetId: "quote_card-0", status: "completed" } },
   ];
   const value = {
     status: "batch_finished",
@@ -33,8 +40,16 @@ function fixture() {
 }
 for (const [name, mutate] of [
   ["dependent dispatched before persisted readiness", f => f.trace.reverse()],
-  ["dependent attempt binding missing", f => (f.trace[1].result.dependency_bindings = [])],
-  ["accepted generation repeated", f => f.trace.push(f.trace[2])],
+  ["dependent attempt binding missing", f => (f.trace[2].result.dependency_bindings = [])],
+  ["accepted generation repeated", f => f.trace.push(f.trace[3])],
+  [
+    "missing foundation receipt",
+    f => (f.trace = f.trace.filter(e => e.result?.assetId !== "artwork-0")),
+  ],
+  [
+    "missing independent receipt",
+    f => (f.trace = f.trace.filter(e => e.result?.assetId !== "quote_card-0")),
+  ],
   ["unexpected new hold", f => f.state.job.held_credits++],
   [
     "readiness hash replaced",

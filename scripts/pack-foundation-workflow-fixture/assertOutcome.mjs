@@ -2,6 +2,26 @@ import assert from "node:assert/strict";
 export function assertOutcome(scenario, initial, state, trace, value) {
   const ready = ["success", "retained"].includes(scenario);
   const produced = trace.filter(e => e.action === "produce");
+  const expectedIds = {
+    success: ["artwork-0", "video-0", "quote_card-0"],
+    retained: ["video-0"],
+    failed: ["artwork-0", "quote_card-0"],
+    uncertain: ["artwork-0", "quote_card-0"],
+    none_requested: ["quote_card-0"],
+    missing: ["quote_card-0"],
+    "persistence-ack-loss": ["artwork-0"],
+  }[scenario];
+  assert.deepEqual(produced.map(e => e.result.assetId).sort(), [...expectedIds].sort());
+  for (const event of produced) {
+    const expectedStatus =
+      event.result.assetId === "artwork-0" && ["failed", "uncertain"].includes(scenario)
+        ? scenario
+        : "completed";
+    const asset = state.assets.find(a => a.id === event.result.assetId);
+    assert.equal(event.result.status, expectedStatus);
+    assert.equal(asset?.status, expectedStatus);
+    assert.equal(asset?.attempt, 1);
+  }
   assert.equal(new Set(produced.map(e => e.result.assetId)).size, produced.length);
   assert.equal(trace.filter(e => e.action === "prepare").length, 1);
   assert.equal(state.job.held_credits, initial.job.held_credits);

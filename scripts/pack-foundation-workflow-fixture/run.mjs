@@ -8,7 +8,7 @@ import { buildFixture } from "./buildFixture.mjs";
 import { runWorker } from "./runWorker.mjs";
 import { runScenario } from "./runScenario.mjs";
 const networkAttempts = denyNetwork();
-// Satisfy the const-module import guard with a synthetic sentinel; never read credentials.
+// Satisfy the const-module import guard with a synthetic sentinel; no real credential is required.
 process.env.PRIVY_PROJECT_SECRET = "offline-fixture-not-a-credential";
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "../..");
@@ -30,7 +30,7 @@ else {
     ]) {
       results.push(await runScenario(root, here, temp, scenario));
       console.log(
-        `PASS ${scenario}: ${scenario === "persistence-ack-loss" ? "failed acknowledgement" : "persisted readiness barrier"}, restart and terminal replay`,
+        `PASS ${scenario}: ${scenario === "persistence-ack-loss" ? "failed acknowledgement" : "persisted foundation outcome"}, restart and terminal replay`,
       );
     }
     assert.equal(networkAttempts(), 0);
