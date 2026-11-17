@@ -6,16 +6,9 @@ import { prepareSiteRenderArtifacts } from "./prepareSiteRenderArtifacts";
 import { reviewSchema } from "./schema";
 import { openingReviewSchema } from "./openingReviewSchema";
 
+import { sitePublishEvidenceSchema } from "./sitePublishEvidenceSchema";
+
 const hash = z.string().regex(/^[a-f0-9]{64}$/);
-const recordSchema = z.object({
-  id: z.string().min(1),
-  siteId: z.string().min(1),
-  ownerId: z.string().min(1),
-  revision: z.number().int().nonnegative().safe(),
-  candidateSha256: hash,
-  recordedByAccountId: z.string().min(1),
-  recordedAt: z.string().datetime(),
-});
 const verificationSchema = z.object({
   scope: z.literal("generated-experience"),
   humanApproval: z.literal("not-recorded"),
@@ -37,15 +30,6 @@ const verificationSchema = z.object({
     .extend({ verdict: z.literal("pass"), issues: z.array(z.unknown()).length(0) })
     .optional(),
 });
-const evidenceSchema = z.discriminatedUnion("kind", [
-  recordSchema.extend({ kind: z.literal("review"), review: z.unknown(), reviewSha256: hash }),
-  recordSchema.extend({
-    kind: z.literal("override"),
-    intent: z.literal("publish-without-passed-review"),
-    reason: z.string().trim().min(1).max(2000),
-  }),
-]);
-
 /** UNWIRED evidence assessment, not publication authorization.
  * Adapters MUST read authoritative persisted records, authorize the authenticated account
  * using authorizeSiteWorkspace, and resolve the actual draft/signed working-build candidate.
@@ -83,7 +67,7 @@ export async function assessSitePublishEvidence(
     return unsatisfied("revision-mismatch");
   if (!current.candidate.design.experience) return unsatisfied("missing-experience");
   const identity = getSitePublishIdentity(current);
-  const parsed = evidenceSchema.safeParse(
+  const parsed = sitePublishEvidenceSchema.safeParse(
     await server.readEvidence({
       evidenceId: request.evidenceId,
       siteId: current.siteId,
