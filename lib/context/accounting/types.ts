@@ -49,7 +49,7 @@ export interface ContextAccountingServices {
     payerId: string,
     action: (
       ledger: ContextAccountingLedger,
-    ) => T & (T extends PromiseLike<unknown> ? never : unknown),
+    ) => T & ([Extract<T, PromiseLike<unknown>>] extends [never] ? unknown : never),
   ): Promise<T>;
   authorize(input: ContextAccountingInput): Promise<void>;
   /** Must establish authorized, accepted retained evidence; a planner reuse_candidate is insufficient. */
