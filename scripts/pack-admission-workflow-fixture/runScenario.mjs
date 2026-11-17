@@ -14,7 +14,11 @@ export async function runScenario(root, here, temp, scenario) {
       scenario,
       savedRunId:
         scenario === "immediate" ? "current" : scenario === "different-run" ? "other-run" : null,
-      holdExpiresAt: new Date(scenario === "expired-hold" ? 0 : Date.now() + 120000).toISOString(),
+      holdExpiresAt: new Date(
+        scenario === "expired-hold"
+          ? 0
+          : Date.now() + (scenario === "hold-expiry" ? 10000 : 120000),
+      ).toISOString(),
     }),
   );
   let child;

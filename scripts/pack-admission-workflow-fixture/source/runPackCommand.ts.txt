@@ -1,7 +1,7 @@
 import { readFileSync, appendFileSync } from "node:fs";
 import { join } from "node:path";
 import { admissionStateSchema } from "./fixtureSchemas";
-import { getWorkflowMetadata } from "workflow";
+import { getStepMetadata, getWorkflowMetadata } from "workflow";
 import type { PackActor } from "@/lib/content/packs/packTypes";
 import type { PackAdmissionObservation } from "@/lib/content/packs/foundation/packAdmissionTypes";
 export async function runPackCommand(
@@ -18,7 +18,8 @@ export async function runPackCommand(
   const runId = getWorkflowMetadata().workflowRunId;
   appendFileSync(
     join(path, "events.jsonl"),
-    JSON.stringify({ action, jobId, runId, at: Date.now() }) + "\n",
+    JSON.stringify({ action, jobId, runId, at: Date.now(), stepId: getStepMetadata().stepId }) +
+      "\n",
   );
   if (state.scenario === "read-failure") throw new Error("Fixture access denied");
   return {

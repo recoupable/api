@@ -24,6 +24,7 @@ else {
       "different-run",
       "read-failure",
       "expired-hold",
+      "hold-expiry",
     ])
       results.push(await runScenario(root, here, temp, scenario));
     assert.equal(attempts(), 0);

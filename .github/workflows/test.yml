@@ -43,9 +43,7 @@ jobs:
         run: pnpm test:pack-foundation-workflow
 
       - name: Check unwired pack admission wait and restart
-        run: |
-          node --test scripts/pack-admission-workflow-fixture/__tests__/*.test.mjs
-          node scripts/pack-admission-workflow-fixture/run.mjs
+        run: pnpm test:pack-admission-workflow
 
       - name: Check actual unwired pack foundation port compilation
         run: |

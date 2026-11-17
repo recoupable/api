@@ -5,7 +5,7 @@ function specimen() {
   const runId = "run";
   const clock = { workflowRunId: runId, startedAt: 1000 };
   const state = { holdExpiresAt: "2099-01-01T00:00:00Z" };
-  const trace = [{ action: "read", runId, jobId: "immediate", at: 1001 }];
+  const trace = [{ action: "read", runId, jobId: "immediate", at: 1001, stepId: "step-1" }];
   const journal = [
     { eventType: "run_created" },
     ...["startPackAdmissionStep", "readPackAdmissionStep"].map((name, i) => ({
@@ -21,10 +21,33 @@ function specimen() {
     hold_expires_at: state.holdExpiresAt,
     deadline_at: 31000,
   };
-  return { runId, clock, state, trace, journal, value };
+  return {
+    runId,
+    clock,
+    state,
+    trace,
+    journal,
+    value,
+    observations: [
+      {
+        observedAt: 1001,
+        workflowRunId: runId,
+        job: { workflow_run_id: runId, hold_expires_at: state.holdExpiresAt },
+      },
+    ],
+  };
 }
 const check = f =>
-  assertOutcome("immediate", f.runId, f.state, f.trace, f.journal, f.value, f.clock);
+  assertOutcome(
+    "immediate",
+    f.runId,
+    f.state,
+    f.trace,
+    f.journal,
+    f.value,
+    f.clock,
+    f.observations,
+  );
 test("accepts correctly bound immediate admission", () => check(specimen()));
 for (const [name, mutate] of [
   [
@@ -80,4 +103,58 @@ for (const [name, mutate] of [
     const f = specimen();
     mutate(f);
     assert.throws(() => check(f));
+  });
+
+function delayed() {
+  const f = specimen();
+  f.value.job_id = "delayed";
+  f.trace[0].jobId = "delayed";
+  f.trace.push({ action: "read", runId: f.runId, jobId: "delayed", at: 2001, stepId: "step-2" });
+  f.journal.push({
+    eventType: "step_created",
+    correlationId: "step-2",
+    eventData: { stepName: "step//./readPackAdmissionStep//readPackAdmissionStep" },
+  });
+  f.journal.push({ eventType: "wait_created", eventData: { resumeAt: new Date(2001) } });
+  f.observations[0].job.workflow_run_id = null;
+  f.observations.push({
+    ...f.observations[0],
+    observedAt: 2001,
+    job: { ...f.observations[0].job, workflow_run_id: f.runId },
+  });
+  return f;
+}
+const checkDelayed = f =>
+  assertOutcome("delayed", f.runId, f.state, f.trace, f.journal, f.value, f.clock, f.observations);
+test("accepts exact scheduled wake boundary", () => checkDelayed(delayed()));
+for (const [name, mutate] of [
+  [
+    "long poll",
+    f => {
+      f.journal.at(-1).eventData.resumeAt = new Date(2002);
+    },
+  ],
+  [
+    "missing wait",
+    f => {
+      f.journal.pop();
+    },
+  ],
+  [
+    "extra wait",
+    f => {
+      f.journal.push(f.journal.at(-1));
+    },
+  ],
+  [
+    "repeated pre-crash read",
+    f => {
+      f.trace[1].stepId = f.trace[0].stepId;
+    },
+  ],
+])
+  test(`rejects ${name}`, () => {
+    const f = delayed();
+    mutate(f);
+    assert.throws(() => checkDelayed(f));
   });

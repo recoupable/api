@@ -1,5 +1,5 @@
 import { getWorkflowMetadata } from "workflow";
-/** Journal this start clock once; replay must never reset the candidate deadline. */
+/** After this result is durably completed, replay preserves its candidate deadline. */
 export async function startPackAdmissionStep() {
   "use step";
   return { workflowRunId: getWorkflowMetadata().workflowRunId, startedAt: Date.now() };

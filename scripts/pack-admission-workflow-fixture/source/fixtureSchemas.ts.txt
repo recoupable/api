@@ -9,6 +9,7 @@ export const admissionStateSchema = z.object({
     "different-run",
     "read-failure",
     "expired-hold",
+    "hold-expiry",
   ]),
   savedRunId: z.string().nullable(),
   holdExpiresAt: z.string(),

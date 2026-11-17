@@ -14,12 +14,12 @@ export type PackAdmissionServices = {
 export type PackAdmissionResult = {
   job_id: string;
   workflow_run_id: string;
-  hold_expires_at: string | null;
   deadline_at: number;
 } & (
-  | { status: "admitted" }
+  | { status: "admitted"; hold_expires_at: string }
   | {
       status: "needs-reconciliation";
+      hold_expires_at: string | null;
       reason:
         | "scope"
         | "different-run"

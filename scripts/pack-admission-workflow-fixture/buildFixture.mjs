@@ -59,7 +59,7 @@ export async function buildFixture(root, here, temp) {
     });
     for (const input of Object.keys(graph.metafile.inputs)) {
       const full = resolve(source, input);
-      const path = relative(root, full);
+      const path = relative(root, full).replaceAll("\\", "/");
       if (path.startsWith("..") || path.includes("node_modules")) continue;
       if (path.startsWith("lib/supabase/") || path.startsWith("lib/ai/"))
         throw new Error(`Unexpected external effect dependency: ${path}`);

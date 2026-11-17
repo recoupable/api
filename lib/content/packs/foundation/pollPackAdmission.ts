@@ -54,7 +54,8 @@ export async function pollPackAdmission(
     if (job.workflow_run_id != null && job.workflow_run_id !== start.workflowRunId)
       return reconcile("different-run");
     if (observedAt >= deadline) return reconcile("deadline");
-    if (job.workflow_run_id === start.workflowRunId) return { ...identity(), status: "admitted" };
+    if (job.workflow_run_id === start.workflowRunId)
+      return { ...identity(), status: "admitted", hold_expires_at: originalExpiry };
     try {
       await sleepUntil(new Date(Math.min(observedAt + 1000, deadline, holdDeadline)));
     } catch {

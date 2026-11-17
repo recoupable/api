@@ -10,8 +10,9 @@ not a selected production timeout or service-level guarantee.
 invokes `readPackAdmissionStep` separately, producing a distinct durable step result.
 Completed reads replay from their own journal entries; the next poll is a new read,
 not reuse of a cached initial snapshot. Absolute durable sleeps stop at the earlier
-of the next poll time, original hold expiry and admission deadline. Restart cannot
-reset the start clock or extend the deadline.
+of the next poll time, original hold expiry and admission deadline. Once the start-step result is durably completed, restart cannot reset that saved
+clock or extend its deadline. A crash before completion can execute the clock step
+again; the fixture does not qualify that pre-journal window.
 
 The read step calls only the existing owner/org-scoped read RPC. The loop tolerates
 only an absent saved workflow ID on the same running, authorized job with a valid
@@ -47,9 +48,12 @@ coordinator and durable steps, replacing only the read RPC with a typed syntheti
 boundary. It uses the unchanged shared local-world, network-denial, polling and
 strict-type helpers. Scenarios cover immediate admission, delayed persistence across
 process restart, deadline across restart, different ID, read/access failure and
-expired hold. The fixture retains the decoded original journaled start-clock result
+expired hold, and expiry while waiting. The fixture retains the decoded original journaled start-clock result
 and checks the exact deadline, distinct read-step correlations, one original start,
-no other step/effect, unchanged hold and no repeated reads after terminal replay.
+no other step/effect, unchanged hold and exact scheduled wake times against every
+decoded read result. Pre-crash trace entries must remain an unchanged prefix; each
+effect carries its durable step ID and must occur exactly once across restart and
+terminal replay. Fresh polls already due at restart are allowed distinct IDs.
 The delayed case simulates persistence of the original dispatch ID outside the
 workflow; it does not perform self-admission or start a second workflow.
 
