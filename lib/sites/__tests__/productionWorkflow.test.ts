@@ -210,7 +210,7 @@ it("explains build output exhaustion without exposing provider content or saving
   expect(m.save).not.toHaveBeenCalled();
 });
 
-it("stops after two repairs without saving even if a later review would pass", async () => {
+it("stops when the review after the second repair still requests revision", async () => {
   for (let i = 0; i < 6; i++)
     vi.mocked(reviewStep).mockResolvedValueOnce({
       verdict: "revise",
@@ -241,7 +241,7 @@ it.each(["late pass", "deleted", "revision", "access", "slow repair"])(
     let checks = 0;
     m.checkpoint.mockImplementation(async () => {
       checks++;
-      const changed = checks >= (scenario === "late pass" ? 4 : scenario === "slow repair" ? 3 : 2);
+      const changed = checks >= (scenario === "late pass" ? 5 : scenario === "slow repair" ? 3 : 2);
       if (changed && scenario === "access") throw new Error("Access revoked");
       return {
         revision: changed && scenario === "revision" ? 8 : 7,
@@ -436,3 +436,72 @@ it.each(["revision", "deleted"])(
     expect(m.save).not.toHaveBeenCalled();
   },
 );
+
+it("accepts a pass from the second and final allowed repair", async () => {
+  const revise = {
+    verdict: "revise",
+    issues: [{ module: "implementation", detail: "Fix" }],
+  } as never;
+  vi.mocked(reviewStep).mockResolvedValueOnce(revise).mockResolvedValueOnce(revise);
+  m.revise.mockResolvedValue({ snapshot: {}, direction: {}, assets: [] });
+  await siteProductionWorkflow({ id: "site" } as Site, "", "account", undefined, approvedConcept);
+  expect(m.revise).toHaveBeenCalledTimes(2);
+  expect(reviewStep).toHaveBeenCalledTimes(3);
+  expect(m.save).toHaveBeenCalledOnce();
+  expect(m.save.mock.calls[0][1].production.status).toBe("reviewed");
+});
+it.each(["expired", "deleted", "revision"])(
+  "does not reveal a repaired candidate after %s control change",
+  async change => {
+    vi.mocked(reviewStep).mockResolvedValueOnce({
+      verdict: "revise",
+      issues: [{ module: "implementation", detail: "Fix" }],
+    } as never);
+    const candidate = { name: "Repaired candidate" };
+    m.revise.mockResolvedValue({ snapshot: candidate, direction: {}, assets: [] });
+    let reads = 0;
+    m.checkpoint.mockImplementation(async () => ({
+      revision: ++reads >= 3 && change === "revision" ? 8 : 7,
+      cancelled: reads >= 3 && change === "deleted",
+      now: reads >= 3 && change === "expired" ? 1201000 : 1000,
+    }));
+    expect(
+      await siteProductionWorkflow(
+        { id: "site", revision: 7 } as Site,
+        "",
+        "account",
+        undefined,
+        approvedConcept,
+      ),
+    ).toHaveProperty("error");
+    expect(m.revise).toHaveBeenCalledOnce();
+    expect(vi.mocked(revealBuildStep).mock.calls.some(call => call[2] === candidate)).toBe(false);
+    expect(reviewStep).toHaveBeenCalledOnce();
+    expect(m.save).not.toHaveBeenCalled();
+  },
+);
+
+it("rechecks the deadline after revealing a repaired candidate before paid review", async () => {
+  vi.mocked(reviewStep).mockResolvedValueOnce({
+    verdict: "revise",
+    issues: [{ module: "implementation", detail: "Fix" }],
+  } as never);
+  const candidate = { name: "Repaired" };
+  m.revise.mockResolvedValue({ snapshot: candidate, direction: {}, assets: [] });
+  let now = 1000;
+  m.checkpoint.mockImplementation(async () => ({ revision: 7, cancelled: false, now }));
+  vi.mocked(revealBuildStep).mockImplementation(async (_d, _a, snapshot) => {
+    if (snapshot === candidate) now = 1201000;
+    return { concept: _d, assets: _a };
+  });
+  const result = await siteProductionWorkflow(
+    { id: "site", revision: 7 } as Site,
+    "",
+    "account",
+    undefined,
+    approvedConcept,
+  );
+  expect(result).toEqual({ error: expect.stringContaining("repair time limit") });
+  expect(reviewStep).toHaveBeenCalledOnce();
+  expect(m.save).not.toHaveBeenCalled();
+});

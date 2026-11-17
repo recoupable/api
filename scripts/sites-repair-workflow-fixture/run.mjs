@@ -78,13 +78,13 @@ import {appendFileSync, readFileSync, existsSync} from "node:fs";
 import {join} from "node:path";
 import {RetryableError, FatalError} from "workflow";
 const file = (name: string) => join(process.env.SITES_REPAIR_EFFECTS!,name);
-export async function effect(name: string, args: any[]) {
+export async function effect(name: string, args: unknown[]) {
   const scenario = JSON.parse(readFileSync(file("scenario.json"),"utf8"));
   const rows = readFileSync(file("events.jsonl"),"utf8").trim().split("\\n").filter(Boolean).map(x=>JSON.parse(x));
   const count = rows.filter(x=>x.name===name).length;
   appendFileSync(file("events.jsonl"),JSON.stringify({name,args})+"\\n");
   if(name==="readRepairCheckpointStep") {
-    const late = scenario.name==="late-pass" && count>=3;
+    const late = scenario.name==="late-pass" && count>=4;
     if (scenario.name === "access-after-repair" && count >= 2) throw new FatalError("Synthetic access revoked");
     const stale = (scenario.name === "revision" && count >= 1) || (scenario.name === "revision-after-repair" && count >= 2);
     const deleted = (scenario.name === "deleted" && count >= 1) || (scenario.name === "deleted-after-repair" && count >= 2);
@@ -95,8 +95,9 @@ export async function effect(name: string, args: any[]) {
     if(scenario.name==="cancel" && count===1) while(!existsSync(file("release"))) await new Promise(r=>setTimeout(r,10));
     return {name:count?"repaired":"initial", assets:args[3]};
   }
+  if(name==="reviewStep" && scenario.name==="initial-pass") return {verdict:"pass",issues:[]};
   if(name==="reviewStep" && scenario.name==="direction-pass") return {verdict:"pass",issues:[{module:"direction",detail:"Wrong concept"}]};
-  if(name==="reviewStep") return {verdict: count===0 || scenario.name==="exhaust" ? "revise":"pass", issues: count===0 || scenario.name==="exhaust" ? [{module:"implementation",severity:"blocking",detail:"Repair",fix:"Repair"}]:[]};
+  if(name==="reviewStep") return {verdict: count===0 || (scenario.name==="second-repair-pass" && count===1) || scenario.name==="exhaust" ? "revise":"pass", issues: count===0 || (scenario.name==="second-repair-pass" && count===1) || scenario.name==="exhaust" ? [{module:"implementation",severity:"blocking",detail:"Repair",fix:"Repair"}]:[]};
   if(name==="saveSiteStep") return {site:args[1]};
   if(name==="collectContextStep") return {release:{url:"https://example.com/release"}, marker:"original-context"};
   if(name==="prepareSkillStep") return {name:"synthetic",referenceIds:[]};
@@ -110,7 +111,7 @@ for (const name of names)
   await writeFile(
     join(source, `${name}.ts`),
     `import {effect} from "./effects";
-export async function ${name}(...args:any[]) {
+export async function ${name}(...args:unknown[]) {
   "use step";
   return effect("${name}",args);
 }
@@ -151,6 +152,9 @@ try {
   );
   const { setWorld, reenqueueRun } = await import("@workflow/core/runtime");
   const { start } = await import("workflow/api");
+  const { WorkflowRunCancelledError } = await import(
+    pathToFileURL(createRequire(require.resolve("@workflow/core")).resolve("@workflow/errors"))
+  );
   const effects = join(temp, "effects");
   await mkdir(effects);
   process.env.SITES_REPAIR_EFFECTS = effects;
@@ -198,6 +202,8 @@ try {
   const traces = [];
   for (const name of [
     "success",
+    "initial-pass",
+    "second-repair-pass",
     "exhaust",
     "late-pass",
     "revision",
@@ -220,38 +226,58 @@ try {
       await until(async () => (await events()).filter(e => e.name === "buildStep").length === 2);
       await run.cancel();
       await writeFile(join(effects, "release"), "release");
-      await assert.rejects(bounded(run.returnValue));
+      await assert.rejects(bounded(run.returnValue), WorkflowRunCancelledError);
       assert.equal(await run.status, "cancelled");
     } else {
       const result = await bounded(run.returnValue);
-      if (["success", "retry", "direction-pass"].includes(name))
+      if (
+        ["success", "retry", "direction-pass", "initial-pass", "second-repair-pass"].includes(name)
+      )
         assert(result.site, JSON.stringify({ result, events: await events() }));
-      else assert(result.error);
+      else {
+        const reasons = {
+          exhaust: "repair attempt limit",
+          "late-pass": "repair time limit",
+          revision: "site revision changed",
+          "revision-after-repair": "site revision changed",
+          deleted: "site deleted",
+          "deleted-after-repair": "site deleted",
+        };
+        assert.deepEqual(result, {
+          error:
+            name === "access-after-repair"
+              ? "Site production stopped during bounded repair. Your existing draft is unchanged."
+              : `Site production stopped: ${reasons[name]}. This run did not save its candidate.`,
+        });
+      }
       if (name === "direction-pass") assert.equal(result.site.production.status, "needs-review");
     }
     const trace = await events();
     const count = n => trace.filter(e => e.name === n).length;
     assert.equal(
       count("saveSiteStep"),
-      ["success", "retry", "direction-pass"].includes(name) ? 1 : 0,
+      ["success", "retry", "direction-pass", "initial-pass", "second-repair-pass"].includes(name)
+        ? 1
+        : 0,
     );
     assert.equal(
       count("buildStep"),
-      name === "exhaust" || name === "retry"
+      name === "exhaust" || name === "retry" || name === "second-repair-pass"
         ? 3
-        : ["revision", "deleted", "direction-pass"].includes(name)
+        : ["revision", "deleted", "direction-pass", "initial-pass"].includes(name)
           ? 1
           : 2,
     );
     assert.equal(
       count("reviewStep"),
-      name === "exhaust"
+      name === "exhaust" || name === "second-repair-pass"
         ? 3
         : [
               "revision",
               "deleted",
               "cancel",
               "direction-pass",
+              "initial-pass",
               "revision-after-repair",
               "deleted-after-repair",
               "access-after-repair",

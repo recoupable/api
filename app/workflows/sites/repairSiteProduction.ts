@@ -63,6 +63,9 @@ export async function repairSiteProduction(
       review,
       accountId,
     ));
+    checkpoint = await readRepairCheckpointStep(site, accountId);
+    const beforeReveal = stop();
+    if (beforeReveal) return failure(beforeReveal);
     await revealBuildStep(direction.concept, assets, snapshot).catch(() => undefined);
     checkpoint = await readRepairCheckpointStep(site, accountId);
     const beforeReview = stop();
