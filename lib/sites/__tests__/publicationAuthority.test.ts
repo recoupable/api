@@ -43,7 +43,7 @@ beforeEach(() => {
 it("checks the existing brief, workspace artist, fresh paid entitlement, OAuth and prepared fan config", async () => {
   await authorize();
   expect(readSiteContextBrief).toHaveBeenCalledWith(site, "actor", "brief");
-  expect(readPaidSiteSubscription).toHaveBeenCalledWith("workspace");
+  expect(readPaidSiteSubscription).toHaveBeenCalledWith("workspace", { throwOnError: true });
   expect(getFanOAuthConfig).toHaveBeenCalledOnce();
 });
 it.each([
@@ -101,4 +101,13 @@ it("propagates context and configuration read errors", async () => {
   vi.mocked(readSiteContextBrief).mockResolvedValue({} as never);
   vi.mocked(selectFanConfig).mockRejectedValue(new Error("Unavailable"));
   await expect(authorize()).rejects.toThrow("Unavailable");
+});
+
+it("short-circuits personal artist lookup when existing workspace ownership suffices", async () => {
+  await authorizeSelectedSitePublication(
+    "workspace",
+    { site, candidate },
+    "https://example.com/site",
+  );
+  expect(checkAccountArtistAccess).not.toHaveBeenCalled();
 });

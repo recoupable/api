@@ -1,7 +1,7 @@
 # Unwired exact-selected Sites publication
 
 This source extends the evidence adapters from API #1263. It targets the unchanged
-**Database #136 proposal**, commit `4caac3cc8a15a47b348109b2fa4f571423d8beb0`.
+**Database #136 proposal**, commit `afd214aa73dfd70b0f2b860fce90c12ceb23f28b`.
 There is no route, UI, MCP or workflow caller. Existing `processSiteOperation`
 publishing remains advisory and unchanged. No migration, schema exposure, runtime
 grant, retention activation or publication gate is introduced.
@@ -15,7 +15,8 @@ nullable expected publication evidence pointer, and optional signed generation
 token. These values do not grant access. The server reloads and authorizes the site
 and resolves the actual draft or signed/current-generation working build. A new
 preview under the same revision must still match the selected digest. Missing
-`published_evidence_id` metadata is an error, never silently interpreted as null.
+`published_evidence_id` metadata is a 503, never silently interpreted as null. Valid
+selection UUIDs are normalized before comparing them with database values.
 
 The input chooses either a stored review ID or explicit
 `publish-without-passed-review` intent with a nonblank reason. The existing Publish
@@ -35,7 +36,7 @@ and execution hashes. Both branches run the full existing
 `assessSitePublishEvidence` predicate. A failed review never falls back to an
 override. The server resolves the selected candidate, checks authority and reads
 and assesses the evidence again before `publish_candidate`. The SQL call receives
-only actor/owner/site/revision/record ID/selected digest/expected pointer; SQL copies
+only actor/owner/site/revision/record ID/selected digest/expected pointer/expected artist; SQL copies
 the stored immutable candidate, not API-supplied replacement bytes.
 
 ## Existing authority and deliberate unsupported transitions
@@ -56,8 +57,9 @@ The new, unwired path reuses these read/check owners:
   personal-access distinction used by site creation), plus artist name lookup.
 - The existing active-paid-subscription predicate, extracted into
   `readPaidSiteSubscription`. The old fan-request helper retains its 30-second
-  cache; the new path uses fresh reads at both authority passes. The underlying
-  Stripe reader continues to fail closed to no entitlement on provider errors.
+  cache; the new path uses fresh reads at both authority passes. The new publication path opts into provider-error propagation and reports a
+  retryable 503 on read failure; an authoritative unpaid result remains 402. Existing
+  Stripe consumers and cached fan requests keep their prior default behavior.
 - `getFanOAuthConfig`, `selectFanConfig`, and the extracted shared
   `resolveSiteFanReturnUrl` transformation/validator used by existing preparation.
 
@@ -71,16 +73,19 @@ unwired source, not the existing advisory publish flow.
 
 ## Atomicity and activation gates
 
-The SQL proposal serializes workspace membership, revision, evidence binding and
-publication-pointer CAS. The external paid, Context, artist, fan configuration and
+The SQL proposal serializes workspace membership, revision, evidence binding,
+publication-pointer CAS and expected artist-ID comparison under the same site row
+lock. The selected artist is forwarded as `p_expected_artist_id`; a concurrent
+artist change before the transaction locks the row conflicts before publication.
+SQL uses `IS DISTINCT FROM`, so null matches null, while null/non-null mismatches
+conflict. This does not authorize an artist transition; the API still requires an
+already attributed artist. The external paid, Context, artist, fan configuration and
 Workflow reads are **not atomically serialized with that transaction**. A changed
 selection or pointer observed by the final recheck is rejected, but changes after
-that observation are not prevented by API reads. In particular the proposal does
-not compare an expected artist ID or the latest mutable Workflow preview inside
-SQL. An artist change after the final read can therefore commit before publication;
-receipt validation can detect it only after publication has already committed.
-Artist/current-generation race handling and exact preview interaction must be
-resolved before activation; this source is not complete end-to-end publication
+that observation are not prevented by API reads. The expected-artist comparison closes the previously documented artist-ID race;
+it does not lock external artist access/name records or the latest mutable
+Workflow preview. Current-generation race handling and exact preview interaction
+must still be resolved before activation; this source is not complete end-to-end publication
 authorization. Pointer CAS also does not solve ABA or order multiple legacy writes
 that leave the pointer null; see the proposal protocol.
 
@@ -107,3 +112,9 @@ revocation, explicit override capture, mismatched receipts, original report/arti
 digests and RPC argument/error contracts. Existing working-preview, capture,
 assessment and fan-configuration tests remain regression checks. No live provider,
 DB, browser, native share, fan OAuth or publication execution is claimed.
+
+The SQL artist fence is qualified by local PostgreSQL15/17 fixtures, including
+a publisher blocked behind an artist writer and a subsequent conflict with all
+publication fields unchanged. API mocks prove argument forwarding and one-shot
+conflict propagation, not hosted execution. Capture/read signatures and canonical
+golden bytes remain compatible with API#1263.

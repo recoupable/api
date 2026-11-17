@@ -8,6 +8,7 @@ export async function publishSiteEvidenceCandidate(input: {
   evidenceId: string;
   candidateSha256: string;
   expectedPublishedEvidenceId: string | null;
+  expectedArtistId: string | null;
 }) {
   return callSiteEvidenceRpc("publish_candidate", {
     p_actor: input.accountId,
@@ -17,5 +18,6 @@ export async function publishSiteEvidenceCandidate(input: {
     p_record: input.evidenceId,
     p_candidate_sha: input.candidateSha256,
     p_expected_pointer: input.expectedPublishedEvidenceId,
+    p_expected_artist_id: input.expectedArtistId,
   });
 }

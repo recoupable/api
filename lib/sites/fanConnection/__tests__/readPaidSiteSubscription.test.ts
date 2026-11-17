@@ -15,3 +15,13 @@ it("preserves existing fan cache while fresh publication reads observe revocatio
   expect(await readPaidSiteSubscription("fresh-test-owner")).toBe(false);
   expect(getActiveSubscriptions).toHaveBeenCalledTimes(2);
 });
+
+it("distinguishes publication entitlement read failures from unpaid results", async () => {
+  vi.mocked(getActiveSubscriptions).mockRejectedValue(new Error("Stripe unavailable"));
+  await expect(readPaidSiteSubscription("owner", { throwOnError: true })).rejects.toMatchObject({
+    status: 503,
+  });
+  expect(getActiveSubscriptions).toHaveBeenLastCalledWith("owner", expect.any(Function), {
+    throwOnError: true,
+  });
+});

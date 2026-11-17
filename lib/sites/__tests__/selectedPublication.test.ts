@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import vectors from "./fixtures/site-evidence-digests.json";
 import { publishSelectedSiteEvidence } from "../production/publication/publishSelectedSiteEvidence";
 import { selectSite } from "@/lib/supabase/sites/selectSite";
@@ -79,7 +79,11 @@ function fixture() {
     publishSelectedSiteEvidence({ accountId: actor, operationKey: "run:explicit-publish" }, raw);
   return { site, record, request, receipt, publish };
 }
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-17T12:00:00Z"));
+});
+afterEach(() => vi.restoreAllMocks());
 describe("unwired exact selected publication", () => {
   it("runs the real assessment and repeats authority before fixed SQL publication", async () => {
     const f = fixture();
@@ -95,6 +99,7 @@ describe("unwired exact selected publication", () => {
       evidenceId,
       candidateSha256: f.request.selection.candidateSha256,
       expectedPublishedEvidenceId: null,
+      expectedArtistId: artistId,
     });
     expect(insertSiteOverrideEvidence).not.toHaveBeenCalled();
   });
@@ -132,7 +137,9 @@ describe("unwired exact selected publication", () => {
       if (field === "owner") f.site.owner_id = actor;
       if (field === "artist") f.site.artist_id = actor;
       if (field === "missing-pointer") delete (f.site as any).published_evidence_id;
-      await expect(f.publish()).rejects.toMatchObject({ status: 409 });
+      await expect(f.publish()).rejects.toMatchObject({
+        status: field === "missing-pointer" ? 503 : 409,
+      });
       expect(insertSiteOverrideEvidence).not.toHaveBeenCalled();
       expect(publishSiteEvidenceCandidate).not.toHaveBeenCalled();
     },
@@ -315,3 +322,50 @@ it("does not accept an override record through the review branch", async () => {
   await expect(f.publish()).rejects.toMatchObject({ status: 409 });
   expect(publishSiteEvidenceCandidate).not.toHaveBeenCalled();
 });
+
+it("forwards the selected artist after final read and propagates an artist SQL conflict once", async () => {
+  const f = fixture();
+  vi.mocked(publishSiteEvidenceCandidate).mockImplementation(async input => {
+    expect(input.expectedArtistId).toBe(artistId);
+    f.site.artist_id = ownerId; // Concurrent writer after the API read; SQL owns the atomic fence.
+    throw Object.assign(new Error("Publication conflict"), { status: 409 });
+  });
+  await expect(f.publish()).rejects.toMatchObject({ status: 409 });
+  expect(publishSiteEvidenceCandidate).toHaveBeenCalledTimes(1);
+  expect(insertSiteOverrideEvidence).not.toHaveBeenCalled();
+});
+
+it("reports malformed stored evidence as unavailable rather than a raw parser error", async () => {
+  const f = fixture();
+  vi.mocked(selectSitePublishEvidence).mockResolvedValue({ kind: "review" });
+  await expect(f.publish()).rejects.toMatchObject({ status: 503 });
+  expect(publishSiteEvidenceCandidate).not.toHaveBeenCalled();
+});
+it.each(["reason", "future", "id", "identity"])(
+  "rejects override capture receipt %s before publication",
+  async failure => {
+    const f = fixture();
+    const record = {
+      ...f.record,
+      kind: "override",
+      intent: "publish-without-passed-review",
+      reason: "Publish now",
+    };
+    if (failure === "reason") record.reason = "Different intent";
+    if (failure === "future") record.recordedAt = "2026-11-18T00:00:00.000000Z";
+    if (failure === "id") record.id = "not-a-uuid";
+    if (failure === "identity") record.candidateSha256 = "a".repeat(64);
+    vi.mocked(insertSiteOverrideEvidence).mockResolvedValue(record);
+    await expect(
+      f.publish({
+        selection: f.request.selection,
+        evidence: {
+          kind: "override",
+          intent: "publish-without-passed-review",
+          reason: "Publish now",
+        },
+      }),
+    ).rejects.toMatchObject({ status: 503 });
+    expect(publishSiteEvidenceCandidate).not.toHaveBeenCalled();
+  },
+);

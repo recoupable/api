@@ -25,10 +25,12 @@ export async function authorizeSelectedSitePublication(
   const organizations = await selectArtistOrganizationIds(site.artist_id);
   const belongs = organizations?.some(row => row.organization_id === site.owner_id) ?? false;
   const personalAccess =
-    site.owner_id === accountId && (await checkAccountArtistAccess(accountId, site.artist_id));
+    !belongs &&
+    site.owner_id === accountId &&
+    (await checkAccountArtistAccess(accountId, site.artist_id));
   if (!belongs && !personalAccess)
     throw new SiteError(403, "Artist not available in this workspace");
-  if (!(await readPaidSiteSubscription(site.owner_id)))
+  if (!(await readPaidSiteSubscription(site.owner_id, { throwOnError: true })))
     throw new SiteError(402, "Paid site entitlement unavailable");
   getFanOAuthConfig();
   const config = await selectFanConfig(site.id);

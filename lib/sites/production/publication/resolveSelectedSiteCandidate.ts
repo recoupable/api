@@ -18,8 +18,8 @@ export async function resolveSelectedSiteCandidate(
     .uuid()
     .nullable()
     .safeParse((site as unknown as Record<string, unknown>).published_evidence_id);
+  if (!pointer.success) throw new SiteError(503, "Publication pointer metadata unavailable");
   if (
-    !pointer.success ||
     pointer.data !== selection.expectedPublishedEvidenceId ||
     site.id !== selection.siteId ||
     site.owner_id !== selection.ownerId ||

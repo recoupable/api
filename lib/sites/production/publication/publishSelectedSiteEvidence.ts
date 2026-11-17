@@ -42,7 +42,7 @@ export async function publishSelectedSiteEvidence(
     ).id;
   } else evidenceId = input.evidence.evidenceId;
   const assess = async () => {
-    const record = sitePublishEvidenceSchema.parse(
+    const parsedRecord = sitePublishEvidenceSchema.safeParse(
       await selectSitePublishEvidence({
         accountId: server.accountId,
         ownerId: selection.ownerId,
@@ -50,6 +50,8 @@ export async function publishSelectedSiteEvidence(
         evidenceId,
       }),
     );
+    if (!parsedRecord.success) throw new SiteError(503, "Stored evidence unavailable or invalid");
+    const record = parsedRecord.data;
     if (record.kind !== input.evidence.kind)
       throw new SiteError(409, "Evidence kind does not match selected intent");
     if (input.evidence.kind === "override")
@@ -84,6 +86,7 @@ export async function publishSelectedSiteEvidence(
     evidenceId,
     candidateSha256: selection.candidateSha256,
     expectedPublishedEvidenceId: selection.expectedPublishedEvidenceId,
+    expectedArtistId: selection.artistId,
   });
   return validateSitePublicationReceipt(result, selection, record);
 }

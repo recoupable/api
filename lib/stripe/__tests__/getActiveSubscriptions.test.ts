@@ -81,3 +81,11 @@ describe("getActiveSubscriptions", () => {
     await expect(getActiveSubscriptions(ACC)).resolves.toEqual([]);
   });
 });
+
+it("propagates provider failure only when explicitly requested", async () => {
+  const failure = new Error("Stripe unavailable");
+  list().mockRejectedValue(failure);
+  await expect(getActiveSubscriptions(ACC, () => true, { throwOnError: true })).rejects.toBe(
+    failure,
+  );
+});

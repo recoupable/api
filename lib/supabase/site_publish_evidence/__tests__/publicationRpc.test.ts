@@ -49,6 +49,7 @@ it.each([null, "pointer"])(
       evidenceId: "record",
       candidateSha256: "a".repeat(64),
       expectedPublishedEvidenceId,
+      expectedArtistId: "artist",
     });
     expect(rpc).toHaveBeenCalledWith("publish_candidate", {
       p_actor: "actor",
@@ -58,6 +59,7 @@ it.each([null, "pointer"])(
       p_record: "record",
       p_candidate_sha: "a".repeat(64),
       p_expected_pointer: expectedPublishedEvidenceId,
+      p_expected_artist_id: "artist",
     });
   },
 );
@@ -72,7 +74,25 @@ it("propagates publication conflicts without retries", async () => {
       evidenceId: "record",
       candidateSha256: "a".repeat(64),
       expectedPublishedEvidenceId: null,
+      expectedArtistId: null,
     }),
   ).rejects.toMatchObject({ status: 409 });
   expect(rpc).toHaveBeenCalledOnce();
+});
+
+it("forwards an explicit null expected artist without omitting the SQL argument", async () => {
+  await publishSiteEvidenceCandidate({
+    accountId: "actor",
+    ownerId: "owner",
+    siteId: "site",
+    revision: 8,
+    evidenceId: "record",
+    candidateSha256: "a".repeat(64),
+    expectedPublishedEvidenceId: null,
+    expectedArtistId: null,
+  });
+  expect(rpc).toHaveBeenCalledWith(
+    "publish_candidate",
+    expect.objectContaining({ p_expected_artist_id: null }),
+  );
 });

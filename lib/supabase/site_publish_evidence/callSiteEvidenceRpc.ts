@@ -24,6 +24,7 @@ type Functions = {
       p_record: string;
       p_candidate_sha: string;
       p_expected_pointer: string | null;
+      p_expected_artist_id: string | null;
     };
     Returns: unknown;
   };
