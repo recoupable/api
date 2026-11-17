@@ -7,6 +7,7 @@ export function enforceJourneyReview(review: CreativeReview, reports: JourneyRep
     issues: [...review.issues],
     verification: {
       scope: "generated-experience",
+      humanApproval: "not-recorded",
       nativeShareDelivery: "not-tested",
       spotifyAuthentication: "not-tested",
       viewports: reports,

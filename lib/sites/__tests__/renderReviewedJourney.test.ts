@@ -19,7 +19,12 @@ beforeEach(() => {
 it("repairs the test once using browser evidence without changing the site or payoff", async () => {
   vi.mocked(renderExperience)
     .mockResolvedValueOnce(failed)
-    .mockResolvedValueOnce({ report: [], images: [], firstActionImages: [] });
+    .mockResolvedValueOnce({
+      report: [],
+      images: [],
+      firstActionImages: [],
+      evidence: { sourceSha256: "source", journeySha256: "plan", runnerSha256: "runner" },
+    });
   await renderReviewedJourney(snapshot, contract, "account", "site");
   expect(compileJourney).toHaveBeenLastCalledWith(snapshot, contract, "account", "site", {
     journey: contract,
