@@ -11,8 +11,19 @@ type Functions = {
       p_candidate: SiteSnapshot;
       p_candidate_canonical: string;
       p_candidate_sha: string;
-      p_decision: { kind: "review"; review: unknown; reviewSha256: string };
-      p_review_canonical: string;
+      p_decision:
+        | { kind: "review"; review: unknown; reviewSha256: string }
+        | { kind: "override"; intent: "publish-without-passed-review"; reason: string };
+      p_review_canonical: string | null;
+    };
+    Returns: unknown;
+  };
+  publish_candidate: {
+    Args: Scope & {
+      p_revision: number;
+      p_record: string;
+      p_candidate_sha: string;
+      p_expected_pointer: string | null;
     };
     Returns: unknown;
   };
