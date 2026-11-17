@@ -54,7 +54,8 @@ owner/org/job forwarding, real retained-byte hashing, exact signing inputs, pers
 attempt binding before dependent claims, failure/no-retry behavior and retained replay.
 They do not execute SQL, authenticate a real account, fetch real storage, or call providers.
 
-A separate compile-only check combines the actual coordinator and actual factory with
+`node scripts/pack-foundation-durable-ports-compile.mjs` (also run in CI) combines
+the actual coordinator and actual factory with
 the installed Workflow compiler. It does not shadow these steps, start a workflow,
 execute step modules, or call a server. Compilability and mocked adapter behavior are
 separate evidence from the earlier synthetic-port restart/replay fixture; a hosted run

@@ -337,3 +337,15 @@ it.each([false, true])(
     );
   },
 );
+it("refuses persistence if admission changes after the initial read", async () => {
+  const ports = services();
+  const admitted = await ports.read(actor, "job");
+  const plan = createPackFoundationPlan(admitted, { dependentAssetIds: ["video-0"] });
+  snapshot.job.workflow_run_id = "different-run";
+  await expect(
+    ports.persist(actor, admitted.job, { plan, state: "pending", files: [] }),
+  ).rejects.toThrow("already-admitted");
+  expect(calls.map(c => c.action)).toEqual(["read", "read"]);
+  expect(mocks.fal).not.toHaveBeenCalled();
+  expect(mocks.sign).not.toHaveBeenCalled();
+});

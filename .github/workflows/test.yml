@@ -42,6 +42,9 @@ jobs:
       - name: Check unwired pack foundation with offline durable ports
         run: pnpm test:pack-foundation-workflow
 
+      - name: Check actual unwired pack foundation port compilation
+        run: node scripts/pack-foundation-durable-ports-compile.mjs
+
       - name: Check production TypeScript configuration
         run: pnpm exec tsc --noEmit --project tsconfig.build.json
 
