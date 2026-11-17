@@ -60,3 +60,7 @@ the installed Workflow compiler. It does not shadow these steps, start a workflo
 execute step modules, or call a server. Compilability and mocked adapter behavior are
 separate evidence from the earlier synthetic-port restart/replay fixture; a hosted run
 using these real bindings remains unqualified.
+
+See [admission ordering qualification](./ADMISSION.md) for the actual dispatcher
+boundary tests, remaining wait/continuation contract and deterministic scheduler
+fixture barrier. Production admission behavior is unchanged.

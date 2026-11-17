@@ -3,6 +3,7 @@ import { processPackOperation } from "../processPackOperation";
 import { runPackCommand } from "@/lib/supabase/release_pack_jobs/runPackCommand";
 import { importPackSources } from "../importPackSources";
 import { start } from "workflow/api";
+import { readAdmittedPackSnapshot } from "../foundation/readAdmittedPackSnapshot";
 const fixture = vi.hoisted(() => ({ saved: null as any, composedAudio: "" }));
 vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
 vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
@@ -183,6 +184,71 @@ describe("new-buyer pack acceptance fixture", () => {
         video_seconds: 8,
       },
     }) as Promise<any>;
+  it.each(["saved", "write-lost"])(
+    "qualifies early foundation read before dispatcher admission (%s)",
+    async outcome => {
+      const prepared = await prepareWorld({
+        ...proposedWorld,
+        selection: { direction_id: "paper", selected_by: "customer", decision_note: "Selected" },
+      });
+      const estimated = (await processPackOperation("owner", "estimate", {
+        job_id: prepared.job.id,
+      })) as any;
+      const original = vi.mocked(runPackCommand).getMockImplementation()!;
+      vi.mocked(runPackCommand).mockImplementation(async (actor, action, jobId, input = {}) => {
+        // Model only the existing SQL's running-approval dispatch suppression and lost write.
+        if (action === "approve" && fixture.saved.job.status === "running")
+          return { ...structuredClone(fixture.saved), dispatch: false };
+        if (action === "run" && outcome === "write-lost") throw new Error("Run write lost");
+        if (action === "dispatch_uncertain") {
+          fixture.saved.job.dispatch_state = "uncertain";
+          fixture.saved.job.error = input.error;
+        }
+        return original(actor, action, jobId, input);
+      });
+      vi.mocked(start).mockImplementationOnce(async (_workflow, args) => {
+        const [actor, jobId] = args as [{ accountId: string }, string];
+        expect(actor).toEqual({ accountId: "owner", organizationId: undefined });
+        expect(jobId).toBe(prepared.job.id);
+        // Model queue execution before start returns its run ID. No production workflow runs.
+        await expect(readAdmittedPackSnapshot(actor, jobId, "fixture-workflow")).rejects.toThrow(
+          /already-admitted/,
+        );
+        expect(fixture.saved.job.workflow_run_id).toBeNull();
+        return { runId: "fixture-workflow" } as Awaited<ReturnType<typeof start>>;
+      });
+      vi.mocked(runPackCommand).mockClear();
+      vi.mocked(start).mockClear();
+      const approval = {
+        job_id: prepared.job.id,
+        quote_id: estimated.job.quote.id,
+        expected_revision: 1,
+        approved_max_usd: estimated.job.quote.maximum_usd,
+      };
+      await processPackOperation("owner", "generate", approval);
+      const admission = readAdmittedPackSnapshot(
+        { accountId: "owner" },
+        prepared.job.id,
+        "fixture-workflow",
+      );
+      if (outcome === "saved")
+        await expect(admission).resolves.toMatchObject({ job: { status: "running" } });
+      else {
+        await expect(admission).rejects.toThrow(/already-admitted/);
+        expect(fixture.saved.job.dispatch_state).toBe("uncertain");
+      }
+      await processPackOperation("owner", "generate", approval);
+      expect(start).toHaveBeenCalledTimes(1);
+      expect(fixture.saved.job.held_credits).toBe(estimated.job.quote.credits);
+      expect(
+        vi
+          .mocked(runPackCommand)
+          .mock.calls.filter(call =>
+            ["claim", "phase", "finish_asset", "settle", "context"].includes(call[1]),
+          ),
+      ).toEqual([]);
+    },
+  );
   it.each(["legacy", "changed"])(
     "rejects %s quote before reserving credits or dispatching",
     async kind => {

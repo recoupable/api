@@ -54,6 +54,9 @@ export async function verifyOutcome(ctx, effects, scenario, run, runId, getNetwo
   assert.equal(getNetworkAttempts(), 0);
   const result = {
     scenario,
+    ...(scenario === "claim-failure"
+      ? { failureDelivery: await readJson(join(effects, "failure-barrier.json")) }
+      : {}),
     runId: runId,
     value,
     failure,
