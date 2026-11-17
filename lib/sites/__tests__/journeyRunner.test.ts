@@ -169,6 +169,9 @@ it.each([
     );
     if (mobileOverflow) {
       expect(report.find(r => r.name === "mobile")?.overflow).toBe(true);
+      expect(report.find(r => r.name === "mobile")?.errors).toContain(
+        "Horizontal overflow at step 1 participate",
+      );
       expect(report.find(r => r.name === "desktop")?.overflow).toBe(false);
     }
     if (deadGame) {
