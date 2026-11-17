@@ -1,7 +1,9 @@
 # Unwired exact-selected Sites publication
 
-This source extends the evidence adapters from API #1263. It targets the unchanged
-**Database #136 proposal**, commit `afd214aa73dfd70b0f2b860fce90c12ceb23f28b`.
+This source extends the evidence adapters from API #1263. It targets the revised
+**Database #136 proposal**, commit `afd214aa73dfd70b0f2b860fce90c12ceb23f28b`,
+which extends `4caac3cc8a15a47b348109b2fa4f571423d8beb0` with the expected-artist
+publication fence. Capture/read contracts remain compatible.
 There is no route, UI, MCP or workflow caller. Existing `processSiteOperation`
 publishing remains advisory and unchanged. No migration, schema exposure, runtime
 grant, retention activation or publication gate is introduced.

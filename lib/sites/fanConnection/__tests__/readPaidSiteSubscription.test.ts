@@ -17,10 +17,14 @@ it("preserves existing fan cache while fresh publication reads observe revocatio
 });
 
 it("distinguishes publication entitlement read failures from unpaid results", async () => {
-  vi.mocked(getActiveSubscriptions).mockRejectedValue(new Error("Stripe unavailable"));
+  const failure = new Error("Stripe unavailable");
+  const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+  vi.mocked(getActiveSubscriptions).mockRejectedValue(failure);
   await expect(readPaidSiteSubscription("owner", { throwOnError: true })).rejects.toMatchObject({
     status: 503,
   });
+  expect(logged).toHaveBeenCalledWith("Error checking paid site entitlement:", failure);
+  logged.mockRestore();
   expect(getActiveSubscriptions).toHaveBeenLastCalledWith("owner", expect.any(Function), {
     throwOnError: true,
   });
