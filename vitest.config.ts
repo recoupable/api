@@ -11,6 +11,7 @@ export default defineConfig({
       // This fixture owns node:test lifecycle cases and a separate compiled runtime runner.
       "scripts/pack-scheduler-workflow-fixture/**",
       "scripts/pack-foundation-workflow-fixture/**",
+      "scripts/pack-admission-workflow-fixture/**",
     ],
     env: {
       PRIVY_PROJECT_SECRET: "test-secret",
