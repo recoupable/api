@@ -196,7 +196,9 @@ it.each(["revision", "deleted", "access"])(
       );
     if (change === "access")
       m.authorize.mockResolvedValueOnce(undefined).mockRejectedValue(new Error("Access revoked"));
-    await expect(produceSite(site, "", "account", undefined, approvedConcept)).rejects.toThrow();
+    await expect(
+      produceSite(site, "", "account", undefined, approvedConcept),
+    ).rejects.toMatchObject(change === "access" ? { message: "Access revoked" } : { status: 409 });
     expect(m.build).toHaveBeenCalledTimes(2);
     expect(m.select).toHaveBeenCalledTimes(2);
     expect(m.review).toHaveBeenCalledOnce();
