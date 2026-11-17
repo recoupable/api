@@ -24,13 +24,13 @@ export async function runPackCommand(
     const asset = state.assets.find(a => a.id === command.asset_id);
     if (!asset) throw new Error("Unknown fixture asset");
     if (command.action === "claim") {
-      if (state.scenario === "claim-failure" && asset.id === "asset-2")
-        throw new Error("Fixture claim acknowledgement lost");
       const claimed = asset.status === "pending";
       if (claimed) {
         asset.status = "running";
         asset.attempt++;
         writeFixtureState(state);
+        if (state.scenario === "claim-failure" && asset.id === "asset-2")
+          throw new Error("Fixture claim acknowledgement lost");
       }
       return { ...state, asset, claimed };
     }
@@ -46,6 +46,10 @@ export async function runPackCommand(
     writeFixtureState(state);
     if (state.scenario === "settlement-failure")
       throw new Error("Fixture settlement acknowledgement lost");
+  }
+  if (command.action === "run") {
+    state.job.workflow_run_id = command.workflow_run_id;
+    writeFixtureState(state);
   }
   return state;
 }

@@ -11,7 +11,8 @@ export async function runWorker(temp, scenario, phase, getNetworkAttempts) {
     waitFor(async () => {
       try {
         return !!(await ctx.getHookByToken(`${scenario}:${id}`));
-      } catch {
+      } catch (error) {
+        if (!ctx.isHookNotFound(error)) throw error;
         return false;
       }
     });

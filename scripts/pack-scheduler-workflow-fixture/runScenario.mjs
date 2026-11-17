@@ -20,11 +20,13 @@ export async function runScenario(root, here, temp, scenario) {
     };
     child = launch("start");
     await waitFor(async () => {
-      if (child.exitCode !== null) throw new Error(`Fixture child exited ${child.exitCode}`);
+      if (child.exitCode !== null || child.signalCode !== null)
+        throw new Error(`Fixture child exited ${child.exitCode ?? child.signalCode}`);
       try {
         await readJson(join(effects, "ready.json"));
         return true;
-      } catch {
+      } catch (error) {
+        if (error.code !== "ENOENT") throw error;
         return false;
       }
     });
@@ -37,7 +39,7 @@ export async function runScenario(root, here, temp, scenario) {
     assert.equal((await killed).signal, "SIGKILL");
     child = undefined;
     child = launch("resume");
-    await waitFor(async () => child.exitCode !== null);
+    await waitFor(async () => child.exitCode !== null || child.signalCode !== null);
     assert.equal(child.exitCode, 0);
     child = undefined;
     const result = await readJson(join(effects, "result.json"));
@@ -47,7 +49,7 @@ export async function runScenario(root, here, temp, scenario) {
       resumeNetworkAttempts: result.networkAttempts,
     };
   } finally {
-    if (child && child.exitCode === null) {
+    if (child && child.exitCode === null && child.signalCode === null) {
       const exited = new Promise(resolve => child.once("exit", resolve));
       child.kill("SIGKILL");
       await exited;

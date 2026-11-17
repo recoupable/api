@@ -12,15 +12,18 @@ export async function validateFixtureInputs(source, temp) {
     format: "cjs",
   });
   const { fixtureSchemas } = await import(pathToFileURL(outfile));
-  assert.throws(() => fixtureSchemas.command.parse({ action: "claim" }));
-  assert.throws(() =>
-    fixtureSchemas.command.parse({ action: "settle", error: null, extra: "drift" }),
-  );
-  assert.throws(() => fixtureSchemas.command.parse({ action: "reserve", credits: 100 }));
-  assert.throws(() =>
+  const rejects = test =>
+    assert.throws(
+      test,
+      error => error.name === "ZodError" && Array.isArray(error.issues) && error.issues.length > 0,
+    );
+  rejects(() => fixtureSchemas.command.parse({ action: "claim" }));
+  rejects(() => fixtureSchemas.command.parse({ action: "settle", error: null, extra: "drift" }));
+  rejects(() => fixtureSchemas.command.parse({ action: "reserve", credits: 100 }));
+  rejects(() =>
     fixtureSchemas.file.parse({ storage_key: "fixture", content_type: "image/png", bytes: -1 }),
   );
-  assert.throws(() => fixtureSchemas.state.parse({ assets: [], job: {} }));
+  rejects(() => fixtureSchemas.state.parse({ assets: [], job: {} }));
   assert.deepEqual(fixtureSchemas.command.parse({ action: "settle", error: null }), {
     action: "settle",
     error: null,

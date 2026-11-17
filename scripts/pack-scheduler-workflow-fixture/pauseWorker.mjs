@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { writeFile } from "node:fs/promises";
+import { writeFile, rename } from "node:fs/promises";
 import { join } from "node:path";
 import { readEvents as events } from "./readEvents.mjs";
 import { waitFor } from "./waitFor.mjs";
@@ -22,8 +22,9 @@ export async function pauseWorker(ctx, effects, scenario, waitHook, getNetworkAt
   await writeFile(join(effects, "before-crash.json"), JSON.stringify(trace));
   assert.equal(getNetworkAttempts(), 0);
   await writeFile(
-    join(effects, "ready.json"),
+    join(effects, "ready.tmp"),
     JSON.stringify({ networkAttempts: getNetworkAttempts(), pid: process.pid }),
   );
+  await rename(join(effects, "ready.tmp"), join(effects, "ready.json"));
   await new Promise(() => {}); // parent SIGKILLs only this owned fixture worker
 }

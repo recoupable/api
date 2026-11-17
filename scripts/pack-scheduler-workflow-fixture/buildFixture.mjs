@@ -23,6 +23,7 @@ export async function buildFixture(root, here, temp) {
   for (const from of [
     "lib/content/packs/producePackAsset.ts",
     "lib/content/packs/buildPackAssetPrompt.ts",
+    "lib/content/packs/resolvePackCreativeContext.ts",
     "pnpm-lock.yaml",
   ]) {
     bindings.push({

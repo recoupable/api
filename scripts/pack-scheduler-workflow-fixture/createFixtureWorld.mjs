@@ -7,6 +7,9 @@ export async function createFixtureWorld(temp, effects) {
   const { createLocalWorld } = await import(
     pathToFileURL(createRequire(require.resolve("@workflow/core")).resolve("@workflow/world-local"))
   );
+  const { HookNotFoundError } = await import(
+    pathToFileURL(createRequire(require.resolve("@workflow/core")).resolve("@workflow/errors"))
+  );
   const { setWorld, reenqueueRun } = await import("@workflow/core/runtime");
   const { start, getRun, resumeHook, getHookByToken } = await import("workflow/api");
   const world = createLocalWorld({ dataDir: join(effects, "journal") });
@@ -19,9 +22,10 @@ export async function createFixtureWorld(temp, effects) {
   world.registerHandler("__wkf_workflow_", async req => {
     activeDeliveries++;
     try {
-      return await workflows.POST(req);
-    } finally {
+      const response = await workflows.POST(req);
       deliveries++;
+      return response;
+    } finally {
       activeDeliveries--;
     }
   });
@@ -29,6 +33,7 @@ export async function createFixtureWorld(temp, effects) {
   const { packSchedulerFixture } = await import(pathToFileURL(join(temp, "generated/client.mjs")));
   return {
     world,
+    isHookNotFound: HookNotFoundError.is,
     start,
     getRun,
     resumeHook,
