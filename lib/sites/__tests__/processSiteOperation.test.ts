@@ -347,3 +347,20 @@ it("publishes an interrupted working build without a finalized draft", async () 
   );
   expect(m.update).not.toHaveBeenCalled();
 });
+
+it("does not write a draft or publication when direct repair limits are exhausted", async () => {
+  m.generate.mockRejectedValue(
+    new SiteError(422, "Site production stopped: repair attempt limit."),
+  );
+  await expect(
+    processSiteOperation(account, "generate", {
+      approvedConcept,
+      id,
+      revision: 2,
+      instruction: "change",
+      background: false,
+    }),
+  ).rejects.toMatchObject({ status: 422 });
+  expect(m.update).not.toHaveBeenCalled();
+  expect(m.publication).not.toHaveBeenCalled();
+});
