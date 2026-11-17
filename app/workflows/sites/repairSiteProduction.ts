@@ -40,11 +40,10 @@ export async function repairSiteProduction(
     if (reason) return failure(reason);
     const review = reviews.at(-1)!;
     if (review.blocked) return failure("credit limit");
-    if (
-      review.issues.some(issue => issue.module === "direction") ||
-      (review.verdict === "pass" && !review.issues.some(issue => issue.severity === "blocking"))
-    )
-      return { snapshot, direction, assets, reviews };
+    if (review.issues.some(issue => issue.module === "direction"))
+      return { snapshot, direction, assets, reviews, status: "needs-review" as const };
+    if (review.verdict === "pass" && !review.issues.some(issue => issue.severity === "blocking"))
+      return { snapshot, direction, assets, reviews, status: "reviewed" as const };
     if (attempts >= 2) return failure("repair attempt limit");
     await revealBuildStep(direction.concept, assets, snapshot, review.issues[0]?.fix).catch(
       () => undefined,

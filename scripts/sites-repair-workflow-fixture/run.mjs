@@ -76,7 +76,7 @@ await writeFile(
   `
 import {appendFileSync, readFileSync, existsSync} from "node:fs";
 import {join} from "node:path";
-import {RetryableError} from "workflow";
+import {RetryableError, FatalError} from "workflow";
 const file = (name: string) => join(process.env.SITES_REPAIR_EFFECTS!,name);
 export async function effect(name: string, args: any[]) {
   const scenario = JSON.parse(readFileSync(file("scenario.json"),"utf8"));
@@ -85,13 +85,17 @@ export async function effect(name: string, args: any[]) {
   appendFileSync(file("events.jsonl"),JSON.stringify({name,args})+"\\n");
   if(name==="readRepairCheckpointStep") {
     const late = scenario.name==="late-pass" && count>=3;
-    return {now:late?1201000:1000, revision:scenario.name==="revision" && count>=1?8:7, cancelled:scenario.name==="deleted" && count>=1};
+    if (scenario.name === "access-after-repair" && count >= 2) throw new FatalError("Synthetic access revoked");
+    const stale = (scenario.name === "revision" && count >= 1) || (scenario.name === "revision-after-repair" && count >= 2);
+    const deleted = (scenario.name === "deleted" && count >= 1) || (scenario.name === "deleted-after-repair" && count >= 2);
+    return {now:late?1201000:1000, revision:stale?8:7, cancelled:deleted};
   }
   if(name==="buildStep") {
     if(scenario.name==="retry" && count===1) throw new RetryableError("synthetic interruption before repair result", {retryAfter: 1});
     if(scenario.name==="cancel" && count===1) while(!existsSync(file("release"))) await new Promise(r=>setTimeout(r,10));
     return {name:count?"repaired":"initial", assets:args[3]};
   }
+  if(name==="reviewStep" && scenario.name==="direction-pass") return {verdict:"pass",issues:[{module:"direction",detail:"Wrong concept"}]};
   if(name==="reviewStep") return {verdict: count===0 || scenario.name==="exhaust" ? "revise":"pass", issues: count===0 || scenario.name==="exhaust" ? [{module:"implementation",severity:"blocking",detail:"Repair",fix:"Repair"}]:[]};
   if(name==="saveSiteStep") return {site:args[1]};
   if(name==="collectContextStep") return {release:{url:"https://example.com/release"}, marker:"original-context"};
@@ -200,6 +204,10 @@ try {
     "deleted",
     "retry",
     "cancel",
+    "direction-pass",
+    "revision-after-repair",
+    "deleted-after-repair",
+    "access-after-repair",
   ]) {
     await writeFile(join(effects, "events.jsonl"), "");
     await writeFile(join(effects, "scenario.json"), JSON.stringify({ name }));
@@ -216,20 +224,40 @@ try {
       assert.equal(await run.status, "cancelled");
     } else {
       const result = await bounded(run.returnValue);
-      if (["success", "retry"].includes(name))
+      if (["success", "retry", "direction-pass"].includes(name))
         assert(result.site, JSON.stringify({ result, events: await events() }));
       else assert(result.error);
+      if (name === "direction-pass") assert.equal(result.site.production.status, "needs-review");
     }
     const trace = await events();
     const count = n => trace.filter(e => e.name === n).length;
-    assert.equal(count("saveSiteStep"), ["success", "retry"].includes(name) ? 1 : 0);
+    assert.equal(
+      count("saveSiteStep"),
+      ["success", "retry", "direction-pass"].includes(name) ? 1 : 0,
+    );
     assert.equal(
       count("buildStep"),
-      name === "exhaust" || name === "retry" ? 3 : ["revision", "deleted"].includes(name) ? 1 : 2,
+      name === "exhaust" || name === "retry"
+        ? 3
+        : ["revision", "deleted", "direction-pass"].includes(name)
+          ? 1
+          : 2,
     );
     assert.equal(
       count("reviewStep"),
-      name === "exhaust" ? 3 : ["revision", "deleted", "cancel"].includes(name) ? 1 : 2,
+      name === "exhaust"
+        ? 3
+        : [
+              "revision",
+              "deleted",
+              "cancel",
+              "direction-pass",
+              "revision-after-repair",
+              "deleted-after-repair",
+              "access-after-repair",
+            ].includes(name)
+          ? 1
+          : 2,
     );
     const builds = trace.filter(e => e.name === "buildStep");
     for (const b of builds.slice(1)) {

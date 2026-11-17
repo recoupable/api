@@ -372,3 +372,44 @@ it("preserves the saved draft on a credit-blocked review without starting paid r
   expect(m.revise).not.toHaveBeenCalled();
   expect(m.save).not.toHaveBeenCalled();
 });
+
+it.each(["revise", "pass"])(
+  "saves direction rejection as needs-review with a %s verdict",
+  async verdict => {
+    vi.mocked(reviewStep).mockResolvedValueOnce({
+      verdict,
+      issues: [{ module: "direction", detail: "Wrong concept" }],
+    } as never);
+    await siteProductionWorkflow({ id: "site" } as Site, "", "account", undefined, approvedConcept);
+    expect(m.save).toHaveBeenCalledOnce();
+    expect(m.save.mock.calls[0][1].production.status).toBe("needs-review");
+    expect(m.revise).not.toHaveBeenCalled();
+  },
+);
+it.each(["revision", "deleted", "access"])(
+  "stops %s after a completed durable repair without review or save",
+  async change => {
+    const site = { id: "site", revision: 7 } as Site;
+    vi.mocked(reviewStep).mockResolvedValueOnce({
+      verdict: "revise",
+      issues: [{ module: "implementation", detail: "Fix" }],
+    } as never);
+    m.revise.mockResolvedValue({ snapshot: {}, direction: {}, assets: [] });
+    let checks = 0;
+    m.checkpoint.mockImplementation(async () => {
+      const changed = ++checks >= 3;
+      if (changed && change === "access") throw new Error("Access revoked");
+      return {
+        revision: changed && change === "revision" ? 8 : 7,
+        cancelled: changed && change === "deleted",
+        now: 1000,
+      };
+    });
+    expect(
+      await siteProductionWorkflow(site, "", "account", undefined, approvedConcept),
+    ).toHaveProperty("error");
+    expect(m.revise).toHaveBeenCalledOnce();
+    expect(reviewStep).toHaveBeenCalledOnce();
+    expect(m.save).not.toHaveBeenCalled();
+  },
+);

@@ -179,7 +179,7 @@ export async function siteProductionWorkflow(
           context,
           direction,
           reviews,
-          status: reviews[reviews.length - 1].verdict === "pass" ? "reviewed" : "needs-review",
+          status: repaired.status,
         },
       },
       accountId,
