@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { getContextAccountingKey } from "./getContextAccountingKey";
-import { validateCreditCharge } from "@/lib/credits/charges/validateCreditCharge";
+import { validateContextReservationReceipt } from "./validateContextReservationReceipt";
+import { validateContextAccountingCompletion } from "./validateContextAccountingCompletion";
 import { validateContextAccountingInput } from "./validateContextAccountingInput";
 import { admitContextAccountingAttempt } from "./admitContextAccountingAttempt";
 import { finishContextAccountingAttempt } from "./finishContextAccountingAttempt";
@@ -51,35 +52,16 @@ export async function runContextAccountingAttempt(
         ? admission.attempt.phase
         : "pending_reconciliation",
       operationKey,
+      completion: admission.attempt.completion,
     };
   try {
-    const hold = z
-      .discriminatedUnion("state", [
-        z.strictObject({
-          state: z.literal("held"),
-          reservationId: z.string().regex(/^hold-v1-[a-f0-9]{64}$/),
-          creditsHeld: z.number().int().positive().safe(),
-          spendableCredits: z.number().int().nonnegative().safe(),
-        }),
-        z.strictObject({
-          state: z.literal("reused"),
-          reservationId: z.string().regex(/^hold-v1-[a-f0-9]{64}$/),
-          status: z.enum(["held", "settled", "released"]),
-          creditsHeld: z.number().int().positive().safe(),
-        }),
-        z.strictObject({
-          state: z.literal("insufficient"),
-          creditsRequested: z.number().int().positive().safe(),
-          spendableCredits: z.number().int().safe(),
-        }),
-      ])
-      .parse(
-        await services.reserveCreditsOnce({
-          accountId: input.payerId,
-          operationKey,
-          creditsToReserve: input.maximumCredits,
-        }),
-      );
+    const hold = validateContextReservationReceipt(
+      await services.reserveCreditsOnce({
+        accountId: input.payerId,
+        operationKey,
+        creditsToReserve: input.maximumCredits,
+      }),
+    );
     if (hold.state === "insufficient") {
       if (hold.creditsRequested !== input.maximumCredits) throw new Error("Reservation mismatch");
       await services.transact(input.payerId, ledger => {
@@ -94,46 +76,31 @@ export async function runContextAccountingAttempt(
       !/^hold-v1-[a-f0-9]{64}$/.test(hold.reservationId)
     )
       throw new Error("Reservation requires reconciliation");
+    let authorizationFailed = false;
+    try {
+      await services.authorize(input);
+    } catch {
+      authorizationFailed = true;
+    }
     const attempt = await services.transact(input.payerId, ledger => {
       const current = ledger.attempts.get(operationKey)!;
       if (current.phase !== "admitted") throw new Error("Attempt phase changed");
       current.reservationId = hold.reservationId;
       // Cancellation and dispatch intent compete atomically in the owning journal.
-      current.phase = ledger.cancelled.has(operationKey) ? "cancelled" : "dispatching";
+      current.phase =
+        authorizationFailed || ledger.cancelled.has(operationKey) ? "cancelled" : "dispatching";
       return structuredClone(current);
     });
     if (attempt.phase === "cancelled") return finishContextAccountingAttempt(attempt, services);
-    await services.authorize(input);
-    const completion = z
-      .strictObject({
-        resultId: z.string().min(1).max(200),
-        usable: z.boolean(),
-        customerCredits: z.number().int().min(0).max(input.maximumCredits),
-        providerExpense: z.discriminatedUnion("status", [
-          z.strictObject({ status: z.literal("unknown") }),
-          z.strictObject({
-            status: z.enum(["confirmed", "estimated"]),
-            usd: z.number().finite().nonnegative(),
-          }),
-        ]),
-        event: z.record(z.string(), z.unknown()),
-      })
-      .parse(await services.dispatch(input));
-    // Reuse the existing strict usage-event validator. No attribution fields are added to it.
-    const charge = validateCreditCharge({
-      accountId: input.payerId,
+    const completion = validateContextAccountingCompletion(
+      await services.dispatch(input),
+      input,
       operationKey,
-      creditsToDeduct: completion.customerCredits || 1,
-      event: completion.event,
-    });
+    );
     const completed = await services.transact(input.payerId, ledger => {
       const current = ledger.attempts.get(operationKey)!;
       if (current.phase !== "dispatching") throw new Error("Attempt phase changed");
-      current.completion = {
-        ...completion,
-        providerExpense: completion.providerExpense,
-        event: charge.event,
-      };
+      current.completion = completion;
       current.phase = "completed";
       return structuredClone(current);
     });

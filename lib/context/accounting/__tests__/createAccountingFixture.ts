@@ -21,7 +21,12 @@ export function createAccountingFixture() {
   ]);
   const holds = new Map<
     string,
-    { maximum: number; status: "held" | "settled" | "released"; charge?: CreditChargeInput }
+    {
+      accountId: string;
+      maximum: number;
+      status: "held" | "settled" | "released";
+      charge?: CreditChargeInput;
+    }
   >();
   const holdId = (key: string) => "hold-v1-" + createHash("sha256").update(key).digest("hex");
   const input: ContextAccountingInput = {
@@ -43,8 +48,9 @@ export function createAccountingFixture() {
     ledger,
     cancelled: false,
     debits: 0,
-    reserve(args: { operationKey: string; creditsToReserve: number }) {
+    reserve(args: { accountId: string; operationKey: string; creditsToReserve: number }) {
       const prior = holds.get(args.operationKey);
+      if (prior && prior.accountId !== args.accountId) throw new Error("Payer mismatch");
       if (prior)
         return {
           state: "reused" as const,
@@ -52,7 +58,11 @@ export function createAccountingFixture() {
           creditsHeld: prior.maximum,
           status: prior.status,
         };
-      holds.set(args.operationKey, { maximum: args.creditsToReserve, status: "held" });
+      holds.set(args.operationKey, {
+        accountId: args.accountId,
+        maximum: args.creditsToReserve,
+        status: "held",
+      });
       return {
         state: "held" as const,
         reservationId: holdId(args.operationKey),
@@ -62,6 +72,7 @@ export function createAccountingFixture() {
     },
     settle(args: CreditChargeInput) {
       const held = holds.get(args.operationKey)!;
+      if (held.accountId !== args.accountId) throw new Error("Payer mismatch");
       if (held.status === "released" || args.creditsToDeduct > held.maximum)
         throw new Error("Rejected");
       if (held.charge && JSON.stringify(held.charge) !== JSON.stringify(args))
@@ -73,7 +84,7 @@ export function createAccountingFixture() {
       return {
         state,
         reservationId: holdId(args.operationKey),
-        eventId: "charge-v1-" + "a".repeat(64),
+        eventId: "charge-v1-" + createHash("sha256").update(args.operationKey).digest("hex"),
         creditsHeld: held.maximum,
         creditsCharged: args.creditsToDeduct,
         creditsReleased: held.maximum - args.creditsToDeduct,
@@ -132,6 +143,7 @@ export function createAccountingFixture() {
     releaseCreditReservation: vi.fn<ContextAccountingServices["releaseCreditReservation"]>(
       async args => {
         const held = holds.get(args.operationKey)!;
+        if (held.accountId !== args.accountId) throw new Error("Payer mismatch");
         if (held.status === "settled") throw new Error("Rejected");
         const state = held.status === "released" ? ("reused" as const) : ("released" as const);
         held.status = "released";

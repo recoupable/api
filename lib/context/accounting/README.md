@@ -6,7 +6,7 @@ This fixture-only adapter explores #2123 request and pilot ceilings around the e
 
 Structural service ports match API #1026 at `ace711d0b1f4fd8e87e56039a27c88493203cf49` and database #115 at `e05c45487cc16fe908bfa52ba2e6e78b3789bc57`. Reconciliation owns reservation composition with released Packs, refill and other debits. This consumer adds no wallet, migration or direct database access. Its ledger counts request/pilot allocations, not spendable account credits.
 
-The caller supplies authenticated payer, request, pilot, module and attempt identities. The stable operation key hashes those identities. Pricing and ceiling terms cannot change for an existing attempt; request-to-pilot membership and scope ceilings cannot drift. Usage events retain the existing strict charge schema; Context attribution stays in the journal. Provider expense, customer credits and result usability are separate facts.
+The caller supplies authenticated payer, request, pilot, module and attempt identities. The stable operation key hashes those identities. Pricing and ceiling terms cannot change for an existing attempt; request-to-pilot membership and scope ceilings cannot drift after the first successful admission or accepted reuse. Denied work creates no attempt or policy; a trusted caller may supply revised terms before any admission. Request/pilot/module/attempt IDs are opaque and case-sensitive; production adapters must supply canonical domain identities. Usage events retain the existing strict charge schema; Context attribution stays in the journal. Provider expense, customer credits and result usability are separate facts.
 
 ## State and replay
 
@@ -19,6 +19,8 @@ Accepted, authorized retained analysis is journaled as reuse with zero new debit
 A completed zero-customer-charge operation releases rather than settling zero. Standalone work with a zero maximum is outside this adapter's scope; maximum reservation and supplied ceilings must be positive integers. A paid but unusable result can still have provider expense and customer credits according to the supplied completion; this adapter invents no refund or pricing policy.
 
 ## Validation and remaining gates
+
+The focused strict check below is a manual review check, not a new CI job; existing CI checks production types and executes the fixtures.
 
 Run `pnpm exec tsc --project tsconfig.context-accounting.json` for strict source and fixture type checking. Run `pnpm exec vitest run lib/context/accounting` for synthetic concurrency, payer isolation, duplicate delivery, cancellation, retained uncertainty, lost replies, receipt validation and reuse coverage. Tests invoke no real wallet or provider.
 

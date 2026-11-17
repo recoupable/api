@@ -45,7 +45,12 @@ export interface ContextAccountingLedger {
 }
 export interface ContextAccountingServices {
   /** Atomic, isolated, durable transaction over a payer-PARTITIONED ledger; callback is synchronous. No live implementation exists. */
-  transact<T>(payerId: string, action: (ledger: ContextAccountingLedger) => T): Promise<T>;
+  transact<T>(
+    payerId: string,
+    action: (
+      ledger: ContextAccountingLedger,
+    ) => T & (T extends PromiseLike<unknown> ? never : unknown),
+  ): Promise<T>;
   authorize(input: ContextAccountingInput): Promise<void>;
   /** Must establish authorized, accepted retained evidence; a planner reuse_candidate is insufficient. */
   findAcceptedReuse(input: ContextAccountingInput): Promise<{ resultId: string } | null>;

@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import { runContextAccountingAttempt } from "../runContextAccountingAttempt";
 import { reconcileContextAccountingAttempt } from "../reconcileContextAccountingAttempt";
+import type { ContextAccountingServices } from "../types";
 import { createAccountingFixture } from "./createAccountingFixture";
 
 it("serializes concurrent module admission against a supplied request ceiling", async () => {
@@ -74,11 +75,11 @@ it("rejects nesting around an endpoint that already owns its charge", async () =
   expect(f.services.reserveCreditsOnce).not.toHaveBeenCalled();
   expect(f.services.dispatch).not.toHaveBeenCalled();
 });
-it("does not import a live wallet or provider when fixture mode is missing", async () => {
+it("rejects missing fixture mode before authorization", async () => {
   const f = createAccountingFixture();
   await expect(
     runContextAccountingAttempt({ ...f.input, mode: undefined }, f.services),
-  ).rejects.toThrow();
+  ).rejects.toThrow(/mode/);
   expect(f.services.authorize).not.toHaveBeenCalled();
 });
 
@@ -227,7 +228,10 @@ it("rechecks reuse atomically after another delivery starts or completes", async
     await new Promise(resolve => setTimeout(resolve, 0));
   await f.run();
   resume({ resultId: "cached" });
-  expect((await delayed).state).toBe("settled");
+  expect(await delayed).toMatchObject({
+    state: "settled",
+    completion: { resultId: "result", customerCredits: 4 },
+  });
 });
 it("persists reused attempt identity even if cache later disappears", async () => {
   const f = createAccountingFixture();
@@ -288,4 +292,29 @@ it("accepts definite insufficient receipts with signed spendable credits", async
   expect((await f.run()).state).toBe("insufficient");
   expect(f.exposure()).toBe(0);
   expect(f.services.dispatch).not.toHaveBeenCalled();
+});
+
+it("releases a hold when authorization fails before dispatch intent", async () => {
+  const f = createAccountingFixture();
+  f.services.authorize.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("Revoked"));
+  expect((await f.run()).state).toBe("released");
+  expect(f.exposure()).toBe(0);
+  expect(f.services.dispatch).not.toHaveBeenCalled();
+  expect(f.services.releaseCreditReservation).toHaveBeenCalledTimes(1);
+});
+
+it("requires synchronous transaction callbacks at the service boundary", () => {
+  const services: ContextAccountingServices = createAccountingFixture().services;
+  if (false) {
+    // @ts-expect-error Durable transaction mutations must complete synchronously.
+    void services.transact("payer", async () => 1);
+  }
+  expect(services.transact).toBeTypeOf("function");
+});
+
+it("fixture wallet rejects another payer reusing an operation key", async () => {
+  const f = createAccountingFixture();
+  await f.run();
+  const args = f.services.reserveCreditsOnce.mock.calls[0][0];
+  expect(() => f.reserve({ ...args, accountId: "another-payer" })).toThrow("Payer mismatch");
 });
