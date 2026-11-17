@@ -133,7 +133,14 @@ file binder. Bytes are fetched from an existing storage-key signer through `fetc
 temporary URLs supplied in file metadata are never downloaded. Existing ownership,
 byte-length, MIME, size and hashing checks remain in the binder. Signing re-reads admission
 and requires matching key/type/size in the job's retained usable artwork before invoking
-the existing storage signer. Explicit actor/job arguments cross those step boundaries;
+the existing storage signer. Reference URLs use the existing preparation lifetime of
+86,400 seconds, with a finite future hold expiry strictly inside that lifetime. Missing,
+invalid, expired or overlong expiry fails closed; no hold is renewed. Thus replayed
+references outlive claim admission within the validated hold, including delays beyond
+one hour. This does not guarantee arbitrary delays after claim or provider-side fetching;
+claim, submission persistence and provider fetch are not atomic. The one-hour binding-read
+URL is consumed immediately inside its step and is not passed to dependents.
+Explicit actor/job arguments cross those step boundaries;
 no callback or service object is passed as a durable step argument.
 
 Persistence checks admission and invokes `savePackFoundationRecord`, preserving its

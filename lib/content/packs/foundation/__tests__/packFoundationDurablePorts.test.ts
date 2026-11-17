@@ -43,6 +43,7 @@ const execute = () =>
 beforeEach(() => {
   vi.resetAllMocks();
   snapshot = foundationFixture();
+  snapshot.job.hold_expires_at = new Date(Date.now() + 2 * 3600_000).toISOString();
   calls = [];
   mocks.rpc.mockImplementation(async (_name, args) => {
     expect(args.p_actor).toBe("member");
@@ -275,4 +276,42 @@ it("retains zero automatic Workflow retries on every effect and computation port
   ]);
   for (const module of steps)
     for (const step of Object.values(module)) expect(step.maxRetries).toBe(0);
+});
+
+it.each([undefined, "invalid", "2000-01-01T00:00:00Z", "2099-01-01T00:00:00Z"])(
+  "rejects signing when hold expiry cannot bound replay: %s",
+  async expiry => {
+    await execute();
+    const file = snapshot.assets.find(a => a.kind === "artwork")!.files[0];
+    snapshot.job.hold_expires_at = expiry;
+    mocks.sign.mockClear();
+    await expect(services().signFile(file)).rejects.toThrow("hold expiry");
+    expect(mocks.sign).not.toHaveBeenCalled();
+  },
+);
+it("uses the existing 24-hour reference lifetime beyond the valid two-hour admission window", async () => {
+  await execute();
+  const file = snapshot.assets.find(a => a.kind === "artwork")!.files[0];
+  mocks.sign.mockClear();
+  await services().signFile(file);
+  expect(mocks.sign).toHaveBeenCalledWith(file.storage_key, 86400);
+  const signedUntil = Date.now() + 86400_000;
+  expect(signedUntil).toBeGreaterThan(Date.parse(snapshot.job.hold_expires_at as string));
+  expect(signedUntil).toBeGreaterThan(Date.now() + 90 * 60_000);
+});
+
+it("rejects a hold ending exactly at the signing lifetime boundary", async () => {
+  await execute();
+  const now = Date.now();
+  const clock = vi.spyOn(Date, "now").mockReturnValue(now);
+  try {
+    snapshot.job.hold_expires_at = new Date(now + 86400_000).toISOString();
+    mocks.sign.mockClear();
+    await expect(
+      services().signFile(snapshot.assets.find(a => a.kind === "artwork")!.files[0]),
+    ).rejects.toThrow("hold expiry");
+    expect(mocks.sign).not.toHaveBeenCalled();
+  } finally {
+    clock.mockRestore();
+  }
 });

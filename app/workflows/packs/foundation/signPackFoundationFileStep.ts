@@ -22,6 +22,13 @@ export async function signPackFoundationFileStep(actor: PackActor, jobId: string
     )
   )
     throw new Error("Foundation signing requires this admitted job's retained usable artwork");
-  return createSignedFileUrlByKey({ key: file.storage_key, expiresInSeconds: 3600 });
+  // Match existing preparation references; a replayed URL must outlive claim admission.
+  const now = Date.now();
+  const expiry = Date.parse(String(saved.job.hold_expires_at));
+  if (!Number.isFinite(expiry) || expiry <= now || expiry >= now + 86400_000)
+    throw new Error(
+      "Foundation signing requires a future hold expiry within the reference lifetime; reconcile saved state",
+    );
+  return createSignedFileUrlByKey({ key: file.storage_key, expiresInSeconds: 86400 });
 }
 signPackFoundationFileStep.maxRetries = 0;
