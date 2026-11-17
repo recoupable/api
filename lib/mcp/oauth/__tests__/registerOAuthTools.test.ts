@@ -24,6 +24,7 @@ function fixture() {
   const tools = new Map<
     string,
     {
+      annotations?: Record<string, unknown>;
       schema: { parse: (args: unknown) => unknown };
       call: (args: unknown, extra: unknown) => Promise<{ isError?: boolean }>;
     }
@@ -32,10 +33,13 @@ function fixture() {
     {
       registerTool: (
         name: string,
-        config: { inputSchema: { parse: (args: unknown) => unknown } },
+        config: {
+          annotations?: Record<string, unknown>;
+          inputSchema: { parse: (args: unknown) => unknown };
+        },
         call: (args: unknown, extra: unknown) => Promise<{ isError?: boolean }>,
       ) => {
-        tools.set(name, { schema: config.inputSchema, call });
+        tools.set(name, { schema: config.inputSchema, annotations: config.annotations, call });
       },
     } as unknown as McpServer,
     services,
@@ -85,4 +89,15 @@ it("rejects profile updates with no changed fields", () => {
       .get("update_account_info")!
       .schema.parse({ artistId: "00000000-0000-4000-8000-000000000001" }),
   ).toThrow();
+});
+
+it("sets explicit behavior-based annotations for every limited tool", () => {
+  const { tools } = fixture();
+  for (const [name, tool] of tools) {
+    expect(tool.annotations).toEqual({
+      readOnlyHint: !["create_new_artist", "update_account_info"].includes(name),
+      destructiveHint: name === "update_account_info",
+      openWorldHint: false,
+    });
+  }
 });

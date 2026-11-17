@@ -22,8 +22,8 @@ export function registerCatalogCaseTools(server: McpServer) {
       inputSchema,
       annotations: {
         readOnlyHint: metadata.readOnly,
-        destructiveHint: false,
-        openWorldHint: false,
+        destructiveHint: metadata.destructive,
+        openWorldHint: metadata.openWorld,
       },
     };
     const handler = async (

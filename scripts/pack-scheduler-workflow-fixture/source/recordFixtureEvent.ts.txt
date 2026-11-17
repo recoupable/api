@@ -1,0 +1,5 @@
+import { appendFileSync } from "node:fs";
+import { fixturePath } from "./fixturePath";
+export function recordFixtureEvent(action: string, data: unknown = null) {
+  appendFileSync(fixturePath("events.jsonl"), JSON.stringify({ action, data }) + "\n");
+}

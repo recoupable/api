@@ -50,5 +50,6 @@ Review this rendered fan experience as a demanding art director and interaction 
   const result = enforceJourneyReview(combined, rendered.report);
   if (result.verification) result.verification.opening = opening;
   if (result.verification) result.verification.journey = journey;
+  if (result.verification) result.verification.evidence = rendered.evidence;
   return result;
 }
