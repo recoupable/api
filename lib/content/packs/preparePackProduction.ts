@@ -1,8 +1,7 @@
-import { packAudioAnalysisTextSchema } from "./packAudioAnalysisTextSchema";
+import { packProductionContextSchema as contextSchema } from "./packProductionContextSchema";
 import { parsePackAudioAnalysis } from "./parsePackAudioAnalysis";
 import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
 import { packExecutionSettings } from "@/lib/const";
-import { z } from "zod";
 import { createHash } from "node:crypto";
 import { fetchPackMedia } from "./fetchPackMedia";
 import { validatePackMediaBytes } from "./validatePackMediaBytes";
@@ -13,16 +12,7 @@ import { runPackCommand } from "@/lib/supabase/release_pack_jobs/runPackCommand"
 import { resolvePackCreativeContext } from "./resolvePackCreativeContext";
 import { createSignedFileUrlByKey } from "@/lib/supabase/storage/createSignedFileUrlByKey";
 import type { PackActor, PackJob } from "./packTypes";
-const contextSchema = z.object({
-  state: z.literal("complete"),
-  audio: z.object({ storage_key: z.string() }),
-  references: z.array(z.object({ storage_key: z.string() })),
-  summary: packAudioAnalysisTextSchema.max(6000),
-  visual_direction: packAudioAnalysisTextSchema.max(2000),
-  proposed_start_seconds: z.number(),
-  selected_start_seconds: z.number(),
-  duration_seconds: z.number(),
-});
+
 /** Import the exact source, listen once, and persist a labeled excerpt proposal before paid visual calls. */
 export async function preparePackProduction(actor: PackActor, job: PackJob): Promise<PackJob> {
   job = { ...job, brief: resolvePackCreativeContext(job.brief) };
