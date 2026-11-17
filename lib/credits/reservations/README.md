@@ -26,11 +26,13 @@ auto-top-up never see it as consumption.
    is permitted only on a hold whose status is `held` (a `reused` receipt reports
    `held`, `settled` or `released`).
 
-   A hold is not an execution lease. Every duplicate delivery of the same key receives
-   a `reused` receipt with status `held`, so each one may look entitled to start the
-   work. Settlement still charges once, but deduplicate provider dispatch with the
-   caller's own attempt identity (for example a durable workflow step) before calling
-   a paid provider.
+   A hold is not an execution lease. A duplicate receives a `reused` receipt with
+   the hold's current status: `held`, `settled` or `released`. Closed holds never
+   authorize new work. A reused `held` receipt still requires independently established
+   durable dispatch ownership or reconciliation before any paid provider call;
+   settlement charging once does not prevent duplicate provider work. The merged
+   Context accounting consumer conservatively reconciles every reused hold instead
+   of dispatching again.
 3. After the work, `settleCreditReservation` charges the actual credits (at most the
    hold) through the same owner/key receipt as `recordCreditChargeOnce`, then the
    remainder stops being held. Use the existing pricing rules for the amount.
