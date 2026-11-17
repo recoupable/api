@@ -36,8 +36,8 @@ non-running jobs and expired holds must fail closed. A cached step result must n
 be mistaken for a fresh read. Read reconciliation retains the database's existing
 expired-hold behavior; no hold extension or funding action is implied.
 
-Before selecting this candidate, define a finite wait deadline and the observable
-owner continuation when dispatch persistence or its acknowledgement is lost. Prove
+Production use still requires selecting timeout policy and the observable owner
+continuation when dispatch persistence or its acknowledgement is lost. Required evidence covers
 early execution, delayed persistence, restart during wait, wrong-run rejection,
 expiry, read failures, timeout and no second dispatch/provider attempt. A wait solves
 only the initial ordering gap; it does not solve cross-run takeover after admission.
@@ -66,3 +66,7 @@ synthetic effects, not a hosted scheduling guarantee. Negative observer tests re
 outside-delivery reads, incomplete loads, unrelated failures, failed handlers and
 combining events from concurrent deliveries. Keep the original failed CI evidence;
 a passing deterministic fixture does not retroactively prove its complete event order.
+
+The separately qualified [finite admission candidate](./ADMISSION_WAIT.md) implements
+an unwired 30-second admission cutoff with durable fresh reads. It does not select
+production timeout policy, change dispatch or solve atomic ownership.
