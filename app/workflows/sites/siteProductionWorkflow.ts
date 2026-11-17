@@ -11,7 +11,7 @@ import { enrichContextStep } from "./enrichContextStep";
 import { contextBriefStep } from "./contextBriefStep";
 import { conceptPitchSchema, type ConceptPitch } from "@/lib/sites/production/conceptSchema";
 import { selectConceptStep } from "./selectConceptStep";
-import { reviseStep } from "./reviseStep";
+import { repairSiteProduction } from "./repairSiteProduction";
 import type { CreativeDirection } from "@/lib/sites/production/schema";
 import type { SiteAsset } from "@/lib/sites/schema";
 import type { Site } from "@/lib/sites/schema";
@@ -147,35 +147,27 @@ export async function siteProductionWorkflow(
     await revealBuildStep(direction.concept, assets, snapshot).catch(() => undefined);
     stage = "review";
     await ensureSiteExistsStep(site.id);
-    const reviews = [await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill)];
-    while (
-      reviews.at(-1)!.verdict === "revise" &&
-      !reviews.at(-1)!.blocked &&
-      !reviews.at(-1)!.issues.some(issue => issue.module === "direction")
-    ) {
-      await revealBuildStep(
-        direction.concept,
-        assets,
-        snapshot,
-        reviews.at(-1)!.issues[0]?.fix,
-      ).catch(() => undefined);
-      stage = "implementation repair";
-      await ensureSiteExistsStep(site.id);
-      ({ snapshot, direction, assets } = await reviseStep(
-        site,
-        instruction,
-        context,
-        direction,
-        assets,
-        snapshot,
-        reviews.at(-1)!,
-        accountId,
-      ));
-      await revealBuildStep(direction.concept, assets, snapshot).catch(() => undefined);
-      stage = "review";
-      await ensureSiteExistsStep(site.id);
-      reviews.push(await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill));
-    }
+    const firstReview = await reviewStep(
+      snapshot,
+      direction,
+      accountId,
+      site.id,
+      context.siteSkill,
+    );
+    stage = "bounded repair";
+    const repaired = await repairSiteProduction(
+      site,
+      instruction,
+      context,
+      direction,
+      assets,
+      snapshot,
+      firstReview,
+      accountId,
+    );
+    if ("error" in repaired) return repaired;
+    ({ snapshot, direction, assets } = repaired);
+    const reviews = repaired.reviews;
     stage = "save";
     await ensureSiteExistsStep(site.id);
     return await saveSiteStep(

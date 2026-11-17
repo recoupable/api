@@ -1,6 +1,13 @@
 import { it, expect, vi } from "vitest";
 import { siteProductionWorkflow } from "@/app/workflows/sites/siteProductionWorkflow";
 import type { Site } from "../schema";
+vi.mock("@/app/workflows/sites/readRepairCheckpointStep", () => ({
+  readRepairCheckpointStep: vi.fn(async (site: { revision: number }) => ({
+    revision: site.revision,
+    cancelled: false,
+    now: 1000,
+  })),
+}));
 vi.mock("@/app/workflows/sites/ensureSiteExistsStep", () => ({
   ensureSiteExistsStep: vi.fn().mockResolvedValue(undefined),
 }));

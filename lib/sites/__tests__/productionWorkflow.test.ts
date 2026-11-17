@@ -22,6 +22,7 @@ vi.mock("@/app/workflows/sites/prepareSkillStep", () => ({
 }));
 vi.mock("@/app/workflows/sites/albumMetadataStep", () => ({ albumMetadataStep: vi.fn() }));
 const m = vi.hoisted(() => ({
+  checkpoint: vi.fn(),
   build: vi.fn(),
   save: vi.fn(),
   revise: vi.fn(),
@@ -31,6 +32,9 @@ const m = vi.hoisted(() => ({
   enrich: vi.fn(),
   brief: vi.fn(),
   select: vi.fn(),
+}));
+vi.mock("@/app/workflows/sites/readRepairCheckpointStep", () => ({
+  readRepairCheckpointStep: m.checkpoint,
 }));
 vi.mock("@/app/workflows/sites/metadataStep", () => ({ metadataStep: m.metadata }));
 vi.mock("@/app/workflows/sites/audioSourceStep", () => ({ audioSourceStep: m.audio }));
@@ -53,6 +57,11 @@ vi.mock("@/app/workflows/sites/reviseStep", () => ({ reviseStep: m.revise }));
 vi.mock("@/app/workflows/sites/saveSiteStep", () => ({ saveSiteStep: m.save }));
 beforeEach(() => {
   vi.clearAllMocks();
+  m.checkpoint.mockReset().mockImplementation(async (site: Site) => ({
+    revision: site.revision,
+    cancelled: false,
+    now: 1000,
+  }));
   vi.mocked(reviewStep)
     .mockReset()
     .mockResolvedValue({ verdict: "pass", issues: [] } as never);
@@ -201,20 +210,75 @@ it("explains build output exhaustion without exposing provider content or saving
   expect(m.save).not.toHaveBeenCalled();
 });
 
-it("continues durable repairs beyond four reviews and saves only after passing", async () => {
+it("stops after two repairs without saving even if a later review would pass", async () => {
   for (let i = 0; i < 6; i++)
     vi.mocked(reviewStep).mockResolvedValueOnce({
       verdict: "revise",
       issues: [{ module: "implementation", detail: `Fix ${i}` }],
     } as never);
   m.revise.mockResolvedValue({ snapshot: {}, direction: {}, assets: [] });
-  await siteProductionWorkflow({ id: "site" } as Site, "", "account", undefined, approvedConcept);
-  expect(m.revise).toHaveBeenCalledTimes(6);
-  expect(reviewStep).toHaveBeenCalledTimes(7);
+  const result = await siteProductionWorkflow(
+    { id: "site" } as Site,
+    "",
+    "account",
+    undefined,
+    approvedConcept,
+  );
+  expect(result).toEqual({ error: expect.stringContaining("repair attempt limit") });
+  expect(m.revise).toHaveBeenCalledTimes(2);
+  expect(reviewStep).toHaveBeenCalledTimes(3);
+  expect(m.save).not.toHaveBeenCalled();
+});
+it.each(["late pass", "deleted", "revision", "access", "slow repair"])(
+  "preserves saved state after %s",
+  async scenario => {
+    const site = { id: "site", revision: 7 } as Site;
+    vi.mocked(reviewStep).mockResolvedValueOnce({
+      verdict: "revise",
+      issues: [{ module: "implementation", detail: "Fix" }],
+    } as never);
+    m.revise.mockResolvedValue({ snapshot: {}, direction: {}, assets: [] });
+    let checks = 0;
+    m.checkpoint.mockImplementation(async () => {
+      checks++;
+      const changed = checks >= (scenario === "late pass" ? 4 : scenario === "slow repair" ? 3 : 2);
+      if (changed && scenario === "access") throw new Error("Access revoked");
+      return {
+        revision: changed && scenario === "revision" ? 8 : 7,
+        cancelled: changed && scenario === "deleted",
+        now: changed && ["late pass", "slow repair"].includes(scenario) ? 1201000 : 1000,
+      };
+    });
+    expect(
+      await siteProductionWorkflow(site, "", "account", undefined, approvedConcept),
+    ).toHaveProperty("error");
+    expect(m.save).not.toHaveBeenCalled();
+    expect(m.revise).toHaveBeenCalledTimes(["late pass", "slow repair"].includes(scenario) ? 1 : 0);
+    expect(reviewStep).toHaveBeenCalledTimes(scenario === "late pass" ? 2 : 1);
+  },
+);
+it("accepts a repaired pass and carries the original context and assets", async () => {
+  vi.mocked(reviewStep).mockResolvedValueOnce({
+    verdict: "revise",
+    issues: [{ module: "implementation" }],
+  } as never);
+  const candidate = { name: "Repaired" };
+  m.revise.mockImplementation(async (_s, _i, _c, direction, assets) => ({
+    snapshot: candidate,
+    direction,
+    assets,
+  }));
+  await siteProductionWorkflow(
+    { id: "site" } as Site,
+    "Keep game",
+    "account",
+    undefined,
+    approvedConcept,
+  );
   expect(m.save).toHaveBeenCalledOnce();
-  expect(m.save.mock.calls[0][1].production.status).toBe("reviewed");
-  expect(m.save.mock.calls[0][1].production.reviews).toHaveLength(7);
-  for (let i = 0; i < 6; i++) expect(m.revise.mock.calls[i][6].issues[0].detail).toBe(`Fix ${i}`);
+  expect(m.save.mock.calls[0][1].production.reviews).toHaveLength(2);
+  expect(m.revise.mock.calls[0][2]).toEqual(m.build.mock.calls[0][2].release);
+  expect(m.revise.mock.calls[0][4]).toEqual(m.build.mock.calls[0][3]);
 });
 it("reports a repair failure without saving an unfinished candidate", async () => {
   vi.mocked(reviewStep).mockResolvedValueOnce({
@@ -230,8 +294,7 @@ it("reports a repair failure without saving an unfinished candidate", async () =
     approvedConcept,
   );
   expect(result).toEqual({
-    error:
-      "Site production stopped during implementation repair. Your existing draft is unchanged.",
+    error: "Site production stopped during bounded repair. Your existing draft is unchanged.",
   });
   expect(m.save).not.toHaveBeenCalled();
 });
@@ -288,7 +351,7 @@ it("analyzes every album track with durable steps and hands album evidence to th
   expect(m.build.mock.calls[0][2].release.tracks).toHaveLength(2);
 });
 
-it("saves a credit-blocked review as an unfinished draft without starting paid repairs", async () => {
+it("preserves the saved draft on a credit-blocked review without starting paid repairs", async () => {
   const review = {
     verdict: "revise" as const,
     blocked: "credits" as const,
@@ -305,14 +368,7 @@ it("saves a credit-blocked review as an unfinished draft without starting paid r
     undefined,
     approvedConcept,
   );
-  expect(result).toHaveProperty("site");
+  expect(result).toEqual({ error: expect.stringContaining("credit limit") });
   expect(m.revise).not.toHaveBeenCalled();
-  expect(m.save).toHaveBeenCalledWith(
-    expect.anything(),
-    expect.objectContaining({
-      name: "Saved game",
-      production: expect.objectContaining({ status: "needs-review", reviews: [review] }),
-    }),
-    "account",
-  );
+  expect(m.save).not.toHaveBeenCalled();
 });
