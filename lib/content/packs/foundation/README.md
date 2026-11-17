@@ -105,3 +105,6 @@ operations, cross-workflow atomicity, model quality or production admission/cap 
 The fixture has its own initializer-specific process-lifecycle wrapper. The shared runner
 is not generalized in this contribution because it is also used by concurrent work;
 its local-world, network-denial, polling and strict-type primitives are reused unchanged.
+
+Actual server bindings and their admission, authority, URL-expiry and wiring boundaries
+are documented in [Durable ports](./DURABLE_PORTS.md).
