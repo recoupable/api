@@ -1,7 +1,7 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { runContextAccountingAttempt } from "../runContextAccountingAttempt";
 import { reconcileContextAccountingAttempt } from "../reconcileContextAccountingAttempt";
-import type { ContextAccountingServices } from "../types";
+import type { ContextAccountingLedger, ContextAccountingServices } from "../types";
 import { createAccountingFixture } from "./createAccountingFixture";
 
 it("serializes concurrent module admission against a supplied request ceiling", async () => {
@@ -71,7 +71,7 @@ it("rejects nesting around an endpoint that already owns its charge", async () =
   const f = createAccountingFixture();
   await expect(
     runContextAccountingAttempt({ ...f.input, billing: "endpoint_owned" }, f.services),
-  ).rejects.toThrow();
+  ).rejects.toThrow(/billing/);
   expect(f.services.reserveCreditsOnce).not.toHaveBeenCalled();
   expect(f.services.dispatch).not.toHaveBeenCalled();
 });
@@ -224,8 +224,10 @@ it("rechecks reuse atomically after another delivery starts or completes", async
   });
   f.services.findAcceptedReuse.mockImplementationOnce(() => held);
   const delayed = f.run();
-  while (!f.services.findAcceptedReuse.mock.calls.length)
-    await new Promise(resolve => setTimeout(resolve, 0));
+  await vi.waitFor(() => expect(f.services.findAcceptedReuse).toHaveBeenCalledTimes(1), {
+    timeout: 1000,
+    interval: 10,
+  });
   await f.run();
   resume({ resultId: "cached" });
   expect(await delayed).toMatchObject({
@@ -321,3 +323,41 @@ it("fixture wallet rejects another payer reusing an operation key", async () => 
   const args = f.services.reserveCreditsOnce.mock.calls[0][0];
   expect(() => f.reserve({ ...args, accountId: "another-payer" })).toThrow("Payer mismatch");
 });
+
+it("requires synchronous callbacks on the inferred fixture transaction method", () => {
+  const f = createAccountingFixture();
+  if (false) {
+    // @ts-expect-error The inferred fixture method rejects async callbacks directly.
+    void f.services.transact("payer", async () => 1);
+    const unionCallback = (): number | Promise<number> => (Math.random() ? 1 : Promise.resolve(1));
+    // @ts-expect-error The inferred fixture method rejects value-or-Promise callbacks.
+    void f.services.transact("payer", unionCallback);
+  }
+  expect(f.services.transact).toBeTypeOf("function");
+});
+it.each(["fulfilled", "rejected", "thenable"])(
+  "rejects %s async fixture callbacks without committing draft mutations",
+  async outcome => {
+    const f = createAccountingFixture();
+    const unchecked = f.services.transact as (
+      payer: string,
+      action: (ledger: ContextAccountingLedger) => unknown,
+    ) => Promise<unknown>;
+    await expect(
+      unchecked(f.input.payerId, ledger => {
+        ledger.pilotPolicies.set("before", 1);
+        const later = Promise.resolve().then(() => {
+          ledger.pilotPolicies.set("after", 1);
+          if (outcome === "rejected") throw new Error("late rejection");
+        });
+        return outcome === "thenable" ? { then: later.then.bind(later) } : later;
+      }),
+    ).rejects.toThrow("Transaction callback must be synchronous");
+    await Promise.resolve();
+    expect(f.ledger.pilotPolicies.size).toBe(0);
+    await f.services.transact(f.input.payerId, ledger => {
+      ledger.pilotPolicies.set("next", 2);
+    });
+    expect([...f.ledger.pilotPolicies]).toEqual([["next", 2]]);
+  },
+);

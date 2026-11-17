@@ -22,7 +22,9 @@ export function validateContextAccountingCompletion(
       event: z.record(z.string(), z.unknown()),
     })
     .parse(raw);
-  // Reuse the existing strict usage-event validator. No attribution fields are added to it.
+  // Reuse the strict usage-event validator without adding attribution fields.
+  // For a waived completion, 1 only satisfies this validator's positive-amount rule.
+  // No charge is made here; retain the actual zero below so finishing releases the hold.
   const charge = validateCreditCharge({
     accountId: input.payerId,
     operationKey,

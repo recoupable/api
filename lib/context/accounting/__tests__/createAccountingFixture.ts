@@ -107,7 +107,12 @@ export function createAccountingFixture() {
     },
   };
   const services = {
-    async transact<T>(_payer: string, action: (ledger: ContextAccountingLedger) => T): Promise<T> {
+    async transact<T>(
+      _payer: string,
+      action: (
+        ledger: ContextAccountingLedger,
+      ) => T & ([Extract<T, PromiseLike<unknown>>] extends [never] ? unknown : never),
+    ): Promise<T> {
       const next = serial.then(() => {
         const current = ledgers.get(_payer) ?? {
           attempts: new Map(),
@@ -118,6 +123,16 @@ export function createAccountingFixture() {
         const draft = structuredClone(current);
         if (fixture.cancelled) for (const key of draft.attempts.keys()) draft.cancelled.add(key);
         const result = action(draft);
+        if (
+          result !== null &&
+          (typeof result === "object" || typeof result === "function") &&
+          "then" in result &&
+          typeof result.then === "function"
+        ) {
+          // Reject async misuse without committing the draft; consume a later rejection.
+          void Promise.resolve(result).catch(() => {});
+          throw new Error("Transaction callback must be synchronous");
+        }
         Object.assign(current, draft);
         ledgers.set(_payer, current);
         return result;
