@@ -308,10 +308,9 @@ it("requires synchronous transaction callbacks at the service boundary", () => {
   if (false) {
     // @ts-expect-error Durable transaction mutations must complete synchronously.
     void services.transact("payer", async () => 1);
+    const unionCallback = (): number | Promise<number> => (Math.random() ? 1 : Promise.resolve(1));
     // @ts-expect-error A union containing a promise is also asynchronous.
-    void services.transact("payer", (): number | Promise<number> =>
-      Math.random() ? 1 : Promise.resolve(1),
-    );
+    void services.transact("payer", unionCallback);
   }
   expect(services.transact).toBeTypeOf("function");
 });
