@@ -1,0 +1,21 @@
+import { FatalError } from "workflow";
+import type { PackActor, PackJob } from "@/lib/content/packs/packTypes";
+import {
+  packFoundationRecordSchema,
+  type PackFoundationRecord,
+} from "@/lib/content/packs/foundation/packFoundationSchema";
+import { fixtureState } from "./fixtureState";
+export async function persistStep(_actor: PackActor, _job: PackJob, record: PackFoundationRecord) {
+  "use step";
+  const saved = fixtureState("persist", state => {
+    const saved = packFoundationRecordSchema.parse(record);
+    state.job.production_context = {
+      ...(state.job.production_context as object),
+      shared_foundation: saved,
+    };
+    return saved;
+  });
+  if (_job.id === "persistence-ack-loss" && saved.state === "ready")
+    throw new FatalError("Synthetic readiness acknowledgement lost");
+  return saved;
+}

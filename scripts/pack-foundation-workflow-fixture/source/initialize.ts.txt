@@ -1,0 +1,46 @@
+import { foundationFixture } from "@/lib/content/packs/foundation/__tests__/foundationFixture";
+import { foundationImageBytes } from "@/lib/content/packs/foundation/__tests__/foundationImageBytes";
+import { createPackFoundationPlan } from "@/lib/content/packs/foundation/createPackFoundationPlan";
+import { bindPackFoundationFiles } from "@/lib/content/packs/foundation/bindPackFoundationFiles";
+import type { FixtureState } from "./fixtureState";
+export async function initialize(scenario: string): Promise<FixtureState> {
+  const state: FixtureState = {
+    ...foundationFixture(scenario === "none_requested" ? 0 : 1),
+    scenario,
+    settlements: 0,
+  };
+  state.job.id = scenario;
+  state.job.hold_expires_at = "2099-01-01T00:00:00Z";
+  for (const asset of state.assets) asset.job_id = scenario;
+  if (scenario === "missing") state.assets = state.assets.filter(a => a.kind !== "artwork");
+  if (scenario === "retained") {
+    for (const asset of state.assets.filter(a => a.id !== "video-0")) {
+      Object.assign(asset, {
+        status: "completed",
+        attempt: 1,
+        caption: "Retained",
+        qa: { passed: true },
+        provider_state: { fixture_receipt: `${asset.id}:retained` },
+        files: [
+          {
+            storage_key: `owner/release-packs/${asset.id}.png`,
+            content_type: "image/png",
+            bytes: foundationImageBytes().length,
+          },
+        ],
+      });
+    }
+    const plan = createPackFoundationPlan(state, { dependentAssetIds: ["video-0"] });
+    const ready = await bindPackFoundationFiles(
+      plan,
+      state.assets.find(a => a.kind === "artwork"),
+      async () => foundationImageBytes(),
+    );
+    ready.dependency_bindings = [{ asset_id: "video-0", attempt: 1 }];
+    state.job.production_context = {
+      ...(state.job.production_context as object),
+      shared_foundation: ready,
+    };
+  }
+  return state;
+}

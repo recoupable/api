@@ -1,0 +1,45 @@
+import assert from "node:assert/strict";
+import type { PackActor, PackJob } from "@/lib/content/packs/packTypes";
+import { packFoundationRecordSchema } from "@/lib/content/packs/foundation/packFoundationSchema";
+import { foundationImageBytes } from "@/lib/content/packs/foundation/__tests__/foundationImageBytes";
+import { fixtureState } from "./fixtureState";
+export async function produceStep(_actor: PackActor, job: PackJob, assetId: string) {
+  "use step";
+  return fixtureState("produce", state => {
+    const asset = state.assets.find(a => a.id === assetId)!;
+    assert.equal(asset.status, "pending", "accepted synthetic effects must never repeat");
+    if (assetId === "video-0") {
+      const context = state.job.production_context as { shared_foundation?: unknown };
+      const saved = packFoundationRecordSchema.parse(context.shared_foundation);
+      assert.equal(saved.state, "ready");
+      assert(
+        saved.dependency_bindings?.some(
+          b => b.asset_id === assetId && b.attempt === asset.attempt + 1,
+        ),
+      );
+      assert.deepEqual(job.shared_foundation_binding, {
+        plan_sha256: saved.plan.digest,
+        asset_sha256: saved.asset_sha256,
+      });
+      assert(job.brief.reference_image_urls.includes("https://fixture.invalid/retained.png"));
+    }
+    asset.attempt++;
+    asset.provider_state = { fixture_receipt: `${assetId}:accepted` };
+    asset.status =
+      asset.kind === "artwork" && ["failed", "uncertain"].includes(state.scenario)
+        ? (state.scenario as "failed" | "uncertain")
+        : "completed";
+    if (asset.status === "completed") {
+      asset.files = [
+        {
+          storage_key: `owner/release-packs/${assetId}.png`,
+          content_type: "image/png",
+          bytes: foundationImageBytes().length,
+        },
+      ];
+      asset.caption = "Synthetic retained caption";
+      asset.qa = { passed: true };
+    }
+    return { assetId, status: asset.status, binding: job.shared_foundation_binding ?? null };
+  });
+}

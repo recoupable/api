@@ -3,8 +3,11 @@
 This candidate advances app issues2273/2268 without adding a quoted item, provider stage,
 reservation, model, cap or production registration. The production workflow and bounded
 scheduler are unchanged. The caller must supply one already-admitted workflow's durable
-ports before any hosted integration; these ordinary async functions are not a newly
-qualified Workflow registration.
+ports before any hosted integration; no production Workflow registration is added.
+Plan hashing (`createPlan`) and retained-file validation/hashing (`bindFiles`) are explicit
+async ports because Node crypto and Buffer cannot run in Workflow scope. Their step
+adapters call the unchanged `createPackFoundationPlan` and `bindPackFoundationFiles`
+helpers; the latter reads retained bytes inside the step rather than serializing a callback.
 
 `createPackFoundationPlan` selects an explicitly requested **existing quoted artwork**,
 otherwise the lowest ordinal/ID existing quoted artwork. It rejects retry-only/stale
@@ -75,3 +78,30 @@ shared bindings, replay, retained receipt/attempt conflicts, lifecycle results, 
 context adapter, and actual image-adapter input shape with mocked provider calls. They do
 not prove database deployment, hosted Workflow delivery, provider quality, licensing or
 cross-pack creative acceptance. Production remains unwired.
+
+## Compiled local qualification
+
+`pnpm test:pack-foundation-workflow` compiles the actual composition and bounded scheduler
+with the installed Workflow SDK. Typed synthetic step ports preserve the real planning,
+file validation and digest helpers; persistence and generation are local fixture effects.
+The runner reuses the scheduler fixture's local world, network denial, strict generated
+TypeScript checker and polling/restart primitives without changing that shared harness.
+
+For the six ordinary scenarios, it kills only its owned worker after acknowledged
+foundation-outcome persistence at a journaled hook created after the persist step returns. It
+restarts against the same local journal, explicitly re-enqueues, and resumes. Assertions
+cover persisted dependent attempt/hash binding before dispatch, retained foundation and
+independent receipts, failed/uncertain/missing/no-artwork deferred settlement, and lost
+readiness acknowledgement failing closed. That seventh scenario saves readiness then
+throws a fatal step error; it pauses at the final-result hook after the composition handles
+the failure. It does not claim a crash during a persistence effect. Terminal replay must not repeat any recorded
+effect. A synthetic environment sentinel satisfies the constants module's import guard;
+no real credential is supplied or required. Quote amounts and holds remain unchanged fixture values.
+
+This qualifies local compiled orchestration with synthetic durable ports. It does not
+qualify hosted recovery, production persistence adapters, crashes during provider/SQL
+operations, cross-workflow atomicity, model quality or production admission/cap policy.
+
+The fixture has its own initializer-specific process-lifecycle wrapper. The shared runner
+is not generalized in this contribution because it is also used by concurrent work;
+its local-world, network-denial, polling and strict-type primitives are reused unchanged.

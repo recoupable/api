@@ -39,6 +39,9 @@ jobs:
       - name: Check unwired pack scheduler replay with offline effects
         run: pnpm test:pack-scheduler-workflow
 
+      - name: Check unwired pack foundation with offline durable ports
+        run: pnpm test:pack-foundation-workflow
+
       - name: Check production TypeScript configuration
         run: pnpm exec tsc --noEmit --project tsconfig.build.json
 

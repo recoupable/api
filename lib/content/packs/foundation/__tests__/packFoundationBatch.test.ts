@@ -1,3 +1,5 @@
+import { createPackFoundationPlan } from "../createPackFoundationPlan";
+import { bindPackFoundationFiles } from "../bindPackFoundationFiles";
 import { foundationImageBytes } from "./foundationImageBytes";
 import { expect, it, vi } from "vitest";
 import { runPackFoundationBatch } from "../runPackFoundationBatch";
@@ -7,7 +9,17 @@ function setup(artwork = 1) {
   const snapshot = foundationFixture(artwork);
   const actor = { accountId: "owner" };
   const produced: { id: string; references: string[]; binding: unknown }[] = [];
+  const readFile = vi.fn(async () => foundationImageBytes());
   const services = {
+    createPlan: vi.fn(async (...args: Parameters<typeof createPackFoundationPlan>) =>
+      createPackFoundationPlan(...args),
+    ),
+    bindFiles: vi.fn(
+      (
+        plan: Parameters<typeof bindPackFoundationFiles>[0],
+        asset: Parameters<typeof bindPackFoundationFiles>[1],
+      ) => bindPackFoundationFiles(plan, asset, readFile),
+    ),
     prepare: vi.fn(async () => ({
       job: structuredClone(snapshot.job),
       assetIds: snapshot.assets.filter(a => a.status === "pending").map(a => a.id),
@@ -40,7 +52,7 @@ function setup(artwork = 1) {
         ],
       });
     }),
-    readFile: vi.fn(async () => foundationImageBytes()),
+    readFile,
     signFile: vi.fn(async () => "https://example.com/retained.png"),
     settle: vi.fn(async () => undefined),
   };
@@ -351,5 +363,22 @@ it("deduplicates the same retained storage file even when signing would return a
   expect(f.services.signFile).not.toHaveBeenCalled();
   expect(f.produced.find(p => p.id === "video-0")!.references).toEqual(
     f.snapshot.job.brief.reference_image_urls,
+  );
+});
+
+it("runs plan hashing and retained-byte binding only through the supplied durable ports", async () => {
+  const f = setup();
+  const result = await runPackFoundationBatch(
+    f.actor,
+    "job",
+    2,
+    { dependentAssetIds: ["video-0"] },
+    f.services,
+  );
+  expect(result.status).toBe("batch_finished");
+  expect(f.services.createPlan).toHaveBeenCalledTimes(2);
+  expect(f.services.bindFiles).toHaveBeenCalledOnce();
+  expect(f.services.bindFiles.mock.invocationCallOrder[0]).toBeLessThan(
+    f.services.persist.mock.invocationCallOrder.at(-1)!,
   );
 });

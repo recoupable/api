@@ -1,7 +1,5 @@
 import { resolvePackCreativeContext } from "../resolvePackCreativeContext";
 import { bindPackFoundationDependents } from "./bindPackFoundationDependents";
-import { createPackFoundationPlan } from "./createPackFoundationPlan";
-import { bindPackFoundationFiles } from "./bindPackFoundationFiles";
 import { getPackFoundationReferences } from "./getPackFoundationReferences";
 import { packFoundationRecordSchema, type PackFoundationSelection } from "./packFoundationSchema";
 import type { PackActor } from "../packTypes";
@@ -14,12 +12,12 @@ export async function preparePackFoundationBatch(
   services: PackFoundationServices,
   state: PackFoundationBatchState,
 ) {
-  const { prepare, read, persist, produce, readFile } = services;
+  const { prepare, read, persist, produce, createPlan, bindFiles } = services;
   const original = await read(actor, jobId);
   state.savedJob = original.job;
   if (original.job.id !== jobId || original.job.status !== "running")
     throw new Error("Foundation batch requires the admitted running pack");
-  const plan = createPackFoundationPlan(original, selection);
+  const plan = await createPlan(original, selection);
   const context = original.job.production_context as { shared_foundation?: unknown } | undefined;
   const saved =
     context?.shared_foundation === undefined
@@ -51,12 +49,11 @@ export async function preparePackFoundationBatch(
   if (asset?.status === "pending") await produce(actor, prepared.job, asset.id);
   const current = await read(actor, jobId);
   state.savedJob = current.job;
-  if (createPackFoundationPlan(current, selection).digest !== plan.digest)
+  if ((await createPlan(current, selection)).digest !== plan.digest)
     throw new Error("Foundation plan changed during preparation");
-  const bound = await bindPackFoundationFiles(
+  const bound = await bindFiles(
     plan,
     current.assets.find(a => a.id === plan.asset_id),
-    readFile,
   );
   if (
     saved?.state === "ready" &&
