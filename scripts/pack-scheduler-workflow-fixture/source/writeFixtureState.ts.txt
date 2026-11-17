@@ -1,0 +1,6 @@
+import { writeFileSync } from "node:fs";
+import { fixturePath } from "./fixturePath";
+import { fixtureSchemas, type FixtureState } from "./fixtureSchemas";
+export function writeFixtureState(state: FixtureState) {
+  writeFileSync(fixturePath("state.json"), JSON.stringify(fixtureSchemas.state.parse(state)));
+}
