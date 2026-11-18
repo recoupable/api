@@ -24,6 +24,9 @@ describe("internal verified Pack lyric timeline", () => {
       ],
     });
     expect(input).toEqual(before);
+    if (result.status !== "ready") throw new Error("Expected a ready fixture timeline");
+    result.alignment.verifiedRange.startMs = 123;
+    expect(input.alignment.verifiedRange).toEqual(before.alignment.verifiedRange);
     input.expected.recording.sha256 = "b".repeat(64);
     expect(result.target.recording.sha256).toBe("a".repeat(64));
   });
@@ -141,7 +144,7 @@ describe("internal verified Pack lyric timeline", () => {
     const { verificationRef: _unused, ...alignment } = input.alignment;
     expect(() => buildPackLyricTimeline({ ...input, alignment })).toThrow();
   });
-  it.each([" café ", "e\u0301", "你好", "مرحبا", "👩‍🎤", '<b>{\\k20}%:&"\'"</b>'])(
+  it.each([" café ", "e\u0301", "\u0301", "你好", "مرحبا", "👩‍🎤", '<b>{\\k20}%:&"\'"</b>'])(
     "preserves literal Unicode text %j",
     text => {
       const input = verifiedLyricAlignmentFixture();

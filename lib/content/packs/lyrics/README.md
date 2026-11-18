@@ -58,7 +58,9 @@ renderer must use a text-safe sink and test escaping in actual rendered frames;
 these tests establish preservation only. Control characters, lone surrogates,
 line/paragraph separators and bidi override/isolate controls are rejected.
 Ordinary multilingual letters, combining marks and valid emoji joiners survive.
-Whitespace-only and invisible-only words are rejected using `hasPackTextContent`.
+Whitespace-only and default-ignorable-only words are rejected using
+`hasPackTextContent`; other combining marks remain literal Unicode. Their visible
+appearance and glyph support require renderer QA.
 
 ## Bounds and outcomes
 
