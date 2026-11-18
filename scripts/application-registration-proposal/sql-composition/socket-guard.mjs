@@ -1,5 +1,7 @@
 import net from "node:net";
 import dgram from "node:dgram";
+import dns from "node:dns";
+import dnsPromises from "node:dns/promises";
 import { fileURLToPath } from "node:url";
 import tls from "node:tls";
 import http from "node:http";
@@ -30,6 +32,36 @@ const denyNetwork = function () {
 };
 globalThis.fetch = globalThis.WebSocket = denyNetwork;
 dgram.createSocket = dgram.Socket = denyNetwork;
+for (const target of [dns, dnsPromises]) {
+  for (const key of Object.keys(target)) {
+    if (
+      key === "Resolver" ||
+      key.startsWith("resolve") ||
+      key === "reverse" ||
+      key === "lookupService"
+    )
+      target[key] = denyNetwork;
+  }
+}
+// Vite inspects localhost while loading configuration. Answer it without OS/DNS calls.
+const syntheticLocalhost = (hostname, options = {}) => {
+  if (hostname !== "localhost") return denyNetwork();
+  const family = (typeof options === "number" ? options : options.family) === 6 ? 6 : 4;
+  const result = { address: family === 6 ? "::1" : "127.0.0.1", family };
+  return typeof options === "object" && options.all ? [result] : result;
+};
+dns.lookup = (hostname, options, callback) => {
+  if (typeof options === "function") {
+    callback = options;
+    options = {};
+  }
+  const result = syntheticLocalhost(hostname, options);
+  if (typeof callback !== "function") throw new Error("Synthetic localhost callback required");
+  queueMicrotask(() =>
+    Array.isArray(result) ? callback(null, result) : callback(null, result.address, result.family),
+  );
+};
+dnsPromises.lookup = async (hostname, options) => syntheticLocalhost(hostname, options);
 net.connect = net.createConnection = net.Socket.prototype.connect = denyNetwork;
 tls.connect = http.request = http.get = https.request = https.get = http2.connect = denyNetwork;
 
@@ -43,7 +75,7 @@ export function installOwnedSocketGuard() {
   const scope = JSON.parse(readFileSync(join(root, "composition-scope.json"), "utf8"));
   const expected = join(socket, ".s.PGSQL.55473");
   const identity = lstatSync(expected);
-  // Validate the directory last: Node 23 realpath shares stat scratch state with lstat.
+  // Validate the directory last: Node 23.6.1 realpath shares stat scratch state with lstat.
   // Leaving a socket stat last can corrupt cached module-path resolution.
   const directory = lstatSync(socket);
   const pid = readFileSync(join(socket, "pg", "postmaster.pid"), "utf8").split("\n");

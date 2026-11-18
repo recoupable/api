@@ -3,6 +3,8 @@ import { Client } from "pg";
 import { userInfo } from "node:os";
 import net from "node:net";
 import dgram from "node:dgram";
+import dns from "node:dns";
+import dnsPromises from "node:dns/promises";
 import { NextRequest, NextResponse } from "next/server";
 import { fixture } from "../setup";
 import { installOwnedSocketGuard } from "./socket-guard.mjs";
@@ -308,7 +310,16 @@ describe("actual domain to exact disposable SQL proposal", () => {
     );
     expect(calls).toHaveLength(before);
   });
-  it("denies TCP and unrelated Unix sockets without attempting network access", () => {
+  it("denies native DNS, TCP, UDP and unrelated Unix sockets before access", async () => {
+    expect(() => dns.lookup("fixture.invalid", () => {})).toThrow("Network forbidden");
+    expect(() => dns.resolve4("fixture.invalid", () => {})).toThrow("Network forbidden");
+    expect(() => Reflect.construct(dns.Resolver, [])).toThrow("Network forbidden");
+    expect(() => dnsPromises.resolve4("fixture.invalid")).toThrow("Network forbidden");
+    await expect(dnsPromises.lookup("fixture.invalid")).rejects.toThrow("Network forbidden");
+    await expect(dnsPromises.lookup("localhost")).resolves.toEqual({
+      address: "127.0.0.1",
+      family: 4,
+    });
     expect(() => dgram.createSocket("udp4")).toThrow("Network forbidden");
     expect(() => Reflect.construct(dgram.Socket, ["udp4"])).toThrow("Network forbidden");
     expect(() => new net.Socket().connect(443, "example.invalid")).toThrow(
