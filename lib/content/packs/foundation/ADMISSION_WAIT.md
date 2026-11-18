@@ -46,7 +46,8 @@ read-only calls and zero retry settings.
 The separate `scripts/pack-admission-workflow-fixture` compiles the actual composition,
 coordinator and durable steps, replacing only the read RPC with a typed synthetic
 boundary. It uses a fixture-local adapter around the installed SDK, plus unchanged shared
-network-denial, failure-delivery, polling and strict-type helpers. Scenarios cover immediate admission, delayed persistence across
+failure-delivery, polling and strict-type helpers. Its local network guard extends
+the unchanged shared guard to reject WebSocket construction and HTTP/2 connections. Scenarios cover immediate admission, delayed persistence across
 process restart, deadline across restart, different ID, read/access failure and
 expired hold, and expiry while waiting. The fixture retains the decoded original journaled start-clock result
 and checks the exact deadline, distinct read-step correlations, one original start,
@@ -83,8 +84,14 @@ IDs, attempts, per-handler AsyncLocalStorage context, event create requests/resu
 list cursors and returned event IDs. The queue observer is installed before startup
 through an isolated loader with an exact SDK source hash; installed files are not
 changed. It returns original SDK promises/results and adds no locks, retries or
-serialization. JSONL persistence is asynchronous and bounded; dropped entries or
-persistence errors fail successful recovery-trace qualification.
+serialization. JSONL persistence is asynchronous and capped at20,000 entries/2MiB. Successful
+qualification closes the SDK, drains late log writes, checks a fresh snapshot for
+dropped entries/persistence errors, then writes the receipt. A last-append failure
+cannot produce a success receipt; an earlier operation error remains primary.
+The start phase likewise drains and checks its snapshot before writing the
+pre-crash trace or ready receipt, without closing the SDK before intentional SIGKILL.
+The drain returns a frozen snapshot only after all writes queued during the drain
+have settled; later observations belong to a later checkpoint.
 
 `probeRecoveryEnqueues.mjs` uses identical saved-run bytes and the actual SDK queue
 with a bounded synthetic receiver. Startup-only and explicit-only each produce one
@@ -112,3 +119,8 @@ error and explicitly marks unavailable or truncated evidence. Snapshots from the
 sources are not an atomic view of a live process. Tests force these paths and verify
 retained evidence and child cleanup; they do not claim a hung event loop can answer
 an IPC request.
+
+Diagnostic file reads are capped before parsing:1MiB per checkpoint/operation trace,
+64KiB per raw event/wait file and4MiB aggregate per raw directory. Truncation and
+partial lines remain explicit evidence. These bounds supplement the one-second live
+snapshot request; capture is best-effort, not a wall-clock guarantee for filesystem I/O.

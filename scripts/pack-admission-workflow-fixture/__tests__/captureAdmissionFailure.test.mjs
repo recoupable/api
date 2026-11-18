@@ -44,9 +44,9 @@ for (const scenario of ["timeout", "signal", "decoder", "assertion"]) {
     const record = output.find(args => args[0] === "PACK_ADMISSION_SAVED_FAILURE");
     assert(record);
     const evidence = JSON.parse(record[1]);
-    assert.equal(evidence.saved.journal[0].eventId, "retained-event");
-    assert.equal(evidence.resumeOperationTrace[0].delivery.messageId, "real-child-message");
-    assert.equal(evidence["before-crash.json"][0].stepId, "original");
+    assert.equal(evidence.saved.data.journal[0].eventId, "retained-event");
+    assert.equal(evidence.resumeOperationTrace.data[0].delivery.messageId, "real-child-message");
+    assert.equal(evidence["before-crash.json"].data[0].stepId, "original");
     if (scenario === "timeout")
       assert.equal(evidence.live.trace.delivery.messageId, "real-child-message");
     const pid = Number(await readFile(join(root, scenario, "child-pid"), "utf8"));

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { assertRecoveryTrace } from "./assertRecoveryTrace.mjs";
+import { drainAdmissionTrace } from "./drainAdmissionTrace.mjs";
+import { finalizeAdmissionWorld } from "./finalizeAdmissionWorld.mjs";
 import { join } from "node:path";
 import { writeFile, rename } from "node:fs/promises";
 import { createAdmissionWorld } from "./createAdmissionWorld.mjs";
@@ -28,6 +29,8 @@ export async function runWorker(temp, scenario, phase, attempts) {
   };
   process.on("message", onSnapshotRequest);
   const keepAlive = setInterval(() => {}, 1000);
+  let failure;
+  let completed;
   const idle = () => ctx.counts().deliveries > 0 && ctx.counts().activeDeliveries === 0;
   const journal = runId => readAdmissionJournal(ctx.world, runId);
   const results = async runId => readAdmissionResults(await journal(runId), runId);
@@ -64,11 +67,8 @@ export async function runWorker(temp, scenario, phase, attempts) {
         JSON.stringify(await readJson(join(effects, "state.json"))),
       );
       assert.equal(attempts(), 0);
-      await writeFile(
-        join(effects, "before-crash-world-trace.json"),
-        JSON.stringify(ctx.observer.snapshot()),
-      );
-      await ctx.observer.flush();
+      const startTrace = await drainAdmissionTrace(ctx.observer);
+      await writeFile(join(effects, "before-crash-world-trace.json"), JSON.stringify(startTrace));
       await writeFile(join(effects, "ready.tmp"), JSON.stringify({ networkAttempts: attempts() }));
       await rename(join(effects, "ready.tmp"), join(effects, "ready.json"));
       await new Promise(() => {});
@@ -122,8 +122,7 @@ export async function runWorker(temp, scenario, phase, attempts) {
     assert.deepEqual(await readEvents(effects), trace);
     assert.deepEqual(await readJson(join(effects, "state.json")), state);
     assert.equal(attempts(), 0);
-    assertRecoveryTrace(ctx.observer.snapshot(), runId);
-    await writeAdmissionReceipt(effects, {
+    completed = {
       scenario,
       runId,
       startClock,
@@ -133,16 +132,21 @@ export async function runWorker(temp, scenario, phase, attempts) {
       state,
       journal: events,
       networkAttempts: attempts(),
-      worldTrace: ctx.observer.snapshot(),
       beforeCrashWorldTrace: evidence.beforeCrashWorldTrace,
-    });
-    console.log(
-      `PASS ${scenario}: ${value.status}, ${trace.length} read(s), restart and terminal replay`,
-    );
+    };
+  } catch (error) {
+    failure = error;
+    throw error;
   } finally {
-    process.off("message", onSnapshotRequest);
-    clearInterval(keepAlive);
-    await ctx.world.close();
-    await ctx.observer.flush();
+    try {
+      const worldTrace = await finalizeAdmissionWorld(ctx, completed?.runId, failure);
+      await writeAdmissionReceipt(effects, { ...completed, worldTrace });
+      console.log(
+        `PASS ${scenario}: ${completed.value.status}, ${completed.trace.length} read(s), restart and terminal replay`,
+      );
+    } finally {
+      process.off("message", onSnapshotRequest);
+      clearInterval(keepAlive);
+    }
   }
 }

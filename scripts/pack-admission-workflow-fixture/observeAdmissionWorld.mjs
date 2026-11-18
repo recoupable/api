@@ -7,6 +7,7 @@ export function observeAdmissionWorld(world, options = {}) {
   let pending = Promise.resolve();
   let persistenceError;
   let droppedEntries = 0;
+  let traceBytes = 0;
   const trace = [];
   let nextOperation = 0;
   let nextDelivery = 0;
@@ -23,10 +24,17 @@ export function observeAdmissionWorld(world, options = {}) {
       source: sources.getStore() ?? "external",
       ...entry,
     };
+    const line = JSON.stringify(item) + "\n";
+    const bytes = Buffer.byteLength(line);
+    if (traceBytes + bytes > 2097152) {
+      droppedEntries++;
+      return;
+    }
+    traceBytes += bytes;
     trace.push(item);
     if (options.outputPath)
       pending = pending
-        .then(() => appendFile(options.outputPath, JSON.stringify(item) + "\n"))
+        .then(() => (options.writeLine ?? appendFile)(options.outputPath, line))
         .catch(error => {
           persistenceError = error.message;
         });
@@ -138,9 +146,21 @@ export function observeAdmissionWorld(world, options = {}) {
     sdk: globalThis[Symbol.for("pack.admission.sdk")],
     sourceHead: process.env.PACK_ADMISSION_SOURCE_HEAD ?? "unbound",
   });
+  const snapshot = () => ({
+    entries: structuredClone(trace),
+    traceBytes,
+    droppedEntries,
+    persistenceError,
+  });
   return {
-    snapshot: () => ({ entries: structuredClone(trace), droppedEntries, persistenceError }),
-    flush: () => pending,
+    snapshot,
+    flush: async () => {
+      for (;;) {
+        const draining = pending;
+        await draining;
+        if (draining === pending) return snapshot();
+      }
+    },
     observeQueue,
     source: (label, invoke) => sources.run(label, () => observe(label, {}, invoke, () => ({}))),
   };

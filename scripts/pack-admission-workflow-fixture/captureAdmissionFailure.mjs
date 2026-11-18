@@ -1,11 +1,11 @@
-import { readJson } from "../pack-scheduler-workflow-fixture/readJson.mjs";
+import { readAdmissionDiagnosticFile } from "./readAdmissionDiagnosticFile.mjs";
 import { join } from "node:path";
-import { readFile, readdir } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 /** Capture is bounded and best-effort; it must never replace the original failure. */
 export async function captureAdmissionFailure(child, effects, error) {
   const evidence = { error: { name: error.name, message: error.message } };
   try {
-    evidence.saved = await readJson(join(effects, "assertion-evidence.json"));
+    evidence.saved = await readAdmissionDiagnosticFile(join(effects, "assertion-evidence.json"));
   } catch (captureError) {
     evidence.savedUnavailable = captureError.message;
   }
@@ -37,25 +37,17 @@ export async function captureAdmissionFailure(child, effects, error) {
   }
   for (const name of ["before-crash.json", "before-crash-world-trace.json", "start-clock.json"]) {
     try {
-      evidence[name] = await readJson(join(effects, name));
+      evidence[name] = await readAdmissionDiagnosticFile(join(effects, name));
     } catch (captureError) {
       evidence[name] = { unavailable: captureError.message };
     }
   }
   for (const phase of ["start", "resume"]) {
     try {
-      evidence[`${phase}OperationTrace`] = (
-        await readFile(join(effects, `${phase}-world-trace.jsonl`), "utf8")
-      )
-        .split("\n")
-        .filter(Boolean)
-        .map(line => {
-          try {
-            return JSON.parse(line);
-          } catch {
-            return { incompleteRawLine: line };
-          }
-        });
+      evidence[`${phase}OperationTrace`] = await readAdmissionDiagnosticFile(
+        join(effects, `${phase}-world-trace.jsonl`),
+        "jsonl",
+      );
     } catch (captureError) {
       evidence[`${phase}OperationTrace`] = { unavailable: captureError.message };
     }
@@ -64,17 +56,26 @@ export async function captureAdmissionFailure(child, effects, error) {
     try {
       const directory = join(effects, "journal", kind);
       const names = (await readdir(directory)).filter(name => name.endsWith(".json")).sort();
+      const files = [];
+      let budget = 4194304;
+      for (const name of names.slice(0, 2048)) {
+        if (budget <= 0) break;
+        try {
+          const capture = await readAdmissionDiagnosticFile(
+            join(directory, name),
+            "json",
+            Math.min(budget, 65536),
+          );
+          budget -= capture.bytesRead;
+          files.push({ name, capture });
+        } catch (readError) {
+          files.push({ name, unavailable: readError.message });
+        }
+      }
       evidence[`raw${kind}`] = {
-        truncated: names.length > 2048,
-        files: await Promise.all(
-          names.slice(0, 2048).map(async name => {
-            try {
-              return { name, data: await readJson(join(directory, name)) };
-            } catch (readError) {
-              return { name, unavailable: readError.message };
-            }
-          }),
-        ),
+        truncated: files.length < names.length,
+        byteLimit: 4194304,
+        files,
       };
     } catch (captureError) {
       evidence[`raw${kind}`] = { unavailable: captureError.message };

@@ -4,11 +4,11 @@ import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { denyNetwork } from "../pack-scheduler-workflow-fixture/denyNetwork.mjs";
+import { denyAdmissionNetwork } from "./denyAdmissionNetwork.mjs";
 import { buildFixture } from "./buildFixture.mjs";
 import { runWorker } from "./runWorker.mjs";
 import { runScenario } from "./runScenario.mjs";
-const attempts = denyNetwork();
+const attempts = denyAdmissionNetwork();
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "../..");
 process.env.PACK_ADMISSION_SOURCE_HEAD ??= execFileSync("git", ["rev-parse", "HEAD"], {
