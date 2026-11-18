@@ -1,5 +1,5 @@
 import type { AdapterFactory } from "oidc-provider";
-import { selectedContextSchema } from "./selectedContextSchema";
+import { oauthGrantContextSchema } from "./oauthGrantContextSchema";
 import { z } from "zod";
 import type { OAuthRuntimeConfig } from "./loadOAuthConfig";
 import type { OAuthStore, OAuthStoredRecord } from "./OAuthStore";
@@ -9,14 +9,14 @@ const schema = z.object({
   accountId: z.string().uuid(),
   clientId: z.string(),
   grantId: z.string(),
-  extra: z.object({
-    clientName: z.string(),
-    context: z.literal("personal"),
-    selectedContext: selectedContextSchema.optional(),
-    scopes: z.array(z.string()),
-    createdAt: z.number().int(),
-    expiresAt: z.number().int().nullable(),
-  }),
+  extra: z
+    .object({
+      clientName: z.string(),
+      scopes: z.array(z.string()),
+      createdAt: z.number().int(),
+      expiresAt: z.number().int().nullable(),
+    })
+    .and(oauthGrantContextSchema),
 });
 
 /** Read and revoke only grants owned by the verified account; never return credentials. */
@@ -42,7 +42,7 @@ export function createOAuthConnections(
         connections: records.map(record => {
           const payload = decode(accountId, record);
           return {
-            ...(payload.extra.selectedContext
+            ...(payload.extra.context === "selected_context_v1"
               ? { selectedContext: payload.extra.selectedContext }
               : {}),
             id: record.id_hash,

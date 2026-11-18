@@ -1,0 +1,7 @@
+{
+  "repository": "recoupable/api",
+  "commit": "bb542a9924ba531e422b3cd229e75a8bdb1892da",
+  "path": "lib/oauth/resolveOAuthAccess.ts",
+  "sha256": "6af7c2bbc273f7fb662b56e54eddab8a359e66f665c573e2f361496f3dd90450",
+  "purpose": "Exact prior verifier; selected grants must be rejected during mixed-version deployment or rollback."
+}

@@ -1,4 +1,5 @@
-import { selectedContextSchema, type SelectedContext } from "./selectedContextSchema";
+import type { SelectedContext } from "./selectedContextSchema";
+import { oauthGrantContextSchema } from "./oauthGrantContextSchema";
 import type { AdapterFactory, Provider } from "oidc-provider";
 
 export type OAuthAccess = {
@@ -33,7 +34,6 @@ export async function resolveOAuthAccess(
     !grant ||
     grant.isExpired ||
     !attribution ||
-    attribution.extra?.context !== "personal" ||
     grant.accountId !== token.accountId ||
     grant.clientId !== token.clientId ||
     attribution.accountId !== token.accountId ||
@@ -42,6 +42,8 @@ export async function resolveOAuthAccess(
     !(await accountExists(token.accountId))
   )
     return undefined;
+  const authority = oauthGrantContextSchema.safeParse(attribution.extra);
+  if (!authority.success) return undefined;
   const scopes = (token.scope ?? "").split(" ").filter(Boolean);
   const approved = attribution.extra.scopes;
   const resourceScopes = new Set(grant.getResourceScope(resource).split(" "));
@@ -51,17 +53,15 @@ export async function resolveOAuthAccess(
     scopes.some(scope => !approved.includes(scope) || !resourceScopes.has(scope))
   )
     return undefined;
-  let selectedContext: SelectedContext | undefined;
-  if (Object.hasOwn(attribution.extra, "selectedContext")) {
-    const parsed = selectedContextSchema.safeParse(attribution.extra.selectedContext);
-    if (
-      !parsed.success ||
-      !scopes.includes("mcp:tools") ||
-      (parsed.data.kind === "personal" && parsed.data.ownerId !== token.accountId.toLowerCase())
-    )
-      return undefined;
-    selectedContext = parsed.data;
-  }
+  const selectedContext =
+    authority.data.context === "selected_context_v1" ? authority.data.selectedContext : undefined;
+  if (
+    selectedContext &&
+    (!scopes.includes("mcp:tools") ||
+      (selectedContext.kind === "personal" &&
+        selectedContext.ownerId !== token.accountId.toLowerCase()))
+  )
+    return undefined;
   return {
     ...(selectedContext ? { selectedContext } : {}),
     accountId: token.accountId,

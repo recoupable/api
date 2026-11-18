@@ -44,7 +44,7 @@ export async function approveOAuthInteraction(
       extra: {
         ...(binding.selectedContext ? { selectedContext: binding.selectedContext } : {}),
         subject,
-        context: "personal",
+        context: binding.selectedContext ? "selected_context_v1" : "personal",
         scopes,
         persistent: true,
         clientName: client?.clientName ?? "Unnamed agent",

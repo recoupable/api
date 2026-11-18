@@ -117,6 +117,8 @@ it("preserves valid selected workspace attribution and rejects a different perso
     organizationId: null,
   };
   Object.assign(f.attribution.extra, { selectedContext });
+  expect(await resolveOAuthAccess(f.options, "secret")).toBeUndefined();
+  f.attribution.extra.context = "selected_context_v1";
   expect(await resolveOAuthAccess(f.options, "secret")).toMatchObject({ selectedContext });
   f.token.scope = "mcp:read";
   f.grant.getResourceScope = () => "mcp:read";

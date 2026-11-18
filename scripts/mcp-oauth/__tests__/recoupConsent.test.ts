@@ -8,6 +8,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { registerOAuthTools } from "../../../lib/mcp/oauth/registerOAuthTools";
+import { resolveOAuthAccess as resolvePriorOAuthAccess } from "../fixtures/preSelectedResolveOAuthAccess";
 import { resolveOAuthAccess } from "../../../lib/oauth/resolveOAuthAccess";
 import { getOAuthResourceMetadata } from "../../../lib/oauth/getOAuthResourceMetadata";
 import { expect, it, vi } from "vitest";
@@ -120,6 +121,16 @@ async function verifyConsent(mode: string) {
     });
     const verify = (bearer: string) =>
       resolveOAuthAccess(
+        {
+          provider,
+          adapter,
+          resource: config.resource,
+          accountExists: async id => id === accountId,
+        },
+        bearer,
+      );
+    const verifyPrior = (bearer: string) =>
+      resolvePriorOAuthAccess(
         {
           provider,
           adapter,
@@ -426,6 +437,8 @@ async function verifyConsent(mode: string) {
     expect(tokens.scope).toBe(requestedScopes.join(" "));
     expect(tokens.refresh_token).toEqual(expect.any(String));
     const delegated = await verify(tokens.access_token);
+    if (selectedMode) expect(await verifyPrior(tokens.access_token)).toBeUndefined();
+    else expect(await verifyPrior(tokens.access_token)).toMatchObject({ accountId });
     expect(delegated).toMatchObject({ accountId, scopes: requestedScopes });
     if (mode.endsWith("lifecycle") || mode.endsWith("connections")) {
       // Exercise real consent and token HTTP paths; no vendor host or production identity.
@@ -486,6 +499,7 @@ async function verifyConsent(mode: string) {
       const rotatedResponse = await refresh(client.client_id, tokens.refresh_token);
       expect(rotatedResponse.status).toBe(200);
       const rotated = await rotatedResponse.json();
+      if (selectedMode) expect(await verifyPrior(rotated.access_token)).toBeUndefined();
       expect(rotated.refresh_token).not.toBe(tokens.refresh_token);
       if (selectedMode)
         expect((await verify(rotated.access_token))?.selectedContext).toEqual(
@@ -586,6 +600,7 @@ async function verifyConsent(mode: string) {
       });
       expect(refreshed.status).toBe(200);
       const renewed = await refreshed.json();
+      if (selectedMode) expect(await verifyPrior(renewed.access_token)).toBeUndefined();
       expect(await verify(renewed.access_token)).toMatchObject({
         accountId,
         scopes: ["mcp:tools"],

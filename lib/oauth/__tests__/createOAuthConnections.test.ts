@@ -45,7 +45,7 @@ it.each([
       clientId: "client",
       grantId: "secret-grant",
       extra: {
-        context: "personal",
+        context: selected ? "selected_context_v1" : "personal",
         ...(selected ? { selectedContext } : {}),
         clientName: "Agent",
         scopes: ["recoup:read"],
