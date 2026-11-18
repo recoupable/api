@@ -1,7 +1,12 @@
 import { z } from "zod";
 
-const text = z
+const retainedText = z
   .string()
+  .refine(
+    value => !/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\p{Cs}]/u.test(value),
+    "Malformed retained text",
+  );
+const text = retainedText
   .min(1)
   .max(4000)
   .refine(value => /[^\s\p{Cf}\p{Default_Ignorable_Code_Point}]/u.test(value));
@@ -27,7 +32,7 @@ export const contextVideoEvidenceSchema = z
     durationSeconds: z.number().positive().finite().nullable(),
     variant: z.enum(["original", "live", "remix", "dubbed", "unknown"]),
     title: text,
-    description: z.string().max(20000),
+    description: retainedText.max(20000),
     channel: z.strictObject({ id: text, name: text }),
     performers: z.array(z.strictObject({ name: text, sourceVersionIds: references })).max(50),
     identity: z.discriminatedUnion("state", [
@@ -59,7 +64,7 @@ export const contextVideoEvidenceSchema = z
         state: z.literal("available"),
         sourceVersionIds: references,
         segments: z
-          .array(z.strictObject({ ...range, language: z.string().min(1).max(100), text }))
+          .array(z.strictObject({ ...range, language: retainedText.min(1).max(100), text }))
           .min(1)
           .max(500),
       }),

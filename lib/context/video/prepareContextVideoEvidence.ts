@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { parseContextUrl } from "../parseContextUrl";
-import { selectContextDocuments, type ContextBriefDocument } from "../selectContextDocuments";
+import type { ContextBriefDocument } from "../selectContextDocuments";
+import { selectContextVideoArtistResearch } from "./selectContextVideoArtistResearch";
 import type { ContextRequestRecord } from "../runContextRequest";
 import type {
   ContextEnrichmentModule,
@@ -33,14 +34,15 @@ export async function prepareContextVideoEvidence(
   result: ContextEnrichmentResult;
   reusedArtistDocuments: ContextBriefDocument[];
 }> {
-  z.uuid().parse(owner);
-  z.uuid().parse(requestId);
+  actor = z.uuid().parse(actor).toLowerCase();
+  owner = z.uuid().parse(owner).toLowerCase();
+  requestId = z.uuid().parse(requestId).toLowerCase();
   await deps.authorize(actor, owner);
   const request = await deps.readRequest(owner, requestId);
   if (
     !request ||
-    request.id !== requestId ||
-    request.owner_id !== owner ||
+    request.id.toLowerCase() !== requestId ||
+    request.owner_id.toLowerCase() !== owner ||
     request.status === "cancelled"
   )
     throw new Error("Video context request unavailable");
@@ -48,38 +50,18 @@ export async function prepareContextVideoEvidence(
   if (resource.provider !== "youtube") throw new Error("Single YouTube video required");
   const evidence = contextVideoEvidenceSchema.parse(await deps.readEvidence(owner, requestId));
   if (
-    evidence.requestId !== requestId ||
-    evidence.ownerId !== owner ||
+    evidence.requestId.toLowerCase() !== requestId ||
+    evidence.ownerId.toLowerCase() !== owner ||
     evidence.videoId !== resource.id
   )
     throw new Error("Video evidence does not match the selected request");
   let reusedArtistDocuments: ContextBriefDocument[] = [];
   if (evidence.identity.state === "matched") {
-    const subjectIds = evidence.identity.creditedArtists.map(artist => artist.subjectId);
+    const subjectIds = evidence.identity.creditedArtists.map(artist =>
+      artist.subjectId.toLowerCase(),
+    );
     const saved = await deps.readArtistDocuments(owner, subjectIds);
-    if (saved.documents.length > 1000 || saved.withdrawnSourceVersionIds.length > 32000)
-      throw new Error("Artist evidence exceeds bounded selection");
-    // Compare UUID identity canonically; return retained documents byte-for-byte unchanged.
-    const originals = new Map<ContextBriefDocument, ContextBriefDocument>();
-    for (const document of saved.documents.filter(doc => Boolean(doc.resultId))) {
-      originals.set(
-        {
-          ...document,
-          ownerId: document.ownerId.toLowerCase(),
-          subjectId: document.subjectId.toLowerCase(),
-          sourceVersionIds: document.sourceVersionIds.map(id => id.toLowerCase()),
-        },
-        document,
-      );
-    }
-    reusedArtistDocuments = selectContextDocuments([...originals.keys()], {
-      ownerId: owner.toLowerCase(),
-      subjectIds: subjectIds.map(id => id.toLowerCase()),
-      topics: ["artist_research"],
-      maxCharacters: 32000,
-      requiredCoverage: "partial",
-      withdrawnSourceVersionIds: saved.withdrawnSourceVersionIds.map(id => id.toLowerCase()),
-    }).documents.map(document => originals.get(document)!);
+    reusedArtistDocuments = selectContextVideoArtistResearch(owner, subjectIds, saved);
   }
   await deps.authorize(actor, owner);
   const sources = evidence.sources.map(source => ({

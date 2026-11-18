@@ -111,6 +111,21 @@ it("projects one video using shared module/result shapes and reuses artist evide
   expect(result.reusedArtistDocuments).toEqual([document]);
   expect(deps.readArtistDocuments).toHaveBeenCalledWith(owner, [artist]);
   expect(deps.authorize).toHaveBeenCalledTimes(2);
+  expect(result.result.content).toMatchObject({ artistBrand: "not_established" });
+  expect(deps.authorize).toHaveBeenNthCalledWith(1, owner, owner);
+  expect(deps.authorize).toHaveBeenNthCalledWith(2, owner, owner);
+  expect(deps.authorize.mock.invocationCallOrder[0]).toBeLessThan(
+    deps.readRequest.mock.invocationCallOrder[0],
+  );
+  expect(deps.readRequest.mock.invocationCallOrder[0]).toBeLessThan(
+    deps.readEvidence.mock.invocationCallOrder[0],
+  );
+  expect(deps.readEvidence.mock.invocationCallOrder[0]).toBeLessThan(
+    deps.readArtistDocuments.mock.invocationCallOrder[0],
+  );
+  expect(deps.readArtistDocuments.mock.invocationCallOrder[0]).toBeLessThan(
+    deps.authorize.mock.invocationCallOrder[1],
+  );
   expect(JSON.stringify(result.module)).not.toContain('"topic":"artist_brand"');
 });
 it.each(["live", "remix", "dubbed", "unknown"])(
@@ -204,6 +219,7 @@ it("stops before evidence reads on denied access and rechecks before returning",
   const { deps } = fixture();
   deps.authorize.mockRejectedValueOnce(new Error("Denied"));
   await expect(prepare(deps)).rejects.toThrow("Denied");
+  expect(deps.readRequest).not.toHaveBeenCalled();
   expect(deps.readEvidence).not.toHaveBeenCalled();
   deps.authorize.mockResolvedValueOnce(true).mockRejectedValueOnce(new Error("Revoked"));
   await expect(prepare(deps)).rejects.toThrow("Revoked");
@@ -325,3 +341,42 @@ it("excludes source withdrawal case aliases", async () => {
   });
   expect((await prepare(deps)).reusedArtistDocuments).toEqual([]);
 });
+
+it("canonicalizes request/owner/actor and credited artist UUIDs before reader calls", async () => {
+  const { evidence, deps } = fixture();
+  const account = "abcdefab-abcd-4abc-8abc-abcdefabcdef";
+  const request = "bcdefabc-bcde-4bcd-8bcd-bcdefabcdefa";
+  const credited = "cdefabcd-cdef-4cde-8cde-cdefabcdefab";
+  evidence.ownerId = account.toUpperCase();
+  evidence.requestId = request.toUpperCase();
+  evidence.identity.creditedArtists[0].subjectId = credited.toUpperCase();
+  deps.readRequest.mockResolvedValue({
+    id: request,
+    owner_id: account,
+    created_by: account,
+    input: { url },
+    status: "partial",
+  });
+  await prepareContextVideoEvidence(
+    account.toUpperCase(),
+    account.toUpperCase(),
+    request.toUpperCase(),
+    deps,
+  );
+  expect(deps.authorize).toHaveBeenNthCalledWith(1, account, account);
+  expect(deps.authorize).toHaveBeenNthCalledWith(2, account, account);
+  expect(deps.readRequest).toHaveBeenCalledWith(account, request);
+  expect(deps.readEvidence).toHaveBeenCalledWith(account, request);
+  expect(deps.readArtistDocuments).toHaveBeenCalledWith(account, [credited]);
+});
+it.each(["\u0000", "\u0001", "\ud800", "\udfff"])(
+  "rejects malformed retained text %j without sanitizing it",
+  async invalid => {
+    for (const field of ["title", "description", "language"]) {
+      const { evidence, deps } = fixture();
+      if (field === "language") evidence.captions.segments[0].language = "en" + invalid;
+      else Object.assign(evidence, { [field]: "retained" + invalid });
+      await expect(prepare(deps)).rejects.toThrow();
+    }
+  },
+);
