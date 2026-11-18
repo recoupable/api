@@ -214,7 +214,7 @@ it("preserves ordinary defects when supplemental cover evidence is missing", asy
   };
   m.generate.mockResolvedValue({
     verdict: "revise",
-    issues: [issue],
+    issues: [{ ...issue, evidence: "ordinary" }],
     summary: "Ordinary defect",
     coverHiddenCritique: {
       assessment: "needs-improvement",
@@ -277,32 +277,59 @@ it("retains runtime failure admission when discarding an unsupported cover-only 
   );
 });
 
-it("discards structured cover-only issues without losing ordinary issues", async () => {
-  const read = m.read.getMockImplementation()!;
-  m.read.mockImplementation(async arg =>
-    arg.path === "desktop-cover-hidden.png" ? null : read(arg),
-  );
-  const coverIssue = {
-    severity: "visual",
-    module: "implementation",
-    detail: "Cover hidden opinion",
-    fix: "Change frame",
-    evidence: "cover-hidden",
-  };
-  m.generate.mockResolvedValue({
-    verdict: "revise",
-    issues: [coverIssue],
-    summary: "Cover-only",
-    coverHiddenCritique: { assessment: "unverified", reasons: ["Missing"], improvements: [] },
-  });
-  const result = await reviewStep(
-    snapshot,
-    { contract: {} } as CreativeDirection,
-    "account",
-    "site",
-    undefined,
-    { baseRevision: 7, releaseArtwork: url },
-  );
-  expect(result.verdict).toBe("pass");
-  expect(result.issues).toEqual([]);
-});
+it.each([false, true])(
+  "discards structured cover-only issues while retaining ordinary issue=%s",
+  async hasOrdinary => {
+    const read = m.read.getMockImplementation()!;
+    m.read.mockImplementation(async arg =>
+      arg.path === "desktop-cover-hidden.png" ? null : read(arg),
+    );
+    const coverIssue = {
+      severity: "visual",
+      module: "implementation",
+      detail: "Cover hidden opinion",
+      fix: "Change frame",
+      evidence: "cover-hidden",
+    };
+    m.generate.mockResolvedValue({
+      verdict: "revise",
+      issues: [
+        coverIssue,
+        ...(hasOrdinary
+          ? [
+              {
+                severity: "visual",
+                module: "implementation",
+                detail: "Overlapping normal controls",
+                fix: "Add spacing",
+                evidence: "ordinary",
+              },
+            ]
+          : []),
+      ],
+      summary: "Cover-only",
+      coverHiddenCritique: { assessment: "unverified", reasons: ["Missing"], improvements: [] },
+    });
+    const result = await reviewStep(
+      snapshot,
+      { contract: {} } as CreativeDirection,
+      "account",
+      "site",
+      undefined,
+      { baseRevision: 7, releaseArtwork: url },
+    );
+    expect(result.verdict).toBe(hasOrdinary ? "revise" : "pass");
+    expect(result.issues).toEqual(
+      hasOrdinary
+        ? [
+            {
+              severity: "visual",
+              module: "implementation",
+              detail: "Overlapping normal controls",
+              fix: "Add spacing",
+            },
+          ]
+        : [],
+    );
+  },
+);
