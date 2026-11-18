@@ -1,5 +1,5 @@
 {
-  "apiBaseline": "1fff6b55b8c1b98826c375f99b4f4f66a5ba201c",
+  "apiBaseline": "5605ee143afc4ebcdba9ba33dc7b48378c70a47f",
   "databaseHead": "df7be4c65b98924373b38c7d257f4b1c1820d6b7",
   "policyStatus": "proposed_unadopted",
   "apiInputs": {
@@ -8,7 +8,10 @@
     "lib/applications/validateApplicationRegistration.ts": "b842cd312e0123a65ec1dd872c54474f77872b337ef5285ecedff1dad96ac0c6",
     "package.json": "6129bd1116b3f3b3644c4560484daf2feafb57272e29f68cb5156b22ef1bbd50",
     "pnpm-lock.yaml": "59d2629cd37287ad1bfd5e35589d0ed4c15c09d3c1965fff78aaba4a871487ee",
-    "tsconfig.json": "b32629dbc2af272f06db2eb3c5e6bd249183a72cec77481e624b0a4086c10d93"
+    "tsconfig.json": "b32629dbc2af272f06db2eb3c5e6bd249183a72cec77481e624b0a4086c10d93",
+    "lib/keys/getApiKeyDetails.ts": "68813ca17af04703ded1efc25d8c6864aaa1f7b9c297ddeadb44c6c10220c644",
+    "lib/mcp/__tests__/verifyApiKeyExpiry.test.ts": "1b4b18f8147217734b9b1d89418a57ae23c968e6046109d072469b7735fdd1bc",
+    "vercel.json": "51fe455db73ba03253d50db65437746095200ea0e5a3a3603d918474ff903912"
   },
   "databaseInputs": {
     "proposals/application-registration-2104/protocol-composition.py": "377791d3ef4a26103bd046609d4b8dbf8f63a3d475aa2c72faeba68b553aada5",
@@ -27,5 +30,8 @@
   "goldenSha256": "357e2c82f6b9473d024cf6472bdec8d670de64531c0a51fa0843b94f1e70c1fe",
   "captureDriverSha256": "86f6b0de4d43aadec92154a8fd9e51407eb4837f081f0e6d6ffae75455da595f",
   "goldenCaptureLogSha256": "0eb40678c48643d87d2515c68236e62b23f2faf874f6794053b418378e071d6f",
-  "scope": "No route, MCP registration, concrete Supabase adapter, factory, hosted execution, deployment or policy adoption"
+  "scope": "No route, MCP registration, concrete Supabase adapter, factory, hosted execution, deployment or policy adoption",
+  "originalApiBaseline": "1fff6b55b8c1b98826c375f99b4f4f66a5ba201c",
+  "acceptedOAuthMerge": "5605ee143afc4ebcdba9ba33dc7b48378c70a47f",
+  "adapterBeforeComposition": "ce271f4be5570cb0774d582a5e1b832e406aec7f"
 }
