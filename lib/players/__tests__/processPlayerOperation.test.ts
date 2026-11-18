@@ -1,5 +1,17 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { processPlayerOperation } from "../processPlayerOperation";
+import { afterEach } from "vitest";
+import { NextRequest, NextResponse } from "next/server";
+import { playerOperationHandler } from "../playerOperationHandler";
+import { getPlayerToolHandler } from "@/lib/mcp/tools/players/getPlayerToolHandler";
+import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
+import { SiteError } from "@/lib/sites/SiteError";
+const auth = vi.hoisted(() => ({ http: vi.fn(), mcp: vi.fn() }));
+vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: auth.http }));
+vi.mock("@/lib/mcp/resolveAccountId", () => ({ resolveAccountId: auth.mcp }));
+vi.mock("../readPlayerReport", () => ({ readPlayerReport: vi.fn() }));
+vi.mock("../readPlayerFans", () => ({ readPlayerFans: vi.fn() }));
+vi.mock("../readWorkspacePlayerFans", () => ({ readWorkspacePlayerFans: vi.fn() }));
 vi.mock("@/lib/sites/activity/limitSiteRequest", () => ({ limitSiteRequest: vi.fn() }));
 const mocks = vi.hoisted(() => ({
   access: vi.fn(),
@@ -55,6 +67,7 @@ it("derives ownership and creates a disabled reusable release player", async () 
       created_by: owner,
     }),
   );
+  expect(result).not.toHaveProperty("capabilities");
   expect(result).toHaveProperty("listenUrl", `https://app.recoupable.dev/listen/${artist}`);
 });
 it("blocks an artist outside the workspace", async () => {
@@ -138,6 +151,7 @@ it("paginates the workspace catalog instead of silently truncating it", async ()
   const result = await processPlayerOperation(owner, "list", { offset: 100, limit: 1 });
   expect(mocks.list).toHaveBeenCalledWith(owner, 100, 1);
   expect(result).toMatchObject({ offset: 100, limit: 1, nextOffset: 101 });
+  expect(result).not.toHaveProperty("capabilities");
 });
 
 it("stores the owner-selected fallback and rejects non-owned audio before creating", async () => {
@@ -215,3 +229,60 @@ it("can unpublish or change a title without rechecking unchanged audio", async (
     processPlayerOperation(owner, "update", { id: artist, revision: 1, enabled: true }),
   ).rejects.toThrow("Storage unavailable");
 });
+
+it("returns the same capabilities through real HTTP and MCP get domains", async () => {
+  vi.stubEnv("SITES_SPOTIFY_CLIENT_ID", "");
+  vi.stubEnv("PLAYER_APP_ORIGIN", "not-an-origin");
+  mocks.select.mockResolvedValue({
+    id: artist,
+    owner_id: owner,
+    enabled: false,
+    spotify_url: "https://open.spotify.com/track/abc",
+  });
+  auth.http.mockResolvedValue({ accountId: owner });
+  auth.mcp.mockResolvedValue({ accountId: owner });
+  const response = await playerOperationHandler(
+    new NextRequest("https://api.example/api/players/" + artist),
+    "get",
+    { id: artist },
+  );
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  const body = await response.json();
+  expect(body.capabilities).toEqual({
+    version: 1,
+    spotify: {
+      clientConfiguration: "unconfigured",
+      releaseConfigured: true,
+      premiumEligibility: "unknown",
+      tokenStatus: "unknown",
+      scopeStatus: "unknown",
+      playbackSupport: "unknown",
+    },
+  });
+  const tool = await getPlayerToolHandler("get")({ id: artist }, { authInfo: {} });
+  expect(tool).toEqual(getToolResultSuccess(body));
+  expect(body.player.enabled).toBe(false);
+});
+it("preserves HTTP/MCP authentication and ownership denial before player read results", async () => {
+  auth.http.mockResolvedValue(NextResponse.json({ error: "Unauthorized" }, { status: 401 }));
+  auth.mcp.mockResolvedValue({ accountId: null });
+  expect(
+    (await playerOperationHandler(new NextRequest("https://api.example"), "get", { id: artist }))
+      .status,
+  ).toBe(401);
+  expect(await getPlayerToolHandler("get")({ id: artist }, {})).toMatchObject({ isError: true });
+  expect(mocks.select).not.toHaveBeenCalled();
+  auth.http.mockResolvedValue({ accountId: owner });
+  mocks.select.mockResolvedValue({ owner_id: "another-owner" });
+  expect(
+    (await playerOperationHandler(new NextRequest("https://api.example"), "get", { id: artist }))
+      .status,
+  ).toBe(404);
+  mocks.access.mockRejectedValueOnce(new SiteError(403, "Workspace denied"));
+  expect(
+    (await playerOperationHandler(new NextRequest("https://api.example"), "get", { id: artist }))
+      .status,
+  ).toBe(403);
+});
+afterEach(() => vi.unstubAllEnvs());

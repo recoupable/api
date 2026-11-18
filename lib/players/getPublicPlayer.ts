@@ -1,3 +1,4 @@
+import { getPlayerCapabilities } from "./getPlayerCapabilities";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { selectReleasePlayer } from "@/lib/supabase/release_players/selectReleasePlayer";
@@ -43,6 +44,7 @@ export async function getPublicPlayer(id: string, input: unknown, createSession 
     appleUrl: player.apple_url,
     revision: player.revision,
     freePlayback: player.free_playback ?? "spotify",
+    capabilities: getPlayerCapabilities(player.spotify_url),
   };
   if (!query.provider) return result;
   const release = query.provider === "spotify" ? player.spotify_url : player.apple_url;
