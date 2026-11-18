@@ -100,6 +100,20 @@ function barrier<T>() {
   });
   return { promise, resolve, reject };
 }
+function observeDomainCompletion() {
+  const finished = barrier<void>();
+  let complete = false;
+  const actualCreate = domain.createProposedApplicationRegistration;
+  vi.spyOn(domain, "createProposedApplicationRegistration").mockImplementation(async (...args) => {
+    try {
+      return await actualCreate(...args);
+    } finally {
+      complete = true;
+      finished.resolve();
+    }
+  });
+  return { finished: finished.promise, isComplete: () => complete };
+}
 it("closes SDK before returning JSON, even when the caller cancels the response body", async () => {
   const close = vi.spyOn(WebStandardStreamableHTTPServerTransport.prototype, "close");
   const response = await handle(req(undefined, "tools/list"), dependencies());
@@ -116,26 +130,33 @@ it.each(["resolve", "reject"] as const)(
     const entered = barrier<void>();
     const storage = barrier<unknown>();
     const d = dependencies();
-    let settled = false;
+    const completion = observeDomainCompletion();
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const send = vi.spyOn(WebStandardStreamableHTTPServerTransport.prototype, "send");
     d.storage.create.mockImplementation(async () => {
       entered.resolve();
-      try {
-        return await storage.promise;
-      } finally {
-        settled = true;
-      }
+      return storage.promise;
     });
     const close = vi.spyOn(WebStandardStreamableHTTPServerTransport.prototype, "close");
     const response = handle(req(abort.signal), d);
     await entered.promise;
     abort.abort();
-    expect((await response).status).toBe(408);
+    const delivered = await response;
+    const originalBody = await delivered.clone().text();
+    expect(delivered.status).toBe(408);
     expect(close).toHaveBeenCalledTimes(1);
-    expect(settled).toBe(false);
+    expect(completion.isComplete()).toBe(false);
+    const sendsAtAbort = send.mock.calls.length;
     if (settle === "resolve") storage.resolve(golden.createReceipt);
     else storage.reject(new Error("PRIVATE_SENTINEL"));
-    await vi.waitFor(() => expect(settled).toBe(true));
+    await completion.finished;
+    expect(completion.isComplete()).toBe(true);
     expect(d.storage.create).toHaveBeenCalledTimes(1);
+    expect(await response).toBe(delivered);
+    expect(await delivered.text()).toBe(originalBody);
+    expect(originalBody).not.toMatch(/PRIVATE_SENTINEL|receipt_id/);
+    expect(send).toHaveBeenCalledTimes(sendsAtAbort);
+    expect(errors).not.toHaveBeenCalled();
   },
 );
 it("abort during fresh domain lookup prevents late storage invocation", async () => {
@@ -164,22 +185,14 @@ it("abort during fresh domain lookup prevents late storage invocation", async ()
       },
     };
   });
-  const finished = barrier<void>();
-  const actualCreate = domain.createProposedApplicationRegistration;
-  vi.spyOn(domain, "createProposedApplicationRegistration").mockImplementation(async (...args) => {
-    try {
-      return await actualCreate(...args);
-    } finally {
-      finished.resolve();
-    }
-  });
+  const completion = observeDomainCompletion();
   const d = dependencies();
   const response = handle(req(abort.signal), d);
   await entered.promise;
   abort.abort();
   expect((await response).status).toBe(408);
   resume.resolve();
-  await finished.promise;
+  await completion.finished;
   expect(d.storage.create).not.toHaveBeenCalled();
 });
 it("bounds truly pending admission and observes its late rejection", async () => {
@@ -254,24 +267,28 @@ it("bounds connect, closes its attached transport, and blocks late continuation"
 it("bounds the SDK's pending JSON promise separately from late domain settlement", async () => {
   vi.useFakeTimers();
   const pending = barrier<unknown>();
-  let settled = false;
+  const completion = observeDomainCompletion();
+  const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+  const send = vi.spyOn(WebStandardStreamableHTTPServerTransport.prototype, "send");
   const d = dependencies();
-  d.storage.create.mockImplementation(async () => {
-    try {
-      return await pending.promise;
-    } finally {
-      settled = true;
-    }
-  });
+  d.storage.create.mockImplementation(() => pending.promise);
   const response = handle(req(), d);
   await vi.advanceTimersByTimeAsync(30000);
-  expect((await response).status).toBe(504);
+  const delivered = await response;
+  const originalBody = await delivered.clone().text();
+  expect(delivered.status).toBe(504);
   expect(d.storage.create).toHaveBeenCalledTimes(1);
-  expect(settled).toBe(false);
+  expect(completion.isComplete()).toBe(false);
+  const sendsAtDeadline = send.mock.calls.length;
   pending.resolve(golden.createReceipt);
-  await vi.advanceTimersByTimeAsync(0);
-  expect(settled).toBe(true);
+  await completion.finished;
+  expect(completion.isComplete()).toBe(true);
   expect(d.storage.create).toHaveBeenCalledTimes(1);
+  expect(await response).toBe(delivered);
+  expect(await delivered.text()).toBe(originalBody);
+  expect(originalBody).not.toMatch(/PRIVATE_SENTINEL|receipt_id/);
+  expect(send).toHaveBeenCalledTimes(sendsAtDeadline);
+  expect(errors).not.toHaveBeenCalled();
   expect(vi.getTimerCount()).toBe(0);
 });
 it("bounds an uncooperative SDK close independently", async () => {
