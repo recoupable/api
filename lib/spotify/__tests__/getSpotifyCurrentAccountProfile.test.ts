@@ -32,6 +32,10 @@ it.each([
   { id: "provider-account" },
   { id: "provider-account", email: null, display_name: null },
   { id: "x".repeat(255), email: "fan@example.com", display_name: "n".repeat(255) },
+  {
+    id: "email-length-boundary",
+    email: "a".repeat(64) + "@" + ["b".repeat(63), "c".repeat(63), "d".repeat(61)].join("."),
+  },
 ])("preserves optional/null profile fields and accepted boundaries: %j", async profile => {
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(profile)));
   await expect(
