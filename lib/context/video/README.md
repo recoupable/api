@@ -74,3 +74,7 @@ returns the unchanged shared module/result contract after final authorization.
 Named limits keep text budgets distinct from counts. Source binding, analyzed
 range and identity separation are named validators beside their one schema.
 None of these internal helpers grants access or supplies a production reader.
+
+The proposed [acquisition-to-retention handoff](./RETENTION-CONTRACT.md) defines
+producer authority, accounting phase order and original-source acceptance before
+a production reader can be connected.
