@@ -25,4 +25,7 @@ jobs:
       - name: Install pinned dependencies
         run: pnpm install --frozen-lockfile
       - name: Qualify inactive create/read adapter with synthetic leaves
-        run: node scripts/application-registration-proposal/run.mjs
+        run: |
+          node_path="$(command -v node)"
+          test "${node_path#/}" != "$node_path"
+          env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C TZ=UTC "$node_path" scripts/application-registration-proposal/run.mjs
