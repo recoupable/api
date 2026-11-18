@@ -376,3 +376,53 @@ describe("handleChatWorkflowStream", () => {
     });
   });
 });
+
+it("rejects unproven projection before claiming, writing or starting a run", async () => {
+  mockSessionOwnedActive();
+  mockChatOwned();
+  vi.mocked(validateChatWorkflow).mockResolvedValue({
+    accountId: ACCOUNT_ID,
+    chatId: CHAT_ID,
+    sessionId: SESSION_ID,
+    orgId: null,
+    messages: [
+      {
+        id: "a",
+        role: "assistant",
+        parts: [
+          {
+            type: "data-recoup-sdk-observation",
+            id: "a:projection:0",
+            data: { fallback: { partIndex: 1 } },
+          },
+        ],
+      },
+    ],
+  });
+  const response = await handleChatWorkflowStream(makeRequest());
+  expect(response.status).toBe(400);
+  expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
+  expect(persistLatestUserMessage).not.toHaveBeenCalled();
+  expect(start).not.toHaveBeenCalled();
+});
+
+it.each(["custom", "reasoning-file", "tool-approval-request", "tool-approval-response"])(
+  "rejects caller raw %s before persistence or workflow start",
+  async type => {
+    mockSessionOwnedActive();
+    mockChatOwned();
+    vi.mocked(validateChatWorkflow).mockResolvedValue({
+      accountId: ACCOUNT_ID,
+      chatId: CHAT_ID,
+      sessionId: SESSION_ID,
+      orgId: null,
+      messages: [
+        { id: "a", role: "assistant", parts: [{ type, kind: "caller.fake", approved: true }] },
+      ],
+    });
+    expect((await handleChatWorkflowStream(makeRequest())).status).toBe(400);
+    expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
+    expect(persistLatestUserMessage).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
+  },
+);

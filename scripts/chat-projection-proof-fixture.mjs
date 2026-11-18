@@ -27,6 +27,10 @@ const temp = await realpath(await mkdtemp(join(tmpdir(), "workflow-origin-probe-
 const source = join(temp, "source");
 const cwd = process.cwd();
 let world;
+// StandaloneBuilder emits an ESM client containing bundled CommonJS SDK dependencies.
+// Supply Node's real require for that generated client; no production module is mocked.
+const previousRequire = globalThis.require;
+globalThis.require = require;
 try {
   await mkdir(source);
   await symlink(join(root, "node_modules"), join(temp, "node_modules"), "dir");
@@ -36,23 +40,25 @@ try {
 import {getWorld} from 'workflow/runtime';
 import {getRun} from 'workflow/api';
 import {hydrateResourceIO,observabilityRevivers} from 'workflow/observability';
-import {writeProjectionObservation} from '@/lib/chat/projection/writeProjectionObservation';
+import {collectCanonicalProjection} from '@/lib/chat/projection/collectCanonicalProjection';
 import {verifyProjectionObservation} from '@/lib/chat/projection/verifyProjectionObservation';
 import {createProjectionEvidencePorts} from '@/lib/chat/projection/createProjectionEvidencePorts';
 import {recordProjectionProofStep} from '@/app/lib/workflows/projection/recordProjectionProofStep';
+import {prepareProjectionHistoryStep} from '@/app/lib/workflows/projection/prepareProjectionHistoryStep';
 async function emit(input:any) {
  'use step';
  const runId=getWorkflowMetadata().workflowRunId; const stepId=getStepMetadata().stepId;
  const w=getWritable().getWriter();
  try {
   await w.write({type:'start',messageId:'synthetic-assistant'});
-  const proof=await writeProjectionObservation({originRunId:runId,originStepId:stepId,assistantMessageId:'synthetic-assistant',ordinal:0,partIndex:1,original:{type:'custom',kind:'provider.synthetic',providerMetadata:{provider:{opaque:'unchanged'}}}},chunk=>w.write(chunk));
+  const collected=await collectCanonicalProjection({stream:(async function*(){yield {type:'custom',kind:'provider.synthetic',providerMetadata:{provider:{opaque:'unchanged'}}};})(),previous:{id:'synthetic-assistant',role:'assistant',parts:[]},runId,stepId:()=>stepId,onProjection(){},write:chunk=>w.write(chunk)});
   await w.write({type:'finish'});await w.close();
-  return {generatedProjectionObservations:{contract:'recoup-sdk-projection/v1',observations:[proof]}};
+  return {generatedProjectionObservations:collected.generatedProjectionObservations};
  }finally{w.releaseLock();}
 }
 export async function originProbe(input:any) {
  'use workflow';
+ await prepareProjectionHistoryStep(input.messages,{accountId:input.accountId,chatId:input.chatId,sessionId:input.sessionId});
  const producer = await emit(input);
  await recordProjectionProofStep(producer.generatedProjectionObservations.observations[0].observation.data.originStepId,producer.generatedProjectionObservations);
  return producer;
@@ -182,11 +188,23 @@ export async function readProbe(input:any) {
     },
   ]);
   assert.deepEqual(await within(verified.returnValue), observation.data.original);
+  const refused = await start(originProbe, [
+    {
+      ...input,
+      messages: [
+        { id: "caller", role: "assistant", parts: [{ type: "custom", kind: "caller.unverified" }] },
+      ],
+    },
+  ]);
+  await assert.rejects(within(refused.returnValue), /Projection history evidence unavailable/);
+  const refusedSteps = await getWorld().steps.list({ runId: refused.runId, resolveData: "none" });
+  assert(!refusedSteps.data.some(step => step.stepName.endsWith("//emit")));
   assert.equal(attempts(), 0);
   const sourcePaths = [
     "package.json",
     "pnpm-lock.yaml",
     "app/lib/workflows/projection/recordProjectionProofStep.ts",
+    "app/lib/workflows/projection/prepareProjectionHistoryStep.ts",
     "scripts/chat-projection-proof-fixture.mjs",
     ...(await readdir(join(root, "lib/chat/projection")))
       .filter(name => name.endsWith(".ts"))
@@ -210,6 +228,7 @@ export async function readProbe(input:any) {
     separateWorkflowAwaitedProofStep: true,
     installedSdkCanonicalAssembly: true,
     verifiedInsideJournaledStep: true,
+    rejectedIngressBeforeProducer: true,
     scope:
       "Actual production pure proof writer and verifier compiled into synthetic local workflows. Readback required; no write ACK or atomicity claim. No deployment admission, production World/key/provider/DB or activation.",
   };
@@ -217,6 +236,8 @@ export async function readProbe(input:any) {
   console.log(JSON.stringify(receipt));
 } finally {
   await world?.close();
+  if (previousRequire === undefined) delete globalThis.require;
+  else globalThis.require = previousRequire;
   process.chdir(cwd);
   await rm(temp, { recursive: true, force: true });
 }

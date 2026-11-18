@@ -1,3 +1,4 @@
+import { prepareProjectionHistory } from "@/lib/chat/projection/prepareProjectionHistory";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -117,8 +118,25 @@ export async function validateChatRequest(
   }
 
   // Convert messages to UIMessage format and get the last (newest) message
+  try {
+    await prepareProjectionHistory(validatedBody.messages);
+  } catch {
+    return NextResponse.json(
+      { status: "error", message: "Projection history evidence unavailable" },
+      { status: 400, headers: getCorsHeaders() },
+    );
+  }
   const uiMessages = convertToUiMessages(validatedBody.messages);
   const { lastMessage } = validateMessages(uiMessages);
+
+  try {
+    await prepareProjectionHistory(uiMessages);
+  } catch {
+    return NextResponse.json(
+      { status: "error", message: "Projection history evidence unavailable" },
+      { status: 400, headers: getCorsHeaders() },
+    );
+  }
 
   // Setup conversation: auto-create room if needed and persist user message
   // Use the message's original ID to prevent duplicate memory rows on upsert

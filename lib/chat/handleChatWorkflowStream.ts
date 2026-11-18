@@ -1,3 +1,4 @@
+import { prepareAuthorizedProjectionHistory } from "./projection/prepareAuthorizedProjectionHistory";
 import { DEFAULT_MODEL } from "@/lib/const";
 import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStreamResponse } from "ai";
@@ -71,6 +72,16 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   const chat = chats[0];
   if (!chat || chat.session_id !== validated.sessionId) {
     return errorResponse("Chat not found", 404);
+  }
+
+  try {
+    await prepareAuthorizedProjectionHistory(
+      validated.messages,
+      { accountId: validated.accountId, chatId: validated.chatId, sessionId: validated.sessionId },
+      request.signal,
+    );
+  } catch {
+    return errorResponse("Projection history evidence unavailable", 400);
   }
 
   // Reject an unaccepted new turn rather than returning an older response.

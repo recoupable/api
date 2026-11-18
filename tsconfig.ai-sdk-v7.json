@@ -10,7 +10,12 @@
     "lib/agent/contextManagement/__tests__/wrapToolsWithAbortIterable.test.ts",
     "lib/agent/tools/__tests__/wrappedTaskSdk.test.ts",
     "lib/credits/__tests__/getCreditUsageStepBoundary.test.ts",
-    "lib/chat/projection/**/*.ts"
+    "lib/chat/projection/**/*.ts",
+    "app/lib/workflows/__tests__/runAgentStepProjection.test.ts",
+    "app/lib/workflows/__tests__/runAgentWorkflowProjection.test.ts",
+    "app/lib/workflows/__tests__/persistProjectedAssistantStep.test.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

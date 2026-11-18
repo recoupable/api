@@ -1,3 +1,9 @@
+import { collectCanonicalProjection } from "@/lib/chat/projection/collectCanonicalProjection";
+import {
+  ProjectionEvidenceError,
+  type ProjectionEvidenceCode,
+} from "@/lib/chat/projection/ProjectionEvidenceError";
+import type { ProjectionProof } from "@/lib/chat/projection/projectionSchemas";
 import { buildToolsContext } from "@/lib/agent/tools/buildToolsContext";
 import { streamText, type ModelMessage, type UIMessage, type UIMessageChunk } from "ai";
 import { gateway } from "@ai-sdk/gateway";
@@ -14,7 +20,7 @@ import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
 import { closeOpenToolCalls } from "@/lib/chat/closeOpenToolCalls";
 import { isAbortError } from "@/lib/chat/isAbortError";
 import { isRunCancelled } from "@/lib/chat/isRunCancelled";
-import { getWorkflowMetadata } from "workflow";
+import { getWorkflowMetadata, getStepMetadata } from "workflow";
 
 export type RunAgentStepInput = {
   /**
@@ -30,6 +36,7 @@ export type RunAgentStepInput = {
    * cumulative and each persist overwrites one row.
    */
   originalMessages: UIMessage[];
+  nativeOriginalMessages?: UIMessage[];
   modelId: string;
   reasoningEffort?: "low" | "medium" | "high";
   writable: WritableStream<UIMessageChunk>;
@@ -73,6 +80,13 @@ export type RunAgentStepInput = {
 
 export type RunAgentStepResult = {
   finishReason: string;
+  nativeResponseMessage?: UIMessage;
+  generatedProjectionObservations?: ProjectionProof;
+  compatibilityFailure?: {
+    code: ProjectionEvidenceCode;
+    observedMetadata?: AgentMessageMetadata;
+    usageComplete: boolean;
+  };
   /**
    * The assembled assistant message captured from the stream's `onFinish`,
    * cumulative across iterations via `originalMessages`. `undefined` if the
@@ -87,7 +101,7 @@ export type RunAgentStepResult = {
    * next iteration continues the conversation instead of repeating it.
    */
   responseMessages: ModelMessage[];
-  /** True when the user stopped the run; `runAgentWorkflow` skips billing + auto-commit on abort. */
+  /** True for confirmed user-stop; existing usage billing remains, auto-commit is skipped. */
   aborted: boolean;
 };
 
@@ -182,10 +196,17 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     previousMessage?.role === "assistant"
       ? (previousMessage.metadata as AgentMessageMetadata | undefined)
       : undefined;
-  const messageMetadata = buildMessageMetadataCallback({
+  const buildMetadata = buildMessageMetadataCallback({
     modelId: input.modelId,
     seed: previousMetadata,
   });
+
+  let observedMetadata: AgentMessageMetadata | undefined;
+  const messageMetadata: ReturnType<typeof buildMessageMetadataCallback> = event => {
+    const metadata = buildMetadata(event);
+    if (metadata) observedMetadata = metadata;
+    return metadata;
+  };
 
   // Drive the stream directly and write each part to the shared writable,
   // mirroring upstream open-agents. There is deliberately no
@@ -196,42 +217,79 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // from the transcript (chat#1918). Persistence now lives in the workflow
   // body via `persistAssistantMessageStep`.
   let responseMessage: UIMessage | undefined;
+  let nativeResponseMessage: UIMessage | undefined;
+  let generatedProjectionObservations: ProjectionProof | undefined;
+  let projected = input.originalMessages.some(message =>
+    message.parts.some(part => part.type === "data-recoup-sdk-observation"),
+  );
   let finishReason: string;
   let responseMessages: ModelMessage[] = [];
 
   try {
-    for await (const part of result.toUIMessageStream<UIMessage>({
-      messageMetadata,
-      generateMessageId: () => input.assistantMessageId,
-      // Continue building the in-progress assistant message rather than
-      // starting a new one, so `responseMessage` stays cumulative across
-      // iterations and each persist overwrites a single row.
-      originalMessages: input.originalMessages,
-      // The turn's `start`/`finish` chunks are emitted ONCE by the workflow
-      // body (`sendStreamStart` / `sendStreamFinish`). Without this the client
-      // would see one per iteration and render N assistant messages.
-      sendStart: false,
-      sendFinish: false,
-      onEnd: ({ responseMessage: finalMessage }) => {
-        responseMessage = finalMessage;
+    const canonical = await collectCanonicalProjection({
+      previous:
+        previousMessage?.role === "assistant"
+          ? previousMessage
+          : { id: input.assistantMessageId, role: "assistant", parts: [] },
+      runId: workflowRunId,
+      stepId: () => getStepMetadata().stepId,
+      onProjection: () => {
+        projected = true;
       },
-    })) {
-      // A writer lock taken inside a step applies only within that step, so
-      // sequential steps can share one stream. Release per part so the step's
-      // request can terminate.
-      const writer = input.writable.getWriter();
-      try {
-        await writer.write(part);
-      } finally {
-        writer.releaseLock();
-      }
-    }
+      stream: result.toUIMessageStream<UIMessage>({
+        messageMetadata,
+        generateMessageId: () => input.assistantMessageId,
+        // Continue building the in-progress assistant message rather than
+        // starting a new one, so `responseMessage` stays cumulative across
+        // iterations and each persist overwrites a single row.
+        originalMessages: input.nativeOriginalMessages ?? input.originalMessages,
+        // The turn's `start`/`finish` chunks are emitted ONCE by the workflow
+        // body (`sendStreamStart` / `sendStreamFinish`). Without this the client
+        // would see one per iteration and render N assistant messages.
+        sendStart: false,
+        sendFinish: false,
+        onEnd: ({ responseMessage: finalMessage }) => {
+          nativeResponseMessage = finalMessage;
+          responseMessage = finalMessage;
+        },
+      }),
+      write: async part => {
+        // A writer lock taken inside a step applies only within that step, so
+        // sequential steps can share one stream. Release per part so the step's
+        // request can terminate.
+        const writer = input.writable.getWriter();
+        try {
+          await writer.write(part);
+        } finally {
+          writer.releaseLock();
+        }
+      },
+    });
+    if (projected) responseMessage = canonical.message;
+    if (canonical.generatedProjectionObservations.observations.length)
+      generatedProjectionObservations = canonical.generatedProjectionObservations;
 
     // v7 exposes the complete generated history separately from response metadata.
     const [reason, messages] = await Promise.all([result.finishReason, result.responseMessages]);
     finishReason = reason;
     responseMessages = messages;
   } catch (error) {
+    if (error instanceof ProjectionEvidenceError || projected) {
+      cancelController.abort();
+      void Promise.resolve(result.finishReason).catch(() => {});
+      void Promise.resolve(result.responseMessages).catch(() => {});
+      return {
+        finishReason: "error",
+        responseMessage: undefined,
+        responseMessages: [],
+        aborted: false,
+        compatibilityFailure: {
+          code: error instanceof ProjectionEvidenceError ? error.code : "evidence_unavailable",
+          observedMetadata,
+          usageComplete: false,
+        },
+      };
+    }
     // Three ways a user-stop surfaces here: the stream throws AbortError; the
     // poller already flipped our signal; or `run.cancel()` closed the workflow
     // writable underneath us and the write threw something unrelated before
@@ -266,5 +324,11 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     hasResponseMessage: !!responseMessage,
     responseMessageCount: responseMessages.length,
   });
-  return { finishReason, responseMessage, responseMessages, aborted: false };
+  return {
+    finishReason,
+    responseMessage,
+    responseMessages,
+    aborted: false,
+    ...(projected ? { nativeResponseMessage, generatedProjectionObservations } : {}),
+  };
 }

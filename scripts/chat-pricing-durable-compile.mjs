@@ -20,7 +20,12 @@ const previousDirectory = process.cwd();
 try {
   await mkdir(source);
   await symlink(join(root, "node_modules"), join(temp, "node_modules"), "dir");
-  for (const name of ["fence", "prepareCatalogSurfaceStep.ts", "sendCatalogSurfaceStep.ts"])
+  for (const name of [
+    "fence",
+    "projection",
+    "prepareCatalogSurfaceStep.ts",
+    "sendCatalogSurfaceStep.ts",
+  ])
     await symlink(join(root, "app/lib/workflows", name), join(source, name));
   // Actual orchestration, pricing entrypoint and transitive implementations: no pricing seams.
   await writeFile(

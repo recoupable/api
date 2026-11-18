@@ -1,3 +1,4 @@
+import { prepareProjectionHistory } from "@/lib/chat/projection/prepareProjectionHistory";
 import { NextRequest, NextResponse } from "next/server";
 import { start } from "workflow/api";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
@@ -40,6 +41,12 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
   if (validated instanceof NextResponse) return validated;
 
   const { accountId, messages, artistId, modelId, triggerRunId } = validated;
+
+  try {
+    await prepareProjectionHistory(messages);
+  } catch {
+    return errorResponse("Projection history evidence unavailable", 400);
+  }
 
   let ephemeralKeyId: string | undefined;
   try {

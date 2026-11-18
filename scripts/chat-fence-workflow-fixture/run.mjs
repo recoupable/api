@@ -49,6 +49,10 @@ async function copy(from, to) {
   bindings.push({ path: from, sha256: createHash("sha256").update(bytes).digest("hex") });
 }
 await copy("app/lib/workflows/runAgentWorkflow.ts", "workflow.ts");
+await mkdir(join(source, "projection"));
+for (const name of await readdir(join(root, "app/lib/workflows/projection")))
+  if (name.endsWith(".ts"))
+    await copy(`app/lib/workflows/projection/${name}`, `projection/${name}`);
 await mkdir(join(source, "fence"));
 for (const name of await readdir(join(root, "app/lib/workflows/fence")))
   if (name.endsWith(".ts")) await copy(`app/lib/workflows/fence/${name}`, `fence/${name}`);

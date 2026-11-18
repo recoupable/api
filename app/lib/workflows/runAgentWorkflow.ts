@@ -1,3 +1,7 @@
+import { recordProjectionProofStep } from "./projection/recordProjectionProofStep";
+import { persistProjectedAssistantStep } from "./projection/persistProjectedAssistantStep";
+import { sendProjectionFailureStep } from "./projection/sendProjectionFailureStep";
+import { prepareProjectionHistoryStep } from "./projection/prepareProjectionHistoryStep";
 import { FatalError } from "workflow";
 import type { TrustedFencedWorkflowInput } from "./fence/TrustedFencedWorkflowInput";
 import { bindFencedWorkflowStep } from "./fence/bindFencedWorkflowStep";
@@ -124,10 +128,16 @@ export async function runAgentWorkflow(
 
   let streamFinished = false;
   let legacyCleanupEntered = false;
+  let projectionFailure = false;
   // Fenced failures close only this run's stream; retained DB authority needs reconciliation.
   try {
+    const history = await prepareProjectionHistoryStep(input.messages, {
+      accountId: input.accountId,
+      chatId: input.chatId,
+      sessionId: input.sessionId,
+    });
     if (writer) {
-      const latestUser = input.messages.findLast(message => message.role === "user");
+      const latestUser = history.canonical.findLast(message => message.role === "user");
       if (!latestUser) throw new FatalError("Fenced turn requires a user message");
       await persistFencedMessageStep(writer, "user", latestUser);
     }
@@ -140,7 +150,7 @@ export async function runAgentWorkflow(
     // pattern in `apps/web/app/workflows/chat.ts` where the id is
     // generated in the workflow body and threaded into every
     // `runAgentStep` call.
-    const latestMessage = input.messages.at(-1);
+    const latestMessage = history.canonical.at(-1);
     if (
       bound?.turn.kind === "same-turn-resume" &&
       (input.devCatalogSurface ||
@@ -162,7 +172,7 @@ export async function runAgentWorkflow(
     // Convert once, before the loop. The workflow body owns this array and
     // appends every iteration's `responseMessages` to it, which is how
     // iteration N+1 sees iteration N's tool results.
-    const modelMessages = await convertMessagesStep(input.messages);
+    const modelMessages = await convertMessagesStep(history.native);
 
     // The assistant message under construction. Threaded into each iteration
     // as `originalMessages` so the AI SDK keeps appending to it instead of
@@ -173,6 +183,10 @@ export async function runAgentWorkflow(
       latestMessage?.role === "assistant"
         ? latestMessage
         : { id: assistantMessageId, role: "assistant", parts: [] };
+
+    let nativePendingAssistantResponse = reuseAssistant
+      ? history.native.at(-1)
+      : pendingAssistantResponse;
 
     // One `start` chunk for the whole turn — each iteration's stream is told
     // `sendStart: false`, so without this the client renders N messages.
@@ -206,7 +220,7 @@ export async function runAgentWorkflow(
       input.modelId === "auto"
         ? savedRouting
           ? { modelId: savedRouting.modelId, routing: savedRouting }
-          : await routeChatModelStep(input.messages, writable)
+          : await routeChatModelStep(history.native, writable)
         : { modelId: input.modelId };
     if ("metadata" in selection) {
       pendingAssistantResponse = {
@@ -234,6 +248,9 @@ export async function runAgentWorkflow(
         // call, unaffected by later appends.
         modelMessages: [...modelMessages],
         originalMessages: [pendingAssistantResponse],
+        nativeOriginalMessages: nativePendingAssistantResponse
+          ? [nativePendingAssistantResponse]
+          : undefined,
         modelId: selection.modelId,
         reasoningEffort: "routing" in selection ? selection.routing?.reasoningEffort : undefined,
         accountId: input.accountId,
@@ -244,14 +261,46 @@ export async function runAgentWorkflow(
         assistantMessageId,
       });
 
+      if (result.compatibilityFailure) {
+        projectionFailure = true;
+        throw new FatalError(
+          `Required projection generation failed: ${result.compatibilityFailure.code}`,
+        );
+      }
+      if (result.generatedProjectionObservations) {
+        projectionFailure = true;
+        const producerStepId =
+          result.generatedProjectionObservations.observations[0]?.observation.data.originStepId;
+        if (!producerStepId) throw new FatalError("Required projection proof missing");
+        await recordProjectionProofStep(producerStepId, result.generatedProjectionObservations);
+      }
+      nativePendingAssistantResponse = result.nativeResponseMessage ?? result.responseMessage;
       if (result.responseMessage) {
         pendingAssistantResponse = result.responseMessage;
+        if (
+          pendingAssistantResponse.parts.some(part => part.type === "data-recoup-sdk-observation")
+        ) {
+          projectionFailure = true;
+          // A completed producer/receipt is not a stream storage ACK. Fresh raw readback
+          // and configured deployment admission are required before the message write.
+          await prepareProjectionHistoryStep([pendingAssistantResponse], {
+            accountId: input.accountId,
+            chatId: input.chatId,
+            sessionId: input.sessionId,
+          });
+        }
         // Persist per iteration so a long turn's transcript stays live rather
         // than landing only at the end. The stable assistantMessageId makes
         // each write overwrite the same row.
         if (writer) await persistFencedMessageStep(writer, "assistant", pendingAssistantResponse);
-        else await persistAssistantMessageStep(input.chatId, pendingAssistantResponse);
+        else if (
+          pendingAssistantResponse.parts.some(part => part.type === "data-recoup-sdk-observation")
+        ) {
+          projectionFailure = true;
+          await persistProjectedAssistantStep(input.chatId, pendingAssistantResponse);
+        } else await persistAssistantMessageStep(input.chatId, pendingAssistantResponse);
       }
+      projectionFailure = false;
       modelMessages.push(...result.responseMessages);
 
       // A turn continues only while the model asked for more tools. Any
@@ -323,7 +372,11 @@ export async function runAgentWorkflow(
     if (writer) {
       // No legacy slot clear/key revoke. The writer's CAS release is success-only.
       // On required failure the original bound state remains for explicit reconciliation.
-      await closeChatStream(writable);
+      try {
+        if (projectionFailure) await sendProjectionFailureStep(writable);
+      } finally {
+        await closeChatStream(writable);
+      }
     } else if (legacyCleanupEntered) {
       // Run two cleanup steps in parallel:
       //   1) `clearChatActiveStream` — CAS-gated DB clear of the chat's
@@ -353,8 +406,12 @@ export async function runAgentWorkflow(
       await Promise.all([
         clearChatActiveStream(input.chatId, workflowRunId),
         (async () => {
-          if (!streamFinished) await sendStreamFinish(writable);
-          await closeChatStream(writable);
+          try {
+            if (projectionFailure) await sendProjectionFailureStep(writable);
+            else if (!streamFinished) await sendStreamFinish(writable);
+          } finally {
+            await closeChatStream(writable);
+          }
         })(),
         ...(input.agentContext.ephemeralKeyId
           ? [deleteEphemeralKeyStep(input.agentContext.ephemeralKeyId)]

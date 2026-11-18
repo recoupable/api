@@ -190,3 +190,15 @@ describe("handleStartChatRun trigger_run_id link (chat#2006 item 4a)", () => {
     expect(await res.json()).toEqual({ runId: "wrun_abc", chatId: "chat-1", sessionId: "sess-1" });
   });
 });
+
+it("rejects carried projection before provisioning or minting a key", async () => {
+  vi.clearAllMocks();
+  vi.mocked(validateChatRunRequest).mockResolvedValue({
+    ...validated,
+    messages: [{ id: "a", role: "assistant", parts: [{ type: "data-recoup-sdk-observation" }] }],
+  } as never);
+  expect((await handleStartChatRun(req())).status).toBe(400);
+  expect(provisionRunSession).not.toHaveBeenCalled();
+  expect(mintEphemeralAccountKey).not.toHaveBeenCalled();
+  expect(start).not.toHaveBeenCalled();
+});
