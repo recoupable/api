@@ -38,7 +38,6 @@ export function decideFanHostContinuity(input: unknown) {
     value.now_ms > Number.MAX_SAFE_INTEGER - value.policy.session_lifetime_ms
   )
     return "unavailable";
-  if (value.policy.auth_admission === "denied") return "denied";
   if (value.operation === "new_registration") {
     if (value.binding !== "absent") return "denied";
     if (value.policy.new_registration_admission === "unknown") return "unavailable";
@@ -49,5 +48,5 @@ export function decideFanHostContinuity(input: unknown) {
   if (value.binding !== "existing") return "denied";
   if (value.operation === "campaign_operation")
     return value.campaign === "funded" ? "campaign_lane_candidate" : "denied";
-  return "auth_lane_candidate";
+  return value.policy.auth_admission === "admitted" ? "auth_lane_candidate" : "denied";
 }

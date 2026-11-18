@@ -100,3 +100,26 @@ describe("inactive bounded continuity model", () => {
     );
   });
 });
+
+it("keeps registration admission independent from returning-auth admission", () =>
+  expect(
+    decide({
+      ...model(),
+      operation: "new_registration",
+      binding: "absent",
+      policy: {
+        ...model().policy,
+        auth_admission: "denied",
+        new_registration_admission: "admitted",
+      },
+    }),
+  ).toBe("registration_lane_candidate"));
+it("does not use returning-auth admission for campaign classification", () =>
+  expect(
+    decide({
+      ...model(),
+      operation: "campaign_operation",
+      campaign: "funded",
+      policy: { ...model().policy, auth_admission: "denied" },
+    }),
+  ).toBe("campaign_lane_candidate"));
