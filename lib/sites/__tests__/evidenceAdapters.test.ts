@@ -82,6 +82,34 @@ describe("unwired final-save capture", () => {
     );
     expect(insertSitePublishEvidence).toHaveBeenCalledTimes(1);
   });
+  it("captures reordered journey keys without rewriting original report or digests", async () => {
+    const f = fixture();
+    const report = f.site.draft!.production!.reviews[0];
+    const original = structuredClone(report);
+    const journey = report.verification!.journey!;
+    journey.steps = journey.steps.map(
+      step => Object.fromEntries(Object.entries(step).reverse()) as typeof step,
+    );
+    report.verification!.journey = Object.fromEntries(
+      Object.entries(journey).reverse(),
+    ) as typeof journey;
+    vi.mocked(selectSite).mockResolvedValue(structuredClone(f.site));
+    const raw = JSON.stringify(report);
+    expect(await f.capture()).toEqual(f.record);
+    const captured = vi.mocked(insertSitePublishEvidence).mock.calls[0][0].review;
+    expect(JSON.stringify(captured)).toBe(raw);
+    expect(JSON.stringify(report)).toBe(raw);
+    expect(hashSiteEvidence(captured)).toBe(f.record.reviewSha256);
+    expect(report.verification!.evidence).toEqual(original.verification!.evidence);
+  });
+  it.each(["invalid", "changed"])("rejects %s journey before capture RPC", async mode => {
+    const f = fixture();
+    f.site.draft!.production!.reviews[0].verification!.journey!.motivation =
+      mode === "invalid" ? "" : "A genuinely changed motivation for this journey";
+    vi.mocked(selectSite).mockResolvedValue(structuredClone(f.site));
+    await expect(f.capture()).rejects.toMatchObject({ status: 409 });
+    expect(insertSitePublishEvidence).not.toHaveBeenCalled();
+  });
   it.each(["revision", "owner", "site", "candidate"])(
     "rejects changed current %s before persistence",
     async field => {
