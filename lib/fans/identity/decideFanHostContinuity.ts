@@ -31,13 +31,7 @@ export function decideFanHostContinuity(input: unknown) {
   if (!parsed.success) return "unavailable";
   const value = parsed.data;
   if (value.security !== "active") return "denied";
-  const age = value.now_ms - value.authenticated_at_ms;
-  if (
-    age < 0 ||
-    age > value.policy.max_auth_age_ms ||
-    value.now_ms > Number.MAX_SAFE_INTEGER - value.policy.session_lifetime_ms
-  )
-    return "unavailable";
+  if (!withinConfiguredWindow(value)) return "unavailable";
   if (value.operation === "new_registration") {
     if (value.binding !== "absent") return "denied";
     if (value.policy.new_registration_admission === "unknown") return "unavailable";
@@ -49,4 +43,13 @@ export function decideFanHostContinuity(input: unknown) {
   if (value.operation === "campaign_operation")
     return value.campaign === "funded" ? "campaign_lane_candidate" : "denied";
   return value.policy.auth_admission === "admitted" ? "auth_lane_candidate" : "denied";
+}
+
+function withinConfiguredWindow(value: z.infer<typeof schema>) {
+  const age = value.now_ms - value.authenticated_at_ms;
+  return (
+    age >= 0 &&
+    age <= value.policy.max_auth_age_ms &&
+    value.now_ms <= Number.MAX_SAFE_INTEGER - value.policy.session_lifetime_ms
+  );
 }

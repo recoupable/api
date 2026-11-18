@@ -39,13 +39,13 @@ export function decideFanHostLinkConflict(input: unknown) {
     parseFanHostIntent({ ...intent, operation_id: value.host_account_id });
     if (intent.purpose === "link_existing_host" && intent.host_account_id !== value.host_account_id)
       return "unavailable";
-    if (value.security === "revoked") return "denied";
-    if (value.security === "deleted" || value.reassign) return "recovery_required";
     const host = value.host_mapping,
       fan = value.fan_mapping;
     if (host.state === "present") parseFanHostIntent({ ...intent, fan_id: host.fan_id });
     if (fan.state === "present")
       parseFanHostIntent({ ...intent, operation_id: fan.host_account_id });
+    if (value.security === "revoked") return "denied";
+    if (value.security === "deleted" || value.reassign) return "recovery_required";
     if (
       (host.state === "present" && host.fan_id !== intent.fan_id) ||
       (fan.state === "present" && fan.host_account_id !== value.host_account_id)

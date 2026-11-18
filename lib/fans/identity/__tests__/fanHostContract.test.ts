@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
+import ts from "typescript";
 import { parseFanHostIntent } from "../parseFanHostIntent";
 import { assertFanHostReceiptMatchesIntent as match } from "../assertFanHostReceiptMatchesIntent";
 import { decideFanHostLinkConflict as decide } from "../decideFanHostLinkConflict";
@@ -60,8 +61,13 @@ const model = () => ({
 });
 describe("inactive fan host shape and consistency, never authentication", () => {
   it("parses both purposes without modifying input", () => {
-    expect(parseFanHostIntent(intent)).toEqual(intent);
-    expect(parseFanHostIntent(signIn()).purpose).toBe("host_sign_in");
+    const before = structuredClone(intent);
+    expect(parseFanHostIntent(intent)).toEqual(before);
+    expect(intent).toEqual(before);
+    const login = signIn();
+    const loginBefore = structuredClone(login);
+    expect(parseFanHostIntent(login)).toEqual(loginBefore);
+    expect(login).toEqual(loginBefore);
   });
   it.each(["unknown", "host_account_id"])("rejects sign-in extra/link field %s", field =>
     expect(() => parseFanHostIntent({ ...signIn(), [field]: "x" })).toThrow(),
@@ -196,10 +202,7 @@ it("has no authority runtime imports or environment access", () => {
     expect(source).not.toMatch(
       /process\.env|fetch\(|node:crypto|supabase|registerTool|NextRequest|createClient/,
     );
-    const imports = [...source.matchAll(/from\s+["']([^"']+)["']/g)].map(m => m[1]);
-    expect(
-      imports.every(p => p === "zod" || p === "./parseFanHostIntent" || p === "node:util"),
-    ).toBe(true);
+    assertPureImports(source);
   }
 });
 
@@ -224,3 +227,62 @@ it("preserves an encoded hash in the path", () =>
   expect(parseFanHostIntent({ ...intent, return_url: "https://host.example/%23" }).return_url).toBe(
     "https://host.example/%23",
   ));
+
+it.each(["active", "revoked", "deleted"])(
+  "classifies malformed present IDs as unavailable under %s",
+  security => {
+    for (const patch of [
+      { host_mapping: { state: "present", fan_id: "\u0000", revision: 0 } },
+      { fan_mapping: { state: "present", host_account_id: "\ud800" } },
+    ])
+      expect(decide({ ...model(), ...patch, security })).toBe("unavailable");
+  },
+);
+it.each(["customer_id", "application_id", "environment"])(
+  "rejects mismatched observed scope %s",
+  field =>
+    expect(
+      decide({
+        ...model(),
+        scope: { ...scope, [field]: field === "environment" ? "development" : "other" },
+      }),
+    ).toBe("unavailable"),
+);
+
+function assertPureImports(source: string) {
+  const tree = ts.createSourceFile(
+    "model.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const visit = (node: ts.Node) => {
+    if (ts.isImportDeclaration(node)) {
+      expect(ts.isStringLiteral(node.moduleSpecifier)).toBe(true);
+      expect(["zod", "./parseFanHostIntent", "node:util"]).toContain(
+        (node.moduleSpecifier as ts.StringLiteral).text,
+      );
+    }
+    if (
+      ts.isImportEqualsDeclaration(node) ||
+      (ts.isExportDeclaration(node) && node.moduleSpecifier)
+    )
+      throw new Error("Unexpected module import");
+    if (
+      ts.isCallExpression(node) &&
+      (node.expression.kind === ts.SyntaxKind.ImportKeyword ||
+        (ts.isIdentifier(node.expression) && node.expression.text === "require"))
+    )
+      throw new Error("Runtime import");
+    ts.forEachChild(node, visit);
+  };
+  visit(tree);
+}
+it.each([
+  'import "./runtime";',
+  'const x=require("./runtime");',
+  'const x=import("./runtime");',
+  'import x=require("./runtime");',
+  'export * from "./runtime";',
+])("import canary rejects %s", source => expect(() => assertPureImports(source)).toThrow());

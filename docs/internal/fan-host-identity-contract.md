@@ -34,7 +34,7 @@ Missing mapping observations are not absent records. Only an explicit `state: ab
 
 ## Continuity and lifecycle
 
-The policy model separates returning sign-in, recovery, disconnect, new registration and campaign operations. Known returning mappings may yield `auth_lane_candidate` at campaign exhaustion only with explicit bounded authentication admission. New registration requires its own configured admission, independently of returning-auth admission; missing/unknown policy fails closed. A funded campaign classification grants no billing reservation. Revocation/deletion denies independently of funding.
+The policy model separates returning sign-in, recovery, disconnect, new registration and campaign operations. Known returning mappings may yield `auth_lane_candidate` with explicit bounded authentication admission whether campaign allowance is funded or exhausted. Campaign exhaustion is enforced only for campaign operations in this model. New registration requires its own configured admission, independently of returning-auth admission; missing/unknown policy fails closed. A funded campaign classification grants no billing reservation. Revocation/deletion denies independently of funding.
 
 Callers explicitly supply finite positive safe-integer maximum authentication age and session lifetime in milliseconds, an observation time and authentication time, and admission observations. Future times, stale authentication and unsafe expiry arithmetic fail closed; the maximum-age boundary is inclusive. No environment/default policy, adopted rates or production TTLs are selected. This model does not measure requests or enforce a rate limit. `*_candidate` outputs are only proposed lane choices.
 

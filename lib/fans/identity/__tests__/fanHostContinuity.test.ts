@@ -123,3 +123,18 @@ it("does not use returning-auth admission for campaign classification", () =>
       policy: { ...model().policy, auth_admission: "denied" },
     }),
   ).toBe("campaign_lane_candidate"));
+
+it("checks the exact safe session-expiry arithmetic boundary", () => {
+  const lifetime = model().policy.session_lifetime_ms;
+  const last = Number.MAX_SAFE_INTEGER - lifetime;
+  expect(decide({ ...model(), now_ms: last, authenticated_at_ms: last })).toBe(
+    "auth_lane_candidate",
+  );
+  expect(decide({ ...model(), now_ms: last + 1, authenticated_at_ms: last + 1 })).toBe(
+    "unavailable",
+  );
+});
+it.each(["funded", "exhausted"])(
+  "returning authentication remains separately bounded when campaign is %s",
+  campaign => expect(decide({ ...model(), campaign })).toBe("auth_lane_candidate"),
+);
