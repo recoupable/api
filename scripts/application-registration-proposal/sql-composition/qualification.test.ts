@@ -2,6 +2,7 @@ import { beforeAll, beforeEach, afterAll, describe, expect, it } from "vitest";
 import { Client } from "pg";
 import { userInfo } from "node:os";
 import net from "node:net";
+import http2 from "node:http2";
 import dgram from "node:dgram";
 import dns from "node:dns";
 import dnsPromises from "node:dns/promises";
@@ -311,6 +312,15 @@ describe("actual domain to exact disposable SQL proposal", () => {
     expect(calls).toHaveLength(before);
   });
   it("denies native DNS, TCP, UDP and unrelated Unix sockets before access", async () => {
+    expect(
+      globalThis[Symbol.for("recoup.disposable.registration.originalSocketConnect")],
+    ).toBeUndefined();
+    const installer = globalThis[Symbol.for("recoup.disposable.registration.ownedSocketInstaller")];
+    expect(Object.keys(installer).sort()).toEqual(["install", "pid"]);
+    expect(Object.isFrozen(installer)).toBe(true);
+    expect(() => new WebSocket("wss://fixture.invalid")).toThrow("Network forbidden");
+    expect(() => http2.connect("https://fixture.invalid")).toThrow("Network forbidden");
+    expect(() => new net.Server().listen(0, "127.0.0.1")).toThrow("Network forbidden");
     expect(() => dns.lookup("fixture.invalid", () => {})).toThrow("Network forbidden");
     expect(() => dns.resolve4("fixture.invalid", () => {})).toThrow("Network forbidden");
     expect(() => Reflect.construct(dns.Resolver, [])).toThrow("Network forbidden");

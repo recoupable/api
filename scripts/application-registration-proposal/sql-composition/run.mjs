@@ -190,6 +190,9 @@ let complete = false;
 let code;
 let error;
 let interruptedAt;
+const faultReceipts = {};
+let faultBuffer = "";
+let invalidFaultOutput = false;
 const started = Date.now();
 try {
   child = spawn(
@@ -203,13 +206,44 @@ try {
       process.execPath,
       ...(fault ? ["--fault", fault] : []),
     ],
-    { cwd: root, env, stdio: "inherit", detached: true },
+    { cwd: root, env, stdio: fault ? ["ignore", "pipe", "inherit"] : "inherit", detached: true },
   );
+  if (fault) {
+    child.stdout.setEncoding("utf8");
+    child.stdout.on("data", chunk => {
+      process.stdout.write(chunk);
+      faultBuffer += chunk;
+      if (faultBuffer.length > 65536) {
+        invalidFaultOutput = true;
+        faultBuffer = "";
+        return;
+      }
+      let end;
+      while ((end = faultBuffer.indexOf("\n")) !== -1) {
+        const line = faultBuffer.slice(0, end);
+        faultBuffer = faultBuffer.slice(end + 1);
+        for (const key of [
+          "COMPOSITION_FAULT_READY",
+          "OWNED_WORKER_CLEANUP",
+          "OWNED_CLUSTER_CLEANUP",
+        ]) {
+          if (!line.startsWith(key + " ")) continue;
+          try {
+            if (faultReceipts[key]) invalidFaultOutput = true;
+            faultReceipts[key] = JSON.parse(line.slice(key.length + 1));
+          } catch {
+            invalidFaultOutput = true;
+          }
+        }
+      }
+    });
+  }
   child.once("error", value => {
     error = value;
     complete = true;
   });
-  child.once("exit", value => {
+  // close waits for piped fault evidence to drain as well as process exit.
+  child.once("close", value => {
     code = value;
     complete = true;
   });
@@ -229,10 +263,38 @@ try {
   }
   if (error) throw error;
   process.exitCode = interruptedAt ? 1 : (code ?? 1);
+  if (fault) {
+    const ready = faultReceipts.COMPOSITION_FAULT_READY;
+    const worker = faultReceipts.OWNED_WORKER_CLEANUP;
+    const cluster = faultReceipts.OWNED_CLUSTER_CLEANUP;
+    const passed = Boolean(
+      !invalidFaultOutput &&
+        !faultBuffer.trim() &&
+        !interruptedAt &&
+        code === (fault === "worker-exit" ? 23 : 1) &&
+        ready?.fault === fault &&
+        ready.supervisor_pid === child.pid &&
+        Number.isInteger(ready.node_pid) &&
+        Number.isInteger(ready.driver_pid) &&
+        worker?.worker_pid === ready.driver_pid &&
+        worker.worker_group_absent === true &&
+        cluster?.cluster_created === true &&
+        cluster.postmaster_absent === true &&
+        cluster.socket_absent === true,
+    );
+    console.log("COMPOSITION_FAULT_RESULT " + JSON.stringify({ fault, passed, exit: code }));
+    if (!passed) {
+      process.exitCode = 1;
+      throw new Error(`Fault readiness/cleanup validation failed; preserved ${owned}`);
+    }
+  }
   if (code === 0 && !interruptedAt) {
     await rm(owned, { recursive: true, force: true });
     console.log("Composition supervisor completed and launch home removed");
-  } else console.error(`Failed/interrupted qualification; preserved launch home ${owned}`);
+  } else
+    console.error(
+      `${fault ? "Expected fault verified" : "Failed/interrupted qualification"}; preserved launch home ${owned}`,
+    );
 } finally {
   process.removeListener("SIGINT", onInt);
   process.removeListener("SIGTERM", onTerm);

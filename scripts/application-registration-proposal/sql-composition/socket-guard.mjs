@@ -10,7 +10,8 @@ import http2 from "node:http2";
 import { lstatSync, readFileSync, realpathSync } from "node:fs";
 import { dirname, isAbsolute, join } from "node:path";
 import { syncBuiltinESMExports } from "node:module";
-const saved = Symbol.for("recoup.disposable.registration.originalSocketConnect");
+const saved = Symbol.for("recoup.disposable.registration.ownedSocketInstaller");
+let nativeConnect; // Module-private; never publish the raw connector on globalThis.
 // Capture once, in Node's --import preload before Vitest or authentication imports.
 if (!globalThis[saved]) {
   const explicitPreload = process.execArgv.some(
@@ -19,7 +20,8 @@ if (!globalThis[saved]) {
   );
   if (!explicitPreload || process.env.REGISTRATION_CONNECTOR_INITIALIZED === String(process.pid))
     throw new Error("Native owned connector preload required");
-  globalThis[saved] = Object.freeze({ pid: process.pid, connect: net.Socket.prototype.connect });
+  nativeConnect = net.Socket.prototype.connect;
+  globalThis[saved] = Object.freeze({ pid: process.pid, install: installNativeOwnedSocketGuard });
   process.env.REGISTRATION_CONNECTOR_INITIALIZED = String(process.pid);
 }
 if (
@@ -63,10 +65,15 @@ dns.lookup = (hostname, options, callback) => {
 };
 dnsPromises.lookup = async (hostname, options) => syntheticLocalhost(hostname, options);
 net.connect = net.createConnection = net.Socket.prototype.connect = denyNetwork;
+net.Server.prototype.listen = denyNetwork;
 tls.connect = http.request = http.get = https.request = https.get = http2.connect = denyNetwork;
 
 /** Allow only the supervisor's current owned Unix socket; never a host/port or alias. */
 export function installOwnedSocketGuard() {
+  return globalThis[saved].install();
+}
+
+function installNativeOwnedSocketGuard() {
   const socket = process.env.REGISTRATION_QUALIFICATION_SOCKET;
   if (!socket || !isAbsolute(socket) || realpathSync(socket) !== socket)
     throw new Error("Owned Unix socket scope required");
@@ -112,10 +119,10 @@ export function installOwnedSocketGuard() {
         supervisor_pid: scope.supervisor_pid,
         node_pid: Number(process.env.REGISTRATION_COMPOSITION_NODE),
         module: import.meta.url,
-        original_connect: typeof globalThis[saved].connect,
+        original_connect: typeof nativeConnect,
       }),
   );
-  const original = globalThis[saved].connect;
+  const original = nativeConnect;
   net.Socket.prototype.connect = function (...args) {
     const current = lstatSync(expected);
     const currentDirectory = lstatSync(socket);
