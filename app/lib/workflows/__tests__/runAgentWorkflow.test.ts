@@ -569,7 +569,12 @@ it("reuses a resumed Auto decision and preserves accumulated cost", async () => 
       reason: "Saved decision",
     },
   };
-  const assistant = { id: "saved", role: "assistant" as const, parts: [], metadata };
+  const assistant = {
+    id: "saved",
+    role: "assistant" as const,
+    parts: [{ type: "text" as const, text: "prior" }],
+    metadata,
+  };
   vi.mocked(runAgentStep).mockResolvedValue({
     finishReason: "stop",
     aborted: false,

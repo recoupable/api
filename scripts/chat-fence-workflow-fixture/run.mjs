@@ -20,6 +20,10 @@ import tls from "node:tls";
 import http from "node:http";
 import https from "node:https";
 const require = createRequire(import.meta.url);
+// Standalone ESM bundle includes installed SDK CommonJS dependencies.
+// Same real require bridge as the projection fixture; no validation mocks.
+const previousRequire = globalThis.require;
+globalThis.require = require;
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 let networkAttempts = 0;
 const deny = () => {
@@ -59,6 +63,9 @@ for (const name of await readdir(join(root, "app/lib/workflows/fence")))
 await copy("lib/chat/auto-commit/autoCommitChatTurn.ts", "autoCommitChatTurn.ts");
 for (const path of [
   "lib/chat/fence/encodeStrictJson.ts",
+  "lib/chat/continuation/buildContinuationMarker.ts",
+  "lib/chat/continuation/assertMarkerFreeHistory.ts",
+  "lib/chat/continuation/encodeBoundedContinuationValue.ts",
   "lib/chat/fence/persistence/createFencedMessageWriter.ts",
   "lib/supabase/chat_fence/executeChatFenceCommand.ts",
   "lib/chat/upsertAssistantDataPart.ts",
@@ -267,6 +274,9 @@ try {
     "catalog",
     "new-object",
     "resume",
+    "resume-unmarked",
+    "resume-malformed",
+    "resume-oversized",
     "legacy",
   ]) {
     await writeFile(join(effects, "events.jsonl"), "");
@@ -282,17 +292,22 @@ try {
     };
     if (name === "catalog" || name === "catalog-fail") invocation.input.devCatalogSurface = {};
     if (name === "iteration") invocation.input.modelId = "synthetic";
-    if (name === "new-object" || name === "resume")
+    if (name === "new-object" || name.startsWith("resume"))
       invocation.input.messages.push({
         id: "historical-assistant",
         role: "assistant",
         parts: [{ type: "text", text: "OLD" }],
         metadata: { trace: "old" },
       });
-    if (name === "resume")
+    if (name.startsWith("resume"))
       invocation.fence.turn = { kind: "same-turn-resume", assistantId: "historical-assistant" };
+    if (name === "resume-unmarked") invocation.input.streamProtocol = "unmarked-v1";
+    if (name === "resume-malformed") invocation.input.messages.at(-1).parts[0].text = 3;
+    if (name === "resume-oversized") invocation.input.messages.at(-1).parts = Array.from({ length: 2049 }, () => ({ type: "text", text: "prior" }));
     const run = await start(runAgentWorkflow, [name === "legacy" ? invocation.input : invocation]);
-    if (
+    if (name.startsWith("resume-"))
+      await assert.rejects(bounded(run.returnValue), /Continuation/);
+    else if (
       [
         "bind",
         "user",
@@ -322,6 +337,13 @@ try {
         assert.equal(c.p.owner, authority.owner);
       }
       if (name === "bind") assert.deepEqual(actions, ["rpc"]);
+      if (name.startsWith("resume-")) {
+        assert.deepEqual(commands.map(c => c.p_action), ["bind"]);
+        assert(!actions.includes("provider"));
+        assert(!actions.includes("stream-start"));
+        assert(!actions.includes("credits"));
+        assert(!actions.includes("commit"));
+      }
       if (name === "user") {
         assert(!actions.includes("routing"));
         assert(!actions.includes("provider"));
@@ -505,6 +527,8 @@ try {
     ),
   );
 } finally {
+  if (previousRequire === undefined) delete globalThis.require;
+  else globalThis.require = previousRequire;
   await world?.close();
   process.chdir(old);
   await rm(temp, { recursive: true, force: true });

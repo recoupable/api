@@ -1,3 +1,4 @@
+import { validateContinuationBaseStep } from "./projection/validateContinuationBaseStep";
 import { streamProtocolSchema, type StreamProtocol } from "@/lib/chat/continuation/streamProtocol";
 import { recordProjectionProofStep } from "./projection/recordProjectionProofStep";
 import { persistProjectedAssistantStep } from "./projection/persistProjectedAssistantStep";
@@ -141,11 +142,6 @@ export async function runAgentWorkflow(
       chatId: input.chatId,
       sessionId: input.sessionId,
     });
-    if (writer) {
-      const latestUser = history.canonical.findLast(message => message.role === "user");
-      if (!latestUser) throw new FatalError("Fenced turn requires a user message");
-      await persistFencedMessageStep(writer, "user", latestUser);
-    }
     // Pick or generate a stable id for the assistant message. If the
     // last message in the conversation is already an assistant message
     // (we're resuming an in-progress turn after a tool-call interaction)
@@ -163,14 +159,20 @@ export async function runAgentWorkflow(
         latestMessage.id !== bound.turn.assistantId)
     )
       throw new FatalError("Fenced resume identity mismatch");
-    if (writer && bound?.turn.kind === "same-turn-resume" && latestMessage)
-      // Existence + current message generation must be proven before any provider work.
-      await persistFencedMessageStep(writer, "update_parts", latestMessage);
     const reuseAssistant = writer
       ? bound?.turn.kind === "same-turn-resume"
       : !input.devCatalogSurface && latestMessage?.role === "assistant";
     if (reuseAssistant && input.streamProtocol !== "canonical-base-v1")
       throw new FatalError("Continuation protocol requirement unavailable");
+    if (reuseAssistant && latestMessage) await validateContinuationBaseStep(latestMessage);
+    if (writer) {
+      const latestUser = history.canonical.findLast(message => message.role === "user");
+      if (!latestUser) throw new FatalError("Fenced turn requires a user message");
+      await persistFencedMessageStep(writer, "user", latestUser);
+    }
+    if (writer && bound?.turn.kind === "same-turn-resume" && latestMessage)
+      // Existence + current message generation must be proven before any provider work.
+      await persistFencedMessageStep(writer, "update_parts", latestMessage);
     const assistantMessageId =
       reuseAssistant && latestMessage?.role === "assistant"
         ? latestMessage.id

@@ -1,3 +1,4 @@
+import type { TrustedFencedWorkflowInput } from "../fence/TrustedFencedWorkflowInput";
 import { closeChatStream } from "../closeChatStream";
 import { sendStreamStart } from "../sendStreamStart";
 import { sendStreamFinish } from "../sendStreamFinish";
@@ -230,7 +231,11 @@ it("unproven resume message generation fails before provider/routing", async () 
     input: typeof baseInput;
     fence: { turn: unknown };
   };
-  invocation.input.messages.push({ id: "old", role: "assistant", parts: [] } as never);
+  invocation.input.messages.push({
+    id: "old",
+    role: "assistant",
+    parts: [{ type: "text", text: "prior" }],
+  } as never);
   invocation.fence.turn = { kind: "same-turn-resume", assistantId: "old" };
   rpc.mockImplementation(async (_name, args) => ({
     data:
@@ -338,3 +343,27 @@ it("signals thrown fenced producer failure without releasing or masking its caus
   expect(handleChatCredits).not.toHaveBeenCalled();
   expect(sendStreamFinish).not.toHaveBeenCalled();
 });
+it.each(["unmarked", "malformed", "oversized"])(
+  "rejects %s continuation before any fenced message mutation",
+  async mode => {
+    const invocation = fencedInput() as unknown as TrustedFencedWorkflowInput;
+    invocation.fence.turn = { kind: "same-turn-resume", assistantId: "old" };
+    invocation.input.messages.push({
+      id: "old",
+      role: "assistant",
+      parts: [
+        {
+          type: "text",
+          text: mode === "oversized" ? "x".repeat(1_048_576) : mode === "malformed" ? 3 : "prior",
+        },
+      ],
+    } as never);
+    if (mode === "unmarked") invocation.input.streamProtocol = "unmarked-v1" as never;
+    await expect(runAgentWorkflow(invocation)).rejects.toThrow();
+    expect(actions()).toEqual(["bind"]);
+    expect(runAgentStep).not.toHaveBeenCalled();
+    expect(sendStreamStart).not.toHaveBeenCalled();
+    expect(handleChatCredits).not.toHaveBeenCalled();
+    expect(autoCommitChatTurn).not.toHaveBeenCalled();
+  },
+);
