@@ -82,3 +82,54 @@ harness compatibility; this suite does not repeat the expiry-policy matrix.
 
 No source test proves deployment, intended-client authentication, native parity,
 SQL entitlement or live MCP availability. Those gates remain unchanged.
+
+## Inactive direct-SDK transport composition
+
+`handleProposedRegistrationMcpRequest` composes a request-local SDK server and
+stateless JSON Streamable HTTP transport with the existing verifier and proposed
+create/read domains. It is unregistered: current `/mcp`, its onboarding, catalogs
+and delegated allowlists are unchanged. It has no production dependency factory.
+Only server-owned proposed policy/storage dependencies may be supplied. There is
+no adopted query mode or public registration endpoint.
+
+The exact original NextRequest is retained once; its body is read once and passed
+to the SDK as `parsedBody`. No AuthInfo or token is manufactured. A frozen admission
+observation is compared with each call's actual credential tuple (including key ID
+or Privy subject), actor and workspace. Domain authentication runs independently;
+a per-invocation port wrapper checks its actual actor/workspace and intended method
+before invoking the original port. Nothing substitutes the earlier identity into a
+fresh domain call. The domain exposes no credential tuple at that third observation,
+so same-actor credential-only changes there are not claimed detectable. These are
+observations, not atomic revocation or SQL entitlement checks.
+
+Internal source constants are 64KiB wire bytes, a five-second total body read,
+a 30-second whole-request deadline, and a separately bounded one-second cleanup.
+Authentication precedes body reads. All arrays and id-less tool calls are rejected
+before effects; unsupported Accept/content type yield406/415; malformed JSON400,
+oversize413, body timeout408 and whole-request timeout504. Abort yields408 when a
+response can still be delivered. Cleanup uncertainty yields503. Early denial owns
+and cancels unread input too. These are inactive source contracts, not deployed
+limits or client acceptance.
+
+The real SDK uses JSON response mode. The owner closes server/transport before
+returning a completed JSON response, including202 notifications and errors. Request
+abort/deadline races bound every asynchronous stage and observe losing rejections;
+closing alone cannot settle the SDK's pending JSON promise. No mcp-handler import,
+adapter interval, global owner, session store or response-stream teardown claim is
+introduced. A normal returned response body can be abandoned after SDK closure.
+
+The storage guard checks owner/request/SDK termination immediately before port
+entry. Termination before entry prevents execution. Once storage starts, closing
+HTTP does not roll it back: a lost response is an unknown outcome, retaining the
+original operation/key/input, with no automatic retry. Domain work may settle after
+transport cleanup; a never-settling dependency is not reported as settled merely
+because the response deadline or process boundary ended. Controlled tests separately
+release and await delayed domain/storage work. Known storage errors render fixed
+messages, never mutable adapter exception details.
+
+The controlled `mcpTransport` and `mcpTransportLifecycle` suites exercise real SDK
+client/server composition with synthetic credential and storage leaves. Existing
+proposal containment and source/golden bindings remain unchanged. The cohesive
+request-owner, bounded-reader and guard functions deliberately retain their local
+state/control flow despite the review configuration's 50-line function guideline;
+splitting that state into a generic lifecycle framework would obscure ownership.

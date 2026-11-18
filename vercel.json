@@ -27,7 +27,8 @@
       "fix/mcp-oauth-behavior-annotations": false,
       "codex/oauth-annotations-current-main": false,
       "codex/mcp-api-key-expiry": false,
-      "codex/mcp-existing-application-actor": false
+      "codex/mcp-existing-application-actor": false,
+      "codex/mcp-registration-transport-proposal": false
     }
   }
 }
