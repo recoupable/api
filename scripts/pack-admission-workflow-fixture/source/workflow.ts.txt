@@ -1,0 +1,9 @@
+import { createHook } from "workflow";
+import { waitForPackAdmission } from "@/app/workflows/packs/foundation/waitForPackAdmission";
+// Unregistered local fixture; actual coordinator and durable steps, synthetic read RPC only.
+export async function packSchedulerFixture(jobId: string, _limit: number) {
+  "use workflow";
+  const result = await waitForPackAdmission({ accountId: "fixture-owner" }, jobId);
+  await createHook({ token: `${jobId}:finished` });
+  return result;
+}

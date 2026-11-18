@@ -1,0 +1,34 @@
+import { readFileSync, appendFileSync } from "node:fs";
+import { join } from "node:path";
+import { admissionStateSchema } from "./fixtureSchemas";
+import { getStepMetadata, getWorkflowMetadata } from "workflow";
+import type { PackActor } from "@/lib/content/packs/packTypes";
+import type { PackAdmissionObservation } from "@/lib/content/packs/foundation/packAdmissionTypes";
+export async function runPackCommand(
+  actor: PackActor,
+  action: string,
+  jobId: string,
+): Promise<{ job: PackAdmissionObservation["job"] }> {
+  const path = process.env.PACK_SCHEDULER_EFFECTS!;
+  if (action !== "read" || actor.accountId !== "fixture-owner")
+    throw new Error("Forbidden fixture effect");
+  const state = admissionStateSchema.parse(
+    JSON.parse(readFileSync(join(path, "state.json"), "utf8")),
+  );
+  const runId = getWorkflowMetadata().workflowRunId;
+  appendFileSync(
+    join(path, "events.jsonl"),
+    JSON.stringify({ action, jobId, runId, at: Date.now(), stepId: getStepMetadata().stepId }) +
+      "\n",
+  );
+  if (state.scenario === "read-failure") throw new Error("Fixture access denied");
+  return {
+    job: {
+      id: jobId,
+      owner_id: actor.accountId,
+      status: "running",
+      workflow_run_id: state.savedRunId === "current" ? runId : state.savedRunId,
+      hold_expires_at: state.holdExpiresAt,
+    },
+  };
+}

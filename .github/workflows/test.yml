@@ -42,6 +42,9 @@ jobs:
       - name: Check unwired pack foundation with offline durable ports
         run: pnpm test:pack-foundation-workflow
 
+      - name: Check unwired pack admission wait and restart
+        run: pnpm test:pack-admission-workflow
+
       - name: Check actual unwired pack foundation port compilation
         run: |
           PACK_FOUNDATION_PORTS_COMPILE_OUTPUT=./pack-foundation-ports-compile.json node scripts/pack-foundation-durable-ports-compile.mjs
