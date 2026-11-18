@@ -262,3 +262,91 @@ it("attributes a URL-only saved draft before enabling fan capture", async () => 
   expect(updateSite).toHaveBeenCalledWith(id, "owner", 2, { artist_id: "artist" });
   expect((await response.json()).artistId).toBe("artist");
 });
+
+it.each([
+  { id: "fan-without-email" },
+  { id: "fan-with-null-fields", email: null, display_name: null },
+])("keeps optional provider profile data independent of Site completion: %j", async profile => {
+  m.consume.mockResolvedValue({
+    state_hash: hashFanValue("a".repeat(64)),
+    site_id: id,
+    return_url: config.return_url,
+    config_revision: 1,
+    verifier: "verifier",
+    scopes: ["user-read-email", "user-read-private"],
+  });
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce(
+      Response.json({ access_token: "token", scope: "user-read-email user-read-private" }),
+    )
+    .mockResolvedValueOnce(Response.json(profile));
+  vi.stubGlobal("fetch", fetch);
+  const timeout = vi.spyOn(AbortSignal, "timeout");
+  try {
+    const response = await finishFanConnection(callbackRequest());
+    expect(response.headers.get("location")).toContain("recoup_spotify=connected");
+    expect(m.complete).toHaveBeenCalledWith({
+      stateHash: hashFanValue("a".repeat(64)),
+      spotifyId: profile.id,
+      displayName: null,
+      email: null,
+      scopes: ["user-read-email", "user-read-private"],
+    });
+    expect(timeout.mock.calls).toEqual([[15000], [15000]]);
+    expect(fetch.mock.calls[1][1].signal).toBe(timeout.mock.results[1].value);
+  } finally {
+    timeout.mockRestore();
+  }
+});
+
+it.each(["http", "shape", "network"])(
+  "does not complete Site capture after profile %s failure",
+  async failure => {
+    m.consume.mockResolvedValue({
+      state_hash: hashFanValue("a".repeat(64)),
+      site_id: id,
+      return_url: config.return_url,
+      config_revision: 1,
+      verifier: "verifier",
+      scopes: ["user-read-email", "user-read-private"],
+    });
+    const fetch = vi.fn();
+    fetch.mockResolvedValueOnce(
+      Response.json({
+        access_token: "private-token",
+        scope: "user-read-email user-read-private",
+      }),
+    );
+    if (failure === "network") fetch.mockRejectedValueOnce(new Error("private-provider-detail"));
+    else
+      fetch.mockResolvedValueOnce(
+        failure === "http" ? new Response("", { status: 503 }) : Response.json({ id: "" }),
+      );
+    vi.stubGlobal("fetch", fetch);
+    const response = await finishFanConnection(callbackRequest());
+    expect(response.headers.get("location")).toBe(config.return_url + "?recoup_spotify=failed");
+    expect(m.complete).not.toHaveBeenCalled();
+  },
+);
+
+it.each(["configuration", "entitlement"])(
+  "denies %s before provider profile work",
+  async denial => {
+    m.consume.mockResolvedValue({
+      state_hash: hashFanValue("a".repeat(64)),
+      site_id: id,
+      return_url: config.return_url,
+      config_revision: 1,
+      verifier: "verifier",
+      scopes: ["user-read-email", "user-read-private"],
+    });
+    if (denial === "configuration") m.config.mockResolvedValue({ ...config, revision: 2 });
+    else m.entitlement.mockRejectedValue(new SiteError(402, "Paid subscription required"));
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    await finishFanConnection(callbackRequest());
+    expect(fetch).not.toHaveBeenCalled();
+    expect(m.complete).not.toHaveBeenCalled();
+  },
+);

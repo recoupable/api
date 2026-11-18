@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getSpotifyCurrentAccountProfile } from "@/lib/spotify/getSpotifyCurrentAccountProfile";
 import { requirePlayerSession } from "./requirePlayerSession";
 import { getPlayerOAuthConfig } from "./getPlayerOAuthConfig";
 import { connectPlayerFan } from "@/lib/supabase/player_fans/connectPlayerFan";
@@ -52,19 +53,10 @@ export async function exchangePlayerSpotify(input: unknown) {
     throw new SiteError(403, "Required Spotify permissions were not granted");
   let saved = false;
   try {
-    const profileResponse = await fetch("https://api.spotify.com/v1/me", {
-      headers: { Authorization: `Bearer ${token.access_token}` },
-      cache: "no-store",
-      signal: AbortSignal.timeout(10000),
-    });
-    if (!profileResponse.ok) throw new Error("Profile unavailable");
-    const profile = z
-      .object({
-        id: z.string().min(1).max(255),
-        email: z.string().email().max(254).nullish(),
-        display_name: z.string().max(255).nullish(),
-      })
-      .parse(await profileResponse.json());
+    const profile = await getSpotifyCurrentAccountProfile(
+      token.access_token,
+      AbortSignal.timeout(10000),
+    );
     await connectPlayerFan(context.sessionId, context.revision, profile, scopes);
     saved = true;
   } catch {
