@@ -1,3 +1,4 @@
+import { prepareCoverHiddenArtifacts } from "./prepareCoverHiddenArtifacts";
 import { collectCoverHiddenEvidence } from "./collectCoverHiddenEvidence";
 import { prepareSiteRenderArtifacts } from "./prepareSiteRenderArtifacts";
 import type { ExperienceContract } from "./experienceContract";
@@ -61,15 +62,14 @@ export async function renderExperience(
     // Only known supplied/generated image hosts are available while untrusted code executes.
     const hosts = [...new Set(snapshot.assets.map(a => new URL(a.url).hostname))];
     await sandbox.updateNetworkPolicy({ allow: hosts });
-    const {
-      source,
-      journeySource,
-      coverSource,
-      coverHidden,
-      coverRunnerSource,
-      runnerSource,
-      evidence,
-    } = prepareSiteRenderArtifacts(snapshot, contract, artworkUrl);
+    const { source, journeySource, runnerSource, evidence } = prepareSiteRenderArtifacts(
+      snapshot,
+      contract,
+    );
+    const { coverSource, coverHidden, coverRunnerSource } = prepareCoverHiddenArtifacts(
+      snapshot,
+      artworkUrl,
+    );
     await sandbox.writeFiles([
       { path: "experience.html", content: Buffer.from(source) },
       { path: "journey.json", content: Buffer.from(journeySource) },

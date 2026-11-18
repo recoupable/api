@@ -143,3 +143,56 @@ it("refuses an extra transparent full-viewport source match omitted by visible-c
   expect(result.masked).toEqual([]);
   expect(screenshot).not.toHaveBeenCalled();
 });
+
+it.each(["transparent-parent", "over-depth"])(
+  "rejects unsupported ancestor visibility: %s",
+  async scenario => {
+    let parent: object | null = null;
+    for (let i = 0; i < (scenario === "over-depth" ? 65 : 1); i++) {
+      parent = { parentElement: parent, opacity: scenario === "transparent-parent" ? "0" : "1" };
+    }
+    const nodes = [
+      {
+        parentElement: parent,
+        opacity: "1",
+        currentSrc: url,
+        getAttribute: () => url,
+        hasAttribute: () => false,
+        closest: () => null,
+        complete: true,
+        naturalWidth: 400,
+        getBoundingClientRect: () => ({
+          x: 0,
+          y: 0,
+          right: 100,
+          bottom: 100,
+          width: 100,
+          height: 100,
+        }),
+      },
+    ];
+    const images = {
+      count: async () => 1,
+      evaluateAll: async (fn: (...args: never[]) => unknown, arg: unknown) =>
+        runInNewContext("(" + fn.toString() + ")(nodes,arg)", {
+          nodes,
+          arg,
+          innerWidth: 390,
+          innerHeight: 844,
+          getComputedStyle: (node: { opacity: string }) => ({
+            display: "block",
+            visibility: "visible",
+            opacity: node.opacity,
+          }),
+        }),
+    };
+    const screenshot = vi.fn();
+    const capture = runInNewContext("(" + coverHiddenRunner + ")");
+    const result = await capture({ screenshot }, { locator: () => images }, "mobile", {
+      artworkUrl: url,
+    });
+    expect(result.status).toBe("unverified");
+    expect(result.masked).toEqual([]);
+    expect(screenshot).not.toHaveBeenCalled();
+  },
+);

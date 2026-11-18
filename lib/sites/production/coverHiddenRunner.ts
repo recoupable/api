@@ -8,6 +8,12 @@ export const coverHiddenRunner = `async function captureCoverHidden(page,ui,name
   const inspect=()=>images.evaluateAll((nodes,url)=>nodes.flatMap((img,index)=>{
    const box=img.getBoundingClientRect();const style=getComputedStyle(img);
    if(img.getAttribute('src')!==url||img.hasAttribute('srcset')||img.closest('picture')||img.currentSrc!==url||!img.complete||!img.naturalWidth||style.display==='none'||style.visibility!=='visible'||Number(style.opacity)===0||box.width<=0||box.height<=0||box.right<=0||box.bottom<=0||box.x>=innerWidth||box.y>=innerHeight)return [];
+   // Opacity is composited through ancestors, not inherited by the image's computed style.
+   let ancestor=img.parentElement;let depth=0;
+   for(;ancestor&&depth<64;ancestor=ancestor.parentElement,depth++){
+    if(Number(getComputedStyle(ancestor).opacity)===0)return [];
+   }
+   if(ancestor)return []; // Unknown visibility beyond the finite inspection bound.
    return [{index,src:img.currentSrc,box:{x:box.x,y:box.y,width:box.width,height:box.height}}];
   }),input.artworkUrl);
   const matched=await inspect();

@@ -170,19 +170,56 @@ it.each(["malformed", "capture-failure"])(
     expect(m.generate.mock.calls[0][3]).toHaveLength(6);
   },
 );
-it("does not promote unsupported negative cover critique into a repair", async () => {
+it.each(["pass", "revise"])(
+  "does not promote unsupported negative cover critique into a repair from %s",
+  async verdict => {
+    const read = m.read.getMockImplementation()!;
+    m.read.mockImplementation(async arg =>
+      arg.path === "desktop-cover-hidden.png" ? null : read(arg),
+    );
+    m.generate.mockResolvedValue({
+      verdict,
+      issues: [],
+      summary: "Journey works",
+      coverHiddenCritique: {
+        assessment: "needs-improvement",
+        reasons: ["Guessed defect"],
+        improvements: ["Change controls"],
+      },
+    });
+    const result = await reviewStep(
+      snapshot,
+      { contract: {} } as CreativeDirection,
+      "account",
+      "site",
+      undefined,
+      { baseRevision: 7, releaseArtwork: url },
+    );
+    expect(result.verification?.coverHidden?.critique.assessment).toBe("unverified");
+    expect(result.verdict).toBe("pass");
+    expect(result.issues).toEqual([]);
+  },
+);
+
+it("preserves ordinary defects when supplemental cover evidence is missing", async () => {
   const read = m.read.getMockImplementation()!;
   m.read.mockImplementation(async arg =>
     arg.path === "desktop-cover-hidden.png" ? null : read(arg),
   );
+  const issue = {
+    severity: "visual",
+    module: "implementation",
+    detail: "Normal view text overlaps controls",
+    fix: "Add spacing",
+  };
   m.generate.mockResolvedValue({
-    verdict: "pass",
-    issues: [],
-    summary: "Journey works",
+    verdict: "revise",
+    issues: [issue],
+    summary: "Ordinary defect",
     coverHiddenCritique: {
       assessment: "needs-improvement",
-      reasons: ["Guessed defect"],
-      improvements: ["Change controls"],
+      reasons: ["Unsupported"],
+      improvements: [],
     },
   });
   const result = await reviewStep(
@@ -194,6 +231,6 @@ it("does not promote unsupported negative cover critique into a repair", async (
     { baseRevision: 7, releaseArtwork: url },
   );
   expect(result.verification?.coverHidden?.critique.assessment).toBe("unverified");
-  expect(result.verdict).toBe("pass");
-  expect(result.issues).toEqual([]);
+  expect(result.verdict).toBe("revise");
+  expect(result.issues).toEqual([issue]);
 });
