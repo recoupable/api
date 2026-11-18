@@ -1,7 +1,7 @@
 import type { createProposedRegistrationMcpLifetime } from "./createProposedRegistrationMcpLifetime";
 
 // Parse complete entries: quoted parameter text must never establish a media range.
-function mediaRanges(value: string | null) {
+function mediaRanges(value: string | null, interpretQuality = false) {
   const token = "[!#$%&'*+.^_`|~0-9A-Za-z-]+";
   const quoted = '"(?:[^"\\\\\\r\\n]|\\\\[^\\r\\n])*"';
   const parameter = `\\s*;\\s*(${token})\\s*=\\s*(${token}|${quoted})`;
@@ -15,7 +15,7 @@ function mediaRanges(value: string | null) {
     let quality = 1;
     let hasQuality = false;
     for (const param of match[2].matchAll(new RegExp(parameter, "g"))) {
-      if (param[1].toLowerCase() !== "q") continue;
+      if (!interpretQuality || param[1].toLowerCase() !== "q") continue;
       if (hasQuality || !/^(?:0(?:\.\d{0,3})?|1(?:\.0{0,3})?)$/.test(param[2])) return [];
       quality = Number(param[2]);
       hasQuality = true;
@@ -34,7 +34,7 @@ export async function readProposedRegistrationMcpBody(
   const fail = (status: number, message: string, code = -32600): never => {
     throw Response.json({ jsonrpc: "2.0", error: { code, message }, id: null }, { status });
   };
-  const accept = mediaRanges(request.headers.get("accept"));
+  const accept = mediaRanges(request.headers.get("accept"), true);
   const accepts = (type: string) => {
     const explicit = accept.filter(range => range.type === type);
     return explicit.length > 0 && explicit.every(range => range.quality > 0);

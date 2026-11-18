@@ -311,6 +311,7 @@ it.each([
 });
 it.each([
   ["Application/JSON; charset=utf-8", "Application/JSON, Text/Event-Stream", 200],
+  ["application/json;q=custom", "application/json, text/event-stream", 200],
   ["application/json", 'application/json; note="a,b; c", text/event-stream;q=0.5', 200],
   ["text/plain; note=application/json", "application/json, text/event-stream", 415],
   ['text/plain; note="application/json"', "application/json, text/event-stream", 415],
