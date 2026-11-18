@@ -25,9 +25,12 @@ vi.mock("@/lib/supabase/serverClient", () => ({
       if (!["account_api_keys", "account_emails"].includes(table))
         throw new Error("Forbidden fixture database effect");
       return {
-        select() {
+        select(columns: string) {
+          expect(columns).toBe("*");
           return {
-            eq(_field: string, hash: string) {
+            eq(field: string, hash: string) {
+              expect(table).toBe("account_api_keys");
+              expect(field).toBe("key_hash");
               return Promise.resolve({
                 error: null,
                 data:
@@ -40,7 +43,10 @@ vi.mock("@/lib/supabase/serverClient", () => ({
                     : [],
               });
             },
-            in() {
+            in(field: string, values: string[]) {
+              expect(table).toBe("account_emails");
+              expect(field).toBe("email");
+              expect(values).toEqual(["fixture@example.invalid"]);
               return Promise.resolve({
                 error: null,
                 data: fixture.accountPresent ? [{ account_id: fixture.actor }] : [],

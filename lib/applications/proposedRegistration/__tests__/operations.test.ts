@@ -200,6 +200,19 @@ describe("unwired create/read transaction binding", () => {
 describe("strict receipt acceptance", () => {
   const mutations: Array<[string, (x: any) => void]> = [
     [
+      "uppercase generated receipt",
+      x => {
+        x.receipt_id = x.receipt_id.toUpperCase();
+      },
+    ],
+    [
+      "uppercase generated application",
+      x => {
+        x.application_id = x.application_id.toUpperCase();
+        x.snapshot.application_id = x.application_id;
+      },
+    ],
+    [
       "actor",
       x => {
         x.actor = fixture.keyId;

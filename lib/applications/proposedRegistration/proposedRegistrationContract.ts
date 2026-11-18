@@ -33,21 +33,25 @@ const timestamp = z.iso
   .datetime({ offset: true })
   .regex(/(?:Z|\+00:00)$/)
   .regex(/T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|\+00:00)$/);
+const canonicalReceiptUuid = z
+  .string()
+  .uuid()
+  .refine(value => value === value.toLowerCase());
 export const proposedReceiptSchema = z
   .object({
-    receipt_id: z.string().uuid(),
-    application_id: z.string().uuid(),
-    actor: z.string().uuid(),
-    workspace_id: z.string().uuid(),
-    billing_owner_id: z.string().uuid(),
+    receipt_id: canonicalReceiptUuid,
+    application_id: canonicalReceiptUuid,
+    actor: canonicalReceiptUuid,
+    workspace_id: canonicalReceiptUuid,
+    billing_owner_id: canonicalReceiptUuid,
     environment,
     recorded_at: timestamp,
     entitlement_revision: revision,
     policy_version: z.literal("proposed-personal-v1"),
     snapshot: z
       .object({
-        workspace_id: z.string().uuid(),
-        application_id: z.string().uuid(),
+        workspace_id: canonicalReceiptUuid,
+        application_id: canonicalReceiptUuid,
         name: z.string().min(1).max(120),
         environment,
         allowed_origins: z.array(z.string()).min(1).max(32),

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateProposedRegistration } from "../authenticateProposedRegistration";
 import { validateProposedRegistrationActor } from "../validateProposedRegistrationActor";
+import supabase from "@/lib/supabase/serverClient";
 import { fixture } from "../../../../scripts/application-registration-proposal/setup";
 const request = (headers: Record<string, string>) =>
   new NextRequest("https://fixture.invalid", { headers });
@@ -54,6 +55,17 @@ describe("actual nonprovisioning authentication", () => {
       actor: fixture.actor,
       workspace: fixture.actor,
     });
+  });
+  it("rejects incorrect fixture lookup predicates", () => {
+    expect(() =>
+      supabase.from("account_api_keys").select("*").eq("account", fixture.actor),
+    ).toThrow();
+    expect(() =>
+      supabase.from("account_emails").select("*").in("account_id", [fixture.actor]),
+    ).toThrow();
+    expect(() =>
+      supabase.from("account_emails").select("*").in("email", ["other@example.invalid"]),
+    ).toThrow();
   });
   it("rejects malformed or overridden evidence, not just UUID validity", () => {
     const base = {
