@@ -1,9 +1,8 @@
-import { createHash } from "node:crypto";
+import { hashSiteEvidence } from "./hashSiteEvidence";
 import type { SiteSnapshot } from "../schema";
 
 /** Use existing selected context and supplied assets; never discover or fetch artwork. */
 export function prepareCoverHiddenReview(snapshot: SiteSnapshot, artworkUrl?: string | null) {
-  const hash = (value: unknown) => createHash("sha256").update(JSON.stringify(value)).digest("hex");
   const world = snapshot.brandWorld?.specification;
   const permitted =
     artworkUrl && snapshot.assets.some(a => a.type === "image" && a.url === artworkUrl);
@@ -21,7 +20,7 @@ export function prepareCoverHiddenReview(snapshot: SiteSnapshot, artworkUrl?: st
         : !permitted
           ? "Release artwork is not in this candidate's supplied image assets."
           : "Match only the selected artwork URL in visible inline images.",
-    snapshotSha256: hash(snapshot),
-    brandWorldSha256: world ? hash(world) : null,
+    snapshotSha256: hashSiteEvidence(snapshot),
+    brandWorldSha256: world ? hashSiteEvidence(world) : null,
   };
 }

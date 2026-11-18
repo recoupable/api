@@ -48,3 +48,12 @@ it("does not repeat a passing playthrough", async () => {
   await renderReviewedJourney(snapshot, contract, "account", "site");
   expect(renderExperience).toHaveBeenCalledOnce();
 });
+
+it("retains selected artwork through both bounded journey attempts", async () => {
+  vi.mocked(renderExperience).mockResolvedValue(failed);
+  const artwork = "https://assets.example/selected-cover.png";
+  await renderReviewedJourney(snapshot, contract, "account", "site", artwork);
+  expect(renderExperience).toHaveBeenNthCalledWith(1, snapshot, contract, artwork);
+  expect(renderExperience).toHaveBeenNthCalledWith(2, snapshot, contract, artwork);
+  expect(renderExperience).toHaveBeenCalledTimes(2);
+});

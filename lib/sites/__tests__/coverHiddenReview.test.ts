@@ -221,3 +221,10 @@ it("bounds the actual DOM callback when images are appended after count", async 
   expect(inspected).not.toHaveBeenCalled();
   expect(screenshot).not.toHaveBeenCalled();
 });
+
+it("keeps candidate and world hashes stable across persisted object key ordering", () => {
+  const reordered = Object.fromEntries(Object.entries(snapshot).reverse()) as SiteSnapshot;
+  expect(prepareCoverHiddenReview(reordered, url).snapshotSha256).toBe(
+    prepareCoverHiddenReview(snapshot, url).snapshotSha256,
+  );
+});

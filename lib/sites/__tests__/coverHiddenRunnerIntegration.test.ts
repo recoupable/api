@@ -19,12 +19,27 @@ it.each([true, false])(
           ? { waitFor: async () => {} }
           : { count: async () => 1, evaluateAll: async () => [image] },
     };
+    const loaded: string[] = [];
     const page = {
       setDefaultTimeout: vi.fn(),
       route: vi.fn(),
       goto: vi.fn(),
       setContent: vi.fn(),
-      locator: () => ({ evaluate: vi.fn() }),
+      locator: () => ({
+        evaluate: async (
+          callback: (frame: object, content: string) => Promise<void>,
+          content: string,
+        ) => {
+          const frame = {
+            onload: () => {},
+            set srcdoc(value: string) {
+              loaded.push(value);
+              this.onload();
+            },
+          };
+          await callback(frame, content);
+        },
+      }),
       frameLocator: () => ui,
       screenshot: async ({ path, mask }: { path: string; mask: unknown[] }) => {
         expect(mask).toHaveLength(1);
@@ -66,6 +81,12 @@ it.each([true, false])(
     const reports = JSON.parse(written["cover-review-report.json"]);
     expect(reports.map((r: { name: string }) => r.name)).toEqual(["mobile", "desktop"]);
     if (available) {
+      expect(loaded).toEqual(["<img>", "<img>"]);
+      expect(reports).toEqual(
+        ["mobile", "desktop"].map(name =>
+          expect.objectContaining({ name, status: "captured", masked: [image] }),
+        ),
+      );
       expect(captures).toEqual(["mobile-cover-hidden.png", "desktop-cover-hidden.png"]);
       expect(stop).toHaveBeenCalledOnce();
       expect(launch).toHaveBeenCalledWith(expect.objectContaining({ args: [], timeout: 10000 }));

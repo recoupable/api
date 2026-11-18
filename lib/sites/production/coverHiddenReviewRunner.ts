@@ -3,7 +3,7 @@ import { coverHiddenRunner } from "./coverHiddenRunner";
 /** Supplemental fresh initial views in the existing isolated VM; normal journey bytes stay fixed. */
 export const coverHiddenReviewRunner = `const fs=require('node:fs');const {chromium:pw}=require('playwright-core');const chromium=require('@sparticuz/chromium');
 const captureCoverHidden=${coverHiddenRunner};
-// Hard wall-clock bound within the existing Sandbox lifetime; no extension or retry.
+// Hard wall-clock bound within the existing Sandbox lifetime; no internal extension or retry. The existing journey correction may invoke this runner again.
 const deadline=setTimeout(()=>process.exit(1),30000);
 (async()=>{let browser;const reports=[];try{
  const input=JSON.parse(fs.readFileSync('cover-review.json','utf8'));

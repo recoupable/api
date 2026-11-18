@@ -50,6 +50,7 @@ export async function collectCoverHiddenEvidence(
         images.push({ viewport: name, image: `data:image/png;base64,${image.toString("base64")}` });
     }
   } catch {
+    console.warn("[sites:cover-review] Supplemental evidence execution or validation failed.");
     return { reports: [], images: [] };
   }
   return { reports, images };
