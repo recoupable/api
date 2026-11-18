@@ -36,8 +36,8 @@ export function registerReadProposedRegistrationTool(
               ? "Proposed storage denied"
               : error.kind === "conflict"
                 ? "Proposed storage conflict"
-                : "Storage outcome unknown; retain original operation, key and input"
-            : "Registration unavailable; retain original operation, key and input if invoked";
+                : "Registration read outcome unavailable; retain original read input"
+            : "Registration read unavailable; retain original read input";
         return { ...getToolResultError(message), isError: true };
       }
     },

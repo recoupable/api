@@ -100,11 +100,12 @@ function barrier<T>() {
   });
   return { promise, resolve, reject };
 }
-function observeDomainCompletion() {
+function observeDomainCompletion(onEnter = () => {}) {
   const finished = barrier<void>();
   let complete = false;
   const actualCreate = domain.createProposedApplicationRegistration;
   vi.spyOn(domain, "createProposedApplicationRegistration").mockImplementation(async (...args) => {
+    onEnter();
     try {
       return await actualCreate(...args);
     } finally {
@@ -164,10 +165,11 @@ it("abort during fresh domain lookup prevents late storage invocation", async ()
   const entered = barrier<void>();
   const resume = barrier<void>();
   const original = supabase.from.bind(supabase);
-  let calls = 0;
+  let inDomain = false;
+  const gated = vi.fn();
   vi.spyOn(supabase, "from").mockImplementation(table => {
     const query = original(table);
-    if (++calls !== 3) return query;
+    if (!inDomain || table !== "account_api_keys") return query;
     const select = query.select.bind(query);
     return {
       ...query,
@@ -177,6 +179,8 @@ it("abort during fresh domain lookup prevents late storage invocation", async ()
         return {
           ...selection,
           eq: async (...params: Parameters<typeof eq>) => {
+            expect(params[0]).toBe("key_hash");
+            gated(table, params[0]);
             entered.resolve();
             await resume.promise;
             return eq(...params);
@@ -185,10 +189,14 @@ it("abort during fresh domain lookup prevents late storage invocation", async ()
       },
     };
   });
-  const completion = observeDomainCompletion();
+  const completion = observeDomainCompletion(() => {
+    inDomain = true;
+  });
   const d = dependencies();
   const response = handle(req(abort.signal), d);
   await entered.promise;
+  expect(gated).toHaveBeenCalledExactlyOnceWith("account_api_keys", "key_hash");
+  expect(completion.isComplete()).toBe(false);
   abort.abort();
   expect((await response).status).toBe(408);
   resume.resolve();
@@ -231,6 +239,11 @@ it("body timeout cancels the owned input and closes its deadline", async () => {
   const response = handle(request, dependencies());
   await vi.advanceTimersByTimeAsync(5001);
   expect((await response).status).toBe(408);
+  expect(await (await response).json()).toEqual({
+    jsonrpc: "2.0",
+    error: { code: -32000, message: "Request body timeout" },
+    id: null,
+  });
   expect(cancel).toHaveBeenCalledTimes(1);
   expect(vi.getTimerCount()).toBe(0);
 });
@@ -392,7 +405,10 @@ it.each(["closed", "closing", "aborted"])(
     });
     try {
       expect(request.body!.locked).toBe(false);
-      await expect(readProposedRegistrationMcpBody(request, life)).rejects.toBeDefined();
+      const terminal = await life.run(async () => undefined).catch(error => error);
+      expect(terminal).toBeInstanceOf(Response);
+      expect(terminal.status).toBe(408);
+      await expect(readProposedRegistrationMcpBody(request, life)).rejects.toBe(terminal);
       expect(request.body!.locked).toBe(false);
       expect(getReader).not.toHaveBeenCalled();
     } finally {

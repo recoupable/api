@@ -168,10 +168,40 @@ it.each([
     params: { name: "create_application_registration", arguments: input },
   },
 ])("rejects batch/id-less call before effects", async body => {
+  const parse = vi.spyOn(JSON, "parse");
   const d = deps();
   expect((await handle(request(body), d)).status).toBe(400);
+  // Pinned Vitest passes whole rows in a mixed object/array table. Prove wire input.
+  expect(parse).toHaveBeenCalledWith(JSON.stringify(body));
   expect(d.storage.create).not.toHaveBeenCalled();
 });
+it.each(["storage", "policy"])(
+  "read %s failure retains read-specific safe guidance",
+  async failure => {
+    const d = deps();
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    if (failure === "storage") d.storage.read.mockRejectedValue(new Error("PRIVATE_SENTINEL"));
+    else d.policy.version = "PRIVATE_SENTINEL" as typeof d.policy.version;
+    const result = await (
+      await handle(
+        request(
+          call("read_application_registration", {
+            application_id: golden.readReceipt.application_id,
+            environment: "production",
+            receipt_id: golden.readReceipt.receipt_id,
+          }),
+        ),
+        d,
+      )
+    ).json();
+    expect(result.result.isError).toBe(true);
+    expect(JSON.stringify(result)).toContain("retain original read input");
+    expect(JSON.stringify(result)).not.toMatch(/PRIVATE_SENTINEL|key and input/);
+    expect(d.storage.read).toHaveBeenCalledTimes(failure === "storage" ? 1 : 0);
+    expect(d.storage.create).not.toHaveBeenCalled();
+    expect(errors).not.toHaveBeenCalled();
+  },
+);
 it("bounds bytes before SDK execution", async () => {
   const r = request("x".repeat(65536));
   expect((await handle(r, deps())).status).toBe(413);

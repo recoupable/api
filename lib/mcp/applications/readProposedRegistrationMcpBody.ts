@@ -72,7 +72,13 @@ export async function readProposedRegistrationMcpBody(
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_resolve, reject) => {
     timer = setTimeout(
-      () => reject(Response.json({ error: "Request body timeout" }, { status: 408 })),
+      () =>
+        reject(
+          Response.json(
+            { jsonrpc: "2.0", error: { code: -32000, message: "Request body timeout" }, id: null },
+            { status: 408 },
+          ),
+        ),
       5000,
     );
   });
