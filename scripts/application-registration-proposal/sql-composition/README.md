@@ -6,14 +6,20 @@ The actual REST authentication orchestration uses the existing controlled SDK/pr
 
 The loss-of-response case drops the result only after actual SQL commit. Recovery explicitly reauthenticates and reuses the original key/input, then compares the SQL receipt and row count. No production retry ledger or automatic retry exists. Returned UUIDs/timestamps/flags are validated by the real domain parser; input-only read aliases remain supported.
 
-Run with explicit local source and tool paths:
+Resolve the intended Node executable to an absolute path first, then run from the API repository with a minimal parent environment and explicit local source and tool paths:
 
 ```sh
-node scripts/application-registration-proposal/sql-composition/run.mjs \
+node_path=/absolute/path/to/node
+env -i PATH=/usr/bin:/bin LANG=C LC_ALL=C TZ=UTC "$node_path" \
+  scripts/application-registration-proposal/sql-composition/run.mjs \
   --database-root /absolute/path/to/exact-database-proposal \
   --pg-bin /absolute/path/to/postgresql/bin \
   --python /absolute/path/to/python3
 ```
+
+The minimal parent environment prevents ambient `NODE_OPTIONS` from executing code before the launcher can scrub its child. Do not supply a real `HOME` or an env file. Dependency installation happens separately and is outside this process-containment claim.
+
+The final local PostgreSQL 15.10/17.7 qualification and fault controls used Node 24.18.0. The separate loader-defect reproduction used Node 23.6.1. Node 22 has not been qualified by this local suite.
 
 Optional `--fault signal`, `--fault timeout`, or `--fault worker-exit` controls initialize a real guarded Node descendant, then deliberately interrupt the supervisor, time out its worker, or exit its worker while the child remains alive. Each must fail and still report verified cleanup. These are lifecycle controls, not functional SQL passes.
 
