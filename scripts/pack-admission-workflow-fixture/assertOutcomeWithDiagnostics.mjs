@@ -16,6 +16,10 @@ export function assertOutcomeWithDiagnostics(evidence) {
         value,
         startClock,
         observations,
+        initialState: evidence.initialState,
+        beforeCrash: evidence.beforeCrash,
+        deliveryContext: evidence.deliveryContext,
+        decodedStartClock: evidence.decodedStartClock,
         journal: journal.map(event => ({
           eventId: event.eventId,
           eventType: event.eventType,

@@ -60,6 +60,16 @@ export async function runScenario(root, here, temp, scenario) {
     }
     child = launch("resume");
     await waitFor(async () => child.exitCode !== null || child.signalCode !== null, 60000);
+    if (child.exitCode !== 0) {
+      try {
+        console.error(
+          "PACK_ADMISSION_SAVED_FAILURE",
+          JSON.stringify(await readJson(join(effects, "assertion-evidence.json"))),
+        );
+      } catch (error) {
+        console.error("PACK_ADMISSION_CAPTURE_UNAVAILABLE", error.message);
+      }
+    }
     assert.equal(child.exitCode, 0);
     child = undefined;
     const result = await readJson(join(effects, "result.json"));

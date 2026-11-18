@@ -60,7 +60,11 @@ workflow; it does not perform self-admission or start a second workflow.
 On an outcome assertion failure, `PACK_ADMISSION_ASSERTION_FAILURE` in the CI log
 retains the synthetic read trace, decoded observations and journal event IDs,
 correlations, timestamps and wait lifecycle before temporary files are removed.
-This distinguishes repeated storage events from distinct logical waits. No events
+The resumed worker also saves raw events, delivery counts and the pre-crash trace
+before decoding or assertions, then adds decoded observations before validation.
+On child failure, the parent emits `PACK_ADMISSION_SAVED_FAILURE` before cleanup;
+missing capture is reported explicitly. This distinguishes repeated storage events
+from distinct logical waits. No events
 or wake timestamps are deduplicated; extra, early and late waits still fail.
 
 This is local compiled replay with synthetic database reads. It does not establish

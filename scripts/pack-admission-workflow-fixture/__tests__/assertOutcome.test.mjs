@@ -247,6 +247,8 @@ for (const [name, mutate] of [
           value: f.value,
           startClock: f.clock,
           observations: f.observations,
+          beforeCrash: f.trace.slice(0, 1),
+          deliveryContext: { phase: "resume", deliveries: 5, activeDeliveries: 0 },
         }),
       { code: "ERR_ASSERTION" },
     );
@@ -254,6 +256,12 @@ for (const [name, mutate] of [
     assert.equal(emitted[0][0], "PACK_ADMISSION_ASSERTION_FAILURE");
     const saved = JSON.parse(emitted[0][1]);
     assert.deepEqual(saved.observations, f.observations);
+    assert.deepEqual(saved.beforeCrash, f.trace.slice(0, 1));
+    assert.deepEqual(saved.deliveryContext, {
+      phase: "resume",
+      deliveries: 5,
+      activeDeliveries: 0,
+    });
     assert.deepEqual(saved.trace, f.trace);
     assert.deepEqual(
       saved.journal.map(e => e.eventId),

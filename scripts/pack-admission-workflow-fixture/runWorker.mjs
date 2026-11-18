@@ -60,27 +60,36 @@ export async function runWorker(temp, scenario, phase, attempts) {
     const trace = await readEvents(effects);
     const state = await readJson(join(effects, "state.json"));
     const initial = await readJson(join(effects, "initial-state.json"));
-    assert.deepEqual(state, {
-      ...initial,
-      ...(scenario === "delayed" ? { savedRunId: runId } : {}),
-    });
     const events = await journal(runId);
     const startClock = await readJson(join(effects, "start-clock.json"));
-    const decoded = await readAdmissionResults(events, runId);
-    assert.deepEqual(decoded.startClock, startClock);
     const beforeCrash = await readJson(join(effects, "before-crash.json"));
-    assert.deepEqual(trace.slice(0, beforeCrash.length), beforeCrash);
-    // Fresh polls may already be due at restart. Exact step IDs distinguish them from replayed effects.
-    assertOutcomeWithDiagnostics({
+    const evidence = {
       scenario,
       runId,
       state,
+      initialState: initial,
       trace,
       journal: events,
       value,
       startClock,
-      observations: decoded.observations,
+      beforeCrash,
+      deliveryContext: { phase, ...ctx.counts() },
+    };
+    // Save raw IDs/lifecycle before decoding or assertions; the parent retains failures in CI output.
+    const diagnostic = join(effects, "assertion-evidence.json");
+    await writeFile(diagnostic, JSON.stringify(evidence));
+    const decoded = await readAdmissionResults(events, runId);
+    evidence.observations = decoded.observations;
+    evidence.decodedStartClock = decoded.startClock;
+    await writeFile(diagnostic, JSON.stringify(evidence));
+    assert.deepEqual(state, {
+      ...initial,
+      ...(scenario === "delayed" ? { savedRunId: runId } : {}),
     });
+    assert.deepEqual(decoded.startClock, startClock);
+    assert.deepEqual(trace.slice(0, beforeCrash.length), beforeCrash);
+    // Fresh polls may already be due at restart. Exact step IDs distinguish them from replayed effects.
+    assertOutcomeWithDiagnostics(evidence);
     const before = ctx.counts().deliveries;
     await ctx.reenqueueRun(ctx.world, runId);
     await waitFor(() => idle() && ctx.counts().deliveries > before);
