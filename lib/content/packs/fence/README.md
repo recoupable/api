@@ -22,13 +22,13 @@ The Workflow SDK reconstructs step errors. Protocol 2 therefore stops on any rej
 pnpm exec vitest run lib/content/packs app/workflows/packs
 pnpm typecheck:release-packs
 pnpm lint
-pnpm test:pack-fence-workflow
+node scripts/pack-fence-workflow-fixture/run.mjs
 pnpm test:pack-scheduler-workflow
 pnpm test:pack-admission-workflow
 pnpm test:pack-foundation-workflow
 ```
 
-`test:pack-fence-workflow` compiles the actual production workflow and steps with the installed Workflow SDK, replaces only persistence/provider leaves with synthetic effects, denies networking, and verifies rejection, one settlement attempt after lost acknowledgement, and terminal replay. `PACK_FENCE_SDK_OUTPUT=/absolute/path.json` writes source hashes and events.
+`scripts/pack-fence-workflow-fixture/run.mjs` compiles the actual production workflow and steps with the installed Workflow SDK, replaces only persistence/provider leaves with synthetic effects, denies networking, and verifies rejection, one settlement attempt after lost acknowledgement, and terminal replay. `PACK_FENCE_SDK_OUTPUT=/absolute/path.json` writes source hashes and events.
 
 For actual paired SQL integration, put PostgreSQL 17 binaries on PATH and supply the Database checkout explicitly:
 

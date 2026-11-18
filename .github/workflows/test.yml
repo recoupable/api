@@ -37,7 +37,7 @@ jobs:
         run: pnpm test:chat-fence-workflow
 
       - name: Check dormant pack worker fence with offline Workflow SDK
-        run: pnpm test:pack-fence-workflow
+        run: node scripts/pack-fence-workflow-fixture/run.mjs
 
       - name: Check unwired pack scheduler replay with offline effects
         run: pnpm test:pack-scheduler-workflow
