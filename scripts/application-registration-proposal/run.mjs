@@ -1,9 +1,32 @@
-import { mkdtemp, mkdir, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { spawn, execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 const root = fileURLToPath(new URL("../../", import.meta.url));
+// Qualify current local inputs before importing any authentication or test modules.
+const bindings = JSON.parse(
+  await readFile(
+    join(root, "scripts/application-registration-proposal/source-bindings.json"),
+    "utf8",
+  ),
+);
+const goldenPath = "scripts/application-registration-proposal/receipt-golden.json";
+for (const [path, expected] of Object.entries({
+  ...bindings.apiInputs,
+  [goldenPath]: bindings.goldenSha256,
+})) {
+  const actual = createHash("sha256")
+    .update(await readFile(join(root, path)))
+    .digest("hex");
+  if (actual !== expected)
+    throw new Error(`Source binding mismatch: ${path}; refresh reviewed evidence`);
+}
+const golden = JSON.parse(await readFile(join(root, goldenPath), "utf8"));
+if (golden.databaseHead !== bindings.databaseHead)
+  throw new Error("SQL golden source head mismatch");
+console.log("Local API inputs and SQL golden source bindings verified");
 const temp = await mkdtemp("/tmp/registration-api-");
 const inventoryEnv = {
   HOME: join(temp, "home"),
