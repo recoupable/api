@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { applicationRegistrationSchema } from "../applicationRegistrationSchema";
+import { isProposedRegistrationText } from "./isProposedRegistrationText";
 export const proposedPolicySchema = z
   .object({
     status: z.literal("proposed_unadopted"),
@@ -11,9 +12,21 @@ const revision = z.number().int().min(1).max(Number.MAX_SAFE_INTEGER);
 const environment = z.enum(["production", "development"]);
 export const proposedCreateInputSchema = z
   .object({
-    idempotency_key: z.string().min(1).max(128),
+    idempotency_key: z
+      .string()
+      .min(1)
+      .max(128)
+      .refine(isProposedRegistrationText, "Key must contain valid Unicode without NUL"),
     expected_entitlement_revision: revision,
-    registration: applicationRegistrationSchema.omit({ organization_id: true }).strict(),
+    registration: applicationRegistrationSchema
+      .omit({ organization_id: true })
+      .extend({
+        name: applicationRegistrationSchema.shape.name.refine(
+          isProposedRegistrationText,
+          "Name must contain valid Unicode without NUL",
+        ),
+      })
+      .strict(),
   })
   .strict();
 export const proposedReadInputSchema = z

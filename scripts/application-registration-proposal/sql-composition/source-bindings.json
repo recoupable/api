@@ -13,13 +13,14 @@
     "vercel.json": "4b3dfd36dbd274213a3ccf2d6bfbfa9be1ba6be26ea71946828f535e1bbfbf8a",
     "lib/applications/proposedRegistration/readProposedApplicationRegistration.ts": "ca358e8de64b51550f9be50f55d9189a665ca1a38d722a7850f1d31be43ae134",
     "lib/applications/proposedRegistration/validateProposedRegistrationActor.ts": "c56077ada47829f3ba20a618eaf0ae3ccfd67d9cf38db72e13939e57f89b8902",
-    "lib/applications/proposedRegistration/proposedRegistrationContract.ts": "0162487073c4e70dfc88179a49d6577980dcbb8a945e0a3778498e00f307b6e8",
+    "lib/applications/proposedRegistration/proposedRegistrationContract.ts": "9e54808c597030c4fcc16e4cb80e6ec2898fc88b148ec7517513f2bc29224587",
     "lib/applications/proposedRegistration/projectProposedRegistration.ts": "a3075ece761fa2a419dc48bf5c6cbfd8a6b2f0dc41e4d361f2695229022203af",
     "lib/applications/proposedRegistration/assertProposedRegistrationReceipt.ts": "cd8c2aae288df9f245386e630fc179435db5986da9def01fa4b154a1860698c7",
     "lib/applications/proposedRegistration/createProposedApplicationRegistration.ts": "0322dfd63e51314cfe7bcc5d5544127291574f3c1c8152fb536a3e1c6e4afef0",
     "lib/applications/proposedRegistration/authenticateProposedRegistration.ts": "00a1eeb4b9ae5726f5930fc42fbe7599ab7e47f6349ca8f2de8a550f9f392f78",
     "scripts/application-registration-proposal/setup.ts": "40d634fc986cde87f440f0596969985b9a68bf1d2c38ea87f00c4ecd893eb063",
-    "scripts/application-registration-proposal/denyNetwork.mjs": "5ed3c818af2732fe8abddda8e46e4b0e3a8a0edf6ff40c6d7edd54ea64dd159a"
+    "scripts/application-registration-proposal/denyNetwork.mjs": "5ed3c818af2732fe8abddda8e46e4b0e3a8a0edf6ff40c6d7edd54ea64dd159a",
+    "lib/applications/proposedRegistration/isProposedRegistrationText.ts": "6cec3b1f7e7441d7babda35729df77a088b53e0a59406b0b7990c2bb1a84a2cc"
   },
   "databaseInputs": {
     "proposals/application-registration-2104/protocol-composition.py": "377791d3ef4a26103bd046609d4b8dbf8f63a3d475aa2c72faeba68b553aada5",
@@ -36,7 +37,36 @@
     "proposals/application-proof-2104/configuration.sql": "148819c1363929e990bf2cfd67bae02f7567c2e2e2a05732cb17ea2248bad3b1",
     "proposals/application-registration-2104/sources.json": "a617bc3acc14f1cc8af2dfa951eebff0da2e406a4299c5842427f1980560e744"
   },
-  "qualification": "Disposable test-only composition; no production factory or hosted target",
+  "qualification": "Unwired fixed SQL adapter through exact disposable execution profile; no production factory or hosted target",
   "acceptedApiComposition": "0769bc1957fce38bd6b847d342eae904044ae821",
-  "originalApiCompatibility": "784bee20b3e0fe61e67ed156c7f3a39a08a441b2"
+  "originalApiCompatibility": "784bee20b3e0fe61e67ed156c7f3a39a08a441b2",
+  "acceptedApiBaseline": "ec284cba127d73d0c3e7e74deceabac5c6a145f1",
+  "executionProfileHead": "acea75c0e118b6ca12bb9a22470a8bd7b383f925",
+  "executionProfileTree": "a8c45f920144db21ae1d00a807184aae51065b82",
+  "executionProfileInputs": {
+    "proposals/application-registration-execution-2104/qualification-roles.sql": "a5e8916c8fc13776d05d045cb6846d06c5b3670a353dc7f8153cedffb529e8c1",
+    "proposals/application-registration-execution-2104/sources.json": "0934493a7742d7c3c64e3dbc00646138bcb74442a27be22bc6a9782e52247e46",
+    "proposals/application-registration-execution-2104/test_privileges.py": "da2965852d0d5ba3726f92ea596f9fbccfa84ef08432c49602fab742e5e30e2e",
+    "proposals/application-registration-execution-2104/EXECUTION-CONTRACT.md": "036bc58deb8576ab40fbbb8d79e75c764a853c29ebca8c5d45825a4cc008e4b7",
+    "proposals/application-registration-execution-2104/execution.sql": "8ffc568bf01513d14297fd92a48716a7921e023cfacf3f3d124f943e6490a1d7"
+  },
+  "candidatePaths": [
+    "lib/supabase/application_registration_proposal/ProposedRegistrationSqlClient.ts",
+    "lib/supabase/application_registration_proposal/getProposedCreateSqlValues.ts",
+    "lib/supabase/application_registration_proposal/getProposedReadSqlValues.ts",
+    "lib/supabase/application_registration_proposal/getProposedSqlFailure.ts",
+    "lib/supabase/application_registration_proposal/getProposedSqlReceipt.ts",
+    "lib/supabase/application_registration_proposal/insertProposedApplicationRegistration.ts",
+    "lib/supabase/application_registration_proposal/selectProposedApplicationRegistration.ts",
+    "lib/supabase/application_registration_proposal/__tests__/registrationSql.test.ts",
+    "scripts/application-registration-proposal/sql-composition/README.md",
+    "scripts/application-registration-proposal/sql-composition/run.mjs",
+    "scripts/application-registration-proposal/sql-composition/qualification.test.ts",
+    "scripts/application-registration-proposal/sql-composition/source-bindings.json",
+    "scripts/application-registration-proposal/sql-composition/supervise.py",
+    "lib/applications/proposedRegistration/isProposedRegistrationText.ts",
+    "lib/applications/proposedRegistration/proposedRegistrationContract.ts",
+    "lib/applications/proposedRegistration/__tests__/operations.test.ts",
+    "scripts/application-registration-proposal/source-bindings.json"
+  ]
 }

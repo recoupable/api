@@ -19,7 +19,7 @@ API = HERE.parents[2]
 def database_module(database):
     """Validate the pinned fixture sources before importing their lifecycle owner."""
     bindings = json.loads((HERE / 'source-bindings.json').read_text())
-    for relative, expected in bindings['databaseInputs'].items():
+    for relative, expected in {**bindings['databaseInputs'], **bindings['executionProfileInputs']}.items():
         if hashlib.sha256((database / relative).read_bytes()).hexdigest() != expected:
             raise RuntimeError('Database source binding mismatch: ' + relative)
     source = database / 'proposals/application-registration-2104/test_registration.py'
@@ -34,6 +34,11 @@ def run_worker(database, node, fault=None):
     module = database_module(Path(database))
     socket, pg_bin = module.prepare_worker_environment()
     module.Registration.setUpClass()
+    profile = Path(database) / 'proposals/application-registration-execution-2104'
+    # One controller connection: the marker is installation context, not authentication.
+    module.Registration.sql("SET qualification.registration_fixture='owned-disposable-only';" +
+                            (profile/'qualification-roles.sql').read_text() +
+                            (profile/'execution.sql').read_text())
     root = Path(socket).parent
     scope = {'socket': socket, 'driver_pid': os.getpid(), 'supervisor_pid': os.getppid(),
              'postmaster_pid': int((Path(socket)/'pg/postmaster.pid').read_text().splitlines()[0])}

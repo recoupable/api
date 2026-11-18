@@ -11,7 +11,9 @@
     "tsconfig.json": "b32629dbc2af272f06db2eb3c5e6bd249183a72cec77481e624b0a4086c10d93",
     "lib/keys/getApiKeyDetails.ts": "68813ca17af04703ded1efc25d8c6864aaa1f7b9c297ddeadb44c6c10220c644",
     "lib/mcp/__tests__/verifyApiKeyExpiry.test.ts": "1b4b18f8147217734b9b1d89418a57ae23c968e6046109d072469b7735fdd1bc",
-    "vercel.json": "4b3dfd36dbd274213a3ccf2d6bfbfa9be1ba6be26ea71946828f535e1bbfbf8a"
+    "vercel.json": "4b3dfd36dbd274213a3ccf2d6bfbfa9be1ba6be26ea71946828f535e1bbfbf8a",
+    "lib/applications/proposedRegistration/proposedRegistrationContract.ts": "9e54808c597030c4fcc16e4cb80e6ec2898fc88b148ec7517513f2bc29224587",
+    "lib/applications/proposedRegistration/isProposedRegistrationText.ts": "6cec3b1f7e7441d7babda35729df77a088b53e0a59406b0b7990c2bb1a84a2cc"
   },
   "databaseInputs": {
     "proposals/application-registration-2104/protocol-composition.py": "377791d3ef4a26103bd046609d4b8dbf8f63a3d475aa2c72faeba68b553aada5",
