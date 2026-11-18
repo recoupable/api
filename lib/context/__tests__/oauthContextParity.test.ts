@@ -104,7 +104,7 @@ const operations = contextOperationSchema.options
     return { action, option, input, expected: option.parse({ ...input, action }) };
   });
 
-function setup(selected = false) {
+function setup(selected = false, selectedOrganization = organization) {
   const registered = new Map<string, { config: any; run: any }>();
   const server = {
     registerTool: vi.fn((name, config, run) => registered.set(name, { config, run })),
@@ -119,8 +119,8 @@ function setup(selected = false) {
           capabilityVersion: "context-workspace-v1" as const,
           mode: "selected_context" as const,
           kind: "organization" as const,
-          ownerId: organization,
-          organizationId: organization,
+          ownerId: selectedOrganization,
+          organizationId: selectedOrganization,
         },
       }
     : access;
@@ -277,4 +277,66 @@ describe("selected Context workspace", () => {
       for (const sink of Object.values(sinks)) expect(sink).not.toHaveBeenCalled();
     }
   });
+});
+
+it("rechecks after wrapper authorization before the Context domain touches storage", async () => {
+  const { registered, current, verify } = setup(true);
+  verify.mockResolvedValueOnce(current).mockResolvedValueOnce(current).mockResolvedValue(undefined);
+  const scopedExtra = {
+    ...extra,
+    authInfo: { ...extra.authInfo, extra: { accountId: owner, oauth: current } },
+  };
+  const { input } = operations.find(value => value.action === "read_brief")!;
+  const result = await registered
+    .get(contextToolOperations.read_brief.name)!
+    .run(input, scopedExtra);
+  expect(result.isError).toBe(true);
+  expect(processContextOperation).toHaveBeenCalledOnce();
+  expect(verify).toHaveBeenCalledTimes(3);
+  for (const sink of Object.values(sinks)) expect(sink).not.toHaveBeenCalled();
+});
+
+it("blocks saving after revocation during domain reads while a separate workspace connection remains usable", async () => {
+  const first = setup(true);
+  const secondOrg = "33333333-3333-4333-8333-333333333333";
+  const second = setup(true, secondOrg);
+  second.current.grantId = "independent-grant";
+  const { input } = operations.find(value => value.action === "save_brief")!;
+  sinks.callContextRpc.mockImplementation(async (name, args) => {
+    if (name === "read_context_request")
+      return {
+        id: args.p_request,
+        owner_id: args.p_owner,
+        status: "completed",
+        output: { subjectIds: [] },
+      };
+    if (name === "read_context_documents") {
+      first.verify.mockResolvedValue(undefined);
+      return [];
+    }
+    if (name === "save_context_brief") return { id: "saved", owner_id: args.p_owner };
+    throw new Error("Unexpected RPC");
+  });
+  const scopedExtra = (current: typeof first.current) => ({
+    ...extra,
+    authInfo: { ...extra.authInfo, extra: { accountId: owner, oauth: current } },
+  });
+  const denied = await first.registered
+    .get(contextToolOperations.save_brief.name)!
+    .run(input, scopedExtra(first.current));
+  expect(denied.isError).toBe(true);
+  expect(processContextOperation).toHaveBeenCalledOnce();
+  expect(sinks.callContextRpc.mock.calls.map(call => call[0])).toEqual([
+    "read_context_request",
+    "read_context_documents",
+  ]);
+  const allowed = await second.registered
+    .get(contextToolOperations.save_brief.name)!
+    .run({ ...input, organization_id: secondOrg }, scopedExtra(second.current));
+  expect(allowed.isError).not.toBe(true);
+  expect(sinks.callContextRpc).toHaveBeenCalledWith(
+    "save_context_brief",
+    expect.objectContaining({ p_owner: secondOrg }),
+  );
+  expect(first.verify.mock.calls.length).toBeGreaterThanOrEqual(4);
 });
