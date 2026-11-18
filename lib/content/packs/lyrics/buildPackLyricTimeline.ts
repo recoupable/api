@@ -1,11 +1,8 @@
-import {
-  packLyricTimelineInputSchema,
-  type PackLyricTimelineResult,
-} from "./packLyricTimelineSchema";
+import { packLyricTimelineSchema, type PackLyricTimelineResult } from "./packLyricTimelineSchema";
 
 /** Pure internal contract. The trusted caller must verify words/timing against the bound recording. */
 export function buildPackLyricTimeline(input: unknown): PackLyricTimelineResult {
-  const { expected: target, alignment, typography } = packLyricTimelineInputSchema.parse(input);
+  const { expected: target, alignment, typography } = packLyricTimelineSchema.parse(input);
   if (!alignment)
     return { status: "gap", reason: "missing_verified_alignment", target, typography };
   const excerpt = target.excerpt;

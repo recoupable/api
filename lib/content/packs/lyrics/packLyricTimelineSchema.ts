@@ -110,7 +110,7 @@ const alignment = z
 const typography = z.literal("portrait-word-v1");
 
 /** Structural checks do not authenticate caller-supplied verification references. */
-export const packLyricTimelineInputSchema = z
+export const packLyricTimelineSchema = z
   .object({
     expected: target,
     alignment: alignment.nullish(),
