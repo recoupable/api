@@ -8,6 +8,7 @@ import { getSitePublishIdentity } from "./getSitePublishIdentity";
 import { hashSiteEvidence } from "./hashSiteEvidence";
 import { serializeSiteEvidence } from "./serializeSiteEvidence";
 import { prepareSiteRenderArtifacts } from "./prepareSiteRenderArtifacts";
+import { experienceContractSchema } from "./experienceContract";
 import { sitePublishEvidenceSchema } from "./sitePublishEvidenceSchema";
 
 /** UNWIRED. savedSite MUST be the trusted final save return, never request-body state.
@@ -40,7 +41,11 @@ export async function captureSavedSiteReview(input: {
     throw new SiteError(409, "Final saved review unavailable");
   const verification = review.verification;
   if (verification?.journey && verification.evidence) {
-    const actual = prepareSiteRenderArtifacts(candidate, verification.journey).evidence;
+    // JSONB does not preserve object-key order. Match assessment's schema order
+    // for execution bytes, while retaining the original report unchanged.
+    const journey = experienceContractSchema.safeParse(verification.journey);
+    if (!journey.success) throw new SiteError(409, "Saved report journey is invalid");
+    const actual = prepareSiteRenderArtifacts(candidate, journey.data).evidence;
     if (
       Object.entries(actual).some(
         ([key, value]) => verification.evidence![key as keyof typeof actual] !== value,

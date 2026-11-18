@@ -1,0 +1,6 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "incremental": false },
+  "include": ["./*.ts", "../../lib/sites/__tests__/evidenceAdapters.test.ts"],
+  "exclude": ["../../node_modules"]
+}
