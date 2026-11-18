@@ -36,7 +36,7 @@
     "@ai-sdk/gateway": "4.0.2",
     "@ai-sdk/google": "4.0.0",
     "@ai-sdk/mcp": "2.0.0",
-    "@ai-sdk/openai": "4.0.0",
+    "@ai-sdk/openai": "4.0.8",
     "@chat-adapter/github": "^4.15.0",
     "@chat-adapter/slack": "^4.15.0",
     "@chat-adapter/state-ioredis": "^4.15.0",

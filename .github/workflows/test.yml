@@ -53,6 +53,9 @@ jobs:
       - name: Check production TypeScript configuration
         run: pnpm exec tsc --noEmit --project tsconfig.build.json
 
+      - name: Check installed AI SDK v7 contract signatures
+        run: pnpm exec tsc --noEmit --project tsconfig.ai-sdk-v7.json
+
       - name: Check response contract types
         run: pnpm typecheck:response-contracts
 

@@ -1,3 +1,4 @@
+import { agentContextSchema } from "./agentContextSchema";
 import { tool, type ToolExecutionOptions } from "ai";
 import { z } from "zod";
 import type { AgentContext } from "@/lib/agent/tools/AgentContext";
@@ -46,6 +47,7 @@ USAGE:
 - Supports GET, POST, PUT, PATCH, DELETE, and HEAD methods
 - Returns the response status and body text
 - Body is truncated to ${MAX_BODY_LENGTH} characters to avoid overwhelming context`,
+  contextSchema: agentContextSchema,
   inputSchema: fetchInputSchema,
   outputSchema: fetchOutputSchema,
   execute: async (

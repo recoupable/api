@@ -4,7 +4,7 @@ import type { SkillMetadata } from "@/lib/skills/skillTypes";
 
 /**
  * Per-tool-call context threaded into the agent via `streamText`'s
- * `experimental_context`. Mirrors the open-agents `AgentContext`
+ * `toolsContext`. Mirrors the open-agents `AgentContext`
  * interface (`packages/agent/types.ts`) one-for-one. The only
  * deviation is structural: `model` / `subagentModel` are
  * `LanguageModel` instances that cannot ride through a durable
@@ -13,7 +13,7 @@ import type { SkillMetadata } from "@/lib/skills/skillTypes";
  *
  * The durable workflow-input shape is `DurableAgentContext` below —
  * `runAgentStep` widens that into a full `AgentContext` by attaching
- * the constructed model(s) before `experimental_context` is observed
+ * the constructed model(s) before `toolsContext` is observed
  * by any tool.
  *
  * `recoupAccessToken` carries a short-lived Privy JWT (~1h TTL) so

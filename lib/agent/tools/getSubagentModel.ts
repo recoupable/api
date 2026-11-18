@@ -2,7 +2,7 @@ import type { LanguageModel } from "ai";
 import { isAgentContext } from "@/lib/agent/tools/isAgentContext";
 
 /**
- * Resolve the subagent's language model from `experimental_context`,
+ * Resolve the subagent's language model from `toolsContext`,
  * falling back to the main agent's model when no dedicated subagent
  * model is configured. Mirrors open-agents' `getSubagentModel`
  * (`tools/utils.ts`): `ctx.subagentModel ?? ctx.model`.
@@ -17,7 +17,7 @@ export function getSubagentModel(experimental_context: unknown, toolName?: strin
     const toolInfo = toolName ? ` (tool: ${toolName})` : "";
     throw new Error(
       `Model not initialized in context${toolInfo}. ` +
-        "Ensure runAgentStep sets experimental_context: { model, ... }",
+        "Ensure runAgentStep sets toolsContext for this tool with { model, ... }",
     );
   }
   return context.subagentModel ?? context.model;

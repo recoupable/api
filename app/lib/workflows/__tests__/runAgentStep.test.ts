@@ -72,7 +72,7 @@ function makeStreamResult(opts?: {
       })();
     }),
     finishReason: Promise.resolve("stop"),
-    response: Promise.resolve({ messages: [] }),
+    responseMessages: Promise.resolve([]),
   };
 }
 
@@ -165,10 +165,10 @@ describe("runAgentStep", () => {
       writable: stream,
     } as never);
 
-    const args = vi.mocked(streamText).mock.calls[0]?.[0] as { system?: string };
-    expect(args.system).toMatch(/# Environment/);
-    expect(args.system).toMatch(/Working directory: \. \(workspace root\)/);
-    expect(args.system).toMatch(/workspace-relative paths/);
+    const args = vi.mocked(streamText).mock.calls[0]?.[0] as { instructions?: string };
+    expect(args.instructions).toMatch(/# Environment/);
+    expect(args.instructions).toMatch(/Working directory: \. \(workspace root\)/);
+    expect(args.instructions).toMatch(/workspace-relative paths/);
   });
 
   it("wraps tools with anthropic cacheControl on the last tool before passing to streamText", async () => {
@@ -241,7 +241,7 @@ describe("runAgentStep", () => {
         return (async function* () {})();
       }),
       finishReason: Promise.resolve("stop"),
-      response: Promise.resolve({ messages: [] }),
+      responseMessages: Promise.resolve([]),
     } as never);
     const { stream } = makeWritable();
 
@@ -256,7 +256,7 @@ describe("runAgentStep", () => {
     vi.mocked(streamText).mockReturnValue({
       toUIMessageStream: vi.fn(() => (async function* () {})()),
       finishReason: Promise.resolve("tool-calls"),
-      response: Promise.resolve({ messages: produced }),
+      responseMessages: Promise.resolve(produced),
     } as never);
     const { stream } = makeWritable();
 
@@ -354,7 +354,7 @@ describe("runAgentStep", () => {
           })(),
         ),
         finishReason: Promise.resolve("length"),
-        response: Promise.resolve({ messages: [] }),
+        responseMessages: Promise.resolve([]),
       } as never);
       const { stream } = makeWritable();
 

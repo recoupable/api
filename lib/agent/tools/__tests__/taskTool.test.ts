@@ -39,7 +39,7 @@ function makeStreamResult(opts: {
         };
       }
     })(),
-    response: Promise.resolve({ messages: opts.responseMessages ?? [] }),
+    responseMessages: Promise.resolve(opts.responseMessages ?? []),
     totalUsage: Promise.resolve(opts.totalUsage ?? { inputTokens: 0, outputTokens: 0 }),
     finishReason: Promise.resolve("stop"),
   };

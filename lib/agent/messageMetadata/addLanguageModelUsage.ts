@@ -2,8 +2,7 @@ import type { LanguageModelUsage } from "ai";
 import { addTokenCounts } from "@/lib/agent/messageMetadata/addTokenCounts";
 
 /**
- * Pointwise-sum two `LanguageModelUsage` records (the flat shape used by
- * `ai@^6.0.190`). Mirrors `packages/agent/usage.ts:addLanguageModelUsage`
+ * Pointwise-sum two AI SDK v7 `LanguageModelUsage` records. Mirrors `packages/agent/usage.ts:addLanguageModelUsage`
  * in the open-agents source. Used to accumulate per-step usage into a
  * per-message total inside the `messageMetadata` callback.
  *

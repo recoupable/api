@@ -31,6 +31,26 @@ describe("handleChatCredits", () => {
     vi.restoreAllMocks();
   });
 
+  it("still charges persisted sparse usage without nested cache details", async () => {
+    mockGetCreditUsage.mockResolvedValue(0.05);
+    await handleChatCredits({
+      usage: { inputTokens: 1000, outputTokens: 500, totalTokens: 1500 } as never,
+      model: "fixture-model",
+      accountId: "account-123",
+      source: "api",
+      toolCallCount: 2,
+    });
+    expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: "account-123",
+        creditsToDeduct: 50_000,
+        source: "api",
+        toolCallCount: 2,
+        cachedInputTokens: undefined,
+      }),
+    );
+  });
+
   describe("credit deduction", () => {
     it("deducts credits and forwards token detail to the usage_events row", async () => {
       mockGetCreditUsage.mockResolvedValue(0.05); // $0.05 = 50,000 micro-dollars

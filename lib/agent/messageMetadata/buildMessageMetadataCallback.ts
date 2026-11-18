@@ -12,9 +12,8 @@ import type { AgentStepFinishMetadata } from "@/lib/agent/messageMetadata/AgentS
  *
  * Mirrors open-agents' `apps/web/app/workflows/chat.ts` callback shape
  * so sandbox.recoupable.com's UI can render model/cost/usage badges
- * when cut over to api's `/api/chat/workflow`. api and open-agents now
- * share the same `ai@^6.0.190` shape for `LanguageModelUsage`, so no
- * shape conversion happens here.
+ * when cut over to api's `/api/chat/workflow`. Usage is emitted in the
+ * installed v7 nested-detail shape; paired App compatibility is a release gate.
  *
  * Each call to `buildMessageMetadataCallback` returns a FRESH closure —
  * one per assistant turn — so totals reset between turns.

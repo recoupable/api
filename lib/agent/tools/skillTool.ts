@@ -1,3 +1,4 @@
+import { agentContextSchema } from "./agentContextSchema";
 import * as path from "path";
 import { tool } from "ai";
 import { z } from "zod";
@@ -42,6 +43,7 @@ Important:
 - When the user's message starts with "/<name>", they are invoking a skill — call this tool FIRST before any other tool
 - NEVER just announce or mention a skill without actually calling this tool
 - Only use skills listed in "Available skills" in your system prompt`,
+  contextSchema: agentContextSchema,
   inputSchema: skillInputSchema,
   execute: async ({ skill, args }, { context: experimental_context }) => {
     const sandbox = await getSandbox(experimental_context, "skill");

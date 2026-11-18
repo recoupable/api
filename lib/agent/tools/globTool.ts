@@ -1,3 +1,4 @@
+import { agentContextSchema } from "./agentContextSchema";
 import { tool, type ToolExecutionOptions } from "ai";
 import { z } from "zod";
 import type { AgentContext } from "@/lib/agent/tools/AgentContext";
@@ -52,6 +53,7 @@ USAGE:
 IMPORTANT:
 - Patterns are matched primarily on the final path segment (file name), with basic "*" and "**" support
 - Use this to narrow down candidate files before calling readFileTool or grepTool`,
+  contextSchema: agentContextSchema,
   inputSchema: globInputSchema,
   execute: async (
     { pattern, path: basePath, limit = DEFAULT_LIMIT },

@@ -1,3 +1,4 @@
+import { agentContextSchema } from "./agentContextSchema";
 import {
   streamText,
   isStepCount,
@@ -103,6 +104,7 @@ IMPORTANT:
 - Be explicit and concrete — the subagent cannot ask clarifying questions
 - Include critical context (APIs, function names, file paths) in the instructions
 - The parent agent does not see the subagent's internal tool calls, only its final summary`,
+  contextSchema: agentContextSchema,
   inputSchema: taskInputSchema,
   outputSchema: taskOutputSchema,
   execute: async function* (
@@ -154,10 +156,10 @@ IMPORTANT:
       }
     }
 
-    const response = await result.response;
+    const responseMessages = await result.responseMessages;
     const finalUsage = usage ?? (await result.totalUsage);
     yield {
-      final: response.messages,
+      final: responseMessages,
       toolCallCount,
       usage: finalUsage,
       startedAt,

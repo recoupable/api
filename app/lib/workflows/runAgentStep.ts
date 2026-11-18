@@ -227,12 +227,10 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
       }
     }
 
-    // `response.messages` is the assistant message for this call plus any
-    // tool-result message — exactly what the next iteration needs appended.
-    // (`result.responseMessages` is ai@7; this repo is on 6.0.190.)
-    const [reason, response] = await Promise.all([result.finishReason, result.response]);
+    // v7 exposes the complete generated history separately from response metadata.
+    const [reason, messages] = await Promise.all([result.finishReason, result.responseMessages]);
     finishReason = reason;
-    responseMessages = response.messages;
+    responseMessages = messages;
   } catch (error) {
     // Three ways a user-stop surfaces here: the stream throws AbortError; the
     // poller already flipped our signal; or `run.cancel()` closed the workflow
@@ -246,10 +244,10 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     )
       throw error;
 
-    // User-stop. `result.finishReason` / `result.response` reject once
+    // User-stop. `result.finishReason` / `result.responseMessages` reject once
     // streamText aborts — swallow them so they don't surface as unhandled.
     void Promise.resolve(result.finishReason).catch(() => {});
-    void Promise.resolve(result.response).catch(() => {});
+    void Promise.resolve(result.responseMessages).catch(() => {});
     finishReason = "stop";
     // Close any tool-call parts left without a terminal result, otherwise a
     // reload renders them spinning forever. The workflow body persists it.

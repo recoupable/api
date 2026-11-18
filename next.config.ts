@@ -2,8 +2,6 @@ import type { NextConfig } from "next";
 import { withWorkflow } from "workflow/next";
 
 const nextConfig: NextConfig = {
-  // OAuth model class names are persistent storage keys; bundling renames them.
-  serverExternalPackages: ["oidc-provider"],
   env: {
     RESOURCE_WALLET_ADDRESS: process.env.RESOURCE_WALLET_ADDRESS,
   },
@@ -14,7 +12,8 @@ const nextConfig: NextConfig = {
   // (and its internal require) natively. Requires `@vercel/oidc` as a direct
   // dependency so it's resolvable, and the webpack builder (Turbopack refuses
   // to externalize it).
-  serverExternalPackages: ["@vercel/oidc"],
+  // Preserve OAuth model class names, which are persistent storage keys.
+  serverExternalPackages: ["oidc-provider", "@vercel/oidc"],
   experimental: {
     optimizePackageImports: ["date-fns", "@ai-sdk/anthropic", "@ai-sdk/openai", "@ai-sdk/google"],
   },

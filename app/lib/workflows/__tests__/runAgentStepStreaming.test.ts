@@ -70,7 +70,7 @@ describe("runAgentStep — streaming shape (mirrors upstream open-agents)", () =
         })(),
       ),
       finishReason: Promise.resolve("stop"),
-      response: Promise.resolve({ messages: [] }),
+      responseMessages: Promise.resolve([]),
     } as never);
     const { stream, written } = makeWritable();
 
@@ -86,7 +86,7 @@ describe("runAgentStep — streaming shape (mirrors upstream open-agents)", () =
     vi.mocked(streamText).mockReturnValue({
       toUIMessageStream: vi.fn(() => (async function* () {})()),
       finishReason: Promise.resolve("stop"),
-      response: Promise.resolve({ messages: [] }),
+      responseMessages: Promise.resolve([]),
     } as never);
     const { stream } = makeWritable();
 
@@ -105,7 +105,7 @@ describe("runAgentStep — streaming shape (mirrors upstream open-agents)", () =
         })(),
       ),
       finishReason: Promise.reject(abortError),
-      response: Promise.reject(abortError),
+      responseMessages: Promise.reject(abortError),
     } as never);
     const { stream } = makeWritable();
 

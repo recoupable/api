@@ -62,8 +62,7 @@ export default async function getGeneralAgent(body: ChatRequestBody): Promise<Ro
     stopWhen,
     prepareStep: options => {
       const next = getPrepareStepResult(options);
-      if (next) return { ...options, ...next };
-      return options;
+      return { ...options, instructions, ...next };
     },
     providerOptions: {
       anthropic: getAnthropicProviderOptions(model),

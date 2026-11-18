@@ -1,3 +1,4 @@
+import { agentContextSchema } from "./agentContextSchema";
 import { tool } from "ai";
 import { z } from "zod";
 import * as path from "path";
@@ -44,6 +45,7 @@ IMPORTANT:
 - Preserve exact indentation and spacing from the file's content as returned by readFileTool
 - Never include line numbers or the "N: " line prefixes from the read output in oldString or newString
 - If oldString appears multiple times and replaceAll is false, the tool FAILS with an error and occurrence count`,
+  contextSchema: agentContextSchema,
   inputSchema: editInputSchema,
   execute: async (
     { filePath, oldString, newString, replaceAll = false },

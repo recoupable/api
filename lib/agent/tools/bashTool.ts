@@ -1,3 +1,4 @@
+import { agentContextSchema } from "./agentContextSchema";
 import { tool, type ToolExecutionOptions } from "ai";
 import { z } from "zod";
 import type { AgentContext } from "@/lib/agent/tools/AgentContext";
@@ -61,6 +62,7 @@ IMPORTANT:
 - Never use interactive commands (vim, nano, top, bash, ssh, etc.)
 - Always quote file paths that may contain spaces
 - Use detached: true to start dev servers / long-running processes in the background`,
+  contextSchema: agentContextSchema,
   inputSchema: bashInputSchema,
   execute: async (
     { command, cwd, detached },
