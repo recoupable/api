@@ -24,3 +24,5 @@ Independent spec and standards reviewers approved the revised plan before fault 
 Each requires the recorded worker group, owned postmaster, socket and directory to be absent, with retained diagnostics. Run both PostgreSQL versions using the same runner with `--self-test-cleanup`. These lifecycle tests are separate from the business-contract cases and confer no hosted/production qualification.
 
 Fault markers are read from the current owned root before deletion and must match the current root, worker PID and requested fault. A separate regression prepopulates the output directory with an old marker, exits the new worker before bootstrap, and requires fault qualification to fail while cleanup succeeds.
+
+The stale-marker negative specifically covers reuse of the old output-directory artifact. It does not inject a foreign root/worker marker at the current-root read path; those identity comparisons are source-reviewed guards, not separately fault-tested controls.

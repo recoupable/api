@@ -11,15 +11,18 @@ import signal
 import subprocess
 import sys
 import tempfile
-from verify_sources import verify_api, verify_database
-from lifecycle import install_lifecycle, quiesce_worker, stop_owned_cluster
+from verify_api import verify_api
+from verify_database import verify_database
+from install_lifecycle import install_lifecycle
+from quiesce_worker import quiesce_worker
+from stop_owned_cluster import stop_owned_cluster
 
 HERE = pathlib.Path(__file__).resolve().parent
 API = HERE.parents[1]
 FAULTS = ('missing-pid', 'startup', 'partial-bootstrap', 'blocked-sql', 'shutdown-error', 'shutdown-timeout')
 
 
-def worker(args, pins):
+def _worker(args, pins):
     verify_api(API, pins)
     verify_database(args.worker, pins)
     if args.fail_before_bootstrap:
@@ -66,7 +69,7 @@ def main():
     args = parser.parse_args()
     pins = json.loads((HERE / 'sources.json').read_text())
     if args.worker:
-        worker(args, pins)
+        _worker(args, pins)
         return
     if not args.database_repo or not args.pg_bin:
         parser.error('--database-repo and --pg-bin required')
