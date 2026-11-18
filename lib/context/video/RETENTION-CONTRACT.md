@@ -26,7 +26,7 @@ The existing `dispatch(input)` port passes accounting identities, not authentica
 
 ## Proposed handoff: ContextVideoAcquisitionReceiptV1
 
-This is a proposed internal record contract, not an exported TypeScript type or accepted public payload. The trusted adapter resolves and verifies every binding below; serialization and a matching hash do not authenticate its producer.
+This proposed internal record and its Dispatch binding describe the paid-dispatch path; they are not an exported TypeScript type or accepted public payload. The trusted adapter resolves and verifies every binding below; serialization and a matching hash do not authenticate its producer.
 
 | Binding | Required evidence |
 | --- | --- |
@@ -48,7 +48,7 @@ Available captions require actual provider timing, language/track identity and p
 
 ## Database acceptance and retry boundary
 
-The future Database producer accepts only verified server acquisition under the owning durable journal contract. No SQL signature or authority table is specified here. Before writing, it must lock and recheck current membership, request, resource, video subject and accepted locator link using DB140's order, then verify exact acquisition/owner/request/video/media bindings. A previously authorized read is insufficient; removed, rejected, cancelled or changed bindings must refuse acceptance.
+For paid acquisition, the future Database producer accepts only verified server acquisition under the owning durable journal contract. Unpaid export acceptance requires separately reviewed original retention, current scope and source provenance without a fabricated paid journal; its writer and complete acceptance contract are not implemented or specified here. No SQL signature or authority table is specified here. Before writing, it must lock and recheck current membership, request, resource, video subject and accepted locator link using DB140's order, then verify exact acquisition/owner/request/video/media bindings. A previously authorized read is insufficient; removed, rejected, cancelled or changed bindings must refuse acceptance.
 
 Cancellation and acceptance need a concrete serialization point in that implementation. If the owning journal is in the same database, its cancellation/dispatch row must participate in the documented transaction/lock order. If it is elsewhere, the owner must provide and qualify a durable acceptance claim/fence protocol with explicit failure and reconciliation states before implementation is accepted. Separate HTTP reads cannot promise atomic cancellation or a cross-store rollback. This document does not assert either storage topology exists.
 
