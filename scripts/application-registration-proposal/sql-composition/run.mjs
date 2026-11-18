@@ -1,4 +1,4 @@
-import { access, mkdtemp, mkdir, readFile, realpath, rm } from "node:fs/promises";
+import { access, mkdtemp, mkdir, readFile, readlink, lstat, realpath, rm } from "node:fs/promises";
 import { constants } from "node:fs";
 import { createHash } from "node:crypto";
 import { spawn, execFileSync } from "node:child_process";
@@ -55,6 +55,108 @@ const gitEnv = {
   GIT_CONFIG_NOSYSTEM: "1",
   GIT_CONFIG_GLOBAL: "/dev/null",
 };
+// Bind tracked API source bytes, including transitive authentication imports.
+// Only this reviewed eight-path qualification slice may differ from the accepted revision.
+const apiRevision = bindings.acceptedApiComposition ?? bindings.apiMerge;
+if (!/^[0-9a-f]{40}$/.test(apiRevision)) throw new Error("Exact API revision required");
+const gitRead = args =>
+  execFileSync("/usr/bin/git", ["-C", root, ...args], {
+    env: gitEnv,
+    encoding: "utf8",
+    timeout: 5000,
+    maxBuffer: 16 * 1024 * 1024,
+  });
+if (gitRead(["rev-parse", "--verify", `${apiRevision}^{commit}`]).trim() !== apiRevision)
+  throw new Error("Bound API revision unavailable");
+gitRead(["merge-base", "--is-ancestor", apiRevision, "HEAD"]);
+const allowedChanges = new Set([
+  "vitest.config.ts",
+  ...[
+    "README.md",
+    "run.mjs",
+    "qualification.test.ts",
+    "source-bindings.json",
+    "supervise.py",
+    "socket-guard.mjs",
+    "vitest.config.ts",
+  ].map(name => `scripts/application-registration-proposal/sql-composition/${name}`),
+]);
+const committedChanges = gitRead([
+  "diff-tree",
+  "--no-commit-id",
+  "--name-only",
+  "-r",
+  "-z",
+  apiRevision,
+  "HEAD",
+])
+  .split("\0")
+  .filter(Boolean);
+for (const path of committedChanges) {
+  if (!allowedChanges.has(path)) throw new Error(`Unbound committed API change: ${path}`);
+}
+const entries = gitRead(["ls-tree", "-r", "-z", apiRevision]).split("\0").filter(Boolean);
+const baselinePaths = new Set();
+let trackedInputsVerified = 0;
+const unreadEnvPaths = [];
+for (const entry of entries) {
+  const separator = entry.indexOf("\t");
+  const [mode, type, oid] = entry.slice(0, separator).split(" ");
+  const path = entry.slice(separator + 1);
+  baselinePaths.add(path);
+  if (allowedChanges.has(path)) continue;
+  // Dotenv is disabled; never open environment-file contents, including the tracked example.
+  if (/(?:^|\/)\.env(?:$|\.)/.test(path)) {
+    unreadEnvPaths.push(path);
+    continue;
+  }
+  if (type !== "blob" || !["100644", "100755", "120000"].includes(mode))
+    throw new Error(`Unsupported bound API entry: ${path}`);
+  const full = join(root, path);
+  const stat = await lstat(full);
+  const matchesType =
+    mode === "120000"
+      ? stat.isSymbolicLink()
+      : stat.isFile() && Boolean(stat.mode & 0o111) === (mode === "100755");
+  if (!matchesType) throw new Error(`Unbound API source type: ${path}`);
+  const bytes =
+    mode === "120000" ? await readlink(full, { encoding: "buffer" }) : await readFile(full);
+  // Hash raw working-tree bytes as Git blobs: no index flags, stat cache or clean filters.
+  const actual = createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
+  if (actual !== oid) throw new Error(`Unbound API source change: ${path}`);
+  trackedInputsVerified++;
+}
+const indexedPaths = gitRead(["ls-files", "--cached", "-z"]).split("\0").filter(Boolean);
+const untrackedPaths = gitRead(["ls-files", "--others", "--exclude-standard", "-z"])
+  .split("\0")
+  .filter(Boolean);
+const ignoredSources = gitRead([
+  "ls-files",
+  "--others",
+  "--ignored",
+  "--exclude-standard",
+  "-z",
+  "--",
+  "lib",
+  "app",
+  "types",
+  "scripts/application-registration-proposal",
+])
+  .split("\0")
+  .filter(path => /\.(?:[cm]?[jt]sx?|json|py|sql)$/.test(path));
+for (const path of [...indexedPaths, ...untrackedPaths, ...ignoredSources]) {
+  if (!baselinePaths.has(path) && !allowedChanges.has(path))
+    throw new Error(`Unbound API source change: ${path}`);
+}
+console.log(
+  "API_SOURCE_SCOPE " +
+    JSON.stringify({
+      revision: apiRevision,
+      trackedInputsVerified,
+      unreadEnvPaths,
+      allowedQualificationPaths: [...allowedChanges],
+    }),
+);
 const databaseHead = execFileSync("/usr/bin/git", ["-C", database, "rev-parse", "HEAD"], {
   env: gitEnv,
   encoding: "utf8",
