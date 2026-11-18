@@ -17,6 +17,7 @@ export type PackAsset = {
   ordinal: number;
   status: "pending" | "running" | "completed" | "failed" | "uncertain";
   attempt: number;
+  claim_id?: string;
   completed_at?: string | null;
   credits: number;
   maximum_usd: number;
@@ -32,6 +33,10 @@ export type PackJob = {
   owner_id: string;
   created_by: string;
   revision: number;
+  protocol?: 1 | 2;
+  execution_id?: string;
+  execution_version?: number;
+  context_version?: number;
   status: string;
   brief: ReleasePackBrief;
   deliverables: ReleasePackDeliverables;
@@ -46,6 +51,11 @@ export type PackSnapshot = {
   assets: PackAsset[];
   dispatch?: boolean;
   claimed?: boolean;
+  replayed?: boolean;
   asset?: PackAsset;
 };
-export type PackActor = { accountId: string; organizationId?: string };
+export type PackActor = {
+  accountId: string;
+  organizationId?: string;
+  /** Internal opt-in; no public route populates this. */ packProtocol?: 2;
+};

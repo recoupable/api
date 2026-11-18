@@ -36,6 +36,9 @@ jobs:
       - name: Check actual internal fenced workflow with offline effect seams
         run: pnpm test:chat-fence-workflow
 
+      - name: Check dormant pack worker fence with offline Workflow SDK
+        run: pnpm test:pack-fence-workflow
+
       - name: Check unwired pack scheduler replay with offline effects
         run: pnpm test:pack-scheduler-workflow
 

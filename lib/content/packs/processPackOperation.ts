@@ -1,3 +1,6 @@
+import type { PackProtocol2Admission } from "./fence/packFenceTypes";
+import { getPackTransitionInput } from "./fence/getPackTransitionInput";
+import { getPackLaunchFence } from "./fence/getPackLaunchFence";
 import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
 import { importPackSources } from "./importPackSources";
 import { randomUUID, createHash } from "node:crypto";
@@ -38,6 +41,7 @@ export async function processPackOperation(
   operation: PackOperation,
   raw: unknown,
   credentialOrganizationId?: string | null,
+  protocol2?: PackProtocol2Admission,
 ) {
   const input = packOperationSchemas[operation].parse(raw) as z.infer<
     typeof prepareReleasePackSchema
@@ -46,7 +50,11 @@ export async function processPackOperation(
   const organizationId = input.organization_id ?? credentialOrganizationId ?? undefined;
   if (organizationId && !(await validateOrganizationAccess({ accountId, organizationId })))
     throw new Error("Pack workspace access denied");
-  const actor: PackActor = { accountId, organizationId };
+  const actor: PackActor = {
+    accountId,
+    organizationId,
+    ...(protocol2 ? { packProtocol: 2 as const } : {}),
+  };
   if (operation === "upload") return uploadPackAsset(actor, raw);
   if (operation === "prepare") {
     if (input.job_id && !input.expected_revision)
@@ -74,7 +82,12 @@ export async function processPackOperation(
   const saved = await runPackCommand(actor, "read", input.job_id!);
   if (operation === "get") return readPackSnapshot(saved);
   if (operation === "export") {
-    const marked = await runPackCommand(actor, "export", saved.job.id);
+    const marked = await runPackCommand(
+      actor,
+      "export",
+      saved.job.id,
+      protocol2 ? { expected_revision: saved.job.revision } : {},
+    );
     return {
       ...(await readPackSnapshot(marked)),
       manifest: {
@@ -143,6 +156,12 @@ export async function processPackOperation(
       await runPackCommand(actor, "estimate", saved.job.id, {
         quote,
         assets: plan,
+        ...(protocol2
+          ? {
+              expected_revision: saved.job.revision,
+              ...(selected ? { asset_attempt: selected.attempt } : {}),
+            }
+          : {}),
         ...(selected ? { retry_asset_id: selected.id } : {}),
       }),
     );
@@ -177,6 +196,7 @@ export async function processPackOperation(
           "Submission outcome is uncertain; no safe automatic retry is available. Your existing outputs and brief are retained.",
         );
       funded = await runPackCommand(actor, "resume", saved.job.id, {
+        ...getPackTransitionInput(protocol2),
         asset_id: selected.id,
         quote_id: input.quote_id,
         expected_revision: input.expected_revision,
@@ -187,7 +207,10 @@ export async function processPackOperation(
       assertPackQuoteConfiguration(saved.job.quote);
       if (saved.job.quote.retry_asset_id !== input.asset_id)
         throw new Error("Request and approve a fresh estimate for this failed asset first");
-      funded = await runPackCommand(actor, "approve", saved.job.id, input);
+      funded = await runPackCommand(actor, "approve", saved.job.id, {
+        ...input,
+        ...getPackTransitionInput(protocol2),
+      });
     }
   } else {
     assertPackQuoteConfiguration(saved.job.quote);
@@ -200,16 +223,29 @@ export async function processPackOperation(
           });
     if (credits.kind !== "available")
       throw new Error("Insufficient credits; your brief and quote are saved");
-    funded = await runPackCommand(actor, "approve", saved.job.id, input);
+    funded = await runPackCommand(actor, "approve", saved.job.id, {
+      ...input,
+      ...getPackTransitionInput(protocol2),
+    });
   }
   if (funded.dispatch) {
     try {
       const { start } = await import("workflow/api");
       const { releasePackWorkflow } = await import("@/app/workflows/packs/releasePackWorkflow");
-      const run = await start(releasePackWorkflow, [actor, saved.job.id, resumedAssetId]);
-      funded = await runPackCommand(actor, "run", saved.job.id, { workflow_run_id: run.runId });
+      const execution = protocol2 ? getPackLaunchFence(funded.job) : undefined;
+      const run = await start(
+        releasePackWorkflow,
+        execution
+          ? [actor, saved.job.id, resumedAssetId, execution]
+          : [actor, saved.job.id, resumedAssetId],
+      );
+      funded = await runPackCommand(actor, "run", saved.job.id, {
+        ...execution,
+        workflow_run_id: run.runId,
+      });
     } catch {
       funded = await runPackCommand(actor, "dispatch_uncertain", saved.job.id, {
+        ...(protocol2 ? getPackLaunchFence(funded.job) : {}),
         error:
           "Workflow dispatch outcome is uncertain. Its budget remains held while accepted work is reconciled. Read this job; do not resubmit.",
       });

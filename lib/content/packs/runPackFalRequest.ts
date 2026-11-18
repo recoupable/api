@@ -1,3 +1,5 @@
+import { PackFenceError } from "./fence/PackFenceError";
+import type { PackProviderReceipt } from "./fence/packFenceTypes";
 import fal from "@/lib/fal/server";
 import { createHash } from "node:crypto";
 /** Persist submission intent and accepted IDs before polling; ambiguous submits are never repeated. */
@@ -8,20 +10,34 @@ export async function runPackFalRequest(input: {
   key: string;
   state: Record<string, unknown>;
   save: (key: string, value: unknown) => Promise<unknown>;
+  observe?: (receipt: PackProviderReceipt) => Promise<unknown>;
 }) {
-  type Receipt = {
-    state: string;
-    request_id?: string;
-    data?: unknown;
-    charge_credits?: number;
-    model?: string;
-    input_sha256?: string;
-  };
+  type Receipt = PackProviderReceipt;
   let receipt = input.state[input.key] as Receipt | undefined;
   const save = async (value: Receipt) => {
-    await input.save(input.key, value);
-    input.state[input.key] = value;
-    receipt = value;
+    if (input.observe && (value.state === "accepted" || value.state === "complete"))
+      await input.observe(value);
+    const result = await input.save(input.key, value);
+    if (
+      input.observe &&
+      value.state === "submitting" &&
+      (!result ||
+        typeof result !== "object" ||
+        !("operation_created" in result) ||
+        result.operation_created !== true)
+    )
+      throw new PackFenceError(
+        "Submission intent already recorded; reconcile without resubmission",
+      );
+    const operationId =
+      result &&
+      typeof result === "object" &&
+      "operation_id" in result &&
+      typeof result.operation_id === "string"
+        ? result.operation_id
+        : value.operation_id;
+    receipt = operationId ? { ...value, operation_id: operationId } : value;
+    input.state[input.key] = receipt;
   };
   if (receipt?.state === "complete") return receipt.data as Record<string, unknown>;
   if (receipt && !receipt.request_id)

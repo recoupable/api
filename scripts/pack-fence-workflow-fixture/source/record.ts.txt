@@ -1,0 +1,8 @@
+import { appendFileSync } from "node:fs";
+import { join } from "node:path";
+export function record(action: string) {
+  appendFileSync(
+    join(process.env.PACK_SCHEDULER_EFFECTS!, "events.jsonl"),
+    JSON.stringify({ action }) + "\n",
+  );
+}

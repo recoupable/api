@@ -1,0 +1,29 @@
+import { read } from "./read";
+import { record } from "./record";
+import { runPackCommand } from "./runPackCommand";
+import { PackFenceError } from "@/lib/content/packs/fence/PackFenceError";
+import type { PackActor, PackJob, PackAsset } from "@/lib/content/packs/packTypes";
+import type { PackProductionServices } from "@/lib/content/packs/producePackAsset";
+export function createPackProductionServices(
+  actor: PackActor,
+  job: PackJob,
+  asset: PackAsset,
+): PackProductionServices {
+  return {
+    phase: async () => {
+      record("phase");
+      if (read().scenario === "phase-failure")
+        throw new PackFenceError("Receipt acknowledgement lost");
+    },
+    generateImages: async () => ["synthetic"],
+    generateMotion: async () => "synthetic",
+    caption: async () => "fixture",
+    compose: async () => ({
+      files: [{ storage_key: "synthetic", content_type: "image/png", bytes: 1 }],
+      probe: {},
+    }),
+    inspect: async () => ({ passed: true, reason: "fixture" }),
+    finish: result =>
+      runPackCommand(actor, "finish_asset", job.id, { asset_id: asset.id, ...result }),
+  };
+}

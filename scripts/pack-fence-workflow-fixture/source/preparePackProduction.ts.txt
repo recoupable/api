@@ -1,0 +1,6 @@
+import { record } from "./record";
+import type { PackActor, PackJob } from "@/lib/content/packs/packTypes";
+export async function preparePackProduction(_actor: PackActor, job: PackJob) {
+  record("prepare");
+  return job;
+}

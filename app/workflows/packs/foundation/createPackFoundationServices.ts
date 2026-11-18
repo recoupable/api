@@ -1,3 +1,6 @@
+import type { PackLaunchFence } from "@/lib/content/packs/fence/packFenceTypes";
+import { assertPackExecutionIdentity } from "@/lib/content/packs/fence/assertPackExecutionIdentity";
+import { PackFenceError } from "@/lib/content/packs/fence/PackFenceError";
 import { preparePackStep } from "../preparePackStep";
 import { producePackAssetStep } from "../producePackAssetStep";
 import { settleBoundedPackStep } from "../settleBoundedPackStep";
@@ -12,38 +15,56 @@ import type { PackFoundationServices } from "@/lib/content/packs/foundation/pack
 export function createPackFoundationServices(
   actor: PackActor,
   jobId: string,
+  execution?: PackLaunchFence,
 ): PackFoundationServices {
+  if (actor.packProtocol === 2 && !execution)
+    throw new PackFenceError("Foundation requires original execution admission");
+  const attempts = new Map<string, number>();
   const scope = (input: PackActor, id: string) => {
     if (
       id !== jobId ||
       input.accountId !== actor.accountId ||
-      input.organizationId !== actor.organizationId
+      input.organizationId !== actor.organizationId ||
+      input.packProtocol !== actor.packProtocol
     )
       throw new Error("Foundation service scope mismatch");
   };
   return {
     read: (a, id) => {
       scope(a, id);
-      return readPackFoundationStep(a, id);
+      return readPackFoundationStep(a, id).then(saved => {
+        if (a.packProtocol === 2) {
+          assertPackExecutionIdentity(saved.job, execution);
+          for (const asset of saved.assets)
+            if (!attempts.has(asset.id)) attempts.set(asset.id, asset.attempt);
+        }
+        return saved;
+      });
     },
     prepare: (a, id) => {
       scope(a, id);
-      return preparePackStep(a, id);
+      return preparePackStep(a, id, execution);
     },
     persist: (a, job, record) => {
       scope(a, job.id);
+      if (a.packProtocol === 2) assertPackExecutionIdentity(job, execution);
       return persistPackFoundationStep(a, job, record);
     },
     produce: (a, job, id) => {
       scope(a, job.id);
+      if (a.packProtocol === 2) {
+        assertPackExecutionIdentity(job, execution);
+        return producePackAssetStep(a, job, id, false, attempts.get(id));
+      }
       return producePackAssetStep(a, job, id);
     },
     settle: (a, id, error) => {
       scope(a, id);
-      return settleBoundedPackStep(a, id, error);
+      return settleBoundedPackStep(a, id, error, execution);
     },
     createPlan: (snapshot, selection) => {
       scope(actor, snapshot.job.id);
+      if (actor.packProtocol === 2) assertPackExecutionIdentity(snapshot.job, execution);
       return planPackFoundationStep(snapshot, selection);
     },
     bindFiles: (plan, asset) => bindPackFoundationFilesStep(actor, jobId, plan, asset),
