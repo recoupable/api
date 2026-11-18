@@ -297,8 +297,9 @@ describe("actual domain and helpers to restricted disposable SQL wrappers", () =
     const original = (
       await fixtureQuery("SELECT result FROM application_registration_proposal.receipts")
     ).rows[0].result;
-    expect(await register()).toEqual(original);
     const saved = await registrationState();
+    expect(await register()).toEqual(original);
+    expect(await registrationState()).toEqual(saved);
     expect(
       (
         await fixtureQuery(
@@ -427,7 +428,10 @@ describe("actual domain and helpers to restricted disposable SQL wrappers", () =
       const original = (
         await fixtureQuery("SELECT result FROM application_registration_proposal.receipts")
       ).rows[0].result;
-      expect(created.content).toEqual([{ type: "text", text: JSON.stringify(original) }]);
+      expect(created.content).toHaveLength(1);
+      const content = created.content as Array<{ type: string; text: string }>;
+      expect(content[0].type).toBe("text");
+      expect(JSON.parse(content[0].text)).toEqual(original);
       await grantRead(original.application_id);
       const selected = await oneStorage(() =>
         client.callTool({ name: "read_application_registration", arguments: select(original) }),
@@ -443,35 +447,52 @@ describe("actual domain and helpers to restricted disposable SQL wrappers", () =
     async failure => {
       const client = new McpClient({ name: "synthetic-sql-negative", version: "1" });
       const abort = new AbortController();
+      let seen = 0;
+      let toolStatus: number | undefined;
       const transport = new StreamableHTTPClientTransport(new URL("https://fixture.invalid/mcp"), {
         requestInit: { headers: { Authorization: `Bearer ${fixture.key}` } },
-        fetch: async (url, init) =>
-          handle(
-            new NextRequest(url instanceof Request ? url : String(url), {
-              ...init,
-              signal: abort.signal,
-            }),
-            dependencies,
-          ),
+        fetch: async (url, init) => {
+          const toolCall =
+            typeof init?.body === "string" && JSON.parse(init.body).method === "tools/call";
+          const original = supabase.from.bind(supabase);
+          const spy = toolCall
+            ? vi.spyOn(supabase, "from").mockImplementation(table => {
+                if (++seen === 2) {
+                  if (failure === "changed-actor") fixture.actor = actorB;
+                  else abort.abort();
+                }
+                return original(table);
+              })
+            : undefined;
+          try {
+            const response = await handle(
+              new NextRequest(url instanceof Request ? url : String(url), {
+                ...init,
+                signal: abort.signal,
+              }),
+              dependencies,
+            );
+            if (toolCall) toolStatus = response.status;
+            return response;
+          } finally {
+            spy?.mockRestore();
+          }
+        },
       });
       try {
         await client.connect(transport);
-        const original = supabase.from.bind(supabase);
-        let seen = 0;
-        vi.spyOn(supabase, "from").mockImplementation(table => {
-          if (++seen === 2) {
-            if (failure === "changed-actor") fixture.actor = actorB;
-            else abort.abort();
-          }
-          return original(table);
-        });
         const before = calls.length;
         const result = await client
           .callTool({ name: "create_application_registration", arguments: input })
           .catch(error => error);
         expect(seen).toBeGreaterThanOrEqual(2);
-        if (failure === "changed-actor") expect(result.isError).toBe(true);
-        else expect(result).toBeInstanceOf(Error);
+        if (failure === "changed-actor") {
+          expect(toolStatus).toBe(200);
+          expect(result.isError).toBe(true);
+        } else {
+          expect(toolStatus).toBe(408);
+          expect(result).toBeInstanceOf(Error);
+        }
         expect(calls).toHaveLength(before);
       } finally {
         await client.close();
