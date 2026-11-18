@@ -48,6 +48,7 @@ describe("pack quote cost accounting", () => {
             brief,
             deliverables,
             execution_config_digest: quote.execution_config_digest,
+            model_readiness_digest: quote.model_readiness.digest,
           }),
         )
         .digest("hex"),

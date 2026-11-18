@@ -1,3 +1,5 @@
+import { getPackModelReadiness } from "./getPackModelReadiness";
+import { getPackPlannedModelTasks } from "./getPackPlannedModelTasks";
 import { packCostAccounting } from "@/lib/const";
 import { getPackExecutionConfiguration } from "./getPackExecutionConfiguration";
 import { getPackConfigurationDigest } from "./getPackConfigurationDigest";
@@ -51,16 +53,32 @@ export function buildReleasePackQuote(
       );
       assets.push({ kind, ordinal, files, maximum_usd: usd, credits: usdToCredits(usd) });
     }
+  const plannedTasks = getPackPlannedModelTasks(brief, assets);
+  for (const task of Object.keys(brief.model_choices ?? {})) {
+    if (!plannedTasks.includes(task as (typeof plannedTasks)[number]))
+      throw new Error(
+        `Model choice ${task} does not apply to this pack plan; no substitution was made.`,
+      );
+  }
+  const model_readiness = getPackModelReadiness(plannedTasks);
   const stills = assets.reduce((sum, a) => sum + a.files, 0);
   const maximum_usd = Number(assets.reduce((sum, a) => sum + a.maximum_usd, 0).toFixed(6));
   return {
+    model_readiness,
     cost_accounting: { ...packCostAccounting },
     pricing_version: execution_config.pricing_version,
     execution_config,
     execution_config_digest,
     brief_fingerprint: getPackBriefFingerprint(brief),
     fingerprint: createHash("sha256")
-      .update(JSON.stringify({ brief, deliverables, execution_config_digest }))
+      .update(
+        JSON.stringify({
+          brief,
+          deliverables,
+          execution_config_digest,
+          model_readiness_digest: model_readiness.digest,
+        }),
+      )
       .digest("hex"),
     creative_piece_count: assets.length,
     generated_file_count: stills,

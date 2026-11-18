@@ -1,5 +1,5 @@
-import { readPackSnapshot } from "../readPackSnapshot";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import * as modelEvidence from "../getPackModelEvidence";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fal from "@/lib/fal/server";
 import { generateText } from "ai";
 import { createPackProductionServices } from "../createPackProductionServices";
@@ -23,6 +23,7 @@ vi.mock("../composePackMedia", () => ({ composePackMedia: vi.fn() }));
 vi.mock("../inspectPackMedia", () => ({ inspectPackMedia: vi.fn() }));
 vi.mock("../withPackMediaRuntime", () => ({ withPackMediaRuntime: vi.fn() }));
 beforeEach(() => vi.resetAllMocks());
+afterEach(() => vi.restoreAllMocks());
 const brief = releasePackBriefSchema.parse({
   artist_name: "Fixture",
   song_title: "Song",
@@ -43,16 +44,6 @@ function fixture(state: Record<string, unknown> = {}, valid = false) {
   return { job, state, services: createPackProductionServices({ accountId: "owner" }, job, asset) };
 }
 describe("configuration guard at production boundaries", () => {
-  it("explains current model blockers instead of requesting spending approval", async () => {
-    const { job } = fixture({}, true);
-    const result = await readPackSnapshot({
-      job: { ...job, status: "awaiting_approval" },
-      assets: [],
-    } as any);
-    expect(result.next_action).toMatch(/model suitability/i);
-    expect(result.job.quote?.execution_config).toEqual(job.quote.execution_config);
-    expect(runPackCommand).not.toHaveBeenCalled();
-  });
   it("blocks each new provider stage on an unbound quote", async () => {
     const { job, services } = fixture();
     await expect(preparePackProduction({ accountId: "owner" }, job)).rejects.toThrow(
@@ -108,25 +99,73 @@ describe("configuration guard at production boundaries", () => {
     await expect(services.generateImages("prompt", 4)).rejects.toThrow(/new estimate/);
     expect(fal.queue.submit).not.toHaveBeenCalled();
   });
-  it("refuses current unverified models before every new effect", async () => {
-    const { job, services } = fixture({}, true);
+  it("allows new work with the exact supported configuration", async () => {
+    const { services } = fixture({}, true);
+    vi.mocked(fal.queue.submit).mockResolvedValue({ request_id: "new" } as never);
+    vi.mocked(fal.queue.status).mockResolvedValue({ status: "COMPLETED" } as never);
+    vi.mocked(fal.queue.result).mockResolvedValue({
+      data: { images: [{ url: "https://example.com/new.png" }] },
+    } as never);
+    await services.generateImages("prompt", 1);
+    expect(fal.queue.submit).toHaveBeenCalledTimes(1);
+  });
+  it("refuses only new restricted analysis before storage or provider effects", async () => {
+    const { job } = fixture({}, true);
+    delete job.quote.model_readiness;
     await expect(preparePackProduction({ accountId: "owner" }, job)).rejects.toThrow(
-      /model suitability/i,
+      /analysis.*commercial use restricted/,
     );
-    await expect(services.generateImages("prompt", 1)).rejects.toThrow(/model suitability/i);
-    await expect(services.generateMotion("prompt", "image")).rejects.toThrow(/model suitability/i);
-    await expect(services.caption("prompt")).rejects.toThrow(/model suitability/i);
-    expect(() => services.compose({} as any)).toThrow(/model suitability/i);
-    expect(() => services.inspect({} as any)).toThrow(/model suitability/i);
-    for (const mock of [
-      fal.queue.submit,
-      fal.queue.status,
-      generateText,
-      callFlamingoGenerate,
-      runPackCommand,
-      composePackMedia,
-      inspectPackMedia,
-    ])
-      expect(mock).not.toHaveBeenCalled();
+    expect(callFlamingoGenerate).not.toHaveBeenCalled();
+    expect(runPackCommand).not.toHaveBeenCalled();
+  });
+  it("keeps legacy accepted receipt recovery, caption and local composition independent of motion evidence", async () => {
+    const evidence = modelEvidence.getPackModelEvidence();
+    evidence.tasks.motion.commercial_basis = "restricted";
+    vi.spyOn(modelEvidence, "getPackModelEvidence").mockReturnValue(evidence);
+    const { job, services } = fixture(
+      {
+        image_submission_0: {
+          state: "accepted",
+          request_id: "accepted",
+          model: "original-route",
+          charge_credits: 100,
+        },
+      },
+      true,
+    );
+    delete job.quote.model_readiness;
+    vi.mocked(fal.queue.status).mockResolvedValue({ status: "COMPLETED" } as never);
+    vi.mocked(fal.queue.result).mockResolvedValue({
+      data: { images: [{ url: "https://example.com/retained.png" }] },
+    } as never);
+    expect(await services.generateImages("prompt", 1)).toEqual([
+      "https://example.com/retained.png",
+    ]);
+    expect(fal.queue.status).toHaveBeenCalledWith("original-route", {
+      requestId: "accepted",
+      logs: false,
+    });
+    expect(fal.queue.submit).not.toHaveBeenCalled();
+    vi.mocked(generateText).mockResolvedValue({ text: "Retained caption" } as never);
+    expect(await services.caption("prompt")).toBe("Retained caption");
+    await services.compose({} as any);
+    expect(composePackMedia).toHaveBeenCalledOnce();
+    await expect(services.generateMotion("prompt", "image")).rejects.toThrow(
+      /motion.*commercial use restricted/,
+    );
+    expect(fal.queue.submit).not.toHaveBeenCalled();
+    expect(callFlamingoGenerate).not.toHaveBeenCalled();
+  });
+  it("checks only the inspection provider required by the actual output", () => {
+    const evidence = modelEvidence.getPackModelEvidence();
+    evidence.tasks.video_inspection.lifecycle = "retired";
+    vi.spyOn(modelEvidence, "getPackModelEvidence").mockReturnValue(evidence);
+    const { services } = fixture({}, true);
+    services.inspect({ files: [{ content_type: "image/png" }] } as any);
+    expect(inspectPackMedia).toHaveBeenCalledOnce();
+    expect(() => services.inspect({ files: [{ content_type: "video/mp4" }] } as any)).toThrow(
+      /video_inspection.*model retired/,
+    );
+    expect(inspectPackMedia).toHaveBeenCalledOnce();
   });
 });

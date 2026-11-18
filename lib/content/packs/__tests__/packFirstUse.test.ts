@@ -5,14 +5,8 @@ import { importPackSources } from "../importPackSources";
 import { start } from "workflow/api";
 import { readAdmittedPackSnapshot } from "../foundation/readAdmittedPackSnapshot";
 const fixture = vi.hoisted(() => ({ saved: null as any, composedAudio: "" }));
-// Synthetic authorization isolates the behavior under test from production admission.
-vi.mock("../getPackModelEvidence", async importOriginal => {
-  const actual = await importOriginal<typeof import("../getPackModelEvidence")>();
-  const { verifiedPackModelEvidenceFixture } = await import("./verifiedPackModelEvidenceFixture");
-  return {
-    getPackModelEvidence: () => verifiedPackModelEvidenceFixture(actual.getPackModelEvidence()),
-  };
-});
+// This fixture isolates existing workflow/analysis behavior; restriction admission is tested separately.
+vi.mock("../assertPackModelRestrictions", () => ({ assertPackModelRestrictions: vi.fn() }));
 vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
 vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
   validateOrganizationAccess: vi.fn(async () => true),

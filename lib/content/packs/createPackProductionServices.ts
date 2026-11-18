@@ -1,5 +1,6 @@
+import { assertPackModelRestrictions } from "./assertPackModelRestrictions";
 import { packExecutionSettings, PACK_CAPTION_MODEL } from "@/lib/const";
-import { assertPackNewWork } from "./assertPackNewWork";
+import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
 import { generateText } from "ai";
 import { buildImageInput } from "@/lib/content/image/buildImageInput";
 import { buildVideoInput } from "@/lib/content/video/buildVideoInput";
@@ -29,12 +30,16 @@ export function createPackProductionServices(
     generateImages: async (prompt, count) => {
       const images: string[] = [];
       for (let index = 0; index < count; index++) {
-        if (!state[`image_submission_${index}`]) assertPackNewWork(job.quote);
+        if (!state[`image_submission_${index}`]) assertPackQuoteConfiguration(job.quote);
         const built = buildImageInput({
           prompt: `${prompt}\nSlide ${index + 1} of ${count}. ${count > 1 ? ["Open with the exact song title and a strong campaign idea.", "Develop the audible mood and artwork concept without inventing lyrics.", "Make the verified campaign occasion clear without inventing history.", "Close with the approved primary action and only the supplied destination URL."][index] : ""}`,
           ...packExecutionSettings.image,
           image_urls: job.brief.reference_image_urls,
         });
+        if (!state[`image_submission_${index}`])
+          assertPackModelRestrictions([
+            job.brief.reference_image_urls.length ? "image_edit" : "image",
+          ]);
         const data = await runPackFalRequest({
           model: built.model,
           input: built.input,
@@ -50,7 +55,8 @@ export function createPackProductionServices(
       return images;
     },
     generateMotion: async (prompt, image) => {
-      if (!state.motion_submission) assertPackNewWork(job.quote);
+      if (!state.motion_submission) assertPackQuoteConfiguration(job.quote);
+      if (!state.motion_submission) assertPackModelRestrictions(["motion"]);
       const input = buildVideoInput({
         prompt,
         image_url: image,
@@ -75,7 +81,8 @@ export function createPackProductionServices(
       return url;
     },
     caption: async prompt => {
-      assertPackNewWork(job.quote);
+      assertPackQuoteConfiguration(job.quote);
+      assertPackModelRestrictions(["caption"]);
       const result = await generateText({
         model: PACK_CAPTION_MODEL,
         ...packExecutionSettings.caption,
@@ -89,11 +96,16 @@ export function createPackProductionServices(
       return text;
     },
     compose: input => {
-      assertPackNewWork(job.quote);
+      assertPackQuoteConfiguration(job.quote);
       return composePackMedia(job.owner_id, input);
     },
     inspect: input => {
-      assertPackNewWork(job.quote);
+      assertPackQuoteConfiguration(job.quote);
+      assertPackModelRestrictions(
+        input.files.map(file =>
+          file.content_type === "video/mp4" ? "video_inspection" : "still_inspection",
+        ),
+      );
       return inspectPackMedia(input);
     },
     finish: result =>

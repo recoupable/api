@@ -10,14 +10,8 @@ import { buildReleasePackQuote } from "../buildReleasePackQuote";
 import { releasePackBriefSchema, releasePackDeliverablesSchema } from "../releasePackSchema";
 import type { PackJob } from "../packTypes";
 
-// Synthetic authorization isolates the behavior under test from production admission.
-vi.mock("../getPackModelEvidence", async importOriginal => {
-  const actual = await importOriginal<typeof import("../getPackModelEvidence")>();
-  const { verifiedPackModelEvidenceFixture } = await import("./verifiedPackModelEvidenceFixture");
-  return {
-    getPackModelEvidence: () => verifiedPackModelEvidenceFixture(actual.getPackModelEvidence()),
-  };
-});
+// This fixture isolates existing workflow/analysis behavior; restriction admission is tested separately.
+vi.mock("../assertPackModelRestrictions", () => ({ assertPackModelRestrictions: vi.fn() }));
 vi.mock("@/lib/flamingo/callFlamingoGenerate", () => ({ callFlamingoGenerate: vi.fn() }));
 vi.mock("@/lib/supabase/storage/createSignedFileUrlByKey", () => ({
   createSignedFileUrlByKey: vi.fn(),

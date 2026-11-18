@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildReleasePackQuote } from "../buildReleasePackQuote";
 import { releasePackBriefSchema, releasePackDeliverablesSchema } from "../releasePackSchema";
-import { assertPackNewWork } from "../assertPackNewWork";
 import { assertPackQuoteConfiguration } from "../assertPackQuoteConfiguration";
+import { getPackConfigurationDigest } from "../getPackConfigurationDigest";
 import * as evidence from "../getPackModelEvidence";
 const brief = releasePackBriefSchema.parse({
   artist_name: "Fixture",
@@ -11,72 +11,87 @@ const brief = releasePackBriefSchema.parse({
   audio_url: "https://example.com/song.wav",
   allow_creative_defaults: true,
 });
-const deliverables = releasePackDeliverablesSchema.parse({});
-afterEach(() => vi.restoreAllMocks());
-describe("server-owned model suitability", () => {
-  it("quotes current uncertainty but refuses new work", () => {
-    const quote = buildReleasePackQuote(brief, deliverables);
-    expect(quote.execution_config.model_evidence.version).toBe("2026-11-18.1");
-    expect(() => assertPackQuoteConfiguration(quote)).not.toThrow();
-    expect(() => assertPackNewWork(quote)).toThrow(/commercial|availability/);
+const only = (kind: string) =>
+  releasePackDeliverablesSchema.parse({
+    videos: 0,
+    artwork: 0,
+    quote_cards: 0,
+    carousels: 0,
+    visualizers: 0,
+    [kind]: 1,
   });
-  it("preserves an explicit supported choice and rejects substitution", () => {
+afterEach(() => vi.restoreAllMocks());
+describe("model suitability assessment without production activation", () => {
+  it.each([
+    ["artwork", ["analysis", "image", "caption", "still_inspection"]],
+    ["videos", ["analysis", "image", "caption", "motion", "video_inspection"]],
+    ["visualizers", ["analysis", "image", "caption", "video_inspection"]],
+  ])("reports only planned provider tasks for %s", (kind, tasks) => {
+    const quote = buildReleasePackQuote(brief, only(kind as string));
+    expect(Object.keys(quote.model_readiness.tasks)).toEqual(tasks);
+    expect(quote.model_readiness.assessment_only).toBe(true);
+    expect(quote.model_readiness.ready).toBe(false);
+    expect(quote.model_readiness.tasks.analysis?.issues).toContain("commercial basis restricted");
+    expect(() => assertPackQuoteConfiguration(quote)).not.toThrow();
+  });
+  it("uses the editing route for selected production references", () => {
+    const quote = buildReleasePackQuote(
+      { ...brief, reference_image_urls: ["https://example.com/art.png"] },
+      only("artwork"),
+    );
+    expect(quote.model_readiness.tasks.image_edit).toBeDefined();
+    expect(quote.model_readiness.tasks.image).toBeUndefined();
+    expect(() =>
+      buildReleasePackQuote(
+        {
+          ...brief,
+          reference_image_urls: ["https://example.com/art.png"],
+          model_choices: { image: "meta/muse-image/text-to-image" },
+        },
+        only("artwork"),
+      ),
+    ).toThrow(/does not apply/);
+    expect(() =>
+      buildReleasePackQuote(
+        { ...brief, model_choices: { motion: "minimax/h3-max/image-to-video" } },
+        only("artwork"),
+      ),
+    ).toThrow(/does not apply/);
+  });
+  it("keeps old execution identity and changes only new assessment fingerprints", () => {
+    const quote = buildReleasePackQuote(brief, only("artwork"));
+    expect(quote.execution_config_digest).toBe(
+      "012c31125aaae1e336fc23bfa69c7b22b9d6b0b4de9d9f93e7c00678caeb7a24",
+    );
+    const changed = evidence.getPackModelEvidence();
+    changed.version = "updated";
+    vi.spyOn(evidence, "getPackModelEvidence").mockReturnValue(changed);
+    expect(() => assertPackQuoteConfiguration(quote)).not.toThrow();
+    const replacement = buildReleasePackQuote(brief, only("artwork"));
+    expect(replacement.execution_config_digest).toBe(quote.execution_config_digest);
+    expect(replacement.model_readiness.digest).not.toBe(quote.model_readiness.digest);
+    expect(replacement.fingerprint).not.toBe(quote.fingerprint);
+    const { digest, ...report } = replacement.model_readiness;
+    expect(digest).toBe(getPackConfigurationDigest(report));
+  });
+  it("retains exact explicit choices and rejects substitution", () => {
     const selected = releasePackBriefSchema.parse({
       ...brief,
       model_choices: { caption: "openai/gpt-4o-mini" },
     });
-    const quote = buildReleasePackQuote(selected, deliverables);
+    const quote = buildReleasePackQuote(selected, only("artwork"));
     expect(quote.execution_config.models.caption).toBe(selected.model_choices?.caption);
     expect(quote.brief_fingerprint).not.toBe(
-      buildReleasePackQuote(brief, deliverables).brief_fingerprint,
+      buildReleasePackQuote(brief, only("artwork")).brief_fingerprint,
     );
     expect(() =>
       buildReleasePackQuote(
-        { ...brief, model_choices: { caption: "not-supported" } },
-        deliverables,
+        { ...brief, model_choices: { caption: "unsupported" } },
+        only("artwork"),
       ),
-    ).toThrow(/caption.*not-supported.*no substitution/i);
+    ).toThrow(/no substitution/i);
     expect(() =>
       releasePackBriefSchema.parse({ ...brief, model_choices: { invented: "model" } }),
     ).toThrow();
-  });
-  it("binds evidence updates into the approved configuration", () => {
-    const quote = buildReleasePackQuote(brief, deliverables);
-    const changed = evidence.getPackModelEvidence();
-    changed.version = "updated";
-    vi.spyOn(evidence, "getPackModelEvidence").mockReturnValue(changed);
-    expect(() => assertPackQuoteConfiguration(quote)).toThrow(/new estimate/);
-  });
-  it("admits only fully evidenced current routes, refusing unknown, retired, expired and mismatched bindings", () => {
-    const fixture = evidence.getPackModelEvidence();
-    for (const entry of Object.values(fixture.tasks)) {
-      entry.capability = "verified";
-      entry.commercial_basis = "verified";
-      entry.account_availability = "verified";
-      entry.lifecycle = "supported";
-      entry.valid_until = "2099-01-01T00:00:00.000Z";
-      entry.evidence = ["https://example.invalid/synthetic-test-evidence"];
-    }
-    vi.spyOn(evidence, "getPackModelEvidence").mockImplementation(() => structuredClone(fixture));
-    expect(() => assertPackNewWork(buildReleasePackQuote(brief, deliverables))).not.toThrow();
-    const original = structuredClone(fixture.tasks.analysis);
-    for (const patch of [
-      { commercial_basis: "unknown" },
-      { account_availability: "unknown" },
-      { capability: "unknown" },
-      { lifecycle: "retired" },
-      { valid_until: "2000-01-01T00:00:00.000Z" },
-      { model: "other-route" },
-      { endpoint: "https://example.invalid/other" },
-      { evidence: [] },
-    ]) {
-      Object.assign(fixture.tasks.analysis, original, patch);
-      expect(() => assertPackNewWork(buildReleasePackQuote(brief, deliverables))).toThrow();
-    }
-    Object.assign(fixture.tasks.analysis, original);
-    delete (fixture.tasks as Partial<typeof fixture.tasks>).analysis;
-    expect(() => assertPackNewWork(buildReleasePackQuote(brief, deliverables))).toThrow(
-      /missing task evidence/,
-    );
   });
 });

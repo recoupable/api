@@ -8,14 +8,6 @@ import { buildReleasePackQuote } from "../buildReleasePackQuote";
 import { releasePackBriefSchema, releasePackDeliverablesSchema } from "../releasePackSchema";
 import type { PackAsset, PackJob } from "../packTypes";
 
-// Synthetic authorization isolates the behavior under test from production admission.
-vi.mock("../getPackModelEvidence", async importOriginal => {
-  const actual = await importOriginal<typeof import("../getPackModelEvidence")>();
-  const { verifiedPackModelEvidenceFixture } = await import("./verifiedPackModelEvidenceFixture");
-  return {
-    getPackModelEvidence: () => verifiedPackModelEvidenceFixture(actual.getPackModelEvidence()),
-  };
-});
 vi.mock("@/lib/const", async importOriginal => ({
   ...(await importOriginal<typeof import("@/lib/const")>()),
   LIGHTWEIGHT_MODEL: "unrelated/global-model-change",
@@ -37,9 +29,8 @@ it("keeps Pack quote routes independent of unrelated global lightweight changes"
     caption: "openai/gpt-4o-mini",
     still_inspection: "openai/gpt-4o-mini",
   });
-  // Route/settings/price identity is unchanged; evidence now requires a fresh quote.
-  const { model_evidence: _evidence, ...originalConfiguration } = getPackExecutionConfiguration();
-  expect(getPackConfigurationDigest(originalConfiguration)).toBe(
+  // Existing approved configuration identity: isolation must not invalidate it.
+  expect(getPackConfigurationDigest(getPackExecutionConfiguration())).toBe(
     "012c31125aaae1e336fc23bfa69c7b22b9d6b0b4de9d9f93e7c00678caeb7a24",
   );
 });

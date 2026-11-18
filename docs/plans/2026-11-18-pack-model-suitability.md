@@ -1,78 +1,117 @@
-# CD-03: model evidence at the existing pack approval boundary
+# CD-03: task-specific evidence, choices and recorded restrictions
 
 Source-only contribution toward recoupable/app#2266, based on API main
 `30c4d442c75137fa803802091dbb3991f4646e8b`. No model, route, settings, price,
-provider account, deployment, or activation changes. This is not completion of
-CD-03 or permission to run production.
+provider account, migration, deployment or activation changes. This does not
+complete CD-03 or certify production availability or commercial permission.
 
-## Behavior
+## Scope and behavior
 
 `prepare.brief.model_choices` is an optional strict object with `image`,
 `image_edit`, `motion`, `caption`, `still_inspection`, `video_inspection`, and
-`analysis` string values. The same schema serves REST and MCP. Omission keeps the
-configured routes. At estimate time, any explicit choice differing from its
-configured route is rejected by name, with no substitution. An exact choice is
-retained in the brief and its fingerprint; it does not establish suitability.
-No additional route or arbitrary provider choice is enabled.
+`analysis` string values. REST and MCP use the same schema. Omission retains the
+configured routes. Estimate rejects an explicit choice that differs from the
+configured route or does not apply to the plan, before source import or estimate
+persistence. Exact applicable choices remain in the brief fingerprint. No silent
+substitution or alternative provider routing is introduced.
 
-Quotes snapshot `execution_config.model_evidence` with its review version,
-review date, exact task/model bindings, analysis endpoint, evidence references,
-capability, lifecycle, commercial basis, account availability and review expiry.
-The existing configuration digest and quote fingerprint bind this evidence.
-Changing evidence requires a new estimate and approval. Existing route/settings/
-price identity is unchanged, but older quotes lacking evidence cannot authorize
-new work. Explanatory cost-accounting compatibility is unchanged.
+Planning resolves production references from the selected creative context:
 
-`assertPackNewWork` first enforces the existing exact configuration check, then
-requires verified capability, commercial basis and account availability,
-supported lifecycle, matching route/endpoint, nonempty sources and unexpired
-evidence. It runs before new approval/reservation and each unstarted production
-stage. This initial policy conservatively checks the whole configured pack
-pipeline, including routes a particular asset may not use. It does not yet
-select different models per deliverable or perform quality evaluations.
+| Planned work | Provider tasks assessed |
+| --- | --- |
+| Artwork, quote card, carousel | Image or image edit, caption, still inspection |
+| Video | Image or image edit, caption, motion, video inspection |
+| Visualizer | Image or image edit, caption, video inspection |
+| Missing valid completed audio context | Add analysis |
+| Local composition | No provider task |
 
-The current evidence intentionally blocks all new pack execution. Quotes remain
-available for inspection; awaiting-approval readback explains the blockers rather
-than asking the customer to approve an unusable quote. Public listings are not
-account access or commercial grants. Reviewing a model, listing it, or supplying
-an explicit preference cannot override these checks.
+A targeted retry assesses only the selected asset. Completed valid audio context
+is reused. Accepted-receipt recovery and retained caption reuse are not new
+provider effects. Production checks use the actual image/reference route or actual
+inspection file type, not the entire configured pipeline.
 
-Accepted-request resume remains outside the new-work gate. Saved original route,
-request ID and charge recovery are unchanged. After receipt recovery, the next
-unstarted stage must pass the new gate. Missing/unsupported legacy receipts
-retain the existing refusal behavior. No automatic retry or paid substitution
-is introduced.
+## Assessment versus enforcement
+
+Unknown capability, commercial basis, account access and lifecycle remain unknown.
+The new report is explicitly an assessment, not authorization. It does not create
+a blanket unknown-evidence gate or a runtime bypass flag. **Enabling a full
+verified-evidence admission policy remains a product/access decision**, requiring
+real task/provider/account evidence, a migration and recovery contract, and
+independent review. Deprecation alone is not retirement and does not block a call.
+
+Separately, a recorded commercial restriction or retirement on the exact current
+model/endpoint refuses a genuinely new effect. A review expiry cannot erase a
+recorded restriction. Changing an unrelated route's evidence cannot block the
+current task. A mismatched binding is reported unknown rather than transferred to
+a different model. No client assessment can authorize an effect or override the
+server's restriction record.
+
+The current source records Music Flamingo's published noncommercial restriction.
+New analysis on that exact model/endpoint is therefore refused before source
+signing/fetching, context writes or inference. New generation/failed-retry
+approval that needs analysis is refused before credit checks/reservation/dispatch.
+**Fresh packs currently require that analysis and remain blocked by this specific
+restriction.** No replacement or commercial grant was invented to remove it.
+Packs with retained completed analysis can continue their applicable existing
+provider path; their unknown evidence is not newly treated as verified.
+
+An already-funded running generate replay reaches the existing durable approve
+idempotency branch without a new restriction admission check or credit check.
+This exception is only the replay boundary: every genuinely new worker provider
+effect still receives its own relevant restriction check. Failed-asset paid
+retries are not exempt. Accepted receipts keep original route, request ID, input
+fingerprint and charge; local composition and settlement do not require model
+grants. Existing execution configuration checks remain in place.
+
+## Quote compatibility and provenance
+
+The existing route/settings/price `execution_config` and its digest are unchanged.
+For the original configuration the digest remains
+`012c31125aaae1e336fc23bfa69c7b22b9d6b0b4de9d9f93e7c00678caeb7a24`.
+Legacy approved quotes lacking a model assessment remain supported under that
+same integrity contract. Saved original quote fingerprints are not rewritten.
+Genuine route/settings/price changes still follow the original requote rule.
+
+New quotes add optional `model_readiness`: review version/date, applicable task
+and model/endpoint bindings, source references, statuses, issues, and a canonical
+assessment digest. Their new quote fingerprint also includes that assessment
+digest. Thus new estimates record changed evidence without invalidating existing
+funded quotes merely because evidence/version/expiry changed. The persisted
+assessment is historical evidence, not an execution capability token. Current
+restriction checks read only server-owned evidence.
+
+Awaiting-approval readback exposes a separate current assessment and explains any
+applicable recorded restriction. It preserves the stored quote assessment. Legacy
+readback without a complete quote plan remains readable.
 
 ## Public evidence reviewed 2026-11-18
 
-- [NVIDIA Music Flamingo model card](https://huggingface.co/nvidia/music-flamingo-2601-hf)
+- [NVIDIA model card](https://huggingface.co/nvidia/music-flamingo-2601-hf)
   describes music audio understanding and identifies a noncommercial research
-  restriction and NVIDIA OneWay Noncommercial License. This supplies task-modality
-  evidence, not a separate commercial grant. Account availability remains unknown.
-- [OpenAI GPT-4o mini model page](https://developers.openai.com/api/docs/models/gpt-4o-mini)
-  lists text/image input and text/structured output and marks the model deprecated.
-  Caption and still-inspection modality support does not prove current Gateway
-  account availability, application QA quality, or commercial authorization.
-- [OpenAI deprecations](https://developers.openai.com/api/docs/deprecations)
-  was inspected; this contribution does not carry forward a retirement date from
-  an older audit. Deprecated and retired are distinct; this new-work policy requires
-  a supported lifecycle and therefore refuses either.
-- Remaining configured image, editing, motion and video-analysis routes are
-  explicitly unverified in this review. Their route bindings come from existing
-  source, not a new claim about provider availability or licensing.
+  restriction and NVIDIA OneWay Noncommercial License. No separate commercial
+  grant or account availability was established.
+- [OpenAI GPT-4o mini page](https://developers.openai.com/api/docs/models/gpt-4o-mini)
+  lists text/image inputs and text/structured outputs and marks the model deprecated.
+  Modality support does not prove application QA quality, Gateway availability or
+  commercial authorization. [Deprecations](https://developers.openai.com/api/docs/deprecations)
+  was also inspected; no retirement date is inferred from the older audit.
+- Other routes are explicitly unverified in this review. Their exact source
+  bindings are not claims of provider availability or licensing.
 
-The initial review horizon is 2026-12-18, a conservative internal expiry rather
-than a provider retirement date. No account/configuration access was performed.
-Future enabling evidence requires a reviewed server source change with appropriate
-nonsecret references; there is no client-supplied evidence or activation switch.
+The 2026-12-18 review expiry is an internal review horizon, not a provider
+retirement date. No account/config access was performed.
 
-## Verification and delivery
+## Verification and remaining limits
 
-Tests cover mismatched explicit choices, schema refusal, evidence version changes,
-unknown/restricted/retired/expired evidence, route/endpoint mismatch, new-effect
-refusal, refusal before credit checks/reservation/dispatch, and legacy accepted
-receipt recovery. Positive production-path fixtures explicitly use synthetic
-verified evidence; they do not certify the real models or accounts.
+Focused tests cover task variants, exact-choice and nonapplicable-choice refusal,
+assessment provenance without execution-digest churn, new restricted analysis
+before reservation, already-funded replay, and actual workflow preparation,
+accepted polling, composition, inspection and settlement after unrelated evidence
+changes. That recovery fixture uses real workflow/domain orchestration with
+synthetic database/provider/media ports: it is not World execution, a real debit,
+a provider call or production qualification.
 
-Independent review and merge/release remain with the coordinator. Held foundation
-and database changes are not dependencies and are not modified by this branch.
+Existing isolated first-use/analysis fixtures mock only restriction admission to
+continue testing their original behavior. No fixture manufactures production
+commercial/account evidence. Independent review and release remain with the
+coordinator. Held foundation/database and SDK checkouts are not dependencies.

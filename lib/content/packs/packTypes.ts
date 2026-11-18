@@ -1,6 +1,10 @@
 import type { ReleasePackBrief, ReleasePackDeliverables } from "./releasePackSchema";
 import type { buildReleasePackQuote, PackAssetKind } from "./buildReleasePackQuote";
-export type PackQuote = Omit<ReturnType<typeof buildReleasePackQuote>, "cost_accounting"> & {
+export type PackQuote = Omit<
+  ReturnType<typeof buildReleasePackQuote>,
+  "cost_accounting" | "model_readiness"
+> & {
+  model_readiness?: ReturnType<typeof buildReleasePackQuote>["model_readiness"];
   /** Older saved quotes predate these explanatory labels. */
   cost_accounting?: ReturnType<typeof buildReleasePackQuote>["cost_accounting"];
   id: string;
