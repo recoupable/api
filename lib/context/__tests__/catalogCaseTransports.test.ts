@@ -168,3 +168,16 @@ describe("catalog cases HTTP and standard MCP", () => {
     }
   });
 });
+
+it("presents only the known stored-size refusal as safe HTTP400 and MCP JSON text", async () => {
+  const { CatalogSnapshotTooLargeError } = await import("../CatalogSnapshotTooLargeError");
+  const error = new CatalogSnapshotTooLargeError();
+  vi.mocked(callContextRpc).mockRejectedValue(error);
+  const response = await http({ ...operations[0], organization_id: owner });
+  expect(response.status).toBe(400);
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  expect(await response.json()).toEqual({ error: error.message });
+  const result = await mcp()({ ...operations[0], organization_id: owner }, {});
+  expect(result.isError).toBe(true);
+  expect(JSON.parse(result.content[0].text)).toEqual({ success: false, message: error.message });
+});

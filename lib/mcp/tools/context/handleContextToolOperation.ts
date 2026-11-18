@@ -1,3 +1,4 @@
+import { CatalogSnapshotTooLargeError } from "@/lib/context/CatalogSnapshotTooLargeError";
 import type { RequestHandlerExtra } from "@modelcontextprotocol/sdk/shared/protocol.js";
 import type { ServerRequest, ServerNotification } from "@modelcontextprotocol/sdk/types.js";
 import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
@@ -48,6 +49,8 @@ export async function handleContextToolOperation(
       }),
     );
   } catch (error) {
+    if (error instanceof CatalogSnapshotTooLargeError)
+      return { ...getToolResultError(error.message), isError: true };
     console.error("[context] MCP operation failed", { reason: getContextFailureReason(error) });
     return {
       ...getToolResultError(

@@ -1,3 +1,4 @@
+import { CatalogSnapshotTooLargeError } from "@/lib/context/CatalogSnapshotTooLargeError";
 import supabase from "../serverClient";
 import type { Json } from "@/types/database.types";
 
@@ -72,8 +73,14 @@ export async function callContextRpc(
   const rpc = supabase.rpc.bind(supabase) as unknown as (
     name: string,
     params: Record<string, unknown>,
-  ) => PromiseLike<{ data: Json | null; error: { message: string } | null }>;
+  ) => PromiseLike<{ data: Json | null; error: { message: string; code?: string } | null }>;
   const { data, error } = await rpc(name, params);
+  if (
+    name === "save_context_catalog_case" &&
+    error?.code === "22001" &&
+    error.message === "CATALOG_SNAPSHOT_TOO_LARGE"
+  )
+    throw new CatalogSnapshotTooLargeError();
   if (error) throw new Error(`Context storage operation failed: ${error.message}`);
   return data;
 }
