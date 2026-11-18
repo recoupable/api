@@ -17,25 +17,28 @@ export function createPackRecoverySnapshot(): PackSnapshot {
     visualizers: 0,
   });
   const { model_readiness: _assessment, ...quote } = buildReleasePackQuote(brief, deliverables);
-  const asset: PackAsset = {
+  const plan = quote.assets[0];
+  // Accepted submission was already charged; this is the post-resume snapshot.
+  const asset: PackAsset & { billed_credits: number } = {
     id: "asset",
     job_id: "job",
     attempt: 1,
-    credits: 73,
-    maximum_usd: 0.0073,
+    credits: plan.credits,
+    billed_credits: plan.credits,
+    maximum_usd: plan.maximum_usd,
     files: [],
     caption: null,
     qa: null,
     error: null,
     kind: "artwork",
     ordinal: 0,
-    status: "uncertain",
+    status: "running",
     provider_state: {
       image_submission_0: {
         state: "accepted",
         request_id: "retained",
         model: "original-image-route",
-        charge_credits: 73,
+        charge_credits: plan.credits,
         input_sha256: "original-input",
       },
       caption: "Retained caption",
@@ -50,8 +53,8 @@ export function createPackRecoverySnapshot(): PackSnapshot {
       error: null,
       revision: 1,
       status: "running",
-      held_credits: 73,
-      consumed_credits: 0,
+      held_credits: quote.credits - plan.credits,
+      consumed_credits: plan.credits,
       brief,
       deliverables,
       quote: {

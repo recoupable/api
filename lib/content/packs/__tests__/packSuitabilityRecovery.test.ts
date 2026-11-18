@@ -1,3 +1,4 @@
+import { buildReleasePackQuote } from "../buildReleasePackQuote";
 import { createPackRecoverySnapshot } from "./createPackRecoverySnapshot";
 import { createPackRecoveryCommandMock } from "./createPackRecoveryCommandMock";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
@@ -26,6 +27,9 @@ afterEach(() => vi.restoreAllMocks());
 it("runs actual workflow preparation, accepted polling, local composition and settlement after unrelated evidence changes", async () => {
   const saved = createPackRecoverySnapshot();
   const asset = saved.assets[0];
+  const originalConsumed = saved.job.consumed_credits;
+  const originalHeld = saved.job.held_credits;
+  const originalReceipt = structuredClone(asset.provider_state.image_submission_0);
   const changed = evidence.getPackModelEvidence();
   changed.version = "changed-after-approval";
   changed.tasks.motion.commercial_basis = "restricted";
@@ -60,7 +64,12 @@ it("runs actual workflow preparation, accepted polling, local composition and se
   expect(inspectPackMedia).toHaveBeenCalledOnce();
   expect(asset.caption).toBe("Retained caption");
   expect(saved.job.quote?.fingerprint).toBe("original-approved-fingerprint");
-  expect(saved.job.consumed_credits).toBe(73);
+  expect(saved.job.consumed_credits).toBe(originalConsumed);
+  expect(saved.job.held_credits).toBe(originalHeld);
+  expect(asset.provider_state.image_submission_0).toMatchObject({
+    ...(originalReceipt as Record<string, unknown>),
+    state: "complete",
+  });
   const commands = vi.mocked(runPackCommand).mock.calls.map(call => call[1]);
   expect(commands.slice(0, 3)).toEqual(["run", "read", "read"]);
   expect(commands.slice(-2)).toEqual(["finish_asset", "settle"]);
@@ -94,7 +103,14 @@ it.each([
 );
 it("mutates and returns the requested asset rather than a hard-coded recovery asset", async () => {
   const saved = createPackRecoverySnapshot();
-  saved.assets.push({ ...structuredClone(saved.assets[0]), id: "other-asset" });
+  saved.job.deliverables = { ...saved.job.deliverables, artwork: 2 };
+  if (!saved.job.quote) throw new Error("Fixture requires a quote");
+  saved.job.quote = {
+    ...saved.job.quote,
+    ...buildReleasePackQuote(saved.job.brief, saved.job.deliverables),
+  };
+  saved.job.consumed_credits = saved.job.quote.credits;
+  saved.assets.push({ ...structuredClone(saved.assets[0]), id: "other-asset", ordinal: 1 });
   const command = createPackRecoveryCommandMock(saved, { accountId: "owner" });
   const returned = await command({ accountId: "owner" }, "phase", "job", {
     asset_id: "other-asset",
@@ -106,4 +122,26 @@ it("mutates and returns the requested asset rather than a hard-coded recovery as
   expect(returned).toEqual(saved);
   expect(returned).not.toBe(saved);
   await expect(command({ accountId: "owner" }, "settle", "job")).rejects.toThrow(/original asset/);
+});
+
+it("starts recovery with an accepted charge inside the original quote and asset ceiling", () => {
+  const snapshot = createPackRecoverySnapshot();
+  const quote = snapshot.job.quote;
+  if (!quote) throw new Error("Fixture requires an approved quote");
+  const asset = snapshot.assets[0];
+  const plan = quote.assets[0];
+  expect(asset).toMatchObject({
+    credits: plan.credits,
+    maximum_usd: plan.maximum_usd,
+    billed_credits: plan.credits,
+    status: "running",
+  });
+  expect(asset.provider_state.image_submission_0).toMatchObject({
+    state: "accepted",
+    charge_credits: plan.credits,
+  });
+  expect(snapshot.job.consumed_credits).toBe(plan.credits);
+  expect(snapshot.job.held_credits).toBe(quote.credits - snapshot.job.consumed_credits);
+  expect(snapshot.job.held_credits).toBe(0);
+  expect(snapshot.job.consumed_credits).toBeLessThanOrEqual(quote.credits);
 });

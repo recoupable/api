@@ -29,11 +29,11 @@ export function createPackRecoveryCommandMock(
         typeof receipt !== "object" ||
         !receipt ||
         !("charge_credits" in receipt) ||
-        receipt.charge_credits !== 73
+        receipt.charge_credits !== target.credits
       )
         throw new Error("Recovery did not complete the original asset and receipt");
-      saved.job.held_credits = 0;
-      saved.job.consumed_credits = 73;
+      // Acknowledge orchestration only. Accepted work was charged before recovery;
+      // this mock must not invent wallet/refund/debit behavior or bill it again.
     } else if (command !== "run" && command !== "read")
       throw new Error(`Unexpected command ${command}`);
     return structuredClone(saved);

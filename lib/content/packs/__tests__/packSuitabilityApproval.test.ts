@@ -1,3 +1,5 @@
+import type { PackQuote } from "../packTypes";
+import type { ReleasePackBrief } from "../releasePackSchema";
 import { createHash } from "node:crypto";
 import { getPackBriefFingerprint } from "@/lib/content/packs/getPackBriefFingerprint";
 import * as modelEvidence from "../getPackModelEvidence";
@@ -20,6 +22,14 @@ vi.mock("../importPackSources", () => ({ importPackSources: vi.fn() }));
 vi.mock("../assertPackExecutionReady", () => ({ assertPackExecutionReady: vi.fn() }));
 vi.mock("../readPackSnapshot", () => ({ readPackSnapshot: (snapshot: unknown) => snapshot }));
 vi.mock("workflow/api", () => ({ start: vi.fn() }));
+function capturedEstimateQuote() {
+  const payload = vi.mocked(runPackCommand).mock.calls.find(call => call[1] === "estimate")?.[3];
+  if (!payload?.quote || typeof payload.quote !== "object")
+    throw new Error("Missing estimate quote");
+  const quote = payload.quote as PackQuote;
+  if (!quote.model_readiness) throw new Error("Missing estimate model assessment");
+  return { ...quote, model_readiness: quote.model_readiness };
+}
 const id = "00000000-0000-4000-8000-000000000001";
 const brief = releasePackBriefSchema.parse({
   artist_name: "Fixture",
@@ -173,10 +183,8 @@ describe("model suitability before reservation", () => {
     };
     vi.mocked(runPackCommand).mockResolvedValue(saved as never);
     await processPackOperation("owner", "estimate", { job_id: id, asset_id: id });
-    const payload = vi
-      .mocked(runPackCommand)
-      .mock.calls.find(call => call[1] === "estimate")?.[3] as any;
-    expect(Object.keys(payload.quote.model_readiness.tasks)).toEqual([
+    const quote = capturedEstimateQuote();
+    expect(Object.keys(quote.model_readiness.tasks)).toEqual([
       "image",
       "caption",
       "still_inspection",
@@ -241,12 +249,13 @@ const complete = {
   duration_seconds: 30,
 };
 function saved(kind: string) {
+  const choices: NonNullable<ReleasePackBrief["model_choices"]> = { motion };
   return {
     job: {
       id,
       owner_id: "owner",
       revision: 1,
-      brief: structuredClone(fullBrief),
+      brief: { ...structuredClone(fullBrief), model_choices: choices },
       deliverables: mixed,
       production_context: complete,
       quote: {
@@ -263,10 +272,7 @@ it.each(["artwork", "video"])(
     const before = structuredClone(snapshot.job.brief);
     vi.mocked(runPackCommand).mockResolvedValue(snapshot as never);
     await processPackOperation("owner", "estimate", { job_id: id, asset_id: id });
-    const payload = vi
-      .mocked(runPackCommand)
-      .mock.calls.find(call => call[1] === "estimate")?.[3] as any;
-    const quote = payload.quote;
+    const quote = capturedEstimateQuote();
     expect(snapshot.job.brief).toEqual(before);
     expect(snapshot.job.brief.model_choices.motion).toBe(motion);
     expect(quote.brief_fingerprint).toBe(getPackBriefFingerprint(before));
@@ -274,17 +280,17 @@ it.each(["artwork", "video"])(
     expect(quote.assets[0].kind).toBe(kind);
     expect(quote.retry_asset_id).toBe(id);
     expect(quote.execution_config.models.motion).toBe(motion);
-    expect(quote.line_items.find((item: any) => item.category === "motion").units).toBe(
+    expect(quote.line_items.find(item => item.category === "motion")?.units).toBe(
       kind === "video" ? 8 : 0,
     );
-    if (kind === "video") expect(quote.model_readiness.tasks.motion.model).toBe(motion);
+    if (kind === "video") expect(quote.model_readiness.tasks.motion?.model).toBe(motion);
     else {
       expect(Object.keys(quote.model_readiness.tasks)).toEqual([
         "image",
         "caption",
         "still_inspection",
       ]);
-      expect(quote.line_items.find((item: any) => item.category === "motion").usd).toBe(0);
+      expect(quote.line_items.find(item => item.category === "motion")?.usd).toBe(0);
     }
     expect(quote.fingerprint).toBe(
       createHash("sha256")
@@ -344,12 +350,10 @@ it("retains original analysis choice while reusing completed analysis", async ()
   const originalBrief = structuredClone(snapshot.job.brief);
   vi.mocked(runPackCommand).mockResolvedValue(snapshot as never);
   await processPackOperation("owner", "estimate", { job_id: id, asset_id: id });
-  const payload = vi
-    .mocked(runPackCommand)
-    .mock.calls.find(call => call[1] === "estimate")?.[3] as any;
+  const quote = capturedEstimateQuote();
   expect(snapshot.job.brief).toEqual(originalBrief);
-  expect(payload.quote.brief_fingerprint).toBe(getPackBriefFingerprint(originalBrief));
-  expect(payload.quote.model_readiness.tasks.analysis).toBeUndefined();
+  expect(quote.brief_fingerprint).toBe(getPackBriefFingerprint(originalBrief));
+  expect(quote.model_readiness.tasks.analysis).toBeUndefined();
   expect(vi.mocked(runPackCommand).mock.calls.map(call => call[1])).toEqual(["read", "estimate"]);
   expect(importPackSources).not.toHaveBeenCalled();
   expect(start).not.toHaveBeenCalled();
