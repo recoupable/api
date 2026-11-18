@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import { getSpotifyCurrentAccountProfile } from "@/lib/spotify/getSpotifyCurrentAccountProfile";
 import { consumeFanSession } from "@/lib/supabase/site_fan_connections/consumeFanSession";
 import { completeFanConnection } from "@/lib/supabase/site_fan_connections/completeFanConnection";
 import { selectSite } from "@/lib/supabase/sites/selectSite";
@@ -56,19 +57,10 @@ export async function finishFanConnection(request: NextRequest) {
       const scopes = [...new Set(token.scope.split(/\s+/).filter(Boolean))];
       if (!session.scopes.every(scope => scopes.includes(scope)))
         throw new Error("Missing requested permissions");
-      const profileResponse = await fetch("https://api.spotify.com/v1/me", {
-        headers: { Authorization: `Bearer ${token.access_token}` },
-        signal: AbortSignal.timeout(15000),
-        cache: "no-store",
-      });
-      if (!profileResponse.ok) throw new Error("Spotify profile unavailable");
-      const profile = z
-        .object({
-          id: z.string().min(1).max(255),
-          display_name: z.string().max(255).nullish(),
-          email: z.string().email().max(254).nullish(),
-        })
-        .parse(await profileResponse.json());
+      const profile = await getSpotifyCurrentAccountProfile(
+        token.access_token,
+        AbortSignal.timeout(15000),
+      );
       await completeFanConnection({
         stateHash,
         spotifyId: profile.id,
