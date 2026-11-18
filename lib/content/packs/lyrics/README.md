@@ -103,10 +103,16 @@ paid default sandbox. Active `producePackAsset` callers do not populate lyrics;
 no route, brief, asset kind, workflow, quote policy or stage-reuse behavior is
 changed. Non-lyric composition retains its existing adapters.
 
-The capability supplies bounded local fetch/store and an owned runtime with
-cancellation, file-size checks and cleanup. Its font bytes must match the reviewed
+The trusted capability supplies local fetch/store leaves and an owned runtime.
+Composition enforces source/output byte checks and bounded runtime settlement.
+Fetch leaves receive cancellation and a 50MiB read limit they must enforce while
+reading; they run in a separate 180s scope before runtime allocation, with at most
+5s cancellation settlement. An uncooperative fetch fails explicitly without
+allocating a runtime. Storage runs only after successful runtime cleanup; its
+implementation and completion remain trusted injected-leaf responsibilities. Its font bytes must match the reviewed
 same-font TTF SHA-256 in `packLyricRenderTypes.ts`. The exact renderer build stdout
-hash is checked, and a missing-font negative control must fail to demonstrate
+hash is checked, a known-font positive probe must succeed, and a missing-font
+negative control must fail to demonstrate
 that host font fallback is disabled. The existing WOFF2 cannot load in the tested
 local binary; the same-font conversion and full official OFL notice remain in
 ignored qualification evidence. No font binary, conversion dependency or external
@@ -116,7 +122,7 @@ runtime is packaged here. Pinned Linux/sandbox behavior is unqualified.
 then hashes a versioned, fixed-order JSON array encoded as UTF-8. Its returned
 payload includes the target, literal selected words, source/clipped/frame
 intervals, provenance, typography, source/derived font hashes, conversion,
-repertoire, frame policy and renderer identity. Changing a word under the same
+repertoire, frame policy and renderer identity. Changing a selected word under the same
 alignment revision changes this key. It is a **lyric-plan** identity, not a
 whole-composition, authenticated-verification or encoded-file identity. Visual
 bytes are separately hashed in the receipt. Future activation must bind BOTH
@@ -163,8 +169,8 @@ any change. Unsupported encoder rates fail rather than silently resampling.
 Experimental bounds: 128 selected cues; one active command; one scratch raster
 (4,194,304 pixels, at most 16MiB RGBA) and one decoded plate (995,328 RGBA bytes);
 16MiB aggregate encoded plates; 256MiB aggregate intermediate segments; 50MiB
-output; 1MiB command capture; 180 seconds for the owned runtime work including
-source fetches. Command leaves must enforce capture/cancellation before returning;
+output; 1MiB command capture; 180 seconds for owned renderer work after the
+separate source-fetch scope. Command leaves must enforce capture/cancellation before returning;
 read sizes are checked before buffers are allocated. FFmpeg's individual
 allocation cap is separately 64MiB because encoder packets exceed the scratch
 pixel budget; it is NOT a whole-process RSS cap. Encoder buffers are additional.
@@ -188,7 +194,7 @@ uses the installed macOS time utility for observed child RSS. The local leaf own
 a detached process group, including the measurement wrapper and FFmpeg child;
 abort sends TERM, escalates to KILL after 250ms, and requires pipe closure within
 2s. Unknown closure retains the owned directory and reports its path/process
-group; cleanup/disposal refuse while children remain. A real measured-mode
+group; cleanup/disposal refuse while children or termination uncertainty remain. A real measured-mode
 cancellation test verifies that an active unbounded command settles after abort
 and that its process group no longer appears in the OS process inventory.
 These are test-only

@@ -62,7 +62,12 @@ export async function renderPackLyricOverlay(
       "json",
       name,
     ]);
-    const video = JSON.parse(await probe.stdout()).streams?.[0];
+    const parsed: unknown = JSON.parse(await probe.stdout());
+    const streams =
+      parsed && typeof parsed === "object" && "streams" in parsed ? parsed.streams : undefined;
+    const first: unknown = Array.isArray(streams) ? streams[0] : undefined;
+    const video =
+      first && typeof first === "object" ? (first as Record<string, unknown>) : undefined;
     if (video?.width !== 864 || video?.height !== 288 || Number(video?.nb_read_frames) !== frames)
       throw new Error("Lyric segment frame/geometry mismatch");
     segments.push(name);

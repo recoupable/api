@@ -87,6 +87,8 @@ export function validatePackLyricProbe(
   if (typeof codec !== "string" || !/^[a-zA-Z0-9_]+$/.test(codec))
     throw new Error("Invalid audio codec metadata");
   const duration = timing(audio);
+  if (audio.duration !== undefined && number(audio.duration) <= 0)
+    throw new Error("Invalid nonpositive audio duration metadata");
   if (mode.kind === "source") {
     if (duration.start !== 0) throw new Error("Unsupported nonzero audio stream origin");
     const rounded = (duration.numerator * 2n + duration.denominator) / (duration.denominator * 2n);
@@ -111,6 +113,13 @@ export function validatePackLyricProbe(
     )
       throw new Error("Final audio format differs from selected source policy");
     const tolerance = Math.max(1000 / 30, (1024 * 1000) / sampleRate);
+    if (
+      audio.duration !== undefined &&
+      Math.abs(
+        number(audio.duration) * 1000 - Number(duration.numerator) / Number(duration.denominator),
+      ) > tolerance
+    )
+      throw new Error("Inconsistent final audio duration metadata");
     if (duration.start !== 0) throw new Error("Invalid final audio origin");
     const outputMs = number(probe.format?.duration) * 1000;
     if (

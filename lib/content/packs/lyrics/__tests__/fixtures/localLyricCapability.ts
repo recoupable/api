@@ -8,12 +8,21 @@ import type { PackLyricMediaCapability } from "../../packLyricRenderTypes";
 const command = promisify(execFile);
 /** Explicit local test leaf. No network, sandbox, provider or remote storage implementation. */
 export async function localLyricCapability(fontPath: string, audio: Buffer, visual: Buffer) {
+  const fontBytes = await readFile(fontPath);
+  const rendererBuildSha256 = createHash("sha256")
+    .update((await command("ffmpeg", ["-version"])).stdout)
+    .digest("hex");
   const root = await mkdtemp(join(tmpdir(), "pack-lyric-local-"));
-  await mkdir(join(root, "empty-fonts"));
-  await writeFile(
-    join(root, "fonts.conf"),
-    `<?xml version="1.0"?><fontconfig><dir>${root}/empty-fonts</dir><cachedir>${root}/cache</cachedir></fontconfig>`,
-  );
+  try {
+    await mkdir(join(root, "empty-fonts"));
+    await writeFile(
+      join(root, "fonts.conf"),
+      `<?xml version="1.0"?><fontconfig><dir>${root}/empty-fonts</dir><cachedir>${root}/cache</cachedir></fontconfig>`,
+    );
+  } catch (error) {
+    await rm(root, { recursive: true, force: true });
+    throw error;
+  }
   const env = { ...process.env, FONTCONFIG_FILE: join(root, "fonts.conf"), FONTCONFIG_PATH: root };
   const children = new Set<ReturnType<typeof execFile>>();
   const uncertain = new Set<number>();
@@ -42,14 +51,14 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
     active = 0,
     maxActive = 0;
   const capability: PackLyricMediaCapability = {
-    fontBytes: await readFile(fontPath),
-    rendererBuildSha256: createHash("sha256")
-      .update((await command("ffmpeg", ["-version"])).stdout)
-      .digest("hex"),
-    fetchMedia: async url =>
-      url === "fixture:song"
-        ? { bytes: audio, contentType: "audio/mp4" }
-        : { bytes: visual, contentType: "video/mp4" },
+    fontBytes,
+    rendererBuildSha256,
+    fetchMedia: async (url, { signal, maxBytes }) => {
+      signal.throwIfAborted();
+      const bytes = url === "fixture:song" ? audio : visual;
+      if (bytes.length > maxBytes) throw new Error("Source byte bound");
+      return { bytes, contentType: url === "fixture:song" ? "Audio/MP4" : "Video/MP4" };
+    },
     storeFile: async (_owner, bytes, contentType) => {
       if (!cleaned) throw new Error("Store before cleanup");
       output = bytes;

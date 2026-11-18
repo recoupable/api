@@ -245,12 +245,8 @@ it
         await expect(pending).rejects.toThrow();
         expect(fixture.getOutput()).toHaveLength(0);
         if (rate === "wrong-hash") {
-          expect(
-            fixture.trace.every(
-              x => x.args.includes("-version") || x.args.includes("color=s=16x16"),
-            ),
-          ).toBe(true);
-          expect(fixture.isCleaned()).toBe(true);
+          expect(fixture.trace).toHaveLength(0);
+          expect(fixture.isCleaned()).toBe(false); // fetch validation precedes allocation
         } else {
           expect(fixture.isCleaned()).toBe(true);
           await expect(stat(fixture.root)).rejects.toThrow();

@@ -1,3 +1,4 @@
+import { fetchPackLyricSources } from "./lyrics/fetchPackLyricSources";
 import type { PackLyricAudioEvidence } from "./lyrics/packLyricRenderTypes";
 import { createHash } from "node:crypto";
 import { buildPackLyricRenderPlan } from "./lyrics/buildPackLyricRenderPlan";
@@ -48,7 +49,6 @@ export async function composePackMedia(
         PACK_LYRIC_FONT_SHA256)
   )
     throw new Error("Unqualified lyric font");
-  const fetchMedia = lyricPlan ? lyricCapability!.fetchMedia : fetchPackMedia;
   const storeFile = lyricPlan ? lyricCapability!.storeFile : storePackFile;
   const runMedia = <T>(
     run: (sandbox: PackMediaRuntime, ffmpeg: string, ffprobe: string) => Promise<T>,
@@ -64,18 +64,18 @@ export async function composePackMedia(
     return { files, probe: {} };
   }
   const loadSources = async () => {
-    const [audio, visual] = await Promise.all([
-      fetchMedia(input.audioUrl),
-      fetchMedia(input.motion ?? input.images[0]),
-    ]);
-    validatePackMediaBytes(audio.bytes, audio.contentType);
-    validatePackMediaBytes(visual.bytes, visual.contentType);
+    const urls = [input.audioUrl, input.motion ?? input.images[0]];
+    const [audio, visual] = lyricPlan
+      ? await fetchPackLyricSources(lyricCapability!, urls)
+      : await Promise.all(urls.map(url => fetchPackMedia(url)));
+    const audioType = validatePackMediaBytes(audio.bytes, audio.contentType).contentType;
+    const visualType = validatePackMediaBytes(visual.bytes, visual.contentType).contentType;
     if (lyricPlan) {
       if (
         audio.bytes.length > 50 * 1024 * 1024 ||
         visual.bytes.length > 50 * 1024 * 1024 ||
-        !audio.contentType.startsWith("audio/") ||
-        !visual.contentType.startsWith(input.motion ? "video/" : "image/")
+        !audioType.startsWith("audio/") ||
+        !visualType.startsWith(input.motion ? "video/" : "image/")
       )
         throw new Error("Invalid bounded lyric source media");
       if (
@@ -86,9 +86,9 @@ export async function composePackMedia(
     }
     return { audio, visual };
   };
-  const loaded = lyricPlan ? undefined : await loadSources();
+  const loaded = await loadSources();
   const result = await runMedia(async (sandbox, ffmpeg, ffprobe) => {
-    const { audio, visual } = loaded ?? (await loadSources());
+    const { audio, visual } = loaded;
     await sandbox.writeFiles([
       { path: "source-audio", content: audio.bytes },
       { path: "source-visual", content: visual.bytes },

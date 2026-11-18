@@ -28,8 +28,9 @@ describe("local lyric render plan", () => {
     ).toBe(original.digest);
     input.alignment.words[0].text = "Other";
     expect(buildPackLyricRenderPlan(input, 5, 3, renderer).digest).not.toBe(original.digest);
+    const wordDigest = buildPackLyricRenderPlan(input, 5, 3, renderer).digest;
     input.alignment.verificationRef = "fixture:other-proof";
-    expect(buildPackLyricRenderPlan(input, 5, 3, renderer).digest).not.toBe(original.digest);
+    expect(buildPackLyricRenderPlan(input, 5, 3, renderer).digest).not.toBe(wordDigest);
     expect(buildPackLyricRenderPlan(input, 5, 3, "b".repeat(64)).digest).not.toBe(
       buildPackLyricRenderPlan(input, 5, 3, renderer).digest,
     );
@@ -41,8 +42,7 @@ describe("local lyric render plan", () => {
   });
   it("allows binary representation noise only", () => {
     expect(
-      buildPackLyricRenderPlan(verifiedLyricAlignmentFixture(), 5 + Number.EPSILON, 3, renderer)
-        .frames,
+      buildPackLyricRenderPlan(verifiedLyricAlignmentFixture(), 5 + 5e-10, 3, renderer).frames,
     ).toBe(90);
   });
   it("rejects missing alignment and zero-frame words", () => {

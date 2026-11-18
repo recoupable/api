@@ -127,38 +127,82 @@ it("retains exact selected audio evidence", () => {
   });
 });
 
-it.each(["sample_rate", "channels", "codec_name"])("rejects changed final audio %s", field => {
-  const audio = { ...source().streams[0], codec_name: "aac" };
-  const probe = {
-    format: { duration: "2" },
-    streams: [
-      audio,
-      {
-        index: 1,
-        codec_type: "video",
-        width: 1080,
-        height: 1920,
-        start_time: "0",
-        time_base: "1/15360",
-        duration_ts: 30720,
-        avg_frame_rate: "30/1",
-        nb_read_frames: "60",
-      },
-    ],
-  };
-  const mode = {
-    kind: "output" as const,
-    frames: 60,
-    durationMs: 2000,
-    sourceAudio: validatePackLyricProbe(source(), {
-      kind: "source",
+it.each(["sample_rate", "channels", "codec_name", "duration"])(
+  "rejects changed final audio %s",
+  field => {
+    const audio = { ...source().streams[0], codec_name: "aac" };
+    const probe = {
+      format: { duration: "2" },
+      streams: [
+        audio,
+        {
+          index: 1,
+          codec_type: "video",
+          width: 1080,
+          height: 1920,
+          start_time: "0",
+          time_base: "1/15360",
+          duration_ts: 30720,
+          avg_frame_rate: "30/1",
+          nb_read_frames: "60",
+        },
+      ],
+    };
+    const mode = {
+      kind: "output" as const,
+      frames: 60,
       durationMs: 2000,
-      endMs: 1000,
-    }),
-  };
-  expect(() => validatePackLyricProbe(probe, mode)).not.toThrow();
-  Object.assign(audio, {
-    [field]: field === "sample_rate" ? "16000" : field === "channels" ? 2 : "mp3",
-  });
-  expect(() => validatePackLyricProbe(probe, mode)).toThrow(/format/);
-});
+      sourceAudio: validatePackLyricProbe(source(), {
+        kind: "source",
+        durationMs: 2000,
+        endMs: 1000,
+      }),
+    };
+    expect(() => validatePackLyricProbe(probe, mode)).not.toThrow();
+    Object.assign(audio, {
+      [field]:
+        field === "sample_rate"
+          ? "16000"
+          : field === "channels"
+            ? 2
+            : field === "duration"
+              ? "NaN"
+              : "mp3",
+    });
+    expect(() => validatePackLyricProbe(probe, mode)).toThrow();
+  },
+);
+it.each(["0", "-0.001"])(
+  "refuses nonpositive optional audio duration %s even within padding tolerance",
+  duration => {
+    const probe = {
+      format: { duration: "0.067" },
+      streams: [
+        { ...source().streams[0], codec_name: "aac", duration_ts: 400, duration },
+        {
+          index: 1,
+          codec_type: "video",
+          width: 1080,
+          height: 1920,
+          start_time: "0",
+          time_base: "1/15360",
+          duration_ts: 1024,
+          avg_frame_rate: "30/1",
+          nb_read_frames: "2",
+        },
+      ],
+    };
+    expect(() =>
+      validatePackLyricProbe(probe, {
+        kind: "output",
+        frames: 2,
+        durationMs: 50,
+        sourceAudio: validatePackLyricProbe(source(), {
+          kind: "source",
+          durationMs: 2000,
+          endMs: 1000,
+        }),
+      }),
+    ).toThrow();
+  },
+);

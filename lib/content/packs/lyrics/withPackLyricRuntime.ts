@@ -32,6 +32,17 @@ export async function withPackLyricRuntime<T>(
       runCommand: async (command, args) => {
         if (command !== ffmpeg && command !== ffprobe) throw new Error("Unqualified lyric command");
         if (expired || busy) throw new Error("Lyric runtime deadline/concurrency bound");
+        for (let i = 0; i < args.length; i++) {
+          const option =
+            /^-(threads|filter_threads|filter_complex_threads|max_alloc)(?::[^=]+)?(?:=(.*))?$/.exec(
+              args[i],
+            );
+          if (
+            option &&
+            (option[2] ?? args[i + 1]) !== (option[1] === "max_alloc" ? "67108864" : "1")
+          )
+            throw new Error("Protected lyric resource option override");
+        }
         busy = true;
         try {
           const result = await runtime.runCommand(
@@ -111,6 +122,22 @@ export async function withPackLyricRuntime<T>(
             "-",
           ]);
           if (missing.exitCode === 0) throw new Error("Implicit font fallback is not qualified");
+          const known = await bounded.runCommand(ffmpeg, [
+            "-v",
+            "error",
+            "-f",
+            "lavfi",
+            "-i",
+            "color=s=16x16",
+            "-vf",
+            "drawtext=fontfile=lyric-font.ttf:text=check:expansion=none",
+            "-frames:v",
+            "1",
+            "-f",
+            "null",
+            "-",
+          ]);
+          if (known.exitCode !== 0) throw new Error("Known font drawtext probe failed");
           return run(bounded, ffmpeg, ffprobe);
         })(),
       ]);

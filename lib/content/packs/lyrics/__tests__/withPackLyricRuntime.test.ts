@@ -32,7 +32,10 @@ function controlled() {
   const runtime: PackLyricRuntime = {
     writeFiles: vi.fn(),
     runCommand: vi.fn(async (_cmd, args) => ({
-      exitCode: args.includes("-version") ? 0 : 1,
+      exitCode:
+        args.includes("-version") || args.some(arg => arg.includes("fontfile=lyric-font.ttf"))
+          ? 0
+          : 1,
       stdout: async () => "synthetic-build",
     })),
     fileSize: vi.fn(async () => 1),
@@ -130,3 +133,25 @@ it.each(["abort", "cleanup"] as const)(
     }
   },
 );
+
+it.each([
+  ["-threads", "8"],
+  ["-threads:v", "8"],
+  ["-max_alloc", "999999999"],
+  ["-filter_threads=4"],
+])("refuses resource option override %j", async (...args) => {
+  const { cap } = controlled();
+  await expect(withPackLyricRuntime(cap, r => r.runCommand("ffmpeg", args))).rejects.toThrow(
+    /Protected/,
+  );
+});
+it("requires a successful known-font probe before callback", async () => {
+  const { runtime, cap } = controlled();
+  vi.mocked(runtime.runCommand).mockImplementation(async (_cmd, args) => ({
+    exitCode: args.includes("-version") ? 0 : 1,
+    stdout: async () => "synthetic-build",
+  }));
+  const work = vi.fn();
+  await expect(withPackLyricRuntime(cap, work)).rejects.toThrow(/Known font/);
+  expect(work).not.toHaveBeenCalled();
+});

@@ -26,7 +26,11 @@ export type PackLyricMediaCapability = {
   withRuntime: <T>(
     run: (runtime: PackLyricRuntime, ffmpeg: string, ffprobe: string) => Promise<T>,
   ) => Promise<T>;
-  fetchMedia: (url: string) => Promise<{ bytes: Buffer; contentType: string }>;
+  /** Leaf must honor cancellation and enforce maxBytes while reading, before allocating the entire response. */
+  fetchMedia: (
+    url: string,
+    options: { signal: AbortSignal; maxBytes: number },
+  ) => Promise<{ bytes: Buffer; contentType: string }>;
   storeFile: (owner: string, bytes: Buffer, contentType: string) => Promise<PackFile>;
 };
 
