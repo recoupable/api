@@ -82,6 +82,36 @@ it.skipIf(!fontPath || process.platform !== "darwin")(
   },
   5000,
 );
+it.skipIf(!fontPath)(
+  "LOCAL QUALIFICATION: callback signal failure rejects and preserves uncertain ownership",
+  async () => {
+    const fixture = await localLyricCapability(fontPath!, Buffer.alloc(0), Buffer.alloc(0));
+    const originalKill = process.kill.bind(process);
+    const signal = vi.spyOn(process, "kill").mockImplementation((pid, kind) => {
+      if (pid < 0 && kind === "SIGKILL")
+        throw Object.assign(new Error("injected signal denial"), { code: "EPERM" });
+      return originalKill(pid, kind);
+    });
+    try {
+      await fixture.capability.withRuntime(async runtime => {
+        await expect(runtime.runCommand("ffmpeg", ["-version"])).rejects.toThrow(
+          /injected signal denial/,
+        );
+        await expect(runtime.abort()).rejects.toThrow(/unconfirmed/);
+        await expect(runtime.cleanup()).rejects.toThrow(/preserve/);
+        expect((await stat(fixture.root)).isDirectory()).toBe(true);
+        expect(fixture.isCleaned()).toBe(false);
+      });
+    } finally {
+      signal.mockRestore();
+      // Finite version command only: independently verify group absence before test-owned cleanup.
+      const groups = (await command("ps", ["-axo", "pgid="])).stdout.split(/\s+/).map(Number);
+      expect(groups).not.toContain(fixture.trace[0].processGroup);
+      await rm(fixture.root, { recursive: true, force: true });
+    }
+  },
+  5000,
+);
 // Explicit qualification prerequisite: CI without the ignored local font does NOT qualify rendering.
 it
   .skipIf(!fontPath)

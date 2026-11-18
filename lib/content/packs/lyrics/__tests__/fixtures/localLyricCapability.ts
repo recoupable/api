@@ -16,6 +16,7 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
   );
   const env = { ...process.env, FONTCONFIG_FILE: join(root, "fonts.conf"), FONTCONFIG_PATH: root };
   const children = new Set<ReturnType<typeof execFile>>();
+  const uncertain = new Set<number>();
   const killed = new WeakSet<ReturnType<typeof execFile>>();
   const killGroup = (child: ReturnType<typeof execFile>) => {
     if (!child.pid || killed.has(child)) return;
@@ -23,7 +24,10 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
       process.kill(-child.pid, "SIGKILL");
       killed.add(child);
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
+      if ((error as NodeJS.ErrnoException).code !== "ESRCH") {
+        uncertain.add(child.pid);
+        throw error;
+      }
     }
   };
   const trace: {
@@ -156,6 +160,7 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
                       clearTimeout(grace);
                       clearTimeout(limit);
                       child.removeListener("close", closed);
+                      if (child.pid) uncertain.add(child.pid);
                       reject(
                         new Error(
                           `Owned termination unconfirmed: directory=${root}, processGroup=${child.pid}; preserve files`,
@@ -183,9 +188,14 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
                   }),
               ),
             );
+            if (uncertain.size)
+              throw new Error(
+                `Termination unconfirmed; preserve directory=${root}, processGroups=${[...uncertain]}`,
+              );
           },
           cleanup: async () => {
-            if (children.size) throw new Error(`Owned processes remain; preserve ${root}`);
+            if (children.size || uncertain.size)
+              throw new Error(`Owned processes remain; preserve ${root}`);
             await rm(root, { recursive: true, force: true });
             cleaned = true;
           },
@@ -202,7 +212,8 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
     isCleaned: () => cleaned,
     maxActive: () => maxActive,
     dispose: async () => {
-      if (children.size) throw new Error(`Owned processes remain; preserve ${root}`);
+      if (children.size || uncertain.size)
+        throw new Error(`Owned processes remain; preserve ${root}`);
       await rm(root, { recursive: true, force: true });
     },
   };
