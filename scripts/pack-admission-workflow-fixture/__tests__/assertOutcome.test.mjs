@@ -234,6 +234,9 @@ for (const [name, mutate] of [
     const completion = f.journal.pop();
     mutate(f);
     f.journal.push(completion);
+    f.journal.forEach((event, index) => {
+      event.createdAt = new Date(1000 + index);
+    });
     const emitted = [];
     t.mock.method(console, "error", (...args) => emitted.push(args));
     assert.throws(
@@ -264,13 +267,19 @@ for (const [name, mutate] of [
     });
     assert.deepEqual(saved.trace, f.trace);
     assert.deepEqual(
-      saved.journal.map(e => e.eventId),
-      f.journal.map(e => e.eventId),
+      saved.journal,
+      JSON.parse(
+        JSON.stringify(
+          f.journal.map(event => ({
+            eventId: event.eventId,
+            eventType: event.eventType,
+            correlationId: event.correlationId,
+            createdAt: event.createdAt,
+            stepName: event.eventData?.stepName,
+            resumeAt: event.eventData?.resumeAt,
+          })),
+        ),
+      ),
     );
-    assert.deepEqual(
-      saved.journal.map(e => e.correlationId),
-      f.journal.map(e => e.correlationId),
-    );
-    assert.equal(saved.journal.at(-1).eventType, "wait_completed");
   });
 }
