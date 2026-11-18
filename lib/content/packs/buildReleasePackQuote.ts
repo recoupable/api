@@ -23,6 +23,14 @@ export function buildReleasePackQuote(
   deliverables: ReleasePackDeliverables,
 ) {
   const execution_config = getPackExecutionConfiguration();
+  for (const [task, requested] of Object.entries(brief.model_choices ?? {})) {
+    const selected =
+      execution_config.models[task as keyof NonNullable<ReleasePackBrief["model_choices"]>];
+    if (requested !== selected)
+      throw new Error(
+        `Unsupported ${task} model choice ${requested}; configured route is ${selected}. No substitution was made.`,
+      );
+  }
   const execution_config_digest = getPackConfigurationDigest(execution_config);
   const assets: PackAssetPlan[] = [];
   const motionCost =

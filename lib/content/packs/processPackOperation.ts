@@ -1,4 +1,4 @@
-import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
+import { assertPackNewWork } from "./assertPackNewWork";
 import { importPackSources } from "./importPackSources";
 import { randomUUID, createHash } from "node:crypto";
 import { z } from "zod";
@@ -184,13 +184,13 @@ export async function processPackOperation(
       });
       resumedAssetId = selected.id;
     } else {
-      assertPackQuoteConfiguration(saved.job.quote);
+      assertPackNewWork(saved.job.quote);
       if (saved.job.quote.retry_asset_id !== input.asset_id)
         throw new Error("Request and approve a fresh estimate for this failed asset first");
       funded = await runPackCommand(actor, "approve", saved.job.id, input);
     }
   } else {
-    assertPackQuoteConfiguration(saved.job.quote);
+    assertPackNewWork(saved.job.quote);
     const credits =
       saved.job.status === "running"
         ? { kind: "available" as const }

@@ -1,3 +1,4 @@
+import { readPackSnapshot } from "../readPackSnapshot";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import fal from "@/lib/fal/server";
 import { generateText } from "ai";
@@ -42,6 +43,16 @@ function fixture(state: Record<string, unknown> = {}, valid = false) {
   return { job, state, services: createPackProductionServices({ accountId: "owner" }, job, asset) };
 }
 describe("configuration guard at production boundaries", () => {
+  it("explains current model blockers instead of requesting spending approval", async () => {
+    const { job } = fixture({}, true);
+    const result = await readPackSnapshot({
+      job: { ...job, status: "awaiting_approval" },
+      assets: [],
+    } as any);
+    expect(result.next_action).toMatch(/model suitability/i);
+    expect(result.job.quote?.execution_config).toEqual(job.quote.execution_config);
+    expect(runPackCommand).not.toHaveBeenCalled();
+  });
   it("blocks each new provider stage on an unbound quote", async () => {
     const { job, services } = fixture();
     await expect(preparePackProduction({ accountId: "owner" }, job)).rejects.toThrow(
@@ -97,14 +108,25 @@ describe("configuration guard at production boundaries", () => {
     await expect(services.generateImages("prompt", 4)).rejects.toThrow(/new estimate/);
     expect(fal.queue.submit).not.toHaveBeenCalled();
   });
-  it("allows new work with the exact supported configuration", async () => {
-    const { services } = fixture({}, true);
-    vi.mocked(fal.queue.submit).mockResolvedValue({ request_id: "new" } as never);
-    vi.mocked(fal.queue.status).mockResolvedValue({ status: "COMPLETED" } as never);
-    vi.mocked(fal.queue.result).mockResolvedValue({
-      data: { images: [{ url: "https://example.com/new.png" }] },
-    } as never);
-    await services.generateImages("prompt", 1);
-    expect(fal.queue.submit).toHaveBeenCalledTimes(1);
+  it("refuses current unverified models before every new effect", async () => {
+    const { job, services } = fixture({}, true);
+    await expect(preparePackProduction({ accountId: "owner" }, job)).rejects.toThrow(
+      /model suitability/i,
+    );
+    await expect(services.generateImages("prompt", 1)).rejects.toThrow(/model suitability/i);
+    await expect(services.generateMotion("prompt", "image")).rejects.toThrow(/model suitability/i);
+    await expect(services.caption("prompt")).rejects.toThrow(/model suitability/i);
+    expect(() => services.compose({} as any)).toThrow(/model suitability/i);
+    expect(() => services.inspect({} as any)).toThrow(/model suitability/i);
+    for (const mock of [
+      fal.queue.submit,
+      fal.queue.status,
+      generateText,
+      callFlamingoGenerate,
+      runPackCommand,
+      composePackMedia,
+      inspectPackMedia,
+    ])
+      expect(mock).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 import { packProductionContextSchema as contextSchema } from "./packProductionContextSchema";
 import { parsePackAudioAnalysis } from "./parsePackAudioAnalysis";
-import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
+import { assertPackNewWork } from "./assertPackNewWork";
 import { packExecutionSettings } from "@/lib/const";
 import { createHash } from "node:crypto";
 import { fetchPackMedia } from "./fetchPackMedia";
@@ -22,7 +22,7 @@ export async function preparePackProduction(actor: PackActor, job: PackJob): Pro
       throw new Error(
         "Saved audio analysis is invalid; reconcile the retained context before production. No analysis was repeated.",
       );
-    assertPackQuoteConfiguration(job.quote);
+    assertPackNewWork(job.quote);
     if ((job.production_context as { state?: string } | undefined)?.state === "analyzing")
       throw new Error(
         "Audio analysis outcome is uncertain; retained context needs reconciliation before production",
@@ -76,7 +76,7 @@ export async function preparePackProduction(actor: PackActor, job: PackJob): Pro
     await runPackCommand(actor, "context", job.id, {
       value: { state: "analyzing", audio, references, duration_seconds: duration },
     });
-    assertPackQuoteConfiguration(job.quote);
+    assertPackNewWork(job.quote);
     const analysis = await callFlamingoGenerate(
       flamingoGenerateBodySchema.parse({
         audio_url: audio.url,

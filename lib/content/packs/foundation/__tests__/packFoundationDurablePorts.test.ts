@@ -17,6 +17,16 @@ const mocks = vi.hoisted(() => ({
   compose: vi.fn(),
   inspect: vi.fn(),
 }));
+// Synthetic authorization isolates these unwired foundation-port tests.
+vi.mock("../../getPackModelEvidence", async importOriginal => {
+  const actual = await importOriginal<typeof import("../../getPackModelEvidence")>();
+  const { verifiedPackModelEvidenceFixture } = await import(
+    "../../__tests__/verifiedPackModelEvidenceFixture"
+  );
+  return {
+    getPackModelEvidence: () => verifiedPackModelEvidenceFixture(actual.getPackModelEvidence()),
+  };
+});
 vi.mock("workflow", () => ({ getWorkflowMetadata: () => ({ workflowRunId: "run" }) }));
 vi.mock("@/lib/supabase/serverClient", () => ({
   default: { rpc: mocks.rpc, storage: { from: mocks.from } },

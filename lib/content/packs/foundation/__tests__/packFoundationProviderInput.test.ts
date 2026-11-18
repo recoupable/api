@@ -3,6 +3,16 @@ import { createPackProductionServices } from "../../createPackProductionServices
 import { runPackFalRequest } from "../../runPackFalRequest";
 import { creditCostForImageUnits } from "@/lib/content/creditCostForImageUnits";
 import { foundationFixture } from "./foundationFixture";
+// Synthetic authorization isolates these unwired foundation-port tests.
+vi.mock("../../getPackModelEvidence", async importOriginal => {
+  const actual = await importOriginal<typeof import("../../getPackModelEvidence")>();
+  const { verifiedPackModelEvidenceFixture } = await import(
+    "../../__tests__/verifiedPackModelEvidenceFixture"
+  );
+  return {
+    getPackModelEvidence: () => verifiedPackModelEvidenceFixture(actual.getPackModelEvidence()),
+  };
+});
 vi.mock("@/lib/fal/server", () => ({ default: { queue: {} } }));
 vi.mock("../../runPackFalRequest", () => ({ runPackFalRequest: vi.fn() }));
 vi.mock("@/lib/supabase/release_pack_jobs/runPackCommand", () => ({ runPackCommand: vi.fn() }));

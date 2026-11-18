@@ -1,5 +1,5 @@
 import { packExecutionSettings, PACK_CAPTION_MODEL } from "@/lib/const";
-import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
+import { assertPackNewWork } from "./assertPackNewWork";
 import { generateText } from "ai";
 import { buildImageInput } from "@/lib/content/image/buildImageInput";
 import { buildVideoInput } from "@/lib/content/video/buildVideoInput";
@@ -29,7 +29,7 @@ export function createPackProductionServices(
     generateImages: async (prompt, count) => {
       const images: string[] = [];
       for (let index = 0; index < count; index++) {
-        if (!state[`image_submission_${index}`]) assertPackQuoteConfiguration(job.quote);
+        if (!state[`image_submission_${index}`]) assertPackNewWork(job.quote);
         const built = buildImageInput({
           prompt: `${prompt}\nSlide ${index + 1} of ${count}. ${count > 1 ? ["Open with the exact song title and a strong campaign idea.", "Develop the audible mood and artwork concept without inventing lyrics.", "Make the verified campaign occasion clear without inventing history.", "Close with the approved primary action and only the supplied destination URL."][index] : ""}`,
           ...packExecutionSettings.image,
@@ -50,7 +50,7 @@ export function createPackProductionServices(
       return images;
     },
     generateMotion: async (prompt, image) => {
-      if (!state.motion_submission) assertPackQuoteConfiguration(job.quote);
+      if (!state.motion_submission) assertPackNewWork(job.quote);
       const input = buildVideoInput({
         prompt,
         image_url: image,
@@ -75,7 +75,7 @@ export function createPackProductionServices(
       return url;
     },
     caption: async prompt => {
-      assertPackQuoteConfiguration(job.quote);
+      assertPackNewWork(job.quote);
       const result = await generateText({
         model: PACK_CAPTION_MODEL,
         ...packExecutionSettings.caption,
@@ -89,11 +89,11 @@ export function createPackProductionServices(
       return text;
     },
     compose: input => {
-      assertPackQuoteConfiguration(job.quote);
+      assertPackNewWork(job.quote);
       return composePackMedia(job.owner_id, input);
     },
     inspect: input => {
-      assertPackQuoteConfiguration(job.quote);
+      assertPackNewWork(job.quote);
       return inspectPackMedia(input);
     },
     finish: result =>

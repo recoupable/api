@@ -1,3 +1,4 @@
+import { assertPackNewWork } from "./assertPackNewWork";
 import { packCostAccounting } from "@/lib/const";
 import { getPackProgress } from "./getPackProgress";
 import { isPackAssetUsable } from "./isPackAssetUsable";
@@ -33,6 +34,17 @@ export async function readPackSnapshot(snapshot: PackSnapshot) {
     });
   }
   const readiness = getPackBriefReadiness(snapshot.job.brief);
+  let approvalAction = "Review this complete quote and approve its budget before generation.";
+  if (snapshot.job.status === "awaiting_approval") {
+    try {
+      assertPackNewWork(snapshot.job.quote);
+    } catch (error) {
+      approvalAction =
+        error instanceof Error
+          ? error.message
+          : "Model suitability requires review before approval.";
+    }
+  }
   return {
     job: {
       ...job,
@@ -44,7 +56,7 @@ export async function readPackSnapshot(snapshot: PackSnapshot) {
     progress: getPackProgress(snapshot),
     next_action: readiness.ready
       ? snapshot.job.status === "awaiting_approval"
-        ? "Review this complete quote and approve its budget before generation."
+        ? approvalAction
         : snapshot.job.status === "running"
           ? "The approved pack is running. Poll this saved job; do not submit another pack."
           : snapshot.job.status === "completed"

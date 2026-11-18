@@ -1,3 +1,4 @@
+import { getPackModelEvidence } from "./getPackModelEvidence";
 import {
   FLAMINGO_MODEL_ID,
   FLAMINGO_GENERATE_URL,
@@ -16,6 +17,7 @@ import { usdToCredits } from "@/lib/credits/usdToCredits";
 export function getPackExecutionConfiguration() {
   return {
     ...packExecutionSettings,
+    model_evidence: getPackModelEvidence(),
     models: {
       image: buildImageInput({ ...packExecutionSettings.image, prompt: "" }).model,
       image_edit: buildImageInput({
