@@ -133,7 +133,7 @@ test("exposes actual storage bound while retaining small roundtrip/replay", asyn
       2,
     ),
   );
-  // Intended controlled domain contract; current generic wrapper is the red.
+  // The exact proposal signal maps to the safe domain error; unrelated failures stay generic.
   expect(rejection).toMatchObject({ name: "CatalogSnapshotTooLargeError" });
 });
 test.each([9, 99])(

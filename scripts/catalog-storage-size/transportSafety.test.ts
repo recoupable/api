@@ -19,7 +19,9 @@ it.each(["localhost", "127.0.0.1", "relative/socket"])(
   "refuses %s before any subprocess",
   socket => {
     vi.stubEnv("SITES_BRIDGE_SOCKET", socket);
-    expect(() => fixtureSql("TRUNCATE accounts;")).toThrow();
+    expect(() => fixtureSql("TRUNCATE accounts;")).toThrow(
+      "Owned canonical fixture socket required",
+    );
     expect(spawnSync).not.toHaveBeenCalled();
   },
 );
@@ -41,7 +43,7 @@ it("requires the exact fixture marker and uses its socket as HOME", () => {
     join(root, "catalog-size.json"),
     JSON.stringify({ ...marker, databaseTree: "wrong" }),
   );
-  expect(() => fixtureSql("SELECT 1")).toThrow();
+  expect(() => fixtureSql("SELECT 1")).toThrow("Catalog fixture marker mismatch");
   expect(spawnSync).not.toHaveBeenCalled();
   writeFileSync(join(root, "catalog-size.json"), JSON.stringify(marker));
   vi.mocked(spawnSync).mockReturnValue({ status: 0, stdout: "1", stderr: "" } as never);

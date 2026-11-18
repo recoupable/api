@@ -45,7 +45,10 @@ export default defineConfig({
     },
   ],
   test: {
-    include: [resolve(root, "scripts/catalog-storage-size/size.integration.test.ts")],
+    include: [
+      resolve(root, "scripts/catalog-storage-size/size.integration.test.ts"),
+      resolve(root, "scripts/catalog-storage-size/transportSafety.test.ts"),
+    ],
     setupFiles: [resolve(root, "scripts/sites-evidence-sql-bridge/network-deny.ts")],
     fileParallelism: false,
     pool: "forks",
