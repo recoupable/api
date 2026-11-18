@@ -1,3 +1,4 @@
+import { contextVideoLimits as limits } from "./contextVideoLimits";
 import { selectContextDocuments, type ContextBriefDocument } from "../selectContextDocuments";
 
 /** Compare UUIDs canonically while returning the original authorized document objects. */
@@ -6,7 +7,10 @@ export function selectContextVideoArtistResearch(
   subjectIds: string[],
   saved: { documents: ContextBriefDocument[]; withdrawnSourceVersionIds: string[] },
 ): ContextBriefDocument[] {
-  if (saved.documents.length > 1000 || saved.withdrawnSourceVersionIds.length > 32000)
+  if (
+    saved.documents.length > limits.artistDocuments ||
+    saved.withdrawnSourceVersionIds.length > limits.withdrawnSourceVersions
+  )
     throw new Error("Artist evidence exceeds bounded selection");
   const originals = new Map<ContextBriefDocument, ContextBriefDocument>();
   for (const document of saved.documents.filter(doc => Boolean(doc.resultId))) {
@@ -24,7 +28,7 @@ export function selectContextVideoArtistResearch(
     ownerId: owner.toLowerCase(),
     subjectIds: subjectIds.map(id => id.toLowerCase()),
     topics: ["artist_research"],
-    maxCharacters: 32000,
+    maxCharacters: limits.artistResearchCharacters,
     requiredCoverage: "partial",
     withdrawnSourceVersionIds: saved.withdrawnSourceVersionIds.map(id => id.toLowerCase()),
   }).documents.map(document => originals.get(document)!);

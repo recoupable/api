@@ -380,3 +380,56 @@ it.each(["\u0000", "\u0001", "\ud800", "\udfff"])(
     }
   },
 );
+
+it("preserves the complete shared projection and exact original research object after extraction", async () => {
+  const { evidence, deps } = fixture();
+  const original = { ...document };
+  deps.readArtistDocuments.mockResolvedValue({
+    documents: [original],
+    withdrawnSourceVersionIds: [],
+  });
+  const prepared = await prepare(deps);
+  expect(prepared.module).toEqual({
+    key: "video-narrative-fixture-v1",
+    topic: "video_narrative",
+    subjectId: videoSubject,
+    provider: "retained-evidence",
+    model: "none",
+    evidenceKind: "interpretation",
+    input: evidence,
+    sources: [{ url, kind: "provider_metadata", content: evidence.sources[0] }],
+  });
+  expect(prepared.result).toEqual({
+    content: {
+      ...evidence,
+      originalSongLyrics: "not_established",
+      scope: "video_only",
+      artistBrand: "not_established",
+    },
+    coverage: "partial",
+    costUsd: null,
+    costStatus: "unknown",
+    trace: { method: "retained_video_projection", sourceVersionIds: [sourceId] },
+  });
+  expect(prepared.reusedArtistDocuments[0]).toBe(original);
+});
+it("keeps participant, language and retained-text limits unchanged", async () => {
+  for (const mutate of [
+    (evidence: ReturnType<typeof fixture>["evidence"]) => {
+      evidence.title = "x".repeat(4001);
+    },
+    (evidence: ReturnType<typeof fixture>["evidence"]) => {
+      evidence.description = "x".repeat(20001);
+    },
+    (evidence: ReturnType<typeof fixture>["evidence"]) => {
+      evidence.captions.segments[0].language = "x".repeat(101);
+    },
+    (evidence: ReturnType<typeof fixture>["evidence"]) => {
+      evidence.performers = Array.from({ length: 51 }, () => evidence.performers[0]);
+    },
+  ]) {
+    const { evidence, deps } = fixture();
+    mutate(evidence);
+    await expect(prepare(deps)).rejects.toThrow();
+  }
+});

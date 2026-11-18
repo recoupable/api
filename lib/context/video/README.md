@@ -61,3 +61,16 @@ versions, unresolved identity, multiple languages, partial ranges, unavailable
 media, source/version and owner/request mismatch, revoked access and filtered
 reuse. These demonstrate source behavior only; they do not establish collection,
 Database acceptance, live accounting, ingestion or hosted availability.
+
+## Internal responsibilities
+
+The preparation function owns canonical scope arguments and authorization/read
+ordering. `loadContextVideoEvidence` loads and validates request/evidence binding
+only after that first authorization. `selectContextVideoArtistResearch` performs
+bounded reuse; its Map pairs each comparison-only copy with its original object,
+so duplicate document identifiers cannot make restoration ambiguous.
+`projectContextVideoEvidence` is a pure constructor over validated evidence; it
+returns the unchanged shared module/result contract after final authorization.
+Named limits keep text budgets distinct from counts. Source binding, analyzed
+range and identity separation are named validators beside their one schema.
+None of these internal helpers grants access or supplies a production reader.
