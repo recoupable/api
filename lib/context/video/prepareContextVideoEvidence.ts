@@ -59,17 +59,27 @@ export async function prepareContextVideoEvidence(
     const saved = await deps.readArtistDocuments(owner, subjectIds);
     if (saved.documents.length > 1000 || saved.withdrawnSourceVersionIds.length > 32000)
       throw new Error("Artist evidence exceeds bounded selection");
-    reusedArtistDocuments = selectContextDocuments(
-      saved.documents.filter(doc => Boolean(doc.resultId)),
-      {
-        ownerId: owner,
-        subjectIds,
-        topics: ["artist_research"],
-        maxCharacters: 32000,
-        requiredCoverage: "partial",
-        withdrawnSourceVersionIds: saved.withdrawnSourceVersionIds,
-      },
-    ).documents;
+    // Compare UUID identity canonically; return retained documents byte-for-byte unchanged.
+    const originals = new Map<ContextBriefDocument, ContextBriefDocument>();
+    for (const document of saved.documents.filter(doc => Boolean(doc.resultId))) {
+      originals.set(
+        {
+          ...document,
+          ownerId: document.ownerId.toLowerCase(),
+          subjectId: document.subjectId.toLowerCase(),
+          sourceVersionIds: document.sourceVersionIds.map(id => id.toLowerCase()),
+        },
+        document,
+      );
+    }
+    reusedArtistDocuments = selectContextDocuments([...originals.keys()], {
+      ownerId: owner.toLowerCase(),
+      subjectIds: subjectIds.map(id => id.toLowerCase()),
+      topics: ["artist_research"],
+      maxCharacters: 32000,
+      requiredCoverage: "partial",
+      withdrawnSourceVersionIds: saved.withdrawnSourceVersionIds.map(id => id.toLowerCase()),
+    }).documents.map(document => originals.get(document)!);
   }
   await deps.authorize(actor, owner);
   const sources = evidence.sources.map(source => ({

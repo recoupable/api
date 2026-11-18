@@ -304,3 +304,24 @@ it("rejects duplicate retained source UUID aliases", async () => {
   );
   await expect(prepare(deps)).rejects.toThrow();
 });
+
+it("reuses case-equivalent artist UUIDs without rewriting saved document references", async () => {
+  const { evidence, deps } = fixture();
+  const mixedId = "abcdefab-abcd-4abc-8abc-abcdefabcdef";
+  evidence.identity.creditedArtists[0].subjectId = mixedId.toUpperCase();
+  const original = { ...document, subjectId: mixedId };
+  deps.readArtistDocuments.mockResolvedValue({
+    documents: [original],
+    withdrawnSourceVersionIds: [],
+  });
+  expect((await prepare(deps)).reusedArtistDocuments).toEqual([original]);
+});
+it("excludes source withdrawal case aliases", async () => {
+  const { deps } = fixture();
+  const mixedId = "abcdefab-abcd-4abc-8abc-abcdefabcdef";
+  deps.readArtistDocuments.mockResolvedValue({
+    documents: [{ ...document, sourceVersionIds: [mixedId] }],
+    withdrawnSourceVersionIds: [mixedId.toUpperCase()],
+  });
+  expect((await prepare(deps)).reusedArtistDocuments).toEqual([]);
+});
