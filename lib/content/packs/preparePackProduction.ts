@@ -1,3 +1,4 @@
+import { getPackExecutionFence } from "./fence/getPackExecutionFence";
 import { packProductionContextSchema as contextSchema } from "./packProductionContextSchema";
 import { parsePackAudioAnalysis } from "./parsePackAudioAnalysis";
 import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
@@ -73,9 +74,12 @@ export async function preparePackProduction(actor: PackActor, job: PackJob): Pro
       throw new Error("Selected song excerpt runs past the supplied recording");
     const audio = { ...sources.audio, url: audioUrl };
     const references = sources.references;
-    await runPackCommand(actor, "context", job.id, {
+    const analyzing = await runPackCommand(actor, "context", job.id, {
+      ...getPackExecutionFence(job),
+      ...(job.protocol === 2 ? { context_version: job.context_version } : {}),
       value: { state: "analyzing", audio, references, duration_seconds: duration },
     });
+    if (actor.packProtocol === 2) job = { ...job, context_version: analyzing.job.context_version };
     assertPackQuoteConfiguration(job.quote);
     const analysis = await callFlamingoGenerate(
       flamingoGenerateBodySchema.parse({
@@ -100,7 +104,12 @@ export async function preparePackProduction(actor: PackActor, job: PackJob): Pro
       selected_start_seconds: job.brief.audio_start_seconds ?? interpreted.proposed_start_seconds,
       duration_seconds: duration,
     };
-    await runPackCommand(actor, "context", job.id, { value });
+    const completed = await runPackCommand(actor, "context", job.id, {
+      ...getPackExecutionFence(job),
+      ...(job.protocol === 2 ? { context_version: job.context_version } : {}),
+      value,
+    });
+    if (actor.packProtocol === 2) job = { ...job, context_version: completed.job.context_version };
     context = contextSchema.safeParse(value);
   }
   if (!context.success) throw new Error("Production context unavailable");

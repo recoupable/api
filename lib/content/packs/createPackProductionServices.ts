@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { getPackAssetFence } from "./fence/getPackAssetFence";
+import { PackFenceError } from "./fence/PackFenceError";
+import type { PackProviderReceipt } from "./fence/packFenceTypes";
 import { packExecutionSettings, PACK_CAPTION_MODEL } from "@/lib/const";
 import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
 import { generateText } from "ai";
@@ -20,9 +24,47 @@ export function createPackProductionServices(
   asset: PackAsset,
 ): PackProductionServices {
   const state = asset.provider_state;
+  const fence = getPackAssetFence(job, asset);
+  if ((actor.packProtocol === 2) !== (job.protocol === 2))
+    throw new PackFenceError("Pack protocol mismatch");
+  const observe =
+    actor.packProtocol === 2
+      ? async (receipt: PackProviderReceipt) => {
+          if (!receipt.operation_id || !receipt.request_id)
+            throw new PackFenceError("Missing durable provider operation");
+          const { appendPackProviderObservation } = await import(
+            "@/lib/supabase/release_pack_jobs/appendPackProviderObservation"
+          );
+          await appendPackProviderObservation(
+            actor,
+            receipt.operation_id,
+            { execution_id: fence.execution_id, claim_id: fence.claim_id },
+            {
+              kind: receipt.state === "complete" ? "completed" : "accepted",
+              request_id: receipt.request_id,
+              ...(receipt.state === "complete" && receipt.data !== undefined
+                ? {
+                    output_sha256: createHash("sha256")
+                      .update(JSON.stringify(receipt.data))
+                      .digest("hex"),
+                  }
+                : {}),
+            },
+          );
+        }
+      : undefined;
   const phase = async (name: string, value: unknown) => {
-    await runPackCommand(actor, "phase", job.id, { asset_id: asset.id, phase: name, value });
+    const saved = await runPackCommand(actor, "phase", job.id, {
+      ...fence,
+      asset_id: asset.id,
+      phase: name,
+      value,
+      ...(actor.packProtocol === 2 && job.shared_foundation_binding
+        ? { shared_foundation_binding: job.shared_foundation_binding }
+        : {}),
+    });
     state[name] = value;
+    return saved;
   };
   return {
     phase,
@@ -42,6 +84,7 @@ export function createPackProductionServices(
           key: `image_submission_${index}`,
           state,
           save: phase,
+          observe,
         });
         const url = (data.images as { url?: string }[] | undefined)?.[0]?.url;
         if (!url) throw new Error("House image model returned no image");
@@ -69,6 +112,7 @@ export function createPackProductionServices(
         key: "motion_submission",
         state,
         save: phase,
+        observe,
       });
       const url = (data.video as { url?: string } | undefined)?.url;
       if (!url) throw new Error("House video model returned no video");
@@ -97,6 +141,6 @@ export function createPackProductionServices(
       return inspectPackMedia(input);
     },
     finish: result =>
-      runPackCommand(actor, "finish_asset", job.id, { asset_id: asset.id, ...result }),
+      runPackCommand(actor, "finish_asset", job.id, { ...result, ...fence, asset_id: asset.id }),
   };
 }

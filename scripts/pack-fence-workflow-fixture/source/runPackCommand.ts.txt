@@ -1,0 +1,31 @@
+import { read } from "./read";
+import { write } from "./write";
+import { record } from "./record";
+import type { PackSnapshot } from "@/lib/content/packs/packTypes";
+export async function runPackCommand(
+  _actor: unknown,
+  action: string,
+  _job: string,
+  input: Record<string, unknown> = {},
+): Promise<PackSnapshot> {
+  const state = read();
+  record(action);
+  if (action === "run") state.job.workflow_run_id = input.workflow_run_id;
+  if (action === "claim") {
+    const asset = state.assets.find(asset => asset.id === input.asset_id);
+    if (!asset || asset.status !== "pending") return { ...state, asset, claimed: false };
+    asset.status = "running";
+    asset.attempt += 1;
+    asset.claim_id = "00000000-0000-4000-8000-000000000003";
+    write(state);
+    return { ...state, asset, claimed: true };
+  }
+  if (action === "settle") {
+    state.settlements++;
+    write(state);
+    throw new Error("Settlement acknowledgement lost");
+  }
+  if (action === "finish_asset") Object.assign(state.assets[0], input);
+  write(state);
+  return state;
+}

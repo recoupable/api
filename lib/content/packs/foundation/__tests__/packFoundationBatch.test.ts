@@ -1,3 +1,4 @@
+import type { PackJob } from "../../packTypes";
 import { createPackFoundationPlan } from "../createPackFoundationPlan";
 import { bindPackFoundationFiles } from "../bindPackFoundationFiles";
 import { foundationImageBytes } from "./foundationImageBytes";
@@ -25,12 +26,18 @@ function setup(artwork = 1) {
       assetIds: snapshot.assets.filter(a => a.status === "pending").map(a => a.id),
     })),
     read: vi.fn(async () => structuredClone(snapshot)),
-    persist: vi.fn(async (_actor: unknown, _job: unknown, record: PackFoundationRecord) => {
-      snapshot.job.production_context = {
-        ...(snapshot.job.production_context as object),
-        shared_foundation: JSON.parse(JSON.stringify(record)),
-      };
-    }),
+    persist: vi.fn(
+      async (
+        _actor: unknown,
+        _job: unknown,
+        record: PackFoundationRecord,
+      ): Promise<PackJob | void> => {
+        snapshot.job.production_context = {
+          ...(snapshot.job.production_context as object),
+          shared_foundation: JSON.parse(JSON.stringify(record)),
+        };
+      },
+    ),
     produce: vi.fn(async (_actor: unknown, job: typeof snapshot.job, id: string) => {
       produced.push({
         id,
@@ -380,5 +387,154 @@ it("runs plan hashing and retained-byte binding only through the supplied durabl
   expect(f.services.bindFiles).toHaveBeenCalledOnce();
   expect(f.services.bindFiles.mock.invocationCallOrder[0]).toBeLessThan(
     f.services.persist.mock.invocationCallOrder.at(-1)!,
+  );
+});
+
+it("propagates acknowledged preparation and persistence versions and the settlement fence", async () => {
+  const f = setup();
+  const actor = { ...f.actor, packProtocol: 2 as const };
+  const execution = {
+    expected_revision: 1,
+    execution_id: "00000000-0000-4000-8000-000000000001",
+    execution_version: 1,
+  };
+  Object.assign(f.snapshot.job, {
+    protocol: 2,
+    ...execution,
+    revision: 1,
+    workflow_run_id: "run",
+    context_version: 4,
+  });
+  f.services.prepare.mockImplementation(async () => {
+    f.snapshot.job.context_version = 6;
+    return { job: structuredClone(f.snapshot.job), assetIds: f.snapshot.assets.map(a => a.id) };
+  });
+  const versions: number[] = [];
+  f.services.persist.mockImplementation(async (_actor, inputJob, record) => {
+    const job = inputJob as PackJob;
+    expect(job.context_version).toBe(f.snapshot.job.context_version);
+    versions.push(job.context_version!);
+    f.snapshot.job.context_version!++;
+    f.snapshot.job.production_context = {
+      ...(f.snapshot.job.production_context as object),
+      shared_foundation: structuredClone(record),
+    };
+    return structuredClone(f.snapshot.job);
+  });
+  await runPackFoundationBatch(
+    actor,
+    "job",
+    1,
+    { dependentAssetIds: ["video-0"] },
+    f.services,
+    execution,
+  );
+  expect(versions).toEqual([6, 7]);
+  expect(f.snapshot.job.context_version).toBe(8);
+  expect(f.services.settle).toHaveBeenCalledWith(actor, "job", undefined, execution);
+});
+
+it("rejects an intervening context writer after its own pending acknowledgement", async () => {
+  const f = setup();
+  const actor = { ...f.actor, packProtocol: 2 as const };
+  const execution = {
+    expected_revision: 1,
+    execution_id: "00000000-0000-4000-8000-000000000001",
+    execution_version: 1,
+  };
+  Object.assign(f.snapshot.job, {
+    protocol: 2,
+    ...execution,
+    revision: 1,
+    workflow_run_id: "run",
+    context_version: 4,
+  });
+  f.services.persist.mockImplementation(async (_actor, inputJob, record) => {
+    expect((inputJob as PackJob).context_version).toBe(f.snapshot.job.context_version);
+    f.snapshot.job.context_version!++;
+    f.snapshot.job.production_context = {
+      ...(f.snapshot.job.production_context as object),
+      shared_foundation: structuredClone(record),
+    };
+    return structuredClone(f.snapshot.job);
+  });
+  const produce = f.services.produce.getMockImplementation()!;
+  f.services.produce.mockImplementation(async (...args) => {
+    await produce(...args);
+    f.snapshot.job.context_version!++;
+    f.snapshot.job.production_context = {
+      ...(f.snapshot.job.production_context as object),
+      concurrent_writer: "retain this exact context",
+    };
+  });
+  await expect(
+    runPackFoundationBatch(
+      actor,
+      "job",
+      1,
+      { dependentAssetIds: ["video-0"] },
+      f.services,
+      execution,
+    ),
+  ).rejects.toThrow("Foundation context changed after acknowledgement");
+  expect(f.services.persist).toHaveBeenCalledTimes(1);
+  expect(f.services.bindFiles).not.toHaveBeenCalled();
+  expect(f.services.settle).not.toHaveBeenCalled();
+  expect(f.produced.map(asset => asset.id)).toEqual(["artwork-0"]);
+  expect(f.snapshot.job.context_version).toBe(6);
+  expect(f.snapshot.job.production_context).toHaveProperty(
+    "concurrent_writer",
+    "retain this exact context",
+  );
+});
+
+it("rejects a context advance while reusing a saved ready foundation", async () => {
+  const f = setup();
+  await runPackFoundationBatch(f.actor, "job", 1, { dependentAssetIds: ["video-0"] }, f.services);
+  const actor = { ...f.actor, packProtocol: 2 as const };
+  const execution = {
+    expected_revision: 1,
+    execution_id: "00000000-0000-4000-8000-000000000001",
+    execution_version: 1,
+  };
+  Object.assign(f.snapshot.job, {
+    protocol: 2,
+    ...execution,
+    revision: 1,
+    workflow_run_id: "run",
+    context_version: 4,
+  });
+  f.services.persist.mockClear();
+  f.services.produce.mockClear();
+  f.services.bindFiles.mockClear();
+  f.services.settle.mockClear();
+  let reads = 0;
+  f.services.read.mockImplementation(async () => {
+    if (++reads === 2) {
+      f.snapshot.job.context_version = 5;
+      f.snapshot.job.production_context = {
+        ...(f.snapshot.job.production_context as object),
+        concurrent_writer: "saved-ready update",
+      };
+    }
+    return structuredClone(f.snapshot);
+  });
+  await expect(
+    runPackFoundationBatch(
+      actor,
+      "job",
+      1,
+      { dependentAssetIds: ["video-0"] },
+      f.services,
+      execution,
+    ),
+  ).rejects.toThrow("Foundation context changed after acknowledgement");
+  expect(f.services.persist).not.toHaveBeenCalled();
+  expect(f.services.produce).not.toHaveBeenCalled();
+  expect(f.services.bindFiles).not.toHaveBeenCalled();
+  expect(f.services.settle).not.toHaveBeenCalled();
+  expect(f.snapshot.job.production_context).toHaveProperty(
+    "concurrent_writer",
+    "saved-ready update",
   );
 });

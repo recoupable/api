@@ -1,3 +1,4 @@
+import type { PackLaunchFence } from "../fence/packFenceTypes";
 import { getPackFoundationContinuation } from "./getPackFoundationContinuation";
 import { preparePackFoundationBatch } from "./preparePackFoundationBatch";
 import { runBoundedPackProduction } from "../runBoundedPackProduction";
@@ -11,6 +12,7 @@ export async function runPackFoundationBatch(
   concurrency: number,
   selection: PackFoundationSelection,
   services: PackFoundationServices,
+  execution?: PackLaunchFence,
 ) {
   const { produce, settle } = services;
   const state: PackFoundationBatchState = {
@@ -18,27 +20,34 @@ export async function runPackFoundationBatch(
     settlementDeferred: true,
     references: [],
   };
-  const result = await runBoundedPackProduction(actor, jobId, concurrency, {
-    prepare: () => preparePackFoundationBatch(actor, jobId, selection, services, state),
-    produce: async (stepActor, job, assetId) => {
-      if (state.foundation?.plan.dependent_asset_ids.includes(assetId)) {
-        if (state.foundation.state !== "ready")
-          throw new Error("Foundation dependency is not ready");
-        job = {
-          ...job,
-          brief: { ...job.brief, reference_image_urls: state.references },
-          shared_foundation_binding: {
-            plan_sha256: state.foundation.plan.digest,
-            asset_sha256: state.foundation.asset_sha256,
-          },
-        };
-      }
-      return produce(stepActor, job, assetId);
+  const result = await runBoundedPackProduction(
+    actor,
+    jobId,
+    concurrency,
+    {
+      prepare: () => preparePackFoundationBatch(actor, jobId, selection, services, state),
+      produce: async (stepActor, job, assetId) => {
+        if (state.foundation?.plan.dependent_asset_ids.includes(assetId)) {
+          if (state.foundation.state !== "ready")
+            throw new Error("Foundation dependency is not ready");
+          job = {
+            ...job,
+            brief: { ...job.brief, reference_image_urls: state.references },
+            shared_foundation_binding: {
+              plan_sha256: state.foundation.plan.digest,
+              asset_sha256: state.foundation.asset_sha256,
+            },
+          };
+        }
+        return produce(stepActor, job, assetId);
+      },
+      settle: async (stepActor, id, error, fence) => {
+        if (!state.settlementDeferred)
+          await settle(stepActor, id, error, ...(stepActor.packProtocol === 2 ? [fence] : []));
+      },
     },
-    settle: async (stepActor, id, error) => {
-      if (!state.settlementDeferred) await settle(stepActor, id, error);
-    },
-  });
+    execution,
+  );
   const continuation = getPackFoundationContinuation(
     state.foundation,
     state.savedJob,

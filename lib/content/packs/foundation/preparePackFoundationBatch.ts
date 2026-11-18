@@ -1,3 +1,5 @@
+import { persistPackFoundationContext } from "./persistPackFoundationContext";
+import { PackFenceError } from "../fence/PackFenceError";
 import { resolvePackCreativeContext } from "../resolvePackCreativeContext";
 import { bindPackFoundationDependents } from "./bindPackFoundationDependents";
 import { getPackFoundationReferences } from "./getPackFoundationReferences";
@@ -45,9 +47,33 @@ export async function preparePackFoundationBatch(
     prepared.job.quote?.id !== plan.quote_id
   )
     throw new Error("Prepared pack identity changed");
-  if (!saved) await persist(actor, original.job, state.foundation);
+  let acknowledgedJob = prepared.job;
+  if (
+    actor.packProtocol === 2 &&
+    saved &&
+    prepared.job.context_version !== original.job.context_version
+  )
+    throw new PackFenceError("Foundation context changed during preparation");
+  if (!saved) {
+    if (
+      actor.packProtocol === 2 &&
+      (prepared.job.production_context as { shared_foundation?: unknown } | null)
+        ?.shared_foundation !== undefined
+    )
+      throw new PackFenceError("Foundation context changed during preparation");
+    acknowledgedJob = await persistPackFoundationContext(
+      actor,
+      actor.packProtocol === 2
+        ? { ...original.job, context_version: prepared.job.context_version }
+        : original.job,
+      state.foundation,
+      services,
+    );
+  }
   if (asset?.status === "pending") await produce(actor, prepared.job, asset.id);
   const current = await read(actor, jobId);
+  if (actor.packProtocol === 2 && current.job.context_version !== acknowledgedJob.context_version)
+    throw new PackFenceError("Foundation context changed after acknowledgement");
   state.savedJob = current.job;
   if ((await createPlan(current, selection)).digest !== plan.digest)
     throw new Error("Foundation plan changed during preparation");
@@ -63,11 +89,19 @@ export async function preparePackFoundationBatch(
   if (bound.state === "ready")
     bound.dependency_bindings = bindPackFoundationDependents(current, plan, saved);
   state.foundation = bound;
-  await persist(actor, current.job, bound);
+  const persistedJob = await persistPackFoundationContext(
+    actor,
+    actor.packProtocol === 2
+      ? { ...current.job, context_version: acknowledgedJob.context_version }
+      : current.job,
+    bound,
+    services,
+  );
+  state.savedJob = persistedJob;
   const pending = new Set(current.assets.filter(a => a.status === "pending").map(a => a.id));
   state.references = await getPackFoundationReferences(
     actor,
-    current.job,
+    persistedJob,
     prepared.job,
     bound,
     plan.dependent_asset_ids.some(id => pending.has(id)),

@@ -1,3 +1,5 @@
+import { PackFenceError } from "../fence/PackFenceError";
+import { getPackExecutionFence } from "../fence/getPackExecutionFence";
 import { packProductionContextSchema } from "../packProductionContextSchema";
 import { runPackCommand } from "@/lib/supabase/release_pack_jobs/runPackCommand";
 import { createPackFoundationPlan } from "./createPackFoundationPlan";
@@ -10,7 +12,14 @@ export async function savePackFoundationRecord(
   input: PackFoundationRecord,
 ) {
   const record = packFoundationRecordSchema.parse(input);
+  if (
+    job.protocol === 2 &&
+    (!Number.isSafeInteger(job.context_version) || job.context_version! < 0)
+  )
+    throw new PackFenceError("Missing original foundation context version");
   const current = await runPackCommand(actor, "read", job.id);
+  if (job.protocol === 2 && current.job.context_version !== job.context_version)
+    throw new PackFenceError("Foundation context version changed");
   const plan = createPackFoundationPlan(current, {
     ...(record.plan.selection === "explicit" ? { foundationAssetId: record.plan.asset_id! } : {}),
     dependentAssetIds: record.plan.dependent_asset_ids,
@@ -18,6 +27,10 @@ export async function savePackFoundationRecord(
   if (
     current.job.status !== "running" ||
     current.job.owner_id !== job.owner_id ||
+    (job.protocol === 2 &&
+      (current.job.execution_id !== job.execution_id ||
+        current.job.execution_version !== job.execution_version ||
+        current.job.workflow_run_id !== job.workflow_run_id)) ||
     plan.digest !== record.plan.digest
   )
     throw new Error("Foundation quote, direction or admitted job changed");
@@ -29,7 +42,10 @@ export async function savePackFoundationRecord(
       !(record.blocked_reason === "reference_limit" && record.state === "pending"))
   )
     throw new Error("Persist foundation only after retained shared preparation completes");
-  await runPackCommand(actor, "context", job.id, {
+  const saved = await runPackCommand(actor, "context", job.id, {
+    ...getPackExecutionFence(job),
+    ...(job.protocol === 2 ? { context_version: job.context_version } : {}),
     value: { ...context, shared_foundation: record },
   });
+  return saved.job;
 }

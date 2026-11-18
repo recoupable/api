@@ -1,0 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+export function read() {
+  return JSON.parse(readFileSync(join(process.env.PACK_SCHEDULER_EFFECTS!, "state.json"), "utf8"));
+}

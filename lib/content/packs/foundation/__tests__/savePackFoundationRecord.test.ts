@@ -72,3 +72,72 @@ it("rejects malformed completed preparation before persisting readiness", async 
   ).rejects.toThrow();
   expect(runPackCommand).toHaveBeenCalledTimes(1);
 });
+
+function protocol2Snapshot() {
+  const snapshot = foundationFixture();
+  Object.assign(snapshot.job, {
+    protocol: 2,
+    execution_id: "00000000-0000-4000-8000-000000000001",
+    execution_version: 1,
+    workflow_run_id: "run",
+    context_version: 4,
+  });
+  return snapshot;
+}
+it("refuses a stale foundation record without borrowing a newer context version", async () => {
+  const original = protocol2Snapshot();
+  const record = {
+    plan: createPackFoundationPlan(original, { dependentAssetIds: [] }),
+    state: "pending" as const,
+    files: [],
+  };
+  const current = structuredClone(original);
+  current.job.context_version = 5;
+  vi.mocked(runPackCommand).mockResolvedValue(current);
+  await expect(
+    savePackFoundationRecord({ accountId: "owner", packProtocol: 2 }, original.job, record),
+  ).rejects.toThrow(/context.*changed/i);
+  expect(runPackCommand).toHaveBeenCalledTimes(1);
+});
+it("returns acknowledged context versions for consecutive foundation writes", async () => {
+  const snapshot = protocol2Snapshot();
+  const record = {
+    plan: createPackFoundationPlan(snapshot, { dependentAssetIds: [] }),
+    state: "pending" as const,
+    files: [],
+  };
+  vi.mocked(runPackCommand).mockImplementation(async (_actor, action, _id, input) => {
+    if (action === "context") {
+      expect(input?.context_version).toBe(snapshot.job.context_version);
+      snapshot.job.context_version!++;
+      snapshot.job.production_context = input!.value;
+    }
+    return structuredClone(snapshot);
+  });
+  const first = await savePackFoundationRecord(
+    { accountId: "owner", packProtocol: 2 },
+    structuredClone(snapshot.job),
+    record,
+  );
+  expect(first?.context_version).toBe(5);
+  const second = await savePackFoundationRecord(
+    { accountId: "owner", packProtocol: 2 },
+    first!,
+    record,
+  );
+  expect(second?.context_version).toBe(6);
+});
+
+it("rejects a missing original context version before any persistence call", async () => {
+  const snapshot = protocol2Snapshot();
+  delete snapshot.job.context_version;
+  const record = {
+    plan: createPackFoundationPlan(snapshot, { dependentAssetIds: [] }),
+    state: "pending" as const,
+    files: [],
+  };
+  await expect(
+    savePackFoundationRecord({ accountId: "owner", packProtocol: 2 }, snapshot.job, record),
+  ).rejects.toThrow("Missing original foundation context version");
+  expect(runPackCommand).not.toHaveBeenCalled();
+});
