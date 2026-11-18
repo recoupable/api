@@ -12,6 +12,8 @@ it("maps only the dedicated Catalog save size discriminator", async () => {
     name: "CatalogSnapshotTooLargeError",
     code: "catalog_snapshot_too_large",
     status: 400,
+    message:
+      "Catalog snapshot exceeds the 1 MiB stored JSON limit. Reduce the snapshot size; this save was not persisted.",
   });
 });
 it.each([
