@@ -112,6 +112,16 @@ describe.each(cases)("$operation fixed proposal query", ({ operation, invoke, sq
     expect(error).not.toBe(raw);
     expect(query).toHaveBeenCalledTimes(1);
   });
+  it("envelope access failure stays unknown even with a denial code", async () => {
+    const result = Object.defineProperty({}, "rows", {
+      get() {
+        throw { code: "42501" };
+      },
+    });
+    const query = vi.fn().mockResolvedValue(result);
+    await expect(invoke({ query })).rejects.toMatchObject({ kind: "outcome_unknown" });
+    expect(query).toHaveBeenCalledTimes(1);
+  });
   it.each([
     undefined,
     null,
@@ -146,3 +156,22 @@ it("missing serialization is unknown before any query", async () => {
   await expect(create({ query }, call)).rejects.toMatchObject({ kind: "outcome_unknown" });
   expect(query).not.toHaveBeenCalled();
 });
+
+it.each(["create", "read"])(
+  "%s input access fails before querying and cannot claim SQL denial",
+  async operation => {
+    const query = vi.fn();
+    const input = structuredClone(operation === "create" ? createCall : readCall);
+    Object.defineProperty(input, "actor", {
+      get() {
+        throw { code: "42501" };
+      },
+    });
+    const result =
+      operation === "create"
+        ? create({ query }, input as ProposedCreateCall)
+        : read({ query }, input as ProposedReadCall);
+    await expect(result).rejects.toMatchObject({ kind: "outcome_unknown" });
+    expect(query).not.toHaveBeenCalled();
+  },
+);

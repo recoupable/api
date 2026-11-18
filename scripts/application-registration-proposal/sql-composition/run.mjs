@@ -57,7 +57,7 @@ const gitEnv = {
   GIT_CONFIG_GLOBAL: "/dev/null",
 };
 // Bind tracked API source bytes, including transitive authentication imports.
-// Only this reviewed nine-path adapter/qualification slice may differ from the accepted revision.
+// Only this reviewed thirteen-path adapter/qualification slice may differ from the accepted revision.
 const apiRevision = bindings.acceptedApiBaseline;
 if (!/^[0-9a-f]{40}$/.test(apiRevision)) throw new Error("Exact API revision required");
 const gitRead = args =>
@@ -73,6 +73,10 @@ gitRead(["merge-base", "--is-ancestor", apiRevision, "HEAD"]);
 const allowedChanges = new Set([
   ...[
     "ProposedRegistrationSqlClient.ts",
+    "getProposedCreateSqlValues.ts",
+    "getProposedReadSqlValues.ts",
+    "getProposedSqlFailure.ts",
+    "getProposedSqlReceipt.ts",
     "insertProposedApplicationRegistration.ts",
     "selectProposedApplicationRegistration.ts",
     "__tests__/registrationSql.test.ts",
@@ -81,6 +85,10 @@ const allowedChanges = new Set([
     name => `scripts/application-registration-proposal/sql-composition/${name}`,
   ),
 ]);
+if (
+  JSON.stringify([...allowedChanges].sort()) !== JSON.stringify([...bindings.candidatePaths].sort())
+)
+  throw new Error("Exact candidate path manifest mismatch");
 // Candidate changes are review inputs, but executed bytes must equal a recorded commit.
 const candidate = gitRead(["rev-parse", "HEAD"]).trim();
 const candidateTree = gitRead(["rev-parse", "HEAD^{tree}"]).trim();

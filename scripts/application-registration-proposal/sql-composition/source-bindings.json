@@ -48,5 +48,20 @@
     "proposals/application-registration-execution-2104/test_privileges.py": "da2965852d0d5ba3726f92ea596f9fbccfa84ef08432c49602fab742e5e30e2e",
     "proposals/application-registration-execution-2104/EXECUTION-CONTRACT.md": "036bc58deb8576ab40fbbb8d79e75c764a853c29ebca8c5d45825a4cc008e4b7",
     "proposals/application-registration-execution-2104/execution.sql": "8ffc568bf01513d14297fd92a48716a7921e023cfacf3f3d124f943e6490a1d7"
-  }
+  },
+  "candidatePaths": [
+    "lib/supabase/application_registration_proposal/ProposedRegistrationSqlClient.ts",
+    "lib/supabase/application_registration_proposal/getProposedCreateSqlValues.ts",
+    "lib/supabase/application_registration_proposal/getProposedReadSqlValues.ts",
+    "lib/supabase/application_registration_proposal/getProposedSqlFailure.ts",
+    "lib/supabase/application_registration_proposal/getProposedSqlReceipt.ts",
+    "lib/supabase/application_registration_proposal/insertProposedApplicationRegistration.ts",
+    "lib/supabase/application_registration_proposal/selectProposedApplicationRegistration.ts",
+    "lib/supabase/application_registration_proposal/__tests__/registrationSql.test.ts",
+    "scripts/application-registration-proposal/sql-composition/README.md",
+    "scripts/application-registration-proposal/sql-composition/run.mjs",
+    "scripts/application-registration-proposal/sql-composition/qualification.test.ts",
+    "scripts/application-registration-proposal/sql-composition/source-bindings.json",
+    "scripts/application-registration-proposal/sql-composition/supervise.py"
+  ]
 }
