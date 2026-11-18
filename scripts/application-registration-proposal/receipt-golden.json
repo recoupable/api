@@ -1,0 +1,123 @@
+{
+  "databaseHead": "df7be4c65b98924373b38c7d257f4b1c1820d6b7",
+  "serverVersion": "15.10 (Homebrew)",
+  "serverEncoding": "UTF8",
+  "input": {
+    "actor": "11111111-1111-4111-8111-111111111111",
+    "workspace": "11111111-1111-4111-8111-111111111111",
+    "environment": "production",
+    "key": "create",
+    "entitlementRevision": 1,
+    "registration": {
+      "name": "Música 音楽",
+      "origins": [
+        {
+          "origin": "https://music.example",
+          "hostname": "music.example",
+          "return_urls": [
+            "https://music.example/return"
+          ]
+        },
+        {
+          "origin": "https://preview.example",
+          "hostname": "preview.example",
+          "return_urls": []
+        }
+      ]
+    }
+  },
+  "createReceipt": {
+    "actor": "11111111-1111-4111-8111-111111111111",
+    "snapshot": {
+      "name": "Música 音楽",
+      "origins": [
+        {
+          "origin": "https://music.example",
+          "revoked": false,
+          "cas_revision": 1,
+          "proof_revision": 1,
+          "config_revision": 1
+        },
+        {
+          "origin": "https://preview.example",
+          "revoked": false,
+          "cas_revision": 1,
+          "proof_revision": 1,
+          "config_revision": 1
+        }
+      ],
+      "environment": "production",
+      "return_urls": [
+        "https://music.example/return"
+      ],
+      "workspace_id": "11111111-1111-4111-8111-111111111111",
+      "application_id": "cbbb51b5-aca4-405c-9a97-aee7612b0cd4",
+      "allowed_origins": [
+        "https://music.example",
+        "https://preview.example"
+      ]
+    },
+    "receipt_id": "c5ac9418-b749-4e6b-966b-6d5a3314c73d",
+    "environment": "production",
+    "recorded_at": "2026-11-18T02:41:27.506401+00:00",
+    "workspace_id": "11111111-1111-4111-8111-111111111111",
+    "evidence_kind": "disposable_parent_assertion",
+    "policy_status": "proposed_unadopted",
+    "application_id": "cbbb51b5-aca4-405c-9a97-aee7612b0cd4",
+    "policy_version": "proposed-personal-v1",
+    "runtime_enabled": false,
+    "access_activated": false,
+    "billing_owner_id": "11111111-1111-4111-8111-111111111111",
+    "origins_verified": false,
+    "bootstrap_enabled": false,
+    "entitlement_revision": 1,
+    "production_persisted": false
+  },
+  "readReceipt": {
+    "actor": "11111111-1111-4111-8111-111111111111",
+    "snapshot": {
+      "name": "Música 音楽",
+      "origins": [
+        {
+          "origin": "https://music.example",
+          "revoked": false,
+          "cas_revision": 1,
+          "proof_revision": 1,
+          "config_revision": 1
+        },
+        {
+          "origin": "https://preview.example",
+          "revoked": false,
+          "cas_revision": 1,
+          "proof_revision": 1,
+          "config_revision": 1
+        }
+      ],
+      "environment": "production",
+      "return_urls": [
+        "https://music.example/return"
+      ],
+      "workspace_id": "11111111-1111-4111-8111-111111111111",
+      "application_id": "cbbb51b5-aca4-405c-9a97-aee7612b0cd4",
+      "allowed_origins": [
+        "https://music.example",
+        "https://preview.example"
+      ]
+    },
+    "receipt_id": "c5ac9418-b749-4e6b-966b-6d5a3314c73d",
+    "environment": "production",
+    "recorded_at": "2026-11-18T02:41:27.506401+00:00",
+    "workspace_id": "11111111-1111-4111-8111-111111111111",
+    "evidence_kind": "disposable_parent_assertion",
+    "policy_status": "proposed_unadopted",
+    "application_id": "cbbb51b5-aca4-405c-9a97-aee7612b0cd4",
+    "policy_version": "proposed-personal-v1",
+    "runtime_enabled": false,
+    "access_activated": false,
+    "billing_owner_id": "11111111-1111-4111-8111-111111111111",
+    "origins_verified": false,
+    "bootstrap_enabled": false,
+    "entitlement_revision": 1,
+    "production_persisted": false
+  }
+}

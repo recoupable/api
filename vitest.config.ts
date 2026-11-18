@@ -7,6 +7,8 @@ export default defineConfig({
     // The OAuth provider requires Node 22 LTS; its HTTP lab has a dedicated CI job.
     exclude: [
       ...configDefaults.exclude,
+      // Requires explicit no-dotenv/no-network qualification before auth imports.
+      "lib/applications/proposedRegistration/**",
       "scripts/mcp-oauth/**",
       // This fixture owns node:test lifecycle cases and a separate compiled runtime runner.
       "scripts/pack-scheduler-workflow-fixture/**",
