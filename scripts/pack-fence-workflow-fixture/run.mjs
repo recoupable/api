@@ -1,4 +1,6 @@
 /** Actual compiled production workflow/steps, synthetic effects, zero network. */
+import http2 from "node:http2";
+import { syncBuiltinESMExports } from "node:module";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
 import {
@@ -24,6 +26,23 @@ const require = createRequire(import.meta.url),
 const network = denyNetwork(),
   temp = await realpath(await mkdtemp(join(tmpdir(), "pack-fence-sdk-"))),
   bindings = [];
+// Explicitly deny additional transports as well as the shared underlying socket guard.
+let additionalNetworkAttempts = 0;
+const denyAdditionalTransport = () => {
+  additionalNetworkAttempts++;
+  throw new Error("Network forbidden in Pack fence fixture");
+};
+globalThis.WebSocket = class {
+  constructor() {
+    denyAdditionalTransport();
+  }
+};
+http2.connect = denyAdditionalTransport;
+syncBuiltinESMExports();
+assert.throws(() => new WebSocket("wss://example.invalid"), /Network forbidden/);
+assert.throws(() => http2.connect("https://example.invalid"), /Network forbidden/);
+assert.equal(additionalNetworkAttempts, 2);
+additionalNetworkAttempts = 0;
 const source = join(temp, "source");
 await mkdir(source);
 await symlink(join(root, "node_modules"), join(temp, "node_modules"), "dir");
@@ -191,6 +210,25 @@ try {
         .filter(Boolean)
         .map(JSON.parse);
       assert(failure);
+      assert(
+        trace.some(x => x.action === "claim"),
+        "must reach asset claim",
+      );
+      assert(
+        trace.some(x => x.action === "phase"),
+        "must reach provider phase",
+      );
+      assert.match(
+        failure,
+        scenario === "phase-failure"
+          ? /Receipt acknowledgement lost/
+          : /Settlement acknowledgement lost/,
+      );
+      if (scenario === "settlement-failure") {
+        const finish = trace.findIndex(x => x.action === "finish_asset");
+        assert(finish >= 0, "must finish asset before settlement loss");
+        assert(finish < trace.findIndex(x => x.action === "settle"));
+      }
       assert.equal(
         trace.filter(x => x.action === "settle").length,
         scenario === "phase-failure" ? 0 : 1,
@@ -225,6 +263,7 @@ try {
     }
   }
   assert.equal(network(), 0);
+  assert.equal(additionalNetworkAttempts, 0);
   if (process.env.PACK_FENCE_SDK_OUTPUT)
     await writeFile(
       process.env.PACK_FENCE_SDK_OUTPUT,
@@ -232,7 +271,7 @@ try {
         {
           bindings,
           results,
-          networkAttempts: network(),
+          networkAttempts: network() + additionalNetworkAttempts,
           boundary:
             "actual compiled release workflow body (export renamed only), actual steps; synthetic persistence/effect leaves, not SQL or hosted qualification",
         },

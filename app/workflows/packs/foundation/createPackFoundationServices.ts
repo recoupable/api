@@ -58,9 +58,19 @@ export function createPackFoundationServices(
       }
       return producePackAssetStep(a, job, id);
     },
-    settle: (a, id, error) => {
+    settle: (a, id, error, suppliedExecution) => {
       scope(a, id);
-      return settleBoundedPackStep(a, id, error, execution);
+      if (
+        a.packProtocol === 2 &&
+        (!suppliedExecution ||
+          suppliedExecution.execution_id !== execution!.execution_id ||
+          suppliedExecution.execution_version !== execution!.execution_version ||
+          suppliedExecution.expected_revision !== execution!.expected_revision)
+      )
+        throw new PackFenceError("Foundation settlement execution mismatch");
+      return a.packProtocol === 2
+        ? settleBoundedPackStep(a, id, error, suppliedExecution)
+        : settleBoundedPackStep(a, id, error);
     },
     createPlan: (snapshot, selection) => {
       scope(actor, snapshot.job.id);

@@ -28,7 +28,7 @@ export async function preparePackStep(
     job,
     assetIds: saved.assets.filter(a => a.status === "pending").map(a => a.id),
     ...(actor.packProtocol === 2
-      ? { assetAttempts: Object.fromEntries(saved.assets.map(a => [a.id, a.attempt])) }
+      ? { assetAttempts: Object.fromEntries(saved.assets.map(a => [a.id, a.attempt] as const)) }
       : {}),
   };
 }

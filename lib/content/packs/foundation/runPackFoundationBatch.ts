@@ -41,8 +41,9 @@ export async function runPackFoundationBatch(
         }
         return produce(stepActor, job, assetId);
       },
-      settle: async (stepActor, id, error) => {
-        if (!state.settlementDeferred) await settle(stepActor, id, error);
+      settle: async (stepActor, id, error, fence) => {
+        if (!state.settlementDeferred)
+          await settle(stepActor, id, error, ...(stepActor.packProtocol === 2 ? [fence] : []));
       },
     },
     execution,

@@ -6,8 +6,8 @@ export function assertPackExecutionIdentity(
   original: PackLaunchFence | undefined,
   workflowId?: string,
 ) {
-  if (!original || job.protocol !== 2)
-    throw new PackFenceError("Missing original execution identity");
+  if (job.protocol !== 2) throw new PackFenceError("Execution fence requires protocol 2");
+  if (!original) throw new PackFenceError("Missing original execution identity");
   const actual = getPackLaunchFence(job);
   if (
     actual.execution_id !== original.execution_id ||

@@ -7,9 +7,9 @@ price, approval, reservation, or provider adapter is changed. There is no produc
 concurrency default or environment switch.
 
 The caller supplies a positive safe-integer concurrency bound and the existing
-`preparePackStep`, `producePackAssetStep`, and the unwired `settleBoundedPackStep`
+`preparePackStep`, `producePackAssetStep`, and `settleBoundedPackStep`
 services. The settlement adapter uses the same command but sets `maxRetries = 0`;
-the existing production `settlePackStep` and its retry behavior are unchanged.
+the protocol-1 production `settlePackStep` and its retry behavior are unchanged. The zero-retry adapter is also wired into the dormant protocol-2 production workflow.
 The controlled fixtures use explicit limits; they do not select a production cap.
 
 ## Execution contract
@@ -89,3 +89,5 @@ this helper with persisted dependency readiness for an already-quoted artwork as
 It remains unwired, preserves independent eligibility, and reports explicit owner
 continuations when prerequisites or reference capacity prevent dependent production.
 Its source/unit qualification is separate from this helper's compiled replay evidence.
+
+Protocol-2 exception: after draining in-flight work, any rejected preparation or production step stops without settlement. This conservative rule survives SDK error reconstruction and avoids treating an uncertain write as settlement authority. Successful runs settle once with the original execution fence; a settlement rejection is never retried here. The failure-settlement rules above describe protocol 1.

@@ -349,3 +349,27 @@ it("refuses persistence if admission changes after the initial read", async () =
   expect(mocks.fal).not.toHaveBeenCalled();
   expect(mocks.sign).not.toHaveBeenCalled();
 });
+
+it("settles only the explicitly supplied original foundation execution", async () => {
+  const actor = { accountId: "owner", packProtocol: 2 as const };
+  const execution = {
+    expected_revision: 1,
+    execution_id: "00000000-0000-4000-8000-000000000001",
+    execution_version: 1,
+  };
+  const services = createPackFoundationServices(actor, "job", execution);
+  expect(() => services.settle(actor, "job")).toThrow("Foundation settlement execution mismatch");
+  expect(() =>
+    services.settle(actor, "job", undefined, { ...execution, execution_version: 2 }),
+  ).toThrow("Foundation settlement execution mismatch");
+  expect(mocks.rpc).not.toHaveBeenCalled();
+  mocks.rpc.mockResolvedValue({ data: { job: {} }, error: null });
+  await services.settle(actor, "job", undefined, execution);
+  expect(mocks.rpc).toHaveBeenCalledWith(
+    "release_pack_command_v2",
+    expect.objectContaining({
+      p_action: "settle",
+      p_input: { ...execution, workflow_run_id: "run", error: null },
+    }),
+  );
+});

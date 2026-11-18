@@ -1,4 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { savePackFoundationRecord } from "../../foundation/savePackFoundationRecord";
+import { createPackFoundationPlan } from "../../foundation/createPackFoundationPlan";
+import { foundationFixture } from "../../foundation/__tests__/foundationFixture";
 import { randomUUID } from "node:crypto";
 import { userInfo } from "node:os";
 import { Client } from "pg";
@@ -9,6 +12,7 @@ import { getPackExecutionFence } from "../getPackExecutionFence";
 import { readPackProviderObservations } from "@/lib/supabase/release_pack_jobs/readPackProviderObservations";
 import type { PackActor } from "../../packTypes";
 const hooks = vi.hoisted(() => ({
+  beforeContext: undefined as undefined | (() => Promise<void>),
   beforePhase: undefined as undefined | (() => Promise<void>),
   submit: vi.fn(),
   runId: "",
@@ -37,6 +41,8 @@ vi.mock("@/lib/supabase/serverClient", () => ({
         hooks.beforePhase = undefined;
         await act();
       }
+      if (name === "release_pack_command_v2" && args.p_action === "context" && hooks.beforeContext)
+        await hooks.beforeContext();
       const client = await localClient();
       try {
         return {
@@ -97,7 +103,7 @@ async function seed(foundation = false) {
     jobId = randomUUID();
   const c = await localClient(true);
   try {
-    await c.query("INSERT INTO accounts VALUES($1);", [actor.accountId]);
+    await c.query("INSERT INTO accounts(id) VALUES($1);", [actor.accountId]);
     await c.query("INSERT INTO credits_usage(account_id,remaining_credits) VALUES($1,10000000)", [
       actor.accountId,
     ]);
@@ -162,9 +168,54 @@ describe.skipIf(!process.env.PACK_FENCE_TEST_SOCKET)(
   "paired source + actual proposed PostgreSQL",
   () => {
     beforeEach(() => {
+      hooks.beforeContext = undefined;
       hooks.beforePhase = undefined;
       hooks.trace = [];
       hooks.submit.mockReset().mockResolvedValue({ request_id: "original-request" });
+    });
+    it("refuses competing foundation writes at the actual SQL CAS and retains acknowledged versions", async () => {
+      const { actor, job } = await seed(true);
+      const initialized = await runPackCommand(actor, "context", job.id, {
+        ...getPackExecutionFence(job),
+        context_version: job.context_version,
+        value: foundationFixture().job.production_context,
+      });
+      const record = {
+        plan: createPackFoundationPlan(initialized, { dependentAssetIds: [] }),
+        state: "pending" as const,
+        files: [],
+      };
+      let arrivals = 0;
+      let release!: () => void;
+      let bothArrived!: () => void;
+      const barrier = new Promise<void>(resolve => {
+        release = resolve;
+      });
+      const entered = new Promise<void>(resolve => {
+        bothArrived = resolve;
+      });
+      hooks.beforeContext = async () => {
+        if (++arrivals === 2) bothArrived();
+        await barrier;
+      };
+      const attempts = Promise.allSettled([
+        savePackFoundationRecord(actor, initialized.job, record),
+        savePackFoundationRecord(actor, initialized.job, record),
+      ]);
+      await entered;
+      release();
+      const outcomes = await attempts;
+      hooks.beforeContext = undefined;
+      expect(outcomes.filter(result => result.status === "fulfilled")).toHaveLength(1);
+      expect(outcomes.filter(result => result.status === "rejected")).toHaveLength(1);
+      const current = await runPackCommand(actor, "read", job.id);
+      expect(current.job.context_version).toBe(initialized.job.context_version! + 1);
+      await expect(savePackFoundationRecord(actor, initialized.job, record)).rejects.toThrow(
+        "context version changed",
+      );
+      const next = await savePackFoundationRecord(actor, current.job, record);
+      expect(next.context_version).toBe(current.job.context_version! + 1);
+      expect(hooks.submit).not.toHaveBeenCalled();
     });
     it("uses real claim/intent/journal/charge/completion and never resubmits a replayed claim", async () => {
       const { actor, job, asset } = await seed();

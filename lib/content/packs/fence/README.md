@@ -14,7 +14,7 @@ Claim replay is a reconciliation result, not a second production permit. Uncerta
 
 The actual production adapter registers frozen provider intent in the fenced phase transaction, submits only after a fresh acknowledgement, and independently appends an allowlisted accepted/completed observation before saving the active phase. Full results remain in the existing phase path; only request ID and optional output hash enter the bounded journal. If append or active save is refused/uncertain, stop; do not mark a catch failure, settle a newer execution or resubmit the provider request.
 
-The Workflow SDK reconstructs step errors. Protocol 2 therefore stops on any rejected step, not only `instanceof PackFenceError`. Its settlement uses the existing zero-retry bounded step outside the catch path. Foundation/bounded adapters propagate original identity and attempts; retained foundation dependents pass their plan/asset binding for SQL model validation. Those adapters and the lyric renderer remain unwired.
+The Workflow SDK reconstructs step errors. Protocol 2 therefore stops on any rejected step, not only `instanceof PackFenceError`. Its settlement uses the existing zero-retry bounded step outside the catch path. Foundation/bounded adapters propagate original identity and attempts; retained foundation dependents pass their plan/asset binding for SQL model validation. The bounded scheduler, foundation orchestration and lyric renderer remain unwired. The zero-retry settlement adapter is wired into the dormant protocol-2 release workflow.
 
 ## Local checks
 
@@ -33,9 +33,12 @@ pnpm test:pack-foundation-workflow
 For actual paired SQL integration, put PostgreSQL 17 binaries on PATH and supply the Database checkout explicitly:
 
 ```sh
-PYTHONDONTWRITEBYTECODE=1 python3 scripts/pack-fence-postgres/run.py --database /absolute/path/to/database-checkout
+python3 scripts/pack-fence-postgres/run.py --database /absolute/path/to/database-checkout --print-binding
+PYTHONDONTWRITEBYTECODE=1 python3 scripts/pack-fence-postgres/run.py --database /absolute/path/to/database-checkout --expected-binding <reviewed-binding>
 ```
 
-That runner creates and tears down an owned temporary Unix-socket PostgreSQL instance, applies the existing synthetic fixture and inactive proposal, and runs `packFencePostgres.test.ts`. Only Supabase RPC transport is adapted to that local database; production claim/intent/receipt/phase/completion helpers are real. Provider, caption, composition and inspection effects are synthetic. The five integration tests are skipped in ordinary Vitest runs and must be qualified through this explicit runner. They cover charging/completion and claim replay, actual Workflow mismatch, foundation-dependent image-edit and rejection of unretained bindings, and a committed acceptance surviving refused phase without catch finish or charge.
+That runner creates and tears down an owned temporary Unix-socket PostgreSQL instance, applies the existing synthetic fixture and inactive proposal, and runs `packFencePostgres.test.ts`. Only Supabase RPC transport is adapted to that local database; production claim/intent/receipt/phase/completion helpers are real. Provider, caption, composition and inspection effects are synthetic. The six integration tests are skipped in ordinary Vitest runs and must be qualified through this explicit runner. They cover concurrent foundation CAS with one winner and acknowledged version advancement, charging/completion and claim replay, actual Workflow mismatch, foundation-dependent image-edit and rejection of unretained bindings, and a committed acceptance surviving refused phase without catch finish or charge.
 
 These checks do not establish hosted grants, deployed behavior, live provider execution, cancellation of in-flight I/O, automatic reconciliation, cache/QA freshness, legacy drain or customer outcomes. Unknown intent is not safe to resubmit. No new wallet, rates, paid runtime or public activation is included.
+
+The paired runner binds Database HEAD and fixture/proposal bytes (including explicitly reviewed uncommitted candidates) before import and verifies they remain unchanged after testing. It strips credentials from child environments and fails on unconfirmed cleanup. Protocol 2 intentionally treats every RPC refusal as a stop/reconciliation signal; public 402/404 mapping must be decided before activation. Deterministic claim request IDs are opaque stable identities, not claims of random UUID generation; replacing their algorithm requires a replay-compatibility decision before activation.

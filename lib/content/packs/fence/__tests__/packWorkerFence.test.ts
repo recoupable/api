@@ -5,6 +5,7 @@ import { runPackFalRequest } from "../../runPackFalRequest";
 const provider = vi.hoisted(() => ({ submit: vi.fn(), status: vi.fn(), result: vi.fn() }));
 vi.mock("@/lib/fal/server", () => ({ default: { queue: provider } }));
 const id = "00000000-0000-4000-8000-000000000001";
+const claimId = "00000000-0000-4000-8000-000000000002";
 const job = {
   protocol: 2,
   revision: 1,
@@ -20,9 +21,9 @@ describe("dormant Pack worker fence", () => {
       execution_version: 2,
       workflow_run_id: "run-original",
     });
-    expect(getPackAssetFence(job, { attempt: 3, claim_id: id })).toMatchObject({
+    expect(getPackAssetFence(job, { attempt: 3, claim_id: claimId })).toMatchObject({
       asset_attempt: 3,
-      claim_id: id,
+      claim_id: claimId,
     });
     expect(() => getPackExecutionFence({ ...job, execution_id: undefined })).toThrow();
     expect(() => getPackAssetFence(job, { attempt: 3 })).toThrow();
@@ -36,19 +37,33 @@ describe("dormant Pack worker fence", () => {
       if (receipt.state === "accepted") throw new Error("stale");
       return { operation_id: id, operation_created: true };
     });
-    await expect(
-      runPackFalRequest({
-        model: "fixture",
-        input: {},
-        chargeCredits: 1,
-        key: "image_submission_0",
-        state: {},
-        save,
-        observe: async receipt => {
-          order.push(`observation:${receipt.state}`);
-        },
-      }),
-    ).rejects.toThrow("stale");
+    let acknowledge!: () => void;
+    let entered!: () => void;
+    const observationEntered = new Promise<void>(resolve => {
+      entered = resolve;
+    });
+    const acknowledgement = new Promise<void>(resolve => {
+      acknowledge = resolve;
+    });
+    const pending = runPackFalRequest({
+      model: "fixture",
+      input: {},
+      chargeCredits: 1,
+      key: "image_submission_0",
+      state: {},
+      save,
+      observe: async receipt => {
+        order.push(`observation:${receipt.state}`);
+        entered();
+        await acknowledgement;
+      },
+    });
+    const rejected = expect(pending).rejects.toThrow("stale");
+    await observationEntered;
+    expect(order).toEqual(["phase:submitting", "observation:accepted"]);
+    expect(save).toHaveBeenCalledTimes(1);
+    acknowledge();
+    await rejected;
     expect(order).toEqual(["phase:submitting", "observation:accepted", "phase:accepted"]);
     expect(provider.status).not.toHaveBeenCalled();
   });

@@ -2,6 +2,7 @@ import supabase from "../serverClient";
 import { z } from "zod";
 import type { PackActor } from "@/lib/content/packs/packTypes";
 import { PackFenceError } from "@/lib/content/packs/fence/PackFenceError";
+import { packReceiptPageSchema } from "./packReceiptPageSchema";
 /** Internal owner-scoped cursor read. Not mounted on a public route. */
 export async function readPackProviderObservations(
   actor: PackActor,
@@ -34,10 +35,7 @@ export async function readPackProviderObservations(
     throw new PackFenceError("Receipt read unavailable");
   });
   if (error) throw new PackFenceError("Receipt read unavailable");
-  return z
-    .object({
-      operations: z.array(z.record(z.string(), z.unknown())).max(100),
-      next_cursor: z.uuid().nullable(),
-    })
-    .parse(data);
+  const result = packReceiptPageSchema.safeParse(data);
+  if (!result.success) throw new PackFenceError("Invalid redacted receipt response");
+  return result.data;
 }

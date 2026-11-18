@@ -24,6 +24,6 @@ export function createPackProductionServices(
     }),
     inspect: async () => ({ passed: true, reason: "fixture" }),
     finish: result =>
-      runPackCommand(actor, "finish_asset", job.id, { asset_id: asset.id, ...result }),
+      runPackCommand(actor, "finish_asset", job.id, { ...result, asset_id: asset.id }),
   };
 }

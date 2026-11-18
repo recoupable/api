@@ -410,3 +410,24 @@ it("does not settle while final asset persistence is still in flight", async () 
   expect(assets[0].status).toBe("completed");
   expect(settlementActive).toEqual([0]);
 });
+
+it("never forwards an execution fence to legacy settlement", async () => {
+  const execution = {
+    expected_revision: 1,
+    execution_id: "00000000-0000-4000-8000-000000000001",
+    execution_version: 1,
+  };
+  const settle = vi.fn(async () => undefined);
+  await runBoundedPackProduction(
+    { accountId: "owner" },
+    "job",
+    1,
+    {
+      prepare: async () => ({ job: {} as PackJob, assetIds: [] }),
+      produce: async () => undefined,
+      settle,
+    },
+    execution,
+  );
+  expect(settle).toHaveBeenCalledWith({ accountId: "owner" }, "job", undefined);
+});

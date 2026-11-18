@@ -1,3 +1,4 @@
+import type { PackLaunchFence } from "../fence/packFenceTypes";
 import type { PackActor, PackAsset, PackFile, PackJob, PackSnapshot } from "../packTypes";
 import type {
   PackFoundationPlan,
@@ -8,7 +9,11 @@ import type {
 export type PackFoundationServices = {
   prepare: (actor: PackActor, jobId: string) => Promise<{ job: PackJob; assetIds: string[] }>;
   read: (actor: PackActor, jobId: string) => Promise<PackSnapshot>;
-  persist: (actor: PackActor, job: PackJob, record: PackFoundationRecord) => Promise<unknown>;
+  persist: (
+    actor: PackActor,
+    job: PackJob,
+    record: PackFoundationRecord,
+  ) => Promise<PackJob | void>;
   produce: (actor: PackActor, job: PackJob, assetId: string) => Promise<unknown>;
   createPlan: (
     snapshot: PackSnapshot,
@@ -19,7 +24,12 @@ export type PackFoundationServices = {
     asset: PackAsset | undefined,
   ) => Promise<PackFoundationRecord>;
   signFile: (file: PackFile) => Promise<string>;
-  settle: (actor: PackActor, jobId: string, error?: string) => Promise<unknown>;
+  settle: (
+    actor: PackActor,
+    jobId: string,
+    error?: string,
+    execution?: PackLaunchFence,
+  ) => Promise<unknown>;
 };
 
 export type PackFoundationBatchState = {

@@ -82,7 +82,7 @@ export async function runBoundedPackProduction(
     actor,
     jobId,
     stopped ? (failure instanceof Error ? failure.message : "Pack workflow failed") : undefined,
-    ...(execution ? [execution] : []),
+    ...(actor.packProtocol === 2 && execution ? [execution] : []),
   );
   return stopped
     ? {

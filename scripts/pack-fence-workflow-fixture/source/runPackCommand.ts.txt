@@ -12,11 +12,13 @@ export async function runPackCommand(
   record(action);
   if (action === "run") state.job.workflow_run_id = input.workflow_run_id;
   if (action === "claim") {
-    state.assets[0].status = "running";
-    state.assets[0].attempt = 1;
-    state.assets[0].claim_id = "00000000-0000-4000-8000-000000000003";
+    const asset = state.assets.find(asset => asset.id === input.asset_id);
+    if (!asset || asset.status !== "pending") return { ...state, asset, claimed: false };
+    asset.status = "running";
+    asset.attempt += 1;
+    asset.claim_id = "00000000-0000-4000-8000-000000000003";
     write(state);
-    return { ...state, asset: state.assets[0], claimed: true };
+    return { ...state, asset, claimed: true };
   }
   if (action === "settle") {
     state.settlements++;
