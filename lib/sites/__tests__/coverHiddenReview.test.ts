@@ -94,7 +94,7 @@ it("uses source-exact browser masks despite inline visibility important, without
     {
       locator: (selector: string) => {
         selectors.push(selector);
-        return images;
+        return selector === "img" ? images : { count: async () => 1 };
       },
     },
     "mobile",
@@ -123,4 +123,23 @@ it("rejects changed image ordering instead of binding stale indices to a capture
   expect(result.masked).toEqual([]);
   expect(screenshot.mock.calls[0][0]).toHaveProperty("mask");
   expect(screenshot.mock.calls[0][0]).not.toHaveProperty("style");
+});
+it("refuses an extra transparent full-viewport source match omitted by visible-cover inspection", async () => {
+  const screenshot = vi.fn();
+  const inspect = {
+    count: async () => 2,
+    evaluateAll: async () => [{ index: 0, src: url, box: { x: 0, y: 0, width: 100, height: 100 } }],
+  };
+  // Playwright :visible also includes the second opacity:0 image; never mask that larger set.
+  const targets = { count: async () => 2 };
+  const capture = runInNewContext("(" + coverHiddenRunner + ")");
+  const result = await capture(
+    { screenshot },
+    { locator: (selector: string) => (selector === "img" ? inspect : targets) },
+    "mobile",
+    { artworkUrl: url },
+  );
+  expect(result.status).toBe("unverified");
+  expect(result.masked).toEqual([]);
+  expect(screenshot).not.toHaveBeenCalled();
 });

@@ -16,8 +16,10 @@ export const coverHiddenRunner = `async function captureCoverHidden(page,ui,name
   // Hex-escape every URL character. No model-supplied selector or positional lookup.
   const escaped=Array.from(input.artworkUrl,c=>'\\\\'+c.codePointAt(0).toString(16)+' ').join('');
   const selector='img[src="'+escaped+'"]:not([srcset]):not(picture img):visible';
-  await page.screenshot({path:name+'-cover-hidden.png',mask:[ui.locator(selector)],maskColor:'#808080',timeout:5000});
-  if(JSON.stringify(await inspect())!==JSON.stringify(matched))return unavailable('Cover elements or geometry changed during capture; screenshot not used.');
+  const targets=ui.locator(selector);
+  if(await targets.count()!==matched.length)return unavailable('Mask targets include unsupported, transparent, unloaded or offscreen cover images.');
+  await page.screenshot({path:name+'-cover-hidden.png',mask:[targets],maskColor:'#808080',timeout:5000});
+  if(await targets.count()!==matched.length||JSON.stringify(await inspect())!==JSON.stringify(matched))return unavailable('Cover elements or geometry changed during capture; screenshot not used.');
   return {status:'captured',reason:'Browser-level neutral masks suppress exact-source inline cover boxes regardless of author CSS. Overlapping pixels are masked too; other representations and later states are unverified.',masked:matched};
  }catch{return unavailable('Cover identification or bounded screenshot capture failed.');}
 }`;
