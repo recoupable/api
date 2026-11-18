@@ -9,6 +9,8 @@ export default defineConfig({
       ...configDefaults.exclude,
       // Requires explicit no-dotenv/no-network qualification before auth imports.
       "lib/applications/proposedRegistration/**",
+      // Requires its explicit owned disposable PostgreSQL supervisor.
+      "scripts/application-registration-proposal/sql-composition/**",
       "scripts/mcp-oauth/**",
       // This fixture owns node:test lifecycle cases and a separate compiled runtime runner.
       "scripts/pack-scheduler-workflow-fixture/**",
