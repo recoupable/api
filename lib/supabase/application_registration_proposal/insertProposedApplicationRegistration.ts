@@ -12,13 +12,15 @@ export async function insertProposedApplicationRegistration(
   // Serialization/envelope failures are unknown, never SQL authorization outcomes.
   let values: unknown[];
   try {
+    const registration = JSON.stringify(call.registration);
+    if (typeof registration !== "string") throw new Error();
     values = [
       call.actor,
       call.workspace,
       call.environment,
       call.key,
       call.entitlementRevision,
-      JSON.stringify(call.registration),
+      registration,
     ];
   } catch {
     throw new ProposedStorageFailure("outcome_unknown");

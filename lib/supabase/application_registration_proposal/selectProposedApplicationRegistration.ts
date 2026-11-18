@@ -9,7 +9,7 @@ export async function selectProposedApplicationRegistration(
   client: ProposedRegistrationSqlClient,
   call: ProposedReadCall,
 ): Promise<unknown> {
-  // Serialization/envelope failures are unknown, never SQL authorization outcomes.
+  // Input-access/envelope failures are unknown, never SQL authorization outcomes.
   let values: unknown[];
   try {
     values = [call.actor, call.workspace, call.application, call.environment, call.receipt];

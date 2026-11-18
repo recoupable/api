@@ -139,3 +139,10 @@ it("serialization failure is unknown before any query", async () => {
   await expect(create({ query }, call)).rejects.toMatchObject({ kind: "outcome_unknown" });
   expect(query).not.toHaveBeenCalled();
 });
+it("missing serialization is unknown before any query", async () => {
+  const call = structuredClone(createCall);
+  Object.defineProperty(call.registration, "toJSON", { value: () => undefined });
+  const query = vi.fn();
+  await expect(create({ query }, call)).rejects.toMatchObject({ kind: "outcome_unknown" });
+  expect(query).not.toHaveBeenCalled();
+});

@@ -84,16 +84,18 @@ const allowedChanges = new Set([
 // Candidate changes are review inputs, but executed bytes must equal a recorded commit.
 const candidate = gitRead(["rev-parse", "HEAD"]).trim();
 const candidateTree = gitRead(["rev-parse", "HEAD^{tree}"]).trim();
-for (const path of allowedChanges) {
-  const listing = gitRead(["ls-tree", "HEAD", "--", path]).trim();
+async function verifyBlob(readGit, revision, base, path, label) {
+  const listing = readGit(["ls-tree", revision, "--", path]).trim();
   const match = /^(100644|100755) blob ([0-9a-f]{40})\t/.exec(listing);
-  const stat = await lstat(join(root, path));
+  const stat = await lstat(join(base, path));
   if (!match || !stat.isFile() || Boolean(stat.mode & 0o111) !== (match[1] === "100755"))
-    throw new Error(`Uncommitted candidate source/type: ${path}`);
-  const bytes = await readFile(join(root, path));
+    throw new Error(`${label} source/type: ${path}`);
+  const bytes = await readFile(join(base, path));
   const actual = createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
-  if (actual !== match[2]) throw new Error(`Uncommitted candidate bytes: ${path}`);
+  if (actual !== match[2]) throw new Error(`${label} bytes: ${path}`);
 }
+for (const path of allowedChanges)
+  await verifyBlob(gitRead, "HEAD", root, path, "Uncommitted candidate");
 console.log("ADAPTER_CANDIDATE " + JSON.stringify({ candidate, candidateTree }));
 const committedChanges = gitRead([
   "diff-tree",
@@ -192,18 +194,8 @@ for (const [revision, inputs] of [
   [bindings.databaseHead, bindings.databaseInputs],
   [bindings.executionProfileHead, bindings.executionProfileInputs],
 ]) {
-  for (const path of Object.keys(inputs)) {
-    const listing = dbGit(["ls-tree", revision, "--", path]).trim();
-    const match = /^(100644|100755) blob ([0-9a-f]{40})\t/.exec(listing);
-    const stat = await lstat(join(database, path));
-    if (!match || !stat.isFile() || Boolean(stat.mode & 0o111) !== (match[1] === "100755"))
-      throw new Error(`Unbound database source/type: ${path}`);
-    const bytes = await readFile(join(database, path));
-    if (
-      createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex") !== match[2]
-    )
-      throw new Error(`Unbound database bytes: ${path}`);
-  }
+  for (const path of Object.keys(inputs))
+    await verifyBlob(dbGit, revision, database, path, "Unbound database");
 }
 console.log("Composition source bindings verified; no hosted target accepted");
 const owned = await mkdtemp("/tmp/registration-composition-launch-");
