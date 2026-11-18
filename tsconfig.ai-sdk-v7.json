@@ -1,10 +1,16 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": { "incremental": false },
+  "compilerOptions": {
+    "incremental": false
+  },
   "include": [
     "lib/agent/tools/__tests__/sdkV7Runtime.test.ts",
     "lib/agent/tools/__tests__/agentContextSchema.test.ts",
-    "lib/agents/generalAgent/__tests__/getAnthropicProviderOptions.test.ts"
+    "lib/agents/generalAgent/__tests__/getAnthropicProviderOptions.test.ts",
+    "lib/agent/contextManagement/__tests__/wrapToolsWithAbortIterable.test.ts",
+    "lib/agent/tools/__tests__/wrappedTaskSdk.test.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }
