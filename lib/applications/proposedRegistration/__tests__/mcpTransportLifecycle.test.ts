@@ -367,7 +367,7 @@ it.each(["closed", "closing", "aborted"])(
       closing = life.close();
     } else if (state === "closed") await life.close();
     else abort.abort();
-    let acquired: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    let acquired: ReadableStreamDefaultReader<Uint8Array<ArrayBuffer>> | undefined;
     const actualGetReader = request.body!.getReader.bind(request.body!);
     const getReader = vi.spyOn(request.body!, "getReader").mockImplementation(() => {
       acquired = actualGetReader();
