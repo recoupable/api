@@ -1,3 +1,4 @@
+import { normalizeLanguageModelUsage } from "./normalizeLanguageModelUsage";
 import type { LanguageModelUsage } from "ai";
 import { addTokenCounts } from "@/lib/agent/messageMetadata/addTokenCounts";
 
@@ -14,6 +15,8 @@ export function addLanguageModelUsage(
   a: LanguageModelUsage,
   b: LanguageModelUsage,
 ): LanguageModelUsage {
+  a = normalizeLanguageModelUsage(a);
+  b = normalizeLanguageModelUsage(b);
   return {
     inputTokens: addTokenCounts(a.inputTokens, b.inputTokens),
     inputTokenDetails: {

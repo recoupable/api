@@ -95,6 +95,9 @@ return {error:null,data:args.p_action==="bind"?{bound:true}:args.p_action==="rel
 }};
 `,
 );
+// Load the installed SDK natively in the synthetic provider seam. Bundling its
+// CJS OIDC dependency into the standalone ESM client breaks native require.
+// The real reader and network-denial assertions remain unchanged.
 const seams = [
   [
     "@/app/lib/workflows/generateAssistantMessageId",
@@ -117,7 +120,7 @@ const seams = [
   [
     "@/app/lib/workflows/runAgentStep",
     "runAgentStep",
-    'record("provider",{original:args[0].originalMessages}); const {readUIMessageStream}=await import("ai"); const initial=args[0].originalMessages[0]; const stream=new ReadableStream({start(c){c.enqueue({type:"start",messageId:initial.id});c.enqueue({type:"text-start",id:"generated"});c.enqueue({type:"text-delta",id:"generated",delta:"synthetic result"});c.enqueue({type:"text-end",id:"generated"});c.enqueue({type:"finish"});c.close();}}); let responseMessage; for await(const value of readUIMessageStream({message:initial,stream})) responseMessage=value; record("sdk-optional",Object.hasOwn(responseMessage.parts.at(-1),"providerMetadata")); return {finishReason:scenario().fail==="iteration"?"tool-calls":"stop",aborted:false,responseMessages:[],responseMessage};',
+    'record("provider",{original:args[0].originalMessages}); const sdkModule="ai"; const {readUIMessageStream}=await import(sdkModule); const initial=args[0].originalMessages[0]; const stream=new ReadableStream({start(c){c.enqueue({type:"start",messageId:initial.id});c.enqueue({type:"text-start",id:"generated"});c.enqueue({type:"text-delta",id:"generated",delta:"synthetic result"});c.enqueue({type:"text-end",id:"generated"});c.enqueue({type:"finish"});c.close();}}); let responseMessage; for await(const value of readUIMessageStream({message:initial,stream})) responseMessage=value; record("sdk-optional",Object.hasOwn(responseMessage.parts.at(-1),"providerMetadata")); return {finishReason:scenario().fail==="iteration"?"tool-calls":"stop",aborted:false,responseMessages:[],responseMessage};',
   ],
   [
     "@/app/lib/workflows/persistAssistantMessageStep",

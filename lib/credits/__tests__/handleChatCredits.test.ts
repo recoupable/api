@@ -51,6 +51,21 @@ describe("handleChatCredits", () => {
     );
   });
 
+  it("preserves cached tokens from persisted v6 usage in the audit row", async () => {
+    mockGetCreditUsage.mockResolvedValue(0.05);
+    await handleChatCredits({
+      usage: { inputTokens: 1000, outputTokens: 500, cachedInputTokens: 125 } as never,
+      model: "fixture-model",
+      accountId: "account-123",
+    });
+    expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        creditsToDeduct: 50_000,
+        cachedInputTokens: 125,
+      }),
+    );
+  });
+
   describe("credit deduction", () => {
     it("deducts credits and forwards token detail to the usage_events row", async () => {
       mockGetCreditUsage.mockResolvedValue(0.05); // $0.05 = 50,000 micro-dollars

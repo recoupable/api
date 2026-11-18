@@ -10,14 +10,15 @@ import type { AgentContext } from "@/lib/agent/tools/AgentContext";
  * tool reads the same `AgentContext` (sandbox handle, org id, skills, model),
  * so we fan the single context out to one entry per tool in the set.
  *
- * Returning a `Record<string, AgentContext>` (index signature) keeps this DRY
- * across tool sets and stays assignable to the SDK's concrete
- * `InferToolSetContext<TOOLS>` shape, since every typed tool's required entry
- * is satisfied with an `AgentContext` value.
+ * Preserve the tool-name keys so strict callers can prove every required
+ * contextual tool has an entry. Object.fromEntries erases those keys; the
+ * assertion restores exactly the keys enumerated from the input tool set.
  */
-export function buildToolsContext(
-  tools: ToolSet,
+export function buildToolsContext<TOOLS extends ToolSet>(
+  tools: TOOLS,
   context: AgentContext,
-): Record<string, AgentContext> {
-  return Object.fromEntries(Object.keys(tools).map(name => [name, context]));
+): { [K in keyof TOOLS]: AgentContext } {
+  return Object.fromEntries(Object.keys(tools).map(name => [name, context])) as {
+    [K in keyof TOOLS]: AgentContext;
+  };
 }

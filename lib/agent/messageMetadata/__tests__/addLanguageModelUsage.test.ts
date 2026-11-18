@@ -2,6 +2,20 @@ import { describe, it, expect } from "vitest";
 import { addLanguageModelUsage } from "@/lib/agent/messageMetadata/addLanguageModelUsage";
 
 describe("addLanguageModelUsage", () => {
+  it("preserves flat persisted v6 cache and reasoning tokens when adding a v7 step", () => {
+    const result = addLanguageModelUsage(
+      { inputTokens: 100, outputTokens: 50, cachedInputTokens: 10, reasoningTokens: 5 } as never,
+      {
+        inputTokens: 200,
+        outputTokens: 75,
+        inputTokenDetails: { cacheReadTokens: 20 },
+        outputTokenDetails: { reasoningTokens: 15 },
+      } as never,
+    );
+    expect(result.inputTokenDetails.cacheReadTokens).toBe(30);
+    expect(result.outputTokenDetails.reasoningTokens).toBe(20);
+  });
+
   it("sums basic input/output/total tokens", () => {
     const result = addLanguageModelUsage(
       { inputTokens: 100, outputTokens: 50, totalTokens: 150 },
