@@ -37,5 +37,6 @@
     "proposals/application-registration-2104/sources.json": "a617bc3acc14f1cc8af2dfa951eebff0da2e406a4299c5842427f1980560e744"
   },
   "qualification": "Disposable test-only composition; no production factory or hosted target",
-  "acceptedApiComposition": "784bee20b3e0fe61e67ed156c7f3a39a08a441b2"
+  "acceptedApiComposition": "0769bc1957fce38bd6b847d342eae904044ae821",
+  "originalApiCompatibility": "784bee20b3e0fe61e67ed156c7f3a39a08a441b2"
 }
