@@ -1,5 +1,5 @@
 import { expect, it, vi, afterEach, beforeEach } from "vitest";
-import { spawnSync } from "node:child_process";
+import { fixtureSql as sql } from "./fixtureSql";
 import { writeFileSync } from "node:fs";
 import { catalogCaseSnapshotSchema } from "@/lib/context/catalogCaseSnapshotSchema";
 import { processCatalogCaseOperation } from "@/lib/context/processCatalogCaseOperation";
@@ -38,42 +38,7 @@ beforeEach(() => {
     "TRUNCATE context_catalog_cases CASCADE; INSERT INTO accounts(id,name) VALUES ('22222222-2222-4222-8222-222222222222','Synthetic') ON CONFLICT DO NOTHING;",
   );
 });
-function sql(text: string) {
-  const r = spawnSync(
-    process.env.CATALOG_PSQL!,
-    [
-      "-h",
-      process.env.SITES_BRIDGE_SOCKET!,
-      "-p",
-      "55473",
-      "-d",
-      "postgres",
-      "-XqAt",
-      "-v",
-      "ON_ERROR_STOP=1",
-      "-v",
-      "VERBOSITY=verbose",
-    ],
-    {
-      input: text,
-      encoding: "utf8",
-      timeout: 15000,
-      maxBuffer: 4 * 1024 * 1024,
-      env: {
-        PATH: process.env.PATH!,
-        HOME: process.env.HOME!,
-        LANG: "C",
-        PGCLIENTENCODING: "UTF8",
-      },
-    },
-  );
-  if (r.error) throw r.error;
-  if (r.status !== 0)
-    throw Object.assign(new Error(r.stderr), {
-      code: r.stderr.match(/ERROR:\s+([0-9A-Z]{5}):/)?.[1],
-    });
-  return r.stdout.trim();
-}
+
 function quote(v: unknown) {
   return v === null
     ? "NULL"

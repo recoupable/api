@@ -35,6 +35,7 @@ def main():
     if tree != pins['database_tree']:
         raise RuntimeError('Unexpected Database composition')
     sources = {name: read(args.database_repo, tree, name, digest) for name, digest in pins['database_files'].items()}
+    sources.update({name: read(args.database_repo, pins['database_proposal_head'], name, digest) for name, digest in pins['database_proposal_files'].items()})
     lifecycle = read(args.lifecycle_repo, pins['lifecycle_commit'], pins['lifecycle_path'], pins['lifecycle_sha256'])
     node = shutil.which('node'); pg = args.pg_bin.resolve()
     root = pathlib.Path(tempfile.mkdtemp(prefix='catalog-size-', dir='/tmp')).resolve()
@@ -48,9 +49,11 @@ def main():
         spec = importlib.util.spec_from_file_location('catalog_fixture_lifecycle', helper)
         module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
         sys.path.insert(0, str(root / 'tests'))
-        import catalog_size_fixture
+        fixture_spec = importlib.util.spec_from_file_location('catalog_size_fixture', root / 'proposals/catalog-snapshot-size-2277/fixture.py')
+        catalog_size_fixture = importlib.util.module_from_spec(fixture_spec); fixture_spec.loader.exec_module(catalog_size_fixture)
         fixture = module.install_lifecycle(SimpleNamespace(harness=catalog_size_fixture.base, SitesEvidence=catalog_size_fixture.CatalogSizeFixture), root, None)
         fixture.setUpClass()
+        (pathlib.Path(fixture.tmp.name) / 'catalog-size.json').write_text(json.dumps({'fixture':'catalog-storage-size','socket':fixture.tmp.name,'databaseTree':pins['database_tree'],'uid':os.getuid()}))
         run_env = dict(env, SITES_BRIDGE_SOCKET=fixture.tmp.name, CATALOG_PSQL=str(pg / 'psql'), CATALOG_RESULT=str(evidence / 'result.json'), SITES_BRIDGE_LOAD_LOG=str(evidence / 'loader.json'))
         child = subprocess.Popen([node, str(API / 'node_modules/vitest/vitest.mjs'), 'run', '--config', str(HERE / 'vitest.config.ts')], cwd=API, env=run_env, start_new_session=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
         output, _ = child.communicate(timeout=90)

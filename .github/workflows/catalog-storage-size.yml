@@ -23,7 +23,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: recoupable/database
-          ref: codex/migration-history-repair
+          ref: codex/catalog-snapshot-size-proposal
           fetch-depth: 0
           path: .worktrees/catalog-database
           persist-credentials: false

@@ -2,7 +2,7 @@
 
 This paired fixture loads the real snapshot schema, Catalog processor, receipt validator and `callContextRpc`, replacing only the Supabase client with a local `psql` transport. Synthetic account/head setup and error transport are fixture-only. It executes the owning Database SQL from the pinned composition in `sources.json`; no business SQL is copied here.
 
-The owning `tests/catalog_size_fixture.py` reuses the accepted four-file DB125 bootstrap. The baseline is Database main `7708e337` plus the pinned draft PR125 successor; the composition tree is not a deployed commit. The runner reuses the exact reviewed Sites lifecycle helper by Git hash, without changing the shared harness. Supply local repositories containing both source commits; the runner never fetches source or credentials.
+The owning `proposals/catalog-snapshot-size-2277/fixture.py` reuses the accepted four-file DB125 bootstrap. The baseline is Database main `7708e337` plus original DB125 `3f2c849`, followed by the separately pinned inactive size proposal; the composition tree is not a deployed commit. The size proposal lives outside migrations and adds no grants; DB125 remains unchanged. The runner reuses the exact reviewed Sites lifecycle helper by Git hash, without changing the shared harness. Supply local repositories containing both source commits; the runner never fetches source or credentials.
 
 ```sh
 python3 scripts/catalog-storage-size/run.py \
