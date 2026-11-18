@@ -1,3 +1,5 @@
+import { createSignedFileUrlByKey } from "@/lib/supabase/storage/createSignedFileUrlByKey";
+import { fetchPackMedia } from "../fetchPackMedia";
 import * as modelEvidence from "../getPackModelEvidence";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fal from "@/lib/fal/server";
@@ -19,6 +21,7 @@ vi.mock("@/lib/supabase/storage/createSignedFileUrlByKey", () => ({
   createSignedFileUrlByKey: vi.fn(),
 }));
 vi.mock("@/lib/flamingo/callFlamingoGenerate", () => ({ callFlamingoGenerate: vi.fn() }));
+vi.mock("../fetchPackMedia", () => ({ fetchPackMedia: vi.fn() }));
 vi.mock("../composePackMedia", () => ({ composePackMedia: vi.fn() }));
 vi.mock("../inspectPackMedia", () => ({ inspectPackMedia: vi.fn() }));
 vi.mock("../withPackMediaRuntime", () => ({ withPackMediaRuntime: vi.fn() }));
@@ -117,6 +120,8 @@ describe("configuration guard at production boundaries", () => {
     );
     expect(callFlamingoGenerate).not.toHaveBeenCalled();
     expect(runPackCommand).not.toHaveBeenCalled();
+    expect(createSignedFileUrlByKey).not.toHaveBeenCalled();
+    expect(fetchPackMedia).not.toHaveBeenCalled();
   });
   it("keeps legacy accepted receipt recovery, caption and local composition independent of motion evidence", async () => {
     const evidence = modelEvidence.getPackModelEvidence();

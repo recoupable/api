@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { getPackBriefFingerprint } from "@/lib/content/packs/getPackBriefFingerprint";
 import * as modelEvidence from "../getPackModelEvidence";
 import { importPackSources } from "../importPackSources";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -216,4 +218,139 @@ describe("model suitability before reservation", () => {
       expect(start).not.toHaveBeenCalled();
     },
   );
+});
+
+// A subset retry preserves the saved full-pack brief; it does not respecify model intent.
+const mixed = releasePackDeliverablesSchema.parse({
+  videos: 1,
+  artwork: 1,
+  quote_cards: 0,
+  carousels: 0,
+  visualizers: 0,
+});
+const motion = "minimax/h3-max/image-to-video";
+const fullBrief = releasePackBriefSchema.parse({ ...brief, model_choices: { motion } });
+const complete = {
+  state: "complete",
+  audio: { storage_key: "owner/release-packs/song.wav" },
+  references: [],
+  summary: "Sparse piano and percussion",
+  visual_direction: "Cream paper and ink",
+  proposed_start_seconds: 0,
+  selected_start_seconds: 0,
+  duration_seconds: 30,
+};
+function saved(kind: string) {
+  return {
+    job: {
+      id,
+      owner_id: "owner",
+      revision: 1,
+      brief: structuredClone(fullBrief),
+      deliverables: mixed,
+      production_context: complete,
+      quote: {
+        sources: { audio: { storage_key: "owner/release-packs/song.wav" }, references: [] },
+      },
+    },
+    assets: [{ id, kind, ordinal: 0, status: "failed" }],
+  };
+}
+it.each(["artwork", "video"])(
+  "preserves full-pack intent while quoting only the %s retry",
+  async kind => {
+    const snapshot = saved(kind);
+    const before = structuredClone(snapshot.job.brief);
+    vi.mocked(runPackCommand).mockResolvedValue(snapshot as never);
+    await processPackOperation("owner", "estimate", { job_id: id, asset_id: id });
+    const payload = vi
+      .mocked(runPackCommand)
+      .mock.calls.find(call => call[1] === "estimate")?.[3] as any;
+    const quote = payload.quote;
+    expect(snapshot.job.brief).toEqual(before);
+    expect(snapshot.job.brief.model_choices.motion).toBe(motion);
+    expect(quote.brief_fingerprint).toBe(getPackBriefFingerprint(before));
+    expect(quote.assets).toHaveLength(1);
+    expect(quote.assets[0].kind).toBe(kind);
+    expect(quote.retry_asset_id).toBe(id);
+    expect(quote.execution_config.models.motion).toBe(motion);
+    expect(quote.line_items.find((item: any) => item.category === "motion").units).toBe(
+      kind === "video" ? 8 : 0,
+    );
+    if (kind === "video") expect(quote.model_readiness.tasks.motion.model).toBe(motion);
+    else {
+      expect(Object.keys(quote.model_readiness.tasks)).toEqual([
+        "image",
+        "caption",
+        "still_inspection",
+      ]);
+      expect(quote.line_items.find((item: any) => item.category === "motion").usd).toBe(0);
+    }
+    expect(quote.fingerprint).toBe(
+      createHash("sha256")
+        .update(
+          JSON.stringify({
+            brief: before,
+            deliverables: mixed,
+            sources: snapshot.job.quote.sources,
+            execution_config_digest: quote.execution_config_digest,
+            model_readiness_digest: quote.model_readiness.digest,
+          }),
+        )
+        .digest("hex"),
+    );
+    expect(vi.mocked(runPackCommand).mock.calls.map(call => call[1])).toEqual(["read", "estimate"]);
+    expect(importPackSources).not.toHaveBeenCalled();
+    expect(checkCreditsAvailable).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
+  },
+);
+it("does not silently discard an unsupported saved motion choice for an artwork retry", async () => {
+  const snapshot = saved("artwork");
+  snapshot.job.brief.model_choices.motion = "unsupported-motion";
+  vi.mocked(runPackCommand).mockResolvedValue(snapshot as never);
+  await expect(
+    processPackOperation("owner", "estimate", { job_id: id, asset_id: id }),
+  ).rejects.toThrow(/Unsupported motion.*no substitution/i);
+  expect(vi.mocked(runPackCommand).mock.calls.map(call => call[1])).toEqual(["read"]);
+});
+it("does not let the retry locator replace full-pack model choices", async () => {
+  await expect(
+    processPackOperation("owner", "estimate", {
+      job_id: id,
+      asset_id: id,
+      model_choices: { motion },
+    }),
+  ).rejects.toThrow();
+  expect(runPackCommand).not.toHaveBeenCalled();
+});
+it("still rejects a newly specified motion choice for an artwork-only full pack", () => {
+  const artworkOnly = releasePackDeliverablesSchema.parse({
+    videos: 0,
+    artwork: 1,
+    quote_cards: 0,
+    carousels: 0,
+    visualizers: 0,
+  });
+  expect(() => buildReleasePackQuote(fullBrief, artworkOnly)).toThrow(/motion.*does not apply/i);
+});
+
+it("retains original analysis choice while reusing completed analysis", async () => {
+  const snapshot = saved("artwork");
+  snapshot.job.brief.model_choices = {
+    ...snapshot.job.brief.model_choices,
+    analysis: "nvidia/music-flamingo-2601-hf",
+  };
+  const originalBrief = structuredClone(snapshot.job.brief);
+  vi.mocked(runPackCommand).mockResolvedValue(snapshot as never);
+  await processPackOperation("owner", "estimate", { job_id: id, asset_id: id });
+  const payload = vi
+    .mocked(runPackCommand)
+    .mock.calls.find(call => call[1] === "estimate")?.[3] as any;
+  expect(snapshot.job.brief).toEqual(originalBrief);
+  expect(payload.quote.brief_fingerprint).toBe(getPackBriefFingerprint(originalBrief));
+  expect(payload.quote.model_readiness.tasks.analysis).toBeUndefined();
+  expect(vi.mocked(runPackCommand).mock.calls.map(call => call[1])).toEqual(["read", "estimate"]);
+  expect(importPackSources).not.toHaveBeenCalled();
+  expect(start).not.toHaveBeenCalled();
 });

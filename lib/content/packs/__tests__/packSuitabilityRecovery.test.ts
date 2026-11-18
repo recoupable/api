@@ -1,4 +1,6 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { createPackRecoverySnapshot } from "./createPackRecoverySnapshot";
+import { createPackRecoveryCommandMock } from "./createPackRecoveryCommandMock";
+import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { releasePackWorkflow } from "@/app/workflows/packs/releasePackWorkflow";
 import { runPackCommand } from "@/lib/supabase/release_pack_jobs/runPackCommand";
 import { callFlamingoGenerate } from "@/lib/flamingo/callFlamingoGenerate";
@@ -6,8 +8,6 @@ import fal from "@/lib/fal/server";
 import { generateText } from "ai";
 import { composePackMedia } from "../composePackMedia";
 import { inspectPackMedia } from "../inspectPackMedia";
-import { buildReleasePackQuote } from "../buildReleasePackQuote";
-import { releasePackBriefSchema, releasePackDeliverablesSchema } from "../releasePackSchema";
 import * as evidence from "../getPackModelEvidence";
 vi.mock("workflow", () => ({ getWorkflowMetadata: () => ({ workflowRunId: "saved-workflow" }) }));
 vi.mock("@/lib/supabase/release_pack_jobs/runPackCommand", () => ({ runPackCommand: vi.fn() }));
@@ -21,23 +21,11 @@ vi.mock("@/lib/fal/server", () => ({
 vi.mock("ai", () => ({ generateText: vi.fn() }));
 vi.mock("../composePackMedia", () => ({ composePackMedia: vi.fn() }));
 vi.mock("../inspectPackMedia", () => ({ inspectPackMedia: vi.fn() }));
+beforeEach(() => vi.clearAllMocks());
 afterEach(() => vi.restoreAllMocks());
 it("runs actual workflow preparation, accepted polling, local composition and settlement after unrelated evidence changes", async () => {
-  const brief = releasePackBriefSchema.parse({
-    artist_name: "Fixture",
-    song_title: "Song",
-    occasion: "rediscovery",
-    audio_url: "https://example.invalid/song.wav",
-    allow_creative_defaults: true,
-  });
-  const deliverables = releasePackDeliverablesSchema.parse({
-    videos: 0,
-    artwork: 1,
-    quote_cards: 0,
-    carousels: 0,
-    visualizers: 0,
-  });
-  const { model_readiness: _assessment, ...quote } = buildReleasePackQuote(brief, deliverables);
+  const saved = createPackRecoverySnapshot();
+  const asset = saved.assets[0];
   const changed = evidence.getPackModelEvidence();
   changed.version = "changed-after-approval";
   changed.tasks.motion.commercial_basis = "restricted";
@@ -45,58 +33,9 @@ it("runs actual workflow preparation, accepted polling, local composition and se
   // Even a new restriction on this provider cannot resubmit or erase an accepted receipt.
   changed.tasks.image.commercial_basis = "restricted";
   vi.spyOn(evidence, "getPackModelEvidence").mockReturnValue(changed);
-  const asset = {
-    id: "asset",
-    kind: "artwork",
-    ordinal: 0,
-    status: "uncertain",
-    provider_state: {
-      image_submission_0: {
-        state: "accepted",
-        request_id: "retained",
-        model: "original-image-route",
-        charge_credits: 73,
-        input_sha256: "original-input",
-      },
-      caption: "Retained caption",
-    },
-  } as any;
-  const saved = {
-    job: {
-      id: "job",
-      owner_id: "owner",
-      revision: 1,
-      status: "running",
-      held_credits: 73,
-      consumed_credits: 0,
-      brief,
-      deliverables,
-      quote: { ...quote, id: "quote", fingerprint: "original-approved-fingerprint" },
-      production_context: {
-        state: "complete",
-        audio: { storage_key: "owner/release-packs/song.wav" },
-        references: [],
-        summary: "Sparse piano and percussion",
-        visual_direction: "Cream paper and ink",
-        proposed_start_seconds: 0,
-        selected_start_seconds: 0,
-        duration_seconds: 30,
-      },
-    },
-    assets: [asset],
-  };
-  vi.mocked(runPackCommand).mockImplementation(async (_actor, command, _job, input = {}) => {
-    if (command === "phase") asset.provider_state[input.phase as string] = input.value;
-    if (command === "finish_asset") Object.assign(asset, input);
-    if (command === "settle") {
-      // Synthetic ledger only: assert original receipt amount is handed to the existing settlement path.
-      expect(asset.provider_state.image_submission_0.charge_credits).toBe(73);
-      expect(asset.status).toBe("completed");
-      saved.job.held_credits = 0;
-      saved.job.consumed_credits = 73;
-    }
-    return saved as never;
-  });
+  vi.mocked(runPackCommand).mockImplementation(
+    createPackRecoveryCommandMock(saved, { accountId: "owner" }),
+  );
   vi.mocked(fal.queue.status).mockResolvedValue({ status: "COMPLETED" } as never);
   vi.mocked(fal.queue.result).mockResolvedValue({
     data: { images: [{ url: "https://example.invalid/retained.png" }] },
@@ -120,7 +59,7 @@ it("runs actual workflow preparation, accepted polling, local composition and se
   expect(composePackMedia).toHaveBeenCalledOnce();
   expect(inspectPackMedia).toHaveBeenCalledOnce();
   expect(asset.caption).toBe("Retained caption");
-  expect(saved.job.quote.fingerprint).toBe("original-approved-fingerprint");
+  expect(saved.job.quote?.fingerprint).toBe("original-approved-fingerprint");
   expect(saved.job.consumed_credits).toBe(73);
   const commands = vi.mocked(runPackCommand).mock.calls.map(call => call[1]);
   expect(commands.slice(0, 3)).toEqual(["run", "read", "read"]);
@@ -128,4 +67,43 @@ it("runs actual workflow preparation, accepted polling, local composition and se
   expect(commands).not.toContain("approve");
   expect(commands).not.toContain("claim");
   expect(commands).not.toContain("context");
+});
+
+it.each([
+  ["actor", { accountId: "wrong-owner" }, "job", "asset"],
+  ["organization", { accountId: "owner", organizationId: "other-org" }, "job", "asset"],
+  ["job", { accountId: "owner" }, "wrong-job", "asset"],
+  ["asset", { accountId: "owner" }, "job", "wrong-asset"],
+] as const)(
+  "rejects wrong %s targets without mutating persistence",
+  async (_label, actor, job, assetId) => {
+    const saved = createPackRecoverySnapshot();
+    const before = structuredClone(saved);
+    const command = createPackRecoveryCommandMock(saved, { accountId: "owner" });
+    for (const action of ["phase", "finish_asset"])
+      await expect(
+        command(actor, action, job, {
+          asset_id: assetId,
+          phase: "caption",
+          value: "wrong",
+          status: "completed",
+        }),
+      ).rejects.toThrow(/Unexpected/);
+    expect(saved).toEqual(before);
+  },
+);
+it("mutates and returns the requested asset rather than a hard-coded recovery asset", async () => {
+  const saved = createPackRecoverySnapshot();
+  saved.assets.push({ ...structuredClone(saved.assets[0]), id: "other-asset" });
+  const command = createPackRecoveryCommandMock(saved, { accountId: "owner" });
+  const returned = await command({ accountId: "owner" }, "phase", "job", {
+    asset_id: "other-asset",
+    phase: "caption",
+    value: "Other caption",
+  });
+  expect(saved.assets[0].provider_state.caption).toBe("Retained caption");
+  expect(saved.assets[1].provider_state.caption).toBe("Other caption");
+  expect(returned).toEqual(saved);
+  expect(returned).not.toBe(saved);
+  await expect(command({ accountId: "owner" }, "settle", "job")).rejects.toThrow(/original asset/);
 });

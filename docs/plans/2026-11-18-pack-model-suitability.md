@@ -25,8 +25,29 @@ Planning resolves production references from the selected creative context:
 | Missing valid completed audio context | Add analysis |
 | Local composition | No provider task |
 
-A targeted retry assesses only the selected asset. Completed valid audio context
-is reused. Accepted-receipt recovery and retained caption reuse are not new
+A targeted retry assesses only the selected asset. Its request accepts a job/asset
+locator, not a replacement brief or model choices. Choices in the saved brief
+continue to describe the original full pack: for a video-plus-artwork pack, an
+artwork-only retry retains the original motion choice and full-brief fingerprint,
+while its assets, budget and model assessment contain no motion work. A later
+video retry still uses that exact saved motion choice. Preserving the choice is
+not substitution or a promise to execute motion in every retry.
+
+Full-brief choices are validated against the full pack before selecting the retry
+asset. Revalidating inherited choices as if they were newly supplied for the
+subset would reject a legitimate retry with no retry-input mechanism to correct
+it. Removing the inherited choice would change saved intent/provenance. Unsupported
+saved choices still fail; a newly specified motion choice for an artwork-only
+full pack remains nonapplicable and fails. No retry-specific model selection is
+introduced.
+
+The same rule applies to a saved `model_choices.analysis`: after valid analysis
+has completed, the original choice and brief fingerprint remain intact while the
+new estimate omits analysis from its effective task assessment. Re-estimating does
+not submit a new choice or repeat analysis. If new analysis is actually needed,
+the relevant current restriction check still applies.
+
+Completed valid audio context is reused. Accepted-receipt recovery and retained caption reuse are not new
 provider effects. Production checks use the actual image/reference route or actual
 inspection file type, not the entire configured pipeline.
 

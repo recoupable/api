@@ -1,5 +1,4 @@
-import { getPackModelReadiness } from "./getPackModelReadiness";
-import { getPackPlannedModelTasks } from "./getPackPlannedModelTasks";
+import { getPackQuoteModelReadiness } from "./getPackQuoteModelReadiness";
 import { packCostAccounting } from "@/lib/const";
 import { getPackExecutionConfiguration } from "./getPackExecutionConfiguration";
 import { getPackConfigurationDigest } from "./getPackConfigurationDigest";
@@ -25,14 +24,6 @@ export function buildReleasePackQuote(
   deliverables: ReleasePackDeliverables,
 ) {
   const execution_config = getPackExecutionConfiguration();
-  for (const [task, requested] of Object.entries(brief.model_choices ?? {})) {
-    const selected =
-      execution_config.models[task as keyof NonNullable<ReleasePackBrief["model_choices"]>];
-    if (requested !== selected)
-      throw new Error(
-        `Unsupported ${task} model choice ${requested}; configured route is ${selected}. No substitution was made.`,
-      );
-  }
   const execution_config_digest = getPackConfigurationDigest(execution_config);
   const assets: PackAssetPlan[] = [];
   const motionCost =
@@ -53,14 +44,7 @@ export function buildReleasePackQuote(
       );
       assets.push({ kind, ordinal, files, maximum_usd: usd, credits: usdToCredits(usd) });
     }
-  const plannedTasks = getPackPlannedModelTasks(brief, assets);
-  for (const task of Object.keys(brief.model_choices ?? {})) {
-    if (!plannedTasks.includes(task as (typeof plannedTasks)[number]))
-      throw new Error(
-        `Model choice ${task} does not apply to this pack plan; no substitution was made.`,
-      );
-  }
-  const model_readiness = getPackModelReadiness(plannedTasks);
+  const model_readiness = getPackQuoteModelReadiness(brief, assets, execution_config.models);
   const stills = assets.reduce((sum, a) => sum + a.files, 0);
   const maximum_usd = Number(assets.reduce((sum, a) => sum + a.maximum_usd, 0).toFixed(6));
   return {
