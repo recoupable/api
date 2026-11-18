@@ -35,5 +35,6 @@
   "acceptedOAuthMerge": "5605ee143afc4ebcdba9ba33dc7b48378c70a47f",
   "adapterBeforeComposition": "ce271f4be5570cb0774d582a5e1b832e406aec7f",
   "acceptedTransportSource": "2606c9104dff3731f59d56d00bba121d2a8e47ba",
-  "previousDatabaseHead": "df7be4c65b98924373b38c7d257f4b1c1820d6b7"
+  "previousDatabaseHead": "df7be4c65b98924373b38c7d257f4b1c1820d6b7",
+  "acceptedTransportMerge": "f8ec0bee58726b16f7e42b86169c6a7307a4b1b4"
 }
