@@ -327,6 +327,38 @@ describe("strict receipt acceptance", () => {
       expect(deps.storage.create).toHaveBeenCalledTimes(1);
     },
   );
+  it("canonicalizes uppercase read selectors while preserving the SQL golden receipt", async () => {
+    const deps = dependencies();
+    const aliases = {
+      ...selected,
+      application_id: selected.application_id.toUpperCase(),
+      receipt_id: selected.receipt_id.toUpperCase(),
+    };
+    expect(aliases.application_id).not.toBe(selected.application_id);
+    expect(aliases.receipt_id).not.toBe(selected.receipt_id);
+    expect(await read(request(), aliases, deps)).toEqual(golden.readReceipt);
+    expect(deps.storage.read).toHaveBeenCalledExactlyOnceWith({
+      actor: fixture.actor,
+      workspace: fixture.actor,
+      application: selected.application_id,
+      environment: selected.environment,
+      receipt: selected.receipt_id,
+    });
+    expect(deps.storage.create).not.toHaveBeenCalled();
+  });
+  it.each(["application_id", "receipt_id"] as const)(
+    "does not normalize returned %s aliases into success",
+    async field => {
+      const deps = dependencies();
+      const altered = structuredClone(golden.readReceipt);
+      altered[field] = altered[field].toUpperCase();
+      deps.storage.read.mockResolvedValue(altered);
+      await expect(read(request(), selected, deps)).rejects.toMatchObject({
+        kind: "outcome_unknown",
+      });
+      expect(deps.storage.read).toHaveBeenCalledTimes(1);
+    },
+  );
   it("checks read selection and preserves SQL timestamp representations", async () => {
     const deps = dependencies();
     await expect(

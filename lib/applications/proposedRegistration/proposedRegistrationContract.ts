@@ -18,9 +18,15 @@ export const proposedCreateInputSchema = z
   .strict();
 export const proposedReadInputSchema = z
   .object({
-    application_id: z.string().uuid(),
+    application_id: z
+      .string()
+      .uuid()
+      .transform(value => value.toLowerCase()),
     environment,
-    receipt_id: z.string().uuid(),
+    receipt_id: z
+      .string()
+      .uuid()
+      .transform(value => value.toLowerCase()),
   })
   .strict();
 const timestamp = z.iso
