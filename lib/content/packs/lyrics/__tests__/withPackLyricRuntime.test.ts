@@ -78,11 +78,11 @@ it("refuses hidden implicit font fallback", async () => {
   expect(work).not.toHaveBeenCalled();
   expect(runtime.cleanup).toHaveBeenCalled();
 });
-it("runs cleanup even when abort fails", async () => {
+it("preserves owned files when abort fails", async () => {
   const { runtime, cap } = controlled();
   vi.mocked(runtime.abort).mockRejectedValue(new Error("abort failed"));
   await expect(withPackLyricRuntime(cap, async () => "done")).rejects.toThrow("abort failed");
-  expect(runtime.cleanup).toHaveBeenCalled();
+  expect(runtime.cleanup).not.toHaveBeenCalled();
 });
 it("rejects command concurrency", async () => {
   const { cap } = controlled();
@@ -108,3 +108,25 @@ it("aborts and cleans at the 180-second deadline", async () => {
     vi.useRealTimers();
   }
 });
+
+it.each(["abort", "cleanup"] as const)(
+  "bounds nonsettling %s and reports unconfirmed cleanup",
+  async phase => {
+    vi.useFakeTimers();
+    try {
+      const { runtime, cap } = controlled();
+      vi.mocked(runtime[phase]).mockImplementation(() => new Promise<never>(() => {}));
+      let failure: unknown;
+      const result = withPackLyricRuntime(cap, async () => "done").catch(error => {
+        failure = error;
+      });
+      await vi.advanceTimersByTimeAsync(5001);
+      expect(failure).toBeInstanceOf(Error);
+      expect(String(failure)).toMatch(/unconfirmed/);
+      if (phase === "abort") expect(runtime.cleanup).not.toHaveBeenCalled();
+      await result;
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);

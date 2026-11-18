@@ -26,8 +26,13 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
       if ((error as NodeJS.ErrnoException).code !== "ESRCH") throw error;
     }
   };
-  const trace: { command: string; args: string[]; elapsedMs?: number; peakRssBytes?: number }[] =
-    [];
+  const trace: {
+    command: string;
+    args: string[];
+    elapsedMs?: number;
+    peakRssBytes?: number;
+    processGroup?: number;
+  }[] = [];
   let output: Buffer = Buffer.alloc(0);
   let cleaned = false,
     active = 0,
@@ -62,6 +67,7 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
               args: string[];
               elapsedMs?: number;
               peakRssBytes?: number;
+              processGroup?: number;
             } = { command: cmd, args };
             trace.push(entry);
             const started = Date.now();
@@ -77,14 +83,23 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
                     measure ? ["-l", cmd, ...args] : args,
                     { cwd: root, env, detached: true, stdio: ["ignore", "pipe", "pipe"] },
                   );
+                  entry.processGroup = child.pid;
                   let stdout = Buffer.alloc(0),
                     stderr = Buffer.alloc(0);
                   let failure: Error | undefined;
+                  const terminate = () => {
+                    try {
+                      killGroup(child);
+                    } catch (error) {
+                      failure = error as Error;
+                      reject(error);
+                    }
+                  };
                   const capture = (which: "stdout" | "stderr", chunk: Buffer) => {
                     const current = which === "stdout" ? stdout : stderr;
                     if (current.length + chunk.length > 1024 * 1024) {
                       failure = new Error("Child output exceeds capture bound");
-                      killGroup(child);
+                      terminate();
                       return;
                     }
                     if (which === "stdout") stdout = Buffer.concat([current, chunk]);
@@ -95,8 +110,8 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
                   child.on("error", error => {
                     failure = error;
                   });
-                  const deadline = setTimeout(() => killGroup(child), 180000);
-                  child.on("exit", () => killGroup(child));
+                  const deadline = setTimeout(terminate, 180000);
+                  child.on("exit", terminate);
                   child.on("close", code => {
                     clearTimeout(deadline);
                     children.delete(child);
@@ -130,14 +145,47 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
             await Promise.all(
               [...children].map(
                 child =>
-                  new Promise<void>(resolve => {
-                    child.once("close", () => resolve());
-                    killGroup(child);
+                  new Promise<void>((resolve, reject) => {
+                    let grace: ReturnType<typeof setTimeout>;
+                    const closed = () => {
+                      clearTimeout(grace);
+                      clearTimeout(limit);
+                      resolve();
+                    };
+                    const fail = (error: unknown) => {
+                      clearTimeout(grace);
+                      clearTimeout(limit);
+                      child.removeListener("close", closed);
+                      reject(
+                        new Error(
+                          `Owned termination unconfirmed: directory=${root}, processGroup=${child.pid}; preserve files`,
+                          { cause: error },
+                        ),
+                      );
+                    };
+                    const limit = setTimeout(
+                      () => fail(new Error("closure deadline exceeded")),
+                      2000,
+                    );
+                    grace = setTimeout(() => {
+                      try {
+                        killGroup(child);
+                      } catch (error) {
+                        fail(error);
+                      }
+                    }, 250);
+                    child.once("close", closed);
+                    try {
+                      if (child.pid && !killed.has(child)) process.kill(-child.pid, "SIGTERM");
+                    } catch (error) {
+                      if ((error as NodeJS.ErrnoException).code !== "ESRCH") fail(error);
+                    }
                   }),
               ),
             );
           },
           cleanup: async () => {
+            if (children.size) throw new Error(`Owned processes remain; preserve ${root}`);
             await rm(root, { recursive: true, force: true });
             cleaned = true;
           },
@@ -153,6 +201,9 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
     getOutput: () => output,
     isCleaned: () => cleaned,
     maxActive: () => maxActive,
-    dispose: () => rm(root, { recursive: true, force: true }),
+    dispose: async () => {
+      if (children.size) throw new Error(`Owned processes remain; preserve ${root}`);
+      await rm(root, { recursive: true, force: true });
+    },
   };
 }

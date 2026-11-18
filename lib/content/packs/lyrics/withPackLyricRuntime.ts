@@ -79,7 +79,6 @@ export async function withPackLyricRuntime<T>(
       timer = setTimeout(() => {
         expired = true;
         reject(new Error("Lyric runtime deadline exceeded"));
-        void runtime.abort().catch(() => {});
       }, 180000);
     });
     try {
@@ -117,11 +116,31 @@ export async function withPackLyricRuntime<T>(
       ]);
     } finally {
       if (timer) clearTimeout(timer);
-      try {
-        await runtime.abort();
-      } finally {
-        await runtime.cleanup();
-      }
+      expired = true;
+      const settle = async (phase: "abort" | "cleanup") => {
+        let settlementTimer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([
+            Promise.resolve().then(() => runtime[phase]()),
+            new Promise<never>((_, reject) => {
+              settlementTimer = setTimeout(
+                () =>
+                  reject(
+                    new Error(
+                      `Lyric ${phase} deadline exceeded; cleanup unconfirmed, preserve owned runtime evidence`,
+                    ),
+                  ),
+                5000,
+              );
+            }),
+          ]);
+        } finally {
+          if (settlementTimer) clearTimeout(settlementTimer);
+        }
+      };
+      // Never delete files while owned-process termination is unknown.
+      await settle("abort");
+      await settle("cleanup");
     }
   });
 }

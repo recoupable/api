@@ -15,6 +15,7 @@ export type PackMediaRuntime = {
 export type PackLyricRuntime = PackMediaRuntime & {
   fileSize: (path: string) => Promise<number>;
   removeFiles: (paths: string[]) => Promise<void>;
+  /** Resolve only after owned processes and pipes close; reject with owned identity if termination is unknown. */
   abort: () => Promise<void>;
   cleanup: () => Promise<void>;
 };

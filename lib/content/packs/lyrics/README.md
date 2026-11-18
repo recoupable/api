@@ -170,7 +170,10 @@ allocation cap is separately 64MiB because encoder packets exceed the scratch
 pixel budget; it is NOT a whole-process RSS cap. Encoder buffers are additional.
 Qualification records observed RSS and elapsed time without promising all
 content will fit. Deadline/byte/failure paths abort owned commands, clean the
-owned directory and reach storage only after cleanup succeeds. No paid retries.
+owned directory and reach storage only after cleanup succeeds. After the 180s
+work limit, abort and cleanup each have a separate 5s settlement deadline. An
+abort failure or unknown closure preserves owned files and refuses storage;
+cleanup timeout reports unconfirmed cleanup, never success. No paid retries.
 
 ### Local qualification versus CI
 
@@ -183,8 +186,11 @@ actual prerequisite-enabled run. `PACK_LYRIC_OUTPUT_DIR` optionally retains the
 original synthetic outputs and command/probe evidence; `PACK_LYRIC_MEASURE_RSS=1`
 uses the installed macOS time utility for observed child RSS. The local leaf owns
 a detached process group, including the measurement wrapper and FFmpeg child;
-abort/deadline terminate the group and await pipe closure. A real measured-mode
-cancellation test verifies that an active unbounded command settles after abort.
+abort sends TERM, escalates to KILL after 250ms, and requires pipe closure within
+2s. Unknown closure retains the owned directory and reports its path/process
+group; cleanup/disposal refuse while children remain. A real measured-mode
+cancellation test verifies that an active unbounded command settles after abort
+and that its process group no longer appears in the OS process inventory.
 These are test-only
 local controls, never API inputs.
 

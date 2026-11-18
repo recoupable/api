@@ -68,6 +68,9 @@ it.skipIf(!fontPath || process.platform !== "darwin")(
         await runtime.abort();
         expect((await pending).exitCode).not.toBe(0);
         expect(Date.now() - started).toBeLessThan(2000);
+        const groups = (await command("ps", ["-axo", "pgid="])).stdout.split(/\s+/).map(Number);
+        expect(fixture.trace[0].processGroup).toBeGreaterThan(0);
+        expect(groups).not.toContain(fixture.trace[0].processGroup);
         await runtime.cleanup();
       });
       expect(fixture.isCleaned()).toBe(true);
