@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import { createProjectionEvidencePorts } from "../createProjectionEvidencePorts";
+import { recordProjectionProofStep } from "@/app/lib/workflows/projection/recordProjectionProofStep";
 import { verifyProjectionObservation } from "../verifyProjectionObservation";
 
 const scope = { accountId: "account", chatId: "chat", sessionId: "session" };
@@ -321,4 +323,88 @@ it("uses the aggregate budget for multiple individually bounded observations", a
   await expect(verifyProjectionObservation(input)).resolves.toEqual(
     input.observation.data.original,
   );
+});
+
+it.each(
+  [
+    [...baseEvents, { type: "start", messageId: "assistant" }],
+    [
+      { type: "start", messageId: "assistant" },
+      { type: "start", messageId: "other" },
+      ...baseEvents,
+    ],
+    [{ type: "start", messageId: "assistant" }, { type: "finish" }, ...baseEvents],
+  ].map(chunks => ({ chunks })),
+)("rejects projection outside the active canonical assistant", async ({ chunks }) => {
+  const { input, ports } = fixture();
+  ports.readCanonical.mockResolvedValue(chunks as never);
+  await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+    code: "canonical_mismatch",
+  });
+});
+it.each([
+  [new Date("2000-01-01"), "evidence_expired"],
+  [new Date("2999-01-01"), "evidence_unavailable"],
+  [undefined, undefined],
+])(
+  "preserves and refuses ambiguous or expired World metadata through the real adapter",
+  async (expiredAt, code) => {
+    const { input, run, ports } = fixture();
+    const world = {
+      runs: {
+        get: vi.fn(async () => ({
+          ...run,
+          expiredAt,
+          input: new TextEncoder().encode(
+            'devl[[1],{"accountId":2,"chatId":3,"sessionId":4,"modelId":5,"messages":6,"agentContext":7},"account","chat","session","model",[],{}]',
+          ),
+        })),
+      },
+    };
+    const adapter = createProjectionEvidencePorts({ world: world as never });
+    input.ports.readRun = vi.fn(adapter.readRun);
+    if (code) {
+      await expect(verifyProjectionObservation(input)).rejects.toMatchObject({ code });
+      expect(ports.readStep).not.toHaveBeenCalled();
+    } else {
+      await expect(verifyProjectionObservation(input)).resolves.toEqual(
+        input.observation.data.original,
+      );
+    }
+  },
+);
+it("records and verifies the same 600 KB observation budget", async () => {
+  const { input, step, receipt, ports } = fixture();
+  input.observation.data.original.providerMetadata.provider.opaque = ["x".repeat(600_000), 1];
+  step.output.generatedProjectionObservations.observations[0].events[0] = input.observation;
+  receipt.output = (await recordProjectionProofStep(
+    "step",
+    step.output.generatedProjectionObservations,
+  )) as typeof receipt.output;
+  ports.readCanonical.mockResolvedValue([
+    { type: "start", messageId: "assistant" },
+    ...step.output.generatedProjectionObservations.observations[0].events,
+  ]);
+  await expect(verifyProjectionObservation(input)).resolves.toEqual(
+    input.observation.data.original,
+  );
+});
+it("rejects an oversized individual observation at receipt recording with a typed error", async () => {
+  const { input, step } = fixture();
+  input.observation.data.original.providerMetadata.provider.opaque = ["x".repeat(1_048_576), 1];
+  await expect(
+    recordProjectionProofStep("step", step.output.generatedProjectionObservations),
+  ).rejects.toMatchObject({
+    code: "evidence_limit",
+    message: "Projection history evidence unavailable",
+  });
+});
+it("rejects oversized aggregate receipts with a typed limit error", async () => {
+  const { step } = fixture();
+  const item = step.output.generatedProjectionObservations.observations[0];
+  item.observation.data.original.providerMetadata.provider.opaque = ["x".repeat(600_000), 1];
+  step.output.generatedProjectionObservations.observations = Array.from({ length: 32 }, () => item);
+  await expect(
+    recordProjectionProofStep("step", step.output.generatedProjectionObservations),
+  ).rejects.toMatchObject({ code: "evidence_limit" });
 });

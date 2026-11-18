@@ -38,6 +38,7 @@ export function createProjectionEvidencePorts({
         runId: run.runId,
         deploymentId: run.deploymentId,
         workflowName: run.workflowName,
+        expiredAt: run.expiredAt,
         input: await hydrateProjectionEvidence(run.input, runId, world, signal),
       };
     },

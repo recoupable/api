@@ -1,5 +1,6 @@
 import { z } from "zod";
-import { encodeStrictJson } from "@/lib/chat/fence/encodeStrictJson";
+import { isExpiredStub } from "@workflow/core/serialization-format";
+import { encodeProjectionEvidence as json } from "./encodeProjectionEvidence";
 import {
   projectionObservationSchema,
   projectionProofSchema,
@@ -15,17 +16,6 @@ import type {
   ProjectionProducer,
 } from "./ProjectionEvidencePorts";
 const record = z.record(z.string(), z.unknown());
-const json = (value: unknown, maxBytes = 1_048_576) => {
-  try {
-    return encodeStrictJson(value, { omitUndefinedObjectProperties: true, maxBytes });
-  } catch (error) {
-    throw new ProjectionEvidenceError(
-      error instanceof Error && error.message === "JSON exceeds byte budget"
-        ? "evidence_limit"
-        : "invalid_evidence",
-    );
-  }
-};
 /** Source-only verifier: caller must establish current chat authority; no default admitted deployments. */
 export async function verifyProjectionObservation(input: {
   observation: unknown;
@@ -84,13 +74,18 @@ export async function verifyProjectionObservation(input: {
   );
   if (!producer || run.data.runId !== data.originRunId)
     throw new ProjectionEvidenceError("producer_mismatch");
-  if (
-    run.data.expiredAt ||
-    (Array.isArray(run.data.input) &&
-      record.safeParse(run.data.input[0]).success &&
-      "expiredAt" in run.data.input[0])
-  )
-    throw new ProjectionEvidenceError("evidence_expired");
+  // SDK consumers disagree on future expiredAt values. Until the configured World
+  // contract is qualified, refuse those values without asserting they are expired.
+  if (run.data.expiredAt != null) {
+    const value = run.data.expiredAt;
+    const timestamp =
+      value instanceof Date ? value.getTime() : typeof value === "string" ? Date.parse(value) : NaN;
+    if (!Number.isFinite(timestamp)) throw new ProjectionEvidenceError("invalid_evidence");
+    throw new ProjectionEvidenceError(
+      timestamp <= Date.now() ? "evidence_expired" : "evidence_unavailable",
+    );
+  }
+  if (isExpiredStub(run.data.input)) throw new ProjectionEvidenceError("evidence_expired");
   const authority = parseProjectionRunAuthority(run.data.input);
   if (
     authority.accountId !== input.scope.accountId ||
@@ -166,29 +161,22 @@ export async function verifyProjectionObservation(input: {
   const chunks = await read(() => input.ports.readCanonical(data.originRunId, signal));
   if (!Array.isArray(chunks) || chunks.length > 10000)
     throw new ProjectionEvidenceError("evidence_limit");
-  try {
-    encodeStrictJson(chunks, { omitUndefinedObjectProperties: true, maxBytes: 16_777_216 });
-  } catch {
-    throw new ProjectionEvidenceError("invalid_evidence");
-  }
+  json(chunks, 16_777_216);
   let occurrences = 0;
-  for (let index = 0; index <= chunks.length - expectedEvents.length; index++)
-    if (
-      json(chunks.slice(index, index + expectedEvents.length), 16_777_216) ===
-      json(expectedEvents, 16_777_216)
-    )
+  let activeAssistant: unknown;
+  const expected = json(expectedEvents, 16_777_216);
+  for (let index = 0; index < chunks.length; index++) {
+    const chunk = record.safeParse(chunks[index]);
+    if (!chunk.success) throw new ProjectionEvidenceError("canonical_mismatch");
+    if (chunk.data.type === "start") activeAssistant = chunk.data.messageId;
+    if (chunk.data.type === "finish" || chunk.data.type === "abort" || chunk.data.type === "error")
+      activeAssistant = undefined;
+    if (json(chunks.slice(index, index + expectedEvents.length), 16_777_216) === expected) {
+      if (activeAssistant !== data.assistantMessageId)
+        throw new ProjectionEvidenceError("canonical_mismatch");
       occurrences++;
-  if (
-    occurrences !== 1 ||
-    !chunks.some(chunk => {
-      const value = record.safeParse(chunk);
-      return (
-        value.success &&
-        value.data.type === "start" &&
-        value.data.messageId === data.assistantMessageId
-      );
-    })
-  )
-    throw new ProjectionEvidenceError("canonical_mismatch");
+    }
+  }
+  if (occurrences !== 1) throw new ProjectionEvidenceError("canonical_mismatch");
   return data.original;
 }
