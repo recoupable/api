@@ -37,6 +37,7 @@ const sql = new Client({
 const calls: Array<{ operation: "create" | "read"; state: string; parameters: number }> = [];
 let fixtureQueries = 0;
 let dropCommittedResponse = false;
+let injectedFailure: "P0001" | "P2102" | "P2101" | "transport" | undefined;
 let server: { version: string; encoding: string };
 const fixtureQuery = async (text: string, values: unknown[] = []) => {
   fixtureQueries++;
@@ -47,13 +48,18 @@ const execute = async (operation: "create" | "read", text: string, values: unkno
   calls.push(observation);
   let result;
   try {
-    result = await sql.query(text, values);
+    if (injectedFailure === "transport")
+      throw new Error("Synthetic transport loss: idempotency conflict");
+    result = injectedFailure
+      ? await sql.query("SELECT pg_temp.qualification_failure($1::text)", [injectedFailure])
+      : await sql.query(text, values);
     observation.state = "committed";
   } catch (error) {
     const code = (error as { code?: string }).code;
     observation.state = code ?? "unclassified";
     // P0001 includes multiple unrelated failures. Never classify it from exception text.
     if (code === "42501") throw new ProposedStorageFailure("denied");
+    if (operation === "create" && code === "P2101") throw new ProposedStorageFailure("conflict");
     throw error;
   }
   if (dropCommittedResponse && operation === "create") {
@@ -67,7 +73,7 @@ const dependencies: ProposedDependencies = {
   policy: {
     status: "proposed_unadopted",
     version: "proposed-personal-v1",
-    databaseHead: "df7be4c65b98924373b38c7d257f4b1c1820d6b7",
+    databaseHead: "f507a77696f20429f977df9885d6c8c11a5f304b",
   },
   storage: {
     create: (call: ProposedCreateCall) =>
@@ -124,8 +130,23 @@ const grantRead = async (application: string) =>
     [actorA, application],
   );
 
+const registrationState = async () => {
+  const tables = ["applications", "environments", "origins", "receipts", "requests"];
+  const state: Record<string, unknown[]> = {};
+  for (const table of tables) {
+    state[table] = (
+      await fixtureQuery(
+        `SELECT to_jsonb(t) AS row FROM application_registration_proposal.${table} t ORDER BY to_jsonb(t)::text`,
+      )
+    ).rows.map(value => value.row);
+  }
+  return state;
+};
+
 beforeAll(async () => {
   await sql.connect();
+  await fixtureQuery(`CREATE FUNCTION pg_temp.qualification_failure(code text) RETURNS jsonb
+    LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'idempotency conflict' USING ERRCODE=code; END $$`);
   const metadata = await fixtureQuery(
     "SELECT current_setting('server_version') AS version,current_setting('server_encoding') AS encoding",
   );
@@ -138,6 +159,7 @@ beforeAll(async () => {
 });
 beforeEach(async () => {
   dropCommittedResponse = false;
+  injectedFailure = undefined;
   await fixtureQuery("TRUNCATE application_registration_proposal.personal_principals CASCADE");
   await fixtureQuery(
     "INSERT INTO application_registration_proposal.personal_principals(account_id) VALUES($1::uuid),($2::uuid)",
@@ -256,6 +278,7 @@ describe("actual domain to exact disposable SQL proposal", () => {
       await fixtureQuery("SELECT result FROM application_registration_proposal.receipts")
     ).rows[0].result;
     expect(await register()).toEqual(original);
+    const saved = await registrationState();
     expect(
       (
         await fixtureQuery(
@@ -268,25 +291,70 @@ describe("actual domain to exact disposable SQL proposal", () => {
         ...input,
         registration: { ...input.registration, name: "Changed original intent" },
       }),
-    ).rejects.toMatchObject({ kind: "outcome_unknown" });
-    expect(calls.at(-1)?.state).toBe("P0001");
+    ).rejects.toMatchObject({ kind: "conflict" });
+    expect(calls.at(-1)?.state).toBe("P2101");
+    expect(await registrationState()).toEqual(saved);
     expect(
       (await fixtureQuery("SELECT result FROM application_registration_proposal.receipts")).rows[0]
         .result,
     ).toEqual(original);
   });
-  it("does not infer a conflict class from another generic P0001 failure", async () => {
+  it("classifies both definite conflict sites without changing original rows", async () => {
+    const empty = await registrationState();
     await expect(register({ ...input, expected_entitlement_revision: 2 })).rejects.toMatchObject({
-      kind: "outcome_unknown",
+      kind: "conflict",
     });
-    expect(calls.at(-1)?.state).toBe("P0001");
-    expect(
-      (
-        await fixtureQuery(
-          "SELECT count(*)::int AS n FROM application_registration_proposal.applications",
-        )
-      ).rows[0].n,
-    ).toBe(0);
+    expect(calls.at(-1)?.state).toBe("P2101");
+    expect(await registrationState()).toEqual(empty);
+    const original = await register();
+    const saved = await registrationState();
+    for (const changed of [
+      { ...input, expected_entitlement_revision: 2 },
+      { ...input, registration: { ...input.registration, environment: "development" } },
+    ]) {
+      await expect(register(changed)).rejects.toMatchObject({ kind: "conflict" });
+      expect(calls.at(-1)?.state).toBe("P2101");
+      expect(await registrationState()).toEqual(saved);
+    }
+    await fixtureQuery(
+      "UPDATE application_registration_proposal.create_entitlements SET revision=2 WHERE actor=$1::uuid",
+      [actorA],
+    );
+    expect(await register()).toEqual(original);
+    await expect(
+      register({ ...input, idempotency_key: "new-stale-revision" }),
+    ).rejects.toMatchObject({ kind: "conflict" });
+    expect(calls.at(-1)?.state).toBe("P2101");
+    expect(await registrationState()).toEqual(saved);
+  });
+  it.each(["P0001", "P2102", "transport"] as const)(
+    "keeps independent %s failure unknown despite misleading conflict text",
+    async failure => {
+      const original = await register();
+      const saved = await registrationState();
+      injectedFailure = failure;
+      await expect(register()).rejects.toMatchObject({ kind: "outcome_unknown" });
+      expect(calls.at(-1)?.state).toBe(failure === "transport" ? "unclassified" : failure);
+      expect(await registrationState()).toEqual(saved);
+      injectedFailure = undefined;
+      expect(await register()).toEqual(original);
+      expect(await registrationState()).toEqual(saved);
+    },
+  );
+  it("does not classify a read P2101 as a create conflict", async () => {
+    const original = await register();
+    await grantRead(original.application_id);
+    const saved = await registrationState();
+    injectedFailure = "P2101";
+    await expect(
+      oneStorage(() => read(request(), select(original), dependencies)),
+    ).rejects.toMatchObject({ kind: "outcome_unknown" });
+    expect(calls.at(-1)?.state).toBe("P2101");
+    expect(await registrationState()).toEqual(saved);
+    injectedFailure = undefined;
+    expect(await oneStorage(() => read(request(), select(original), dependencies))).toEqual(
+      original,
+    );
   });
   it("rechecks SQL authority before replay and read, and fresh auth before storage", async () => {
     const receipt = await register();
@@ -296,6 +364,12 @@ describe("actual domain to exact disposable SQL proposal", () => {
       [actorA],
     );
     await expect(register()).rejects.toMatchObject({ kind: "denied" });
+    const saved = await registrationState();
+    await expect(register({ ...input, expected_entitlement_revision: 2 })).rejects.toMatchObject({
+      kind: "denied",
+    });
+    expect(calls.at(-1)?.state).toBe("42501");
+    expect(await registrationState()).toEqual(saved);
     await fixtureQuery(
       "UPDATE application_registration_proposal.management_entitlements SET enabled=false WHERE actor=$1::uuid",
       [actorA],

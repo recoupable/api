@@ -4,7 +4,7 @@ export const proposedPolicySchema = z
   .object({
     status: z.literal("proposed_unadopted"),
     version: z.literal("proposed-personal-v1"),
-    databaseHead: z.literal("df7be4c65b98924373b38c7d257f4b1c1820d6b7"),
+    databaseHead: z.literal("f507a77696f20429f977df9885d6c8c11a5f304b"),
   })
   .strict();
 const revision = z.number().int().min(1).max(Number.MAX_SAFE_INTEGER);
