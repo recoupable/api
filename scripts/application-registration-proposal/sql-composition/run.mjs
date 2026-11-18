@@ -57,7 +57,7 @@ const gitEnv = {
   GIT_CONFIG_GLOBAL: "/dev/null",
 };
 // Bind tracked API source bytes, including transitive authentication imports.
-// Only this reviewed thirteen-path adapter/qualification slice may differ from the accepted revision.
+// Only this reviewed seventeen-path adapter/qualification slice may differ from the accepted revision.
 const apiRevision = bindings.acceptedApiBaseline;
 if (!/^[0-9a-f]{40}$/.test(apiRevision)) throw new Error("Exact API revision required");
 const gitRead = args =>
@@ -71,6 +71,11 @@ if (gitRead(["rev-parse", "--verify", `${apiRevision}^{commit}`]).trim() !== api
   throw new Error("Bound API revision unavailable");
 gitRead(["merge-base", "--is-ancestor", apiRevision, "HEAD"]);
 const allowedChanges = new Set([
+  "lib/applications/proposedRegistration/isProposedRegistrationText.ts",
+  "lib/applications/proposedRegistration/proposedRegistrationContract.ts",
+  "lib/applications/proposedRegistration/__tests__/operations.test.ts",
+  "scripts/application-registration-proposal/source-bindings.json",
+
   ...[
     "ProposedRegistrationSqlClient.ts",
     "getProposedCreateSqlValues.ts",

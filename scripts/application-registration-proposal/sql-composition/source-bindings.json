@@ -13,13 +13,14 @@
     "vercel.json": "4b3dfd36dbd274213a3ccf2d6bfbfa9be1ba6be26ea71946828f535e1bbfbf8a",
     "lib/applications/proposedRegistration/readProposedApplicationRegistration.ts": "ca358e8de64b51550f9be50f55d9189a665ca1a38d722a7850f1d31be43ae134",
     "lib/applications/proposedRegistration/validateProposedRegistrationActor.ts": "c56077ada47829f3ba20a618eaf0ae3ccfd67d9cf38db72e13939e57f89b8902",
-    "lib/applications/proposedRegistration/proposedRegistrationContract.ts": "0162487073c4e70dfc88179a49d6577980dcbb8a945e0a3778498e00f307b6e8",
+    "lib/applications/proposedRegistration/proposedRegistrationContract.ts": "9e54808c597030c4fcc16e4cb80e6ec2898fc88b148ec7517513f2bc29224587",
     "lib/applications/proposedRegistration/projectProposedRegistration.ts": "a3075ece761fa2a419dc48bf5c6cbfd8a6b2f0dc41e4d361f2695229022203af",
     "lib/applications/proposedRegistration/assertProposedRegistrationReceipt.ts": "cd8c2aae288df9f245386e630fc179435db5986da9def01fa4b154a1860698c7",
     "lib/applications/proposedRegistration/createProposedApplicationRegistration.ts": "0322dfd63e51314cfe7bcc5d5544127291574f3c1c8152fb536a3e1c6e4afef0",
     "lib/applications/proposedRegistration/authenticateProposedRegistration.ts": "00a1eeb4b9ae5726f5930fc42fbe7599ab7e47f6349ca8f2de8a550f9f392f78",
     "scripts/application-registration-proposal/setup.ts": "40d634fc986cde87f440f0596969985b9a68bf1d2c38ea87f00c4ecd893eb063",
-    "scripts/application-registration-proposal/denyNetwork.mjs": "5ed3c818af2732fe8abddda8e46e4b0e3a8a0edf6ff40c6d7edd54ea64dd159a"
+    "scripts/application-registration-proposal/denyNetwork.mjs": "5ed3c818af2732fe8abddda8e46e4b0e3a8a0edf6ff40c6d7edd54ea64dd159a",
+    "lib/applications/proposedRegistration/isProposedRegistrationText.ts": "6cec3b1f7e7441d7babda35729df77a088b53e0a59406b0b7990c2bb1a84a2cc"
   },
   "databaseInputs": {
     "proposals/application-registration-2104/protocol-composition.py": "377791d3ef4a26103bd046609d4b8dbf8f63a3d475aa2c72faeba68b553aada5",
@@ -62,6 +63,10 @@
     "scripts/application-registration-proposal/sql-composition/run.mjs",
     "scripts/application-registration-proposal/sql-composition/qualification.test.ts",
     "scripts/application-registration-proposal/sql-composition/source-bindings.json",
-    "scripts/application-registration-proposal/sql-composition/supervise.py"
+    "scripts/application-registration-proposal/sql-composition/supervise.py",
+    "lib/applications/proposedRegistration/isProposedRegistrationText.ts",
+    "lib/applications/proposedRegistration/proposedRegistrationContract.ts",
+    "lib/applications/proposedRegistration/__tests__/operations.test.ts",
+    "scripts/application-registration-proposal/source-bindings.json"
   ]
 }

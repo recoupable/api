@@ -412,6 +412,48 @@ describe("actual domain and helpers to restricted disposable SQL wrappers", () =
     alterReceipt = undefined;
     expect(await register()).toEqual(original);
   });
+  it.each(
+    [0, 0xd800, 0xdc00].flatMap(code => [
+      { field: "key", code },
+      { field: "name", code },
+    ]),
+  )("rejects invalid $field code unit $code before any SQL query", async ({ field, code }) => {
+    const character = String.fromCharCode(code);
+    expect(character.charCodeAt(0)).toBe(code);
+    const value =
+      field === "key"
+        ? { ...input, idempotency_key: `req-${character}` }
+        : { ...input, registration: { ...input.registration, name: `Name${character}` } };
+    const before = calls.length;
+    await expect(create(request(), value, dependencies)).rejects.toMatchObject({
+      name: "ZodError",
+    });
+    expect(calls).toHaveLength(before);
+  });
+  it("preserves valid Unicode keys and distinguishes replay from another valid key", async () => {
+    const pair = String.fromCharCode(0xd83d, 0xde80);
+    const replacement = String.fromCharCode(0xfffd);
+    expect(pair.codePointAt(0)).toBe(0x1f680);
+    expect(replacement.codePointAt(0)).toBe(0xfffd);
+    const firstInput = {
+      ...input,
+      idempotency_key: ` key-${pair} `,
+      registration: { ...input.registration, name: `  Name${pair}${replacement}  ` },
+    };
+    const first = await register(firstInput);
+    expect(first.snapshot.name).toBe(`Name${pair}${replacement}`);
+    const saved = await registrationState();
+    expect(await register(firstInput)).toEqual(first);
+    expect(await registrationState()).toEqual(saved);
+    const second = await register({ ...firstInput, idempotency_key: ` key-${replacement} ` });
+    expect(second.application_id).not.toBe(first.application_id);
+    const keys = await fixtureQuery(
+      'SELECT key FROM application_registration_proposal.requests ORDER BY key COLLATE "C"',
+    );
+    expect(keys.rows.map(row => row.key).sort()).toEqual(
+      [firstInput.idempotency_key, ` key-${replacement} `].sort(),
+    );
+  });
   it("real MCP SDK create/read reaches the restricted SQL wrappers", async () => {
     const client = new McpClient({ name: "synthetic-sql-composition", version: "1" });
     const transport = new StreamableHTTPClientTransport(new URL("https://fixture.invalid/mcp"), {
@@ -421,6 +463,22 @@ describe("actual domain and helpers to restricted disposable SQL wrappers", () =
     });
     try {
       await client.connect(transport);
+      for (const code of [0, 0xd800, 0xdc00]) {
+        const character = String.fromCharCode(code);
+        expect(character.charCodeAt(0)).toBe(code);
+        for (const value of [
+          { ...input, idempotency_key: `req-${character}` },
+          { ...input, registration: { ...input.registration, name: `Name${character}` } },
+        ]) {
+          const before = calls.length;
+          const rejected = await client.callTool({
+            name: "create_application_registration",
+            arguments: value,
+          });
+          expect(rejected.isError).toBe(true);
+          expect(calls).toHaveLength(before);
+        }
+      }
       const created = await oneStorage(() =>
         client.callTool({ name: "create_application_registration", arguments: input }),
       );

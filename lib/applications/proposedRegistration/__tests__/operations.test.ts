@@ -8,6 +8,7 @@ import { assertProposedRegistrationReceipt } from "../assertProposedRegistration
 import { projectProposedRegistration } from "../projectProposedRegistration";
 import {
   ProposedStorageFailure,
+  proposedCreateInputSchema,
   type ProposedDependencies,
   type ProposedCreateCall,
 } from "../proposedRegistrationContract";
@@ -402,4 +403,54 @@ describe("strict receipt acceptance", () => {
       expect(value.recorded_at).toBe(recorded_at);
     }
   });
+});
+
+const invalidText = [
+  String.fromCharCode(0),
+  String.fromCharCode(0xd800),
+  String.fromCharCode(0xdc00),
+];
+describe("proposal-local PostgreSQL text boundary", () => {
+  it.each(
+    invalidText.flatMap(character => [
+      { field: "key", character },
+      { field: "name", character },
+    ]),
+  )("rejects actual invalid code units in $field before storage", async ({ field, character }) => {
+    expect([0, 0xd800, 0xdc00]).toContain(character.charCodeAt(0));
+    const value =
+      field === "key"
+        ? { ...input, idempotency_key: `req-${character}` }
+        : { ...input, registration: { ...input.registration, name: `Name${character}` } };
+    expect(proposedCreateInputSchema.safeParse(value).success).toBe(false);
+    const deps = dependencies();
+    await expect(create(request(), value, deps)).rejects.toMatchObject({ name: "ZodError" });
+    expect(deps.storage.create).not.toHaveBeenCalled();
+    expect(deps.storage.read).not.toHaveBeenCalled();
+  });
+  it.each([String.fromCharCode(0xd83d, 0xde80), String.fromCharCode(0xfffd), "Música 音楽"])(
+    "preserves valid Unicode and existing name trimming",
+    async text => {
+      const key = ` key-${text} `;
+      const value = {
+        ...input,
+        idempotency_key: key,
+        registration: { ...input.registration, name: `  Name${text}  ` },
+      };
+      const parsed = proposedCreateInputSchema.parse(value);
+      expect(parsed.idempotency_key).toBe(key);
+      expect(parsed.registration.name).toBe(`Name${text}`);
+      expect(Buffer.from(parsed.idempotency_key)).toEqual(Buffer.from(key));
+      const deps = dependencies();
+      const receipt = structuredClone(golden.createReceipt);
+      receipt.snapshot.name = `Name${text}`;
+      deps.storage.create.mockResolvedValue(receipt);
+      expect(await create(request(), value, deps)).toEqual(receipt);
+      expect(deps.storage.create).toHaveBeenCalledExactlyOnceWith({
+        ...golden.input,
+        key,
+        registration: { ...golden.input.registration, name: `Name${text}` },
+      });
+    },
+  );
 });
