@@ -261,3 +261,64 @@ it("checks the receipt producer linkage, not just identical observations", async
     code: "producer_mismatch",
   });
 });
+it("verifies a valid large observation whose duplicated proof exceeds one MiB", async () => {
+  const { input, step, ports } = fixture();
+  input.observation.data.original.providerMetadata.provider.opaque = ["x".repeat(600_000), 1];
+  step.output.generatedProjectionObservations.observations[0].events[0] = input.observation;
+  ports.readCanonical.mockResolvedValue([
+    { type: "start", messageId: "assistant" },
+    ...step.output.generatedProjectionObservations.observations[0].events,
+  ]);
+  await expect(verifyProjectionObservation(input)).resolves.toEqual(
+    input.observation.data.original,
+  );
+});
+it("sanitizes an aggregate proof exceeding its separate sixteen MiB budget", async () => {
+  const { input, step } = fixture();
+  const item = step.output.generatedProjectionObservations.observations[0];
+  step.output.generatedProjectionObservations.observations = Array.from(
+    { length: 32 },
+    (_, index) => {
+      const copy = structuredClone(item);
+      copy.observation.data.ordinal = index;
+      copy.observation.data.original.providerMetadata.provider.opaque = ["x".repeat(600_000), 1];
+      return copy;
+    },
+  );
+  await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+    code: "evidence_limit",
+    message: "Projection history evidence unavailable",
+  });
+});
+it("uses the aggregate budget for multiple individually bounded observations", async () => {
+  const { input, step, receipt, ports } = fixture();
+  const first = step.output.generatedProjectionObservations.observations[0];
+  first.observation.data.original.providerMetadata.provider.opaque = ["x".repeat(300_000), 1];
+  first.events[0] = first.observation;
+  const second = structuredClone(first);
+  second.observation.id = "assistant:projection:1";
+  second.observation.data.ordinal = 1;
+  second.observation.data.fallback.partIndex = 3;
+  second.events = [
+    second.observation,
+    { type: "text-start", id: "assistant:projection:1:fallback" },
+    {
+      type: "text-delta",
+      id: "assistant:projection:1:fallback",
+      delta: second.observation.data.fallback.text,
+    },
+    { type: "text-end", id: "assistant:projection:1:fallback" },
+  ];
+  step.output.generatedProjectionObservations.observations.push(second);
+  receipt.output.generatedProjectionObservations = structuredClone(
+    step.output.generatedProjectionObservations,
+  );
+  ports.readCanonical.mockResolvedValue([
+    { type: "start", messageId: "assistant" },
+    ...first.events,
+    ...second.events,
+  ]);
+  await expect(verifyProjectionObservation(input)).resolves.toEqual(
+    input.observation.data.original,
+  );
+});

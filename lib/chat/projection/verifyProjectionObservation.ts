@@ -15,8 +15,17 @@ import type {
   ProjectionProducer,
 } from "./ProjectionEvidencePorts";
 const record = z.record(z.string(), z.unknown());
-const json = (value: unknown) =>
-  encodeStrictJson(value, { omitUndefinedObjectProperties: true, maxBytes: 1_048_576 });
+const json = (value: unknown, maxBytes = 1_048_576) => {
+  try {
+    return encodeStrictJson(value, { omitUndefinedObjectProperties: true, maxBytes });
+  } catch (error) {
+    throw new ProjectionEvidenceError(
+      error instanceof Error && error.message === "JSON exceeds byte budget"
+        ? "evidence_limit"
+        : "invalid_evidence",
+    );
+  }
+};
 /** Source-only verifier: caller must establish current chat authority; no default admitted deployments. */
 export async function verifyProjectionObservation(input: {
   observation: unknown;
@@ -102,6 +111,8 @@ export async function verifyProjectionObservation(input: {
     throw new ProjectionEvidenceError("producer_mismatch");
   if (step.data.status !== "completed") throw new ProjectionEvidenceError("proof_pending");
   const output = record.safeParse(step.data.output);
+  if (output.success && output.data.generatedProjectionObservations !== undefined)
+    json(output.data.generatedProjectionObservations, 16_777_216);
   const proof = projectionProofSchema.safeParse(
     output.success ? output.data.generatedProjectionObservations : undefined,
   );
@@ -134,17 +145,23 @@ export async function verifyProjectionObservation(input: {
   )
     throw new ProjectionEvidenceError("producer_mismatch");
   if (receiptRecord.data.status !== "completed") throw new ProjectionEvidenceError("proof_pending");
+  if (receiptRecord.data.output !== undefined) json(receiptRecord.data.output, 16_777_216);
   const receipt = projectionReceiptSchema.safeParse(receiptRecord.data.output);
   if (!receipt.success) throw new ProjectionEvidenceError("proof_missing");
   if (receipt.data.producerStepId !== data.originStepId)
     throw new ProjectionEvidenceError("producer_mismatch");
-  if (json(receipt.data.generatedProjectionObservations) !== json(proof.data))
+  if (
+    json(receipt.data.generatedProjectionObservations, 16_777_216) !== json(proof.data, 16_777_216)
+  )
     throw new ProjectionEvidenceError("proof_missing");
   const matches = proof.data.observations.filter(
     item => json(item.observation) === json(observation),
   );
   const expectedEvents = projectionEvents(observation);
-  if (matches.length !== 1 || json(matches[0].events) !== json(expectedEvents))
+  if (
+    matches.length !== 1 ||
+    json(matches[0].events, 16_777_216) !== json(expectedEvents, 16_777_216)
+  )
     throw new ProjectionEvidenceError("proof_missing");
   const chunks = await read(() => input.ports.readCanonical(data.originRunId, signal));
   if (!Array.isArray(chunks) || chunks.length > 10000)
@@ -156,7 +173,10 @@ export async function verifyProjectionObservation(input: {
   }
   let occurrences = 0;
   for (let index = 0; index <= chunks.length - expectedEvents.length; index++)
-    if (json(chunks.slice(index, index + expectedEvents.length)) === json(expectedEvents))
+    if (
+      json(chunks.slice(index, index + expectedEvents.length), 16_777_216) ===
+      json(expectedEvents, 16_777_216)
+    )
       occurrences++;
   if (
     occurrences !== 1 ||

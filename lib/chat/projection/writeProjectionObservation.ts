@@ -45,6 +45,7 @@ export async function writeProjectionObservation(
         },
       },
     });
+    encodeStrictJson(observation, { omitUndefinedObjectProperties: true, maxBytes: 1_048_576 });
   } catch {
     throw new ProjectionEvidenceError("invalid_observation");
   }

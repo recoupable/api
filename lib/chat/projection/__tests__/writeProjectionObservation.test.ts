@@ -48,3 +48,18 @@ it("refuses approval semantics instead of minting a projection grant", async () 
   ).rejects.toMatchObject({ code: "invalid_observation" });
   expect(write).not.toHaveBeenCalled();
 });
+it("rejects envelope overhead beyond the observation budget before the first write", async () => {
+  const original = {
+    type: "custom",
+    kind: "provider.kind",
+    providerMetadata: { provider: { large: "" } },
+  };
+  original.providerMetadata.provider.large = "x".repeat(
+    1_048_576 - Buffer.byteLength(JSON.stringify(original)) - 32,
+  );
+  const write = vi.fn();
+  await expect(writeProjectionObservation({ ...input, original }, write)).rejects.toMatchObject({
+    code: "invalid_observation",
+  });
+  expect(write).not.toHaveBeenCalled();
+});
