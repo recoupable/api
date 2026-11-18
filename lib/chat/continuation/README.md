@@ -46,3 +46,11 @@ The disabled fenced reconnect adapter accepts a request, verifies current
 ownership, matches the captured original account/chat, then runs the same stored
 protocol gate before status, reader/tail or terminal release. It remains disabled;
 this change does not grant adapter deployment or database admission.
+
+After start succeeds, a failed/lost placeholder promotion returns409 with
+`{status:"error",error:"chat_stream_ownership_lost",admission:"admitted",runId}`.
+Admission means the run was created; it does not claim successful streaming,
+completed cancellation or absence of effects. The existing single cancellation
+attempt remains unchanged, and its success/failure does not alter this response.
+Before-start409 claim/existing-stream conflicts explicitly say not_admitted and
+never invent a runId. Clients must treat ambiguous bare409 responses as unknown.

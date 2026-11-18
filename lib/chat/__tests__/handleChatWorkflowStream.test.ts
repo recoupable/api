@@ -475,3 +475,50 @@ it("reports admitted readback failure without cancelling, restarting, or creatin
   expect(getReadable).not.toHaveBeenCalled();
   expect(cancel).not.toHaveBeenCalled();
 });
+it.each([
+  { promotion: "race", cancelFails: false },
+  { promotion: "race", cancelFails: true },
+  { promotion: "unavailable", cancelFails: false },
+  { promotion: "unavailable", cancelFails: true },
+])("reports the admitted run after promotion loss: %j", async ({ promotion, cancelFails }) => {
+  mockValidated();
+  mockSessionOwnedActive();
+  mockChatOwned();
+  vi.mocked(compareAndSetChatActiveStreamId)
+    .mockResolvedValueOnce({ ok: true, claimed: true })
+    .mockResolvedValueOnce(
+      (promotion === "race" ? { ok: true, claimed: false } : { ok: false }) as never,
+    );
+  const getReadable = vi.fn();
+  const cancel = vi.fn(async () => {
+    if (cancelFails) throw new Error("synthetic cancellation failure");
+  });
+  vi.mocked(start).mockResolvedValue({ runId: "wrun_created", getReadable } as never);
+  vi.mocked(getRun).mockReturnValue({ cancel } as never);
+  const response = await handleChatWorkflowStream(makeRequest());
+  expect(response.status).toBe(409);
+  expect(await response.json()).toEqual({
+    status: "error",
+    error: "chat_stream_ownership_lost",
+    admission: "admitted",
+    runId: "wrun_created",
+  });
+  expect(start).toHaveBeenCalledTimes(1);
+  expect(getRun).toHaveBeenCalledExactlyOnceWith("wrun_created");
+  expect(cancel).toHaveBeenCalledTimes(1);
+  expect(getReadable).not.toHaveBeenCalled();
+  expect(gateStoredContinuation).not.toHaveBeenCalled();
+});
+it("reports a preclaim conflict as not admitted without inventing a run ID", async () => {
+  mockValidated();
+  mockSessionOwnedActive();
+  mockChatOwned();
+  vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValueOnce({ ok: true, claimed: false });
+  const response = await handleChatWorkflowStream(makeRequest());
+  expect(response.status).toBe(409);
+  const body = await response.json();
+  expect(body.admission).toBe("not_admitted");
+  expect(body).not.toHaveProperty("runId");
+  expect(start).not.toHaveBeenCalled();
+  expect(getRun).not.toHaveBeenCalled();
+});

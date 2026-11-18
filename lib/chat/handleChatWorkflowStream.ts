@@ -118,7 +118,9 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   const claimed = await compareAndSetChatActiveStreamId(validated.chatId, null, placeholder);
   if (!claimed.ok) return errorResponse("Internal server error", 500);
   if (!claimed.claimed) {
-    return errorResponse("Another workflow is already running for this chat", 409);
+    return errorResponse("Another workflow is already running for this chat", 409, {
+      admission: "not_admitted",
+    });
   }
 
   // We own the slot — safe to start the workflow.
@@ -185,7 +187,11 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
     } catch (error) {
       console.error("[handleChatWorkflowStream] cancel after slot-loss failed:", error);
     }
-    return errorResponse("Another workflow is already running for this chat", 409);
+    // The run was created. A cancellation attempt does not undo admission or prove completion.
+    return errorResponse("chat_stream_ownership_lost", 409, {
+      admission: "admitted",
+      runId: run.runId,
+    });
   }
 
   const gate = await gateStoredContinuation(

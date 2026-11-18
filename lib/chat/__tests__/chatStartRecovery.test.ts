@@ -156,6 +156,7 @@ describe("POST start recovery with the real reconciliation path", () => {
       expect(response.status).toBe(409);
       expect(await response.json()).toMatchObject({
         error: expect.stringContaining("GET /api/chat/"),
+        admission: "not_admitted",
       });
       expect(response.headers.get("x-workflow-run-id")).toBeNull();
       expect(getReadable).not.toHaveBeenCalled();
