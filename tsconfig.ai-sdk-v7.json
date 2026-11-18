@@ -8,9 +8,8 @@
     "lib/agent/tools/__tests__/agentContextSchema.test.ts",
     "lib/agents/generalAgent/__tests__/getAnthropicProviderOptions.test.ts",
     "lib/agent/contextManagement/__tests__/wrapToolsWithAbortIterable.test.ts",
-    "lib/agent/tools/__tests__/wrappedTaskSdk.test.ts"
+    "lib/agent/tools/__tests__/wrappedTaskSdk.test.ts",
+    "lib/credits/__tests__/getCreditUsageStepBoundary.test.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }
