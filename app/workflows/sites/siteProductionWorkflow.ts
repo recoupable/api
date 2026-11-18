@@ -153,6 +153,7 @@ export async function siteProductionWorkflow(
       accountId,
       site.id,
       context.siteSkill,
+      { baseRevision: site.revision, releaseArtwork: context.release?.artwork ?? null },
     );
     stage = "bounded repair";
     const repaired = await repairSiteProduction(

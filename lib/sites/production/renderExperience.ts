@@ -1,10 +1,15 @@
+import { collectCoverHiddenEvidence } from "./collectCoverHiddenEvidence";
 import { prepareSiteRenderArtifacts } from "./prepareSiteRenderArtifacts";
 import type { ExperienceContract } from "./experienceContract";
 import { Sandbox } from "@vercel/sandbox";
 import type { SiteSnapshot } from "../schema";
 
 /** Runs untrusted generated code in a disposable VM with no application credentials. */
-export async function renderExperience(snapshot: SiteSnapshot, contract?: ExperienceContract) {
+export async function renderExperience(
+  snapshot: SiteSnapshot,
+  contract?: ExperienceContract,
+  artworkUrl?: string | null,
+) {
   const sandbox = await Sandbox.create({
     runtime: "node22",
     // Browser installation and two complete device journeys share this lifetime.
@@ -56,14 +61,21 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
     // Only known supplied/generated image hosts are available while untrusted code executes.
     const hosts = [...new Set(snapshot.assets.map(a => new URL(a.url).hostname))];
     await sandbox.updateNetworkPolicy({ allow: hosts });
-    const { source, journeySource, runnerSource, evidence } = prepareSiteRenderArtifacts(
-      snapshot,
-      contract,
-    );
+    const {
+      source,
+      journeySource,
+      coverSource,
+      coverHidden,
+      coverRunnerSource,
+      runnerSource,
+      evidence,
+    } = prepareSiteRenderArtifacts(snapshot, contract, artworkUrl);
     await sandbox.writeFiles([
       { path: "experience.html", content: Buffer.from(source) },
       { path: "journey.json", content: Buffer.from(journeySource) },
+      { path: "cover-review.json", content: Buffer.from(coverSource) },
       { path: "review.cjs", content: Buffer.from(runnerSource) },
+      { path: "cover-review.cjs", content: Buffer.from(coverRunnerSource) },
     ]);
     stage = "browser playthrough";
     const run = await sandbox.runCommand("node", ["review.cjs"]);
@@ -97,7 +109,12 @@ export async function renderExperience(snapshot: SiteSnapshot, contract?: Experi
           image: `data:image/png;base64,${bytes.toString("base64")}`,
         });
     }
+    const { reports: coverHiddenReports, images: coverHiddenImages } =
+      await collectCoverHiddenEvidence(sandbox);
     return {
+      coverHidden,
+      coverHiddenReports,
+      coverHiddenImages,
       evidence,
       firstActionImages,
       report: JSON.parse(report.toString()) as {

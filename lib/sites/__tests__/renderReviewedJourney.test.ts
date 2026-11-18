@@ -20,6 +20,7 @@ it("repairs the test once using browser evidence without changing the site or pa
   vi.mocked(renderExperience)
     .mockResolvedValueOnce(failed)
     .mockResolvedValueOnce({
+      ...failed,
       report: [],
       images: [],
       firstActionImages: [],
@@ -30,7 +31,7 @@ it("repairs the test once using browser evidence without changing the site or pa
     journey: contract,
     reports: failed.report,
   });
-  expect(renderExperience).toHaveBeenNthCalledWith(2, snapshot, contract);
+  expect(renderExperience).toHaveBeenNthCalledWith(2, snapshot, contract, undefined);
 });
 it("retains failed evidence after the bounded repair instead of claiming success", async () => {
   vi.mocked(renderExperience).mockResolvedValue(failed);

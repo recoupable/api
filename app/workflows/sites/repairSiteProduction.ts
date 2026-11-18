@@ -70,7 +70,12 @@ export async function repairSiteProduction(
     checkpoint = await readRepairCheckpointStep(site, accountId);
     const beforeReview = stop();
     if (beforeReview) return failure(beforeReview);
-    reviews.push(await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill));
+    reviews.push(
+      await reviewStep(snapshot, direction, accountId, site.id, context.siteSkill, {
+        baseRevision: site.revision,
+        releaseArtwork: context.release?.artwork ?? null,
+      }),
+    );
     checkpoint = await readRepairCheckpointStep(site, accountId);
   }
 }

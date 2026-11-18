@@ -9,15 +9,16 @@ export async function renderReviewedJourney(
   contract: ExperienceContract,
   accountId: string,
   siteId: string,
+  artworkUrl?: string | null,
 ) {
   let journey = await compileJourney(snapshot, contract, accountId, siteId);
-  let rendered = await renderExperience(snapshot, journey);
+  let rendered = await renderExperience(snapshot, journey, artworkUrl);
   if (rendered.report.some(report => !report.journeyPassed)) {
     journey = await compileJourney(snapshot, contract, accountId, siteId, {
       journey,
       reports: rendered.report,
     });
-    rendered = await renderExperience(snapshot, journey);
+    rendered = await renderExperience(snapshot, journey, artworkUrl);
   }
   return { journey, rendered };
 }
