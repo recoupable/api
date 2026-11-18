@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, afterAll, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, afterAll, afterEach, describe, expect, it, vi } from "vitest";
 import { Client } from "pg";
 import { userInfo } from "node:os";
 import net from "node:net";
@@ -11,19 +11,22 @@ import { fixture } from "../setup";
 import { installOwnedSocketGuard } from "./socket-guard.mjs";
 import { createProposedApplicationRegistration as create } from "@/lib/applications/proposedRegistration/createProposedApplicationRegistration";
 import { readProposedApplicationRegistration as read } from "@/lib/applications/proposedRegistration/readProposedApplicationRegistration";
-import {
-  ProposedStorageFailure,
-  type ProposedDependencies,
-  type ProposedCreateCall,
-  type ProposedReadCall,
-} from "@/lib/applications/proposedRegistration/proposedRegistrationContract";
+import { type ProposedDependencies } from "@/lib/applications/proposedRegistration/proposedRegistrationContract";
+
+import { insertProposedApplicationRegistration } from "@/lib/supabase/application_registration_proposal/insertProposedApplicationRegistration";
+import { selectProposedApplicationRegistration } from "@/lib/supabase/application_registration_proposal/selectProposedApplicationRegistration";
+import type { ProposedRegistrationSqlClient } from "@/lib/supabase/application_registration_proposal/ProposedRegistrationSqlClient";
+import { Client as McpClient } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { handleProposedRegistrationMcpRequest as handle } from "@/lib/mcp/applications/handleProposedRegistrationMcpRequest";
+import supabase from "@/lib/supabase/serverClient";
 
 // The shared auth setup denies all sockets; restore only the prevalidated owned Unix socket.
 installOwnedSocketGuard();
 const actorA = "11111111-1111-4111-8111-111111111111";
 const actorB = "33333333-3333-4333-8333-333333333333";
 const socket = process.env.REGISTRATION_QUALIFICATION_SOCKET!;
-const sql = new Client({
+const connection = {
   host: socket,
   port: 55473,
   user: userInfo().username,
@@ -33,41 +36,52 @@ const sql = new Client({
   query_timeout: 10000,
   statement_timeout: 10000,
   application_name: "registration-domain-composition",
-});
+};
+const sql = new Client(connection); // Controller only: never passed to the helpers.
+const runtime = new Client({ ...connection, user: "qualification_registration_client" });
+const nativeCompatibility: ProposedRegistrationSqlClient = runtime;
+void nativeCompatibility;
+let setupQueries = 0;
+let runtimeIdentity: unknown;
 const calls: Array<{ operation: "create" | "read"; state: string; parameters: number }> = [];
 let fixtureQueries = 0;
 let dropCommittedResponse = false;
-let injectedFailure: "P0001" | "P2102" | "P2101" | "transport" | undefined;
+let alterReceipt: ((receipt: Record<string, unknown>) => unknown) | undefined;
 let server: { version: string; encoding: string };
 const fixtureQuery = async (text: string, values: unknown[] = []) => {
   fixtureQueries++;
   return sql.query(text, values);
 };
-const execute = async (operation: "create" | "read", text: string, values: unknown[]) => {
-  const observation = { operation, state: "started", parameters: values.length };
-  calls.push(observation);
-  let result;
-  try {
-    if (injectedFailure === "transport")
-      throw new Error("Synthetic transport loss: idempotency conflict");
-    result = injectedFailure
-      ? await sql.query("SELECT pg_temp.qualification_failure($1::text)", [injectedFailure])
-      : await sql.query(text, values);
-    observation.state = "committed";
-  } catch (error) {
-    const code = (error as { code?: string }).code;
-    observation.state = code ?? "unclassified";
-    // P0001 includes multiple unrelated failures. Never classify it from exception text.
-    if (code === "42501") throw new ProposedStorageFailure("denied");
-    if (operation === "create" && code === "P2101") throw new ProposedStorageFailure("conflict");
-    throw error;
-  }
-  if (dropCommittedResponse && operation === "create") {
-    dropCommittedResponse = false;
-    observation.state = "committed_response_dropped";
-    throw new Error("Synthetic response loss after actual SQL commit");
-  }
-  return result.rows[0].receipt;
+const observedClient: ProposedRegistrationSqlClient = {
+  async query(text, values) {
+    const operation = text.includes(".create_registration(") ? "create" : "read";
+    expect(text).toBe(
+      operation === "create"
+        ? "SELECT application_registration_execution_proposal.create_registration($1::uuid,$2::uuid,$3::text,$4::text,$5::bigint,$6::jsonb) AS receipt"
+        : "SELECT application_registration_execution_proposal.read_registration($1::uuid,$2::uuid,$3::uuid,$4::text,$5::uuid) AS receipt",
+    );
+    const observation: (typeof calls)[number] = {
+      operation,
+      state: "started",
+      parameters: values.length,
+    };
+    calls.push(observation);
+    let result;
+    try {
+      result = await runtime.query(text, values);
+      observation.state = "committed";
+    } catch (error) {
+      observation.state = (error as { code?: string }).code ?? "unclassified";
+      throw error;
+    }
+    if (dropCommittedResponse && operation === "create") {
+      dropCommittedResponse = false;
+      observation.state = "committed_response_dropped";
+      throw new Error("Synthetic response loss after actual SQL commit");
+    }
+    if (alterReceipt) result.rows[0].receipt = alterReceipt(result.rows[0].receipt);
+    return result;
+  },
 };
 const dependencies: ProposedDependencies = {
   policy: {
@@ -76,27 +90,11 @@ const dependencies: ProposedDependencies = {
     databaseHead: "f507a77696f20429f977df9885d6c8c11a5f304b",
   },
   storage: {
-    create: (call: ProposedCreateCall) =>
-      execute(
-        "create",
-        "SELECT application_registration_proposal.register_application($1::uuid,$2::uuid,$3::text,$4::text,$5::bigint,$6::jsonb) AS receipt",
-        [
-          call.actor,
-          call.workspace,
-          call.environment,
-          call.key,
-          call.entitlementRevision,
-          JSON.stringify(call.registration),
-        ],
-      ),
-    read: (call: ProposedReadCall) =>
-      execute(
-        "read",
-        "SELECT application_registration_proposal.read_registration($1::uuid,$2::uuid,$3::uuid,$4::text,$5::uuid) AS receipt",
-        [call.actor, call.workspace, call.application, call.environment, call.receipt],
-      ),
+    create: call => insertProposedApplicationRegistration(observedClient, call),
+    read: call => selectProposedApplicationRegistration(observedClient, call),
   },
 };
+
 const input = {
   idempotency_key: "composition-create",
   expected_entitlement_revision: 1,
@@ -145,8 +143,16 @@ const registrationState = async () => {
 
 beforeAll(async () => {
   await sql.connect();
-  await fixtureQuery(`CREATE FUNCTION pg_temp.qualification_failure(code text) RETURNS jsonb
-    LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'idempotency conflict' USING ERRCODE=code; END $$`);
+  await runtime.connect();
+  await runtime.query("SET ROLE qualification_registration_runtime");
+  setupQueries++;
+  const identity = await runtime.query("SELECT session_user, current_user");
+  setupQueries++;
+  runtimeIdentity = identity.rows[0];
+  expect(runtimeIdentity).toEqual({
+    session_user: "qualification_registration_client",
+    current_user: "qualification_registration_runtime",
+  });
   const metadata = await fixtureQuery(
     "SELECT current_setting('server_version') AS version,current_setting('server_encoding') AS encoding",
   );
@@ -159,7 +165,8 @@ beforeAll(async () => {
 });
 beforeEach(async () => {
   dropCommittedResponse = false;
-  injectedFailure = undefined;
+  alterReceipt = undefined;
+  vi.stubEnv("OAUTH_ENABLED", "false");
   await fixtureQuery("TRUNCATE application_registration_proposal.personal_principals CASCADE");
   await fixtureQuery(
     "INSERT INTO application_registration_proposal.personal_principals(account_id) VALUES($1::uuid),($2::uuid)",
@@ -170,14 +177,27 @@ beforeEach(async () => {
   );
 });
 afterAll(async () => {
+  await runtime.end();
   await sql.end();
   console.log(
     "COMPOSITION_RECEIPT " +
-      JSON.stringify({ server, storageCalls: calls, fixtureQueries, activation: false }),
+      JSON.stringify({
+        server,
+        runtimeIdentity,
+        storageCalls: calls,
+        fixtureQueries,
+        setupQueries,
+        activation: false,
+      }),
   );
 });
 
-describe("actual domain to exact disposable SQL proposal", () => {
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
+
+describe("actual domain and helpers to restricted disposable SQL wrappers", () => {
   it("creates disabled canonical rows and returns the unchanged SQL receipt", async () => {
     const receipt = await register();
     const stored = await fixtureQuery(
@@ -327,35 +347,6 @@ describe("actual domain to exact disposable SQL proposal", () => {
     expect(calls.at(-1)?.state).toBe("P2101");
     expect(await registrationState()).toEqual(saved);
   });
-  it.each(["P0001", "P2102", "transport"] as const)(
-    "keeps independent %s failure unknown despite misleading conflict text",
-    async failure => {
-      const original = await register();
-      const saved = await registrationState();
-      injectedFailure = failure;
-      await expect(register()).rejects.toMatchObject({ kind: "outcome_unknown" });
-      expect(calls.at(-1)?.state).toBe(failure === "transport" ? "unclassified" : failure);
-      expect(await registrationState()).toEqual(saved);
-      injectedFailure = undefined;
-      expect(await register()).toEqual(original);
-      expect(await registrationState()).toEqual(saved);
-    },
-  );
-  it("does not classify a read P2101 as a create conflict", async () => {
-    const original = await register();
-    await grantRead(original.application_id);
-    const saved = await registrationState();
-    injectedFailure = "P2101";
-    await expect(
-      oneStorage(() => read(request(), select(original), dependencies)),
-    ).rejects.toMatchObject({ kind: "outcome_unknown" });
-    expect(calls.at(-1)?.state).toBe("P2101");
-    expect(await registrationState()).toEqual(saved);
-    injectedFailure = undefined;
-    expect(await oneStorage(() => read(request(), select(original), dependencies))).toEqual(
-      original,
-    );
-  });
   it("rechecks SQL authority before replay and read, and fresh auth before storage", async () => {
     const receipt = await register();
     await grantRead(receipt.application_id);
@@ -385,6 +376,108 @@ describe("actual domain to exact disposable SQL proposal", () => {
     );
     expect(calls).toHaveLength(before);
   });
+  it("runtime cannot bypass wrappers or modify tables or create TEMP objects", async () => {
+    for (const statement of [
+      "SELECT application_registration_proposal.read_registration(NULL,NULL,NULL,NULL,NULL)",
+      "UPDATE application_registration_proposal.applications SET name='forbidden'",
+      "CREATE TEMP TABLE forbidden_temp(id int)",
+    ]) {
+      setupQueries++;
+      await expect(runtime.query(statement)).rejects.toMatchObject({ code: "42501" });
+    }
+  });
+  it.each([
+    "actor",
+    "workspace_id",
+    "billing_owner_id",
+    "access_activated",
+    "snapshot",
+    "extra",
+    "receipt_id",
+  ])("actual helpers preserve domain rejection of a tampered %s receipt", async field => {
+    const original = await register();
+    await grantRead(original.application_id);
+    const saved = await registrationState();
+    alterReceipt = receipt => ({
+      ...receipt,
+      [field]: field === "access_activated" ? true : field === "snapshot" ? {} : actorB,
+    });
+    if (field !== "receipt_id")
+      await expect(register()).rejects.toMatchObject({ kind: "outcome_unknown" });
+    await expect(
+      oneStorage(() => read(request(), select(original), dependencies)),
+    ).rejects.toMatchObject({ kind: "outcome_unknown" });
+    expect(await registrationState()).toEqual(saved);
+    alterReceipt = undefined;
+    expect(await register()).toEqual(original);
+  });
+  it("real MCP SDK create/read reaches the restricted SQL wrappers", async () => {
+    const client = new McpClient({ name: "synthetic-sql-composition", version: "1" });
+    const transport = new StreamableHTTPClientTransport(new URL("https://fixture.invalid/mcp"), {
+      requestInit: { headers: { Authorization: `Bearer ${fixture.key}` } },
+      fetch: async (url, init) =>
+        handle(new NextRequest(url instanceof Request ? url : String(url), init), dependencies),
+    });
+    try {
+      await client.connect(transport);
+      const created = await oneStorage(() =>
+        client.callTool({ name: "create_application_registration", arguments: input }),
+      );
+      expect(created.isError).not.toBe(true);
+      const original = (
+        await fixtureQuery("SELECT result FROM application_registration_proposal.receipts")
+      ).rows[0].result;
+      expect(created.content).toEqual([{ type: "text", text: JSON.stringify(original) }]);
+      await grantRead(original.application_id);
+      const selected = await oneStorage(() =>
+        client.callTool({ name: "read_application_registration", arguments: select(original) }),
+      );
+      expect(selected.isError).not.toBe(true);
+      expect(selected.content).toEqual(created.content);
+    } finally {
+      await client.close();
+    }
+  });
+  it.each(["changed-actor", "terminated"])(
+    "real SDK dispatch %s stops before SQL",
+    async failure => {
+      const client = new McpClient({ name: "synthetic-sql-negative", version: "1" });
+      const abort = new AbortController();
+      const transport = new StreamableHTTPClientTransport(new URL("https://fixture.invalid/mcp"), {
+        requestInit: { headers: { Authorization: `Bearer ${fixture.key}` } },
+        fetch: async (url, init) =>
+          handle(
+            new NextRequest(url instanceof Request ? url : String(url), {
+              ...init,
+              signal: abort.signal,
+            }),
+            dependencies,
+          ),
+      });
+      try {
+        await client.connect(transport);
+        const original = supabase.from.bind(supabase);
+        let seen = 0;
+        vi.spyOn(supabase, "from").mockImplementation(table => {
+          if (++seen === 2) {
+            if (failure === "changed-actor") fixture.actor = actorB;
+            else abort.abort();
+          }
+          return original(table);
+        });
+        const before = calls.length;
+        const result = await client
+          .callTool({ name: "create_application_registration", arguments: input })
+          .catch(error => error);
+        expect(seen).toBeGreaterThanOrEqual(2);
+        if (failure === "changed-actor") expect(result.isError).toBe(true);
+        else expect(result).toBeInstanceOf(Error);
+        expect(calls).toHaveLength(before);
+      } finally {
+        await client.close();
+      }
+    },
+  );
   it("denies native DNS, TCP, UDP and unrelated Unix sockets before access", async () => {
     expect(
       globalThis[Symbol.for("recoup.disposable.registration.originalSocketConnect")],

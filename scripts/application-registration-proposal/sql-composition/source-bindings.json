@@ -36,7 +36,17 @@
     "proposals/application-proof-2104/configuration.sql": "148819c1363929e990bf2cfd67bae02f7567c2e2e2a05732cb17ea2248bad3b1",
     "proposals/application-registration-2104/sources.json": "a617bc3acc14f1cc8af2dfa951eebff0da2e406a4299c5842427f1980560e744"
   },
-  "qualification": "Disposable test-only composition; no production factory or hosted target",
+  "qualification": "Unwired fixed SQL adapter through exact disposable execution profile; no production factory or hosted target",
   "acceptedApiComposition": "0769bc1957fce38bd6b847d342eae904044ae821",
-  "originalApiCompatibility": "784bee20b3e0fe61e67ed156c7f3a39a08a441b2"
+  "originalApiCompatibility": "784bee20b3e0fe61e67ed156c7f3a39a08a441b2",
+  "acceptedApiBaseline": "ec284cba127d73d0c3e7e74deceabac5c6a145f1",
+  "executionProfileHead": "acea75c0e118b6ca12bb9a22470a8bd7b383f925",
+  "executionProfileTree": "a8c45f920144db21ae1d00a807184aae51065b82",
+  "executionProfileInputs": {
+    "proposals/application-registration-execution-2104/qualification-roles.sql": "a5e8916c8fc13776d05d045cb6846d06c5b3670a353dc7f8153cedffb529e8c1",
+    "proposals/application-registration-execution-2104/sources.json": "0934493a7742d7c3c64e3dbc00646138bcb74442a27be22bc6a9782e52247e46",
+    "proposals/application-registration-execution-2104/test_privileges.py": "da2965852d0d5ba3726f92ea596f9fbccfa84ef08432c49602fab742e5e30e2e",
+    "proposals/application-registration-execution-2104/EXECUTION-CONTRACT.md": "036bc58deb8576ab40fbbb8d79e75c764a853c29ebca8c5d45825a4cc008e4b7",
+    "proposals/application-registration-execution-2104/execution.sql": "8ffc568bf01513d14297fd92a48716a7921e023cfacf3f3d124f943e6490a1d7"
+  }
 }

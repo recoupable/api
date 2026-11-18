@@ -41,6 +41,7 @@ const bindings = JSON.parse(await readFile(join(here, "source-bindings.json"), "
 for (const [base, entries] of [
   [root, bindings.apiInputs],
   [database, bindings.databaseInputs],
+  [database, bindings.executionProfileInputs],
 ]) {
   for (const [path, expected] of Object.entries(entries)) {
     const digest = createHash("sha256")
@@ -56,8 +57,8 @@ const gitEnv = {
   GIT_CONFIG_GLOBAL: "/dev/null",
 };
 // Bind tracked API source bytes, including transitive authentication imports.
-// Only this reviewed eight-path qualification slice may differ from the accepted revision.
-const apiRevision = bindings.acceptedApiComposition ?? bindings.apiMerge;
+// Only this reviewed nine-path adapter/qualification slice may differ from the accepted revision.
+const apiRevision = bindings.acceptedApiBaseline;
 if (!/^[0-9a-f]{40}$/.test(apiRevision)) throw new Error("Exact API revision required");
 const gitRead = args =>
   execFileSync("/usr/bin/git", ["-C", root, ...args], {
@@ -70,17 +71,30 @@ if (gitRead(["rev-parse", "--verify", `${apiRevision}^{commit}`]).trim() !== api
   throw new Error("Bound API revision unavailable");
 gitRead(["merge-base", "--is-ancestor", apiRevision, "HEAD"]);
 const allowedChanges = new Set([
-  "vitest.config.ts",
   ...[
-    "README.md",
-    "run.mjs",
-    "qualification.test.ts",
-    "source-bindings.json",
-    "supervise.py",
-    "socket-guard.mjs",
-    "vitest.config.ts",
-  ].map(name => `scripts/application-registration-proposal/sql-composition/${name}`),
+    "ProposedRegistrationSqlClient.ts",
+    "insertProposedApplicationRegistration.ts",
+    "selectProposedApplicationRegistration.ts",
+    "__tests__/registrationSql.test.ts",
+  ].map(name => `lib/supabase/application_registration_proposal/${name}`),
+  ...["README.md", "run.mjs", "qualification.test.ts", "source-bindings.json", "supervise.py"].map(
+    name => `scripts/application-registration-proposal/sql-composition/${name}`,
+  ),
 ]);
+// Candidate changes are review inputs, but executed bytes must equal a recorded commit.
+const candidate = gitRead(["rev-parse", "HEAD"]).trim();
+const candidateTree = gitRead(["rev-parse", "HEAD^{tree}"]).trim();
+for (const path of allowedChanges) {
+  const listing = gitRead(["ls-tree", "HEAD", "--", path]).trim();
+  const match = /^(100644|100755) blob ([0-9a-f]{40})\t/.exec(listing);
+  const stat = await lstat(join(root, path));
+  if (!match || !stat.isFile() || Boolean(stat.mode & 0o111) !== (match[1] === "100755"))
+    throw new Error(`Uncommitted candidate source/type: ${path}`);
+  const bytes = await readFile(join(root, path));
+  const actual = createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex");
+  if (actual !== match[2]) throw new Error(`Uncommitted candidate bytes: ${path}`);
+}
+console.log("ADAPTER_CANDIDATE " + JSON.stringify({ candidate, candidateTree }));
 const committedChanges = gitRead([
   "diff-tree",
   "--no-commit-id",
@@ -162,8 +176,35 @@ const databaseHead = execFileSync("/usr/bin/git", ["-C", database, "rev-parse", 
   encoding: "utf8",
   timeout: 5000,
 }).trim();
-if (databaseHead !== bindings.databaseHead)
+if (databaseHead !== bindings.executionProfileHead)
   throw new Error("Exact Database proposal head required");
+// Exact profile tree, unchanged D ancestor, and raw profile/D file modes and blobs.
+const dbGit = args =>
+  execFileSync("/usr/bin/git", ["-C", database, ...args], {
+    env: gitEnv,
+    encoding: "utf8",
+    timeout: 5000,
+  });
+if (dbGit(["rev-parse", "HEAD^{tree}"]).trim() !== bindings.executionProfileTree)
+  throw new Error("Execution profile tree mismatch");
+dbGit(["merge-base", "--is-ancestor", bindings.databaseHead, "HEAD"]);
+for (const [revision, inputs] of [
+  [bindings.databaseHead, bindings.databaseInputs],
+  [bindings.executionProfileHead, bindings.executionProfileInputs],
+]) {
+  for (const path of Object.keys(inputs)) {
+    const listing = dbGit(["ls-tree", revision, "--", path]).trim();
+    const match = /^(100644|100755) blob ([0-9a-f]{40})\t/.exec(listing);
+    const stat = await lstat(join(database, path));
+    if (!match || !stat.isFile() || Boolean(stat.mode & 0o111) !== (match[1] === "100755"))
+      throw new Error(`Unbound database source/type: ${path}`);
+    const bytes = await readFile(join(database, path));
+    if (
+      createHash("sha1").update(`blob ${bytes.length}\0`).update(bytes).digest("hex") !== match[2]
+    )
+      throw new Error(`Unbound database bytes: ${path}`);
+  }
+}
 console.log("Composition source bindings verified; no hosted target accepted");
 const owned = await mkdtemp("/tmp/registration-composition-launch-");
 await mkdir(join(owned, "home"));
