@@ -8,6 +8,14 @@ on:
       - "lib/supabase/site_publish_evidence/**"
       - "pnpm-lock.yaml"
       - "package.json"
+      - "tsconfig.json"
+      - "lib/supabase/serverClient.ts"
+      - "lib/supabase/sites/selectSite.ts"
+      - "lib/organizations/validateOrganizationAccess.ts"
+      - "lib/supabase/artist_organization_ids/selectArtistOrganizationIds.ts"
+      - "lib/artists/checkAccountArtistAccess.ts"
+      - "lib/supabase/accounts/selectAccounts.ts"
+      - "lib/supabase/site_fan_connections/selectFanConfig.ts"
       - ".github/workflows/sites-evidence-sql-bridge.yml"
 permissions:
   contents: read
@@ -23,6 +31,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/checkout@v4
         with:
           repository: recoupable/database
@@ -47,6 +56,8 @@ jobs:
           sudo apt-get install -y postgresql-${{ matrix.postgres }}
       - name: Qualify actual Sites API and SQL
         run: python3 scripts/sites-evidence-sql-bridge/run.py --database-repo "$GITHUB_WORKSPACE/.worktrees/sites-database-source" --pg-bin "/usr/lib/postgresql/${{ matrix.postgres }}/bin" --evidence-dir "$RUNNER_TEMP/sites-evidence"
+      - name: Qualify parent cleanup under lifecycle faults
+        run: python3 scripts/sites-evidence-sql-bridge/run.py --database-repo "$GITHUB_WORKSPACE/.worktrees/sites-database-source" --pg-bin "/usr/lib/postgresql/${{ matrix.postgres }}/bin" --evidence-dir "$RUNNER_TEMP/sites-evidence/cleanup-faults" --self-test-cleanup
       - uses: actions/upload-artifact@v4
         if: always()
         with:

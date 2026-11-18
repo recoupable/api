@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
-import { fixtureSql, literal, rpc, state, resetTransport } from "./transport";
+import { fixtureSql } from "./fixtureSql";
+import { literal } from "./quoteFixtureLiteral";
+import { rpc } from "./rpc";
+import { state } from "./fixtureState";
+import { resetTransport } from "./resetTransport";
 import { networkAttempts } from "./network-deny";
 import { captureSavedSiteReview } from "@/lib/sites/production/captureSavedSiteReview";
 import { assessStoredSitePublishEvidence } from "@/lib/sites/production/assessStoredSitePublishEvidence";
@@ -219,6 +223,16 @@ suite("actual Sites API to pinned SQL (synthetic transport)", () => {
       ).rejects.toMatchObject({ status: 403 });
     expect(state.errors).toEqual(["42501", "42501"]);
     expect(snapshot()).toBe(before);
+  });
+  it("fails fixture setup errors instead of mapping them to domain status", async () => {
+    const r = await capture();
+    fixtureSql("ALTER ROLE service_role RENAME TO fixture_role_unavailable");
+    try {
+      await expect(direct(r.id)).rejects.toThrow('role "service_role" does not exist');
+      expect(state.errors).toEqual([]);
+    } finally {
+      fixtureSql("ALTER ROLE fixture_role_unavailable RENAME TO service_role");
+    }
   });
   it("maps actual duplicate-key conflict to 409 without mutation", async () => {
     await capture();

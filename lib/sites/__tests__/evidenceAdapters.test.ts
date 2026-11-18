@@ -98,6 +98,7 @@ describe("unwired final-save capture", () => {
     expect(await f.capture()).toEqual(f.record);
     const captured = vi.mocked(insertSitePublishEvidence).mock.calls[0][0].review;
     expect(JSON.stringify(captured)).toBe(raw);
+    expect(JSON.stringify(report)).toBe(raw);
     expect(hashSiteEvidence(captured)).toBe(f.record.reviewSha256);
     expect(report.verification!.evidence).toEqual(original.verification!.evidence);
   });

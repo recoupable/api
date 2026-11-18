@@ -13,6 +13,7 @@ if (process.env.SITES_BRIDGE_SOCKET) {
     "node:tls": ["connect"],
     "node:http": ["request", "get"],
     "node:https": ["request", "get"],
+    "node:http2": ["connect"],
     "node:dns": ["lookup", "resolve", "resolve4", "resolve6"],
     "node:dgram": ["createSocket"],
   })) {
@@ -23,5 +24,10 @@ if (process.env.SITES_BRIDGE_SOCKET) {
   for (const name of ["lookup", "resolve", "resolve4", "resolve6"])
     require("node:dns").promises[name] = denied(`dns.promises.${name}`);
   globalThis.fetch = denied("fetch");
+  globalThis.WebSocket = class {
+    constructor() {
+      denied("WebSocket")();
+    }
+  } as unknown as typeof WebSocket;
   syncBuiltinESMExports();
 }

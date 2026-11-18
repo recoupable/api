@@ -1,6 +1,6 @@
 # Offline Sites API → SQL qualification plan
 
-Base API f6103bc4f31dfa12f8f9c553920837a7e4d80da5. Database proposal remains draft at afd214aa73dfd70b0f2b860fce90c12ceb23f28b. No production source changes or SQL proposal changes.
+Base API f6103bc4f31dfa12f8f9c553920837a7e4d80da5. Database proposal remains draft at afd214aa73dfd70b0f2b860fce90c12ceb23f28b. The sole business-source change is captureSavedSiteReview journey parsing for artifact comparison, as reviewed after the red cross-layer test below. The SQL proposal remains unchanged.
 
 Existing API unit suites substitute RPCs; Database proposal tests invoke SQL without executing API wrappers. Neither closes the combined transport/envelope/assessment/publication gap. Reuse the application-proof SQL bridge frozen-source loader pattern and Database SitesEvidence.setUpClass bootstrap, not SQL business logic or Python canonicalization.
 
