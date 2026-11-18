@@ -1,9 +1,12 @@
+import { assertFirstChatEffectAttempt } from "./assertFirstChatEffectAttempt";
 import { FatalError } from "workflow";
 import type { UIMessage } from "ai";
 import { encodeProjectionEvidence } from "@/lib/chat/projection/encodeProjectionEvidence";
 /** A projection requires exact message acknowledgement. Unknown outcomes never retry provider/write automatically. */
 export async function persistProjectedAssistantStep(chatId: string, message: UIMessage) {
   "use step";
+
+  assertFirstChatEffectAttempt("message-write");
   try {
     const { upsertChatMessage } = await import("@/lib/supabase/chat_messages/upsertChatMessage");
     const result = await upsertChatMessage(

@@ -181,3 +181,52 @@ it.each(["generation", "receipt", "readback", "persistence"])(
     expect(closeChatStream).toHaveBeenCalledTimes(1);
   },
 );
+
+it("charges acknowledged projected Stop once after required gates and skips auto-commit", async () => {
+  vi.mocked(runAgentStep).mockResolvedValue({
+    finishReason: "stop",
+    aborted: true,
+    responseMessages: [],
+    responseMessage: projected,
+    generatedProjectionObservations: proof,
+  });
+  await runAgentWorkflow(baseInput);
+  expect(recordProjectionProofStep).toHaveBeenCalledTimes(1);
+  expect(prepareProjectionHistoryStep).toHaveBeenCalledTimes(2);
+  expect(persistProjectedAssistantStep).toHaveBeenCalledTimes(1);
+  expect(handleChatCredits).toHaveBeenCalledTimes(1);
+  expect(vi.mocked(handleChatCredits).mock.invocationCallOrder[0]).toBeGreaterThan(
+    vi.mocked(persistProjectedAssistantStep).mock.invocationCallOrder[0],
+  );
+  expect(autoCommitChatTurn).not.toHaveBeenCalled();
+  expect(sendProjectionFailureStep).not.toHaveBeenCalled();
+});
+it.each(["first", "later"])(
+  "signals %s producer rejection as failure, preserving original error",
+  async iteration => {
+    const failure = new Error("producer result rejected");
+    if (iteration === "later")
+      vi.mocked(runAgentStep).mockResolvedValueOnce({
+        finishReason: "tool-calls",
+        aborted: false,
+        responseMessages: [],
+        responseMessage: projected,
+        generatedProjectionObservations: proof,
+      });
+    vi.mocked(runAgentStep).mockRejectedValue(failure);
+    await expect(runAgentWorkflow(baseInput)).rejects.toBe(failure);
+    expect(sendProjectionFailureStep).toHaveBeenCalledTimes(1);
+    expect(sendStreamFinish).not.toHaveBeenCalled();
+    expect(handleChatCredits).not.toHaveBeenCalled();
+    expect(autoCommitChatTurn).not.toHaveBeenCalled();
+  },
+);
+
+it("preserves producer rejection when failure-stream signalling also fails", async () => {
+  const failure = new Error("producer result missing");
+  vi.mocked(runAgentStep).mockRejectedValue(failure);
+  vi.mocked(sendProjectionFailureStep).mockRejectedValueOnce(new Error("unknown error-finish ACK"));
+  await expect(runAgentWorkflow(baseInput)).rejects.toBe(failure);
+  expect(closeChatStream).toHaveBeenCalledTimes(1);
+  expect(handleChatCredits).not.toHaveBeenCalled();
+});

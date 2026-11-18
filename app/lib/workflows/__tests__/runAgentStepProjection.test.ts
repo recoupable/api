@@ -4,18 +4,25 @@ import { readUIMessageStream, type UIMessage, type UIMessageChunk } from "ai";
 import { createRequire } from "node:module";
 import { writeFileSync } from "node:fs";
 import { runAgentStep } from "../runAgentStep";
-const state = vi.hoisted(() => ({ model: undefined as unknown }));
+const state = vi.hoisted(() => ({
+  model: undefined as unknown,
+  controller: undefined as AbortController | undefined,
+}));
 vi.mock("@ai-sdk/gateway", async importOriginal => ({
   ...(await importOriginal<typeof import("@ai-sdk/gateway")>()),
   gateway: () => state.model,
 }));
 vi.mock("@/lib/agent/buildAgentTools", () => ({ buildAgentTools: () => ({}) }));
-vi.mock("workflow", () => ({
+vi.mock("workflow", async original => ({
+  ...(await original<typeof import("workflow")>()),
   getWorkflowMetadata: () => ({ workflowRunId: "run" }),
-  getStepMetadata: () => ({ stepId: "step" }),
+  getStepMetadata: () => ({ stepId: "step", attempt: 1 }),
 }));
 vi.mock("@/lib/chat/pollWorkflowCancellation", () => ({
-  pollWorkflowCancellation: () => ({ stop() {}, done: Promise.resolve() }),
+  pollWorkflowCancellation: (_id: string, controller: AbortController) => {
+    state.controller = controller;
+    return { stop() {}, done: Promise.resolve() };
+  },
 }));
 vi.mock("@/lib/chat/isRunCancelled", () => ({ isRunCancelled: async () => false }));
 beforeEach(() => {
@@ -35,7 +42,10 @@ const usage = {
   inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
   outputTokens: { total: 1, text: 1, reasoning: 0 },
 };
-async function produce(failWrite: boolean | "first" = false, previous = seed) {
+async function produce(
+  failWrite: boolean | "first" | "stop-after-observation" = false,
+  previous = seed,
+) {
   const events = [
     { type: "stream-start", warnings: [] },
     {
@@ -74,9 +84,14 @@ async function produce(failWrite: boolean | "first" = false, previous = seed) {
     } as never,
     writable: new WritableStream({
       write(chunk) {
-        if (failWrite === "first" || (failWrite && chunk.type === "data-recoup-sdk-observation"))
+        if (
+          failWrite === "first" ||
+          (failWrite === true && chunk.type === "data-recoup-sdk-observation")
+        )
           throw new Error("ambiguous write");
         chunks.push(chunk);
+        if (failWrite === "stop-after-observation" && chunk.type === "data-recoup-sdk-observation")
+          state.controller?.abort();
       },
     }),
   });
@@ -213,4 +228,17 @@ it("does not retry a provider after an unknown initial canonical append", async 
   });
   expect(result.finishReason).toBe("error");
   expect(result.aborted).toBe(false);
+});
+
+it("actual SDK cancellation after projection returns canonical Stop with fresh proof", async () => {
+  const first = await produce();
+  const { result } = await produce("stop-after-observation", first.result.responseMessage!);
+  expect(result.aborted).toBe(true);
+  expect(result.compatibilityFailure).toBeUndefined();
+  expect(
+    result.responseMessage?.parts.some(
+      part => part.type === "custom" || part.type === "reasoning-file",
+    ),
+  ).toBe(false);
+  expect(result.generatedProjectionObservations?.observations.length).toBeGreaterThan(0);
 });

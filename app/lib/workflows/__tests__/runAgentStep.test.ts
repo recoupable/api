@@ -15,7 +15,9 @@ vi.mock("@ai-sdk/gateway", () => ({
 // runAgentStep now reads workflowRunId via getWorkflowMetadata() and polls
 // getRun(runId).status to source its abort signal. Stub both so the tests
 // don't pull in the workflow runtime.
-vi.mock("workflow", () => ({
+vi.mock("workflow", async original => ({
+  ...(await original<typeof import("workflow")>()),
+  getStepMetadata: vi.fn(() => ({ attempt: 1, stepId: "step" })),
   getWorkflowMetadata: vi.fn(() => ({
     workflowRunId: "test-run-id",
     workflowName: "test",

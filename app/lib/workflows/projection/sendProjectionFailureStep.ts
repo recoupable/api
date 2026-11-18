@@ -1,8 +1,11 @@
+import { assertFirstChatEffectAttempt } from "./assertFirstChatEffectAttempt";
 import { FatalError } from "workflow";
 import type { UIMessageChunk } from "ai";
 /** Explicit failure, never Stop or an unqualified successful finish. No automatic stream reappend. */
 export async function sendProjectionFailureStep(writable: WritableStream<UIMessageChunk>) {
   "use step";
+
+  assertFirstChatEffectAttempt("failure-stream");
   const writer = writable.getWriter();
   try {
     await writer.write({

@@ -10,6 +10,7 @@ export async function collectCanonicalProjection(input: {
   runId: string;
   stepId: () => string;
   onProjection: () => void;
+  isCancellation?: (error: unknown) => Promise<boolean>;
   write: (chunk: UIMessageChunk) => Promise<void>;
 }) {
   const chunks: UIMessageChunk[] = [];
@@ -42,80 +43,93 @@ export async function collectCanonicalProjection(input: {
       throw new ProjectionEvidenceError("evidence_unavailable");
     }
   };
-  for await (const chunk of input.stream) {
-    if (chunk.type === "custom" || chunk.type === "reasoning-file") {
-      input.onProjection();
-      if (proof.observations.length >= 256) throw new ProjectionEvidenceError("evidence_limit");
-      const candidate = await writeProjectionObservation(
-        {
-          originRunId: input.runId,
-          originStepId: input.stepId(),
-          assistantMessageId: input.previous.id,
-          ordinal: ordinal++,
-          partIndex: partCount + 1,
-          original: chunk,
-        },
-        event => append(event as UIMessageChunk),
-      );
-      proof.observations.push(candidate);
-      encodeProjectionEvidence(proof, 16_777_216);
-      partCount += 2;
-      continue;
-    }
-    if (
-      [
-        "data-recoup-sdk-observation",
-        "tool-approval-request",
-        "tool-approval-response",
-        "error",
-      ].includes(chunk.type)
-    )
-      throw new ProjectionEvidenceError("invalid_observation");
-    // These are the installed SDK's append/upsert rules, only for span indexing.
-    // Final assembly below uses the actual SDK and independently checks every span.
-    if (
-      [
-        "text-start",
-        "reasoning-start",
-        "file",
-        "source-url",
-        "source-document",
-        "start-step",
-      ].includes(chunk.type)
-    )
-      partCount++;
-    else if (
-      ["tool-input-start", "tool-input-available", "tool-input-error"].includes(chunk.type)
-    ) {
-      const tool = chunk as { toolCallId: string; dynamic?: boolean };
-      const key = `${!!tool.dynamic}:${tool.toolCallId}`;
-      if (!tools.has(key)) {
-        tools.add(key);
-        partCount++;
+  let cancelled = false;
+  try {
+    for await (const chunk of input.stream) {
+      if (chunk.type === "custom" || chunk.type === "reasoning-file") {
+        input.onProjection();
+        if (proof.observations.length >= 256) throw new ProjectionEvidenceError("evidence_limit");
+        const candidate = await writeProjectionObservation(
+          {
+            originRunId: input.runId,
+            originStepId: input.stepId(),
+            assistantMessageId: input.previous.id,
+            ordinal: ordinal++,
+            partIndex: partCount + 1,
+            original: chunk,
+          },
+          event => append(event as UIMessageChunk),
+        );
+        proof.observations.push(candidate);
+        encodeProjectionEvidence(proof, 16_777_216);
+        partCount += 2;
+        continue;
       }
-    } else if (chunk.type.startsWith("data-")) {
-      const data = chunk as { id?: string; transient?: boolean };
-      const key = `${chunk.type}:${data.id}`;
-      if (!data.transient && (data.id == null || !dataIds.has(key))) {
+      if (
+        [
+          "data-recoup-sdk-observation",
+          "tool-approval-request",
+          "tool-approval-response",
+          "error",
+        ].includes(chunk.type)
+      )
+        throw new ProjectionEvidenceError("invalid_observation");
+      // These are the installed SDK's append/upsert rules, only for span indexing.
+      // Final assembly below uses the actual SDK and independently checks every span.
+      if (
+        [
+          "text-start",
+          "reasoning-start",
+          "file",
+          "source-url",
+          "source-document",
+          "start-step",
+        ].includes(chunk.type)
+      )
         partCount++;
-        if (data.id != null) dataIds.add(key);
+      else if (
+        ["tool-input-start", "tool-input-available", "tool-input-error"].includes(chunk.type)
+      ) {
+        const tool = chunk as { toolCallId: string; dynamic?: boolean };
+        const key = `${!!tool.dynamic}:${tool.toolCallId}`;
+        if (!tools.has(key)) {
+          tools.add(key);
+          partCount++;
+        }
+      } else if (chunk.type.startsWith("data-")) {
+        const data = chunk as { id?: string; transient?: boolean };
+        const key = `${chunk.type}:${data.id}`;
+        if (!data.transient && (data.id == null || !dataIds.has(key))) {
+          partCount++;
+          if (data.id != null) dataIds.add(key);
+        }
       }
+      await append(chunk);
     }
-    await append(chunk);
+  } catch (error) {
+    if (error instanceof ProjectionEvidenceError || !(await input.isCancellation?.(error)))
+      throw error;
+    // Assemble only the canonical prefix already accepted by the writer. The workflow
+    // still requires proof/readback and message ACK before the existing Stop charge.
+    cancelled = true;
   }
   const { readUIMessageStream } = await import("ai");
   let message = structuredClone(input.previous);
-  for await (const current of readUIMessageStream({
-    message,
-    terminateOnError: true,
-    stream: new ReadableStream<UIMessageChunk>({
-      start(controller) {
-        for (const chunk of chunks) controller.enqueue(chunk);
-        controller.close();
-      },
-    }),
-  }))
-    message = current;
+  try {
+    for await (const current of readUIMessageStream({
+      message,
+      terminateOnError: true,
+      stream: new ReadableStream<UIMessageChunk>({
+        start(controller) {
+          for (const chunk of chunks) controller.enqueue(chunk);
+          controller.close();
+        },
+      }),
+    }))
+      message = current;
+  } catch {
+    throw new ProjectionEvidenceError("canonical_mismatch");
+  }
   for (const item of proof.observations) {
     const { observation } = item;
     const index = observation.data.fallback.partIndex;
@@ -131,5 +145,5 @@ export async function collectCanonicalProjection(input: {
     )
       throw new ProjectionEvidenceError("canonical_mismatch");
   }
-  return { message, generatedProjectionObservations: proof };
+  return { message, generatedProjectionObservations: proof, cancelled };
 }

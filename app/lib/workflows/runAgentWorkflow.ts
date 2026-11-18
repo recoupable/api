@@ -129,6 +129,7 @@ export async function runAgentWorkflow(
   let streamFinished = false;
   let legacyCleanupEntered = false;
   let projectionFailure = false;
+  let hasPrimaryFailure = false;
   // Fenced failures close only this run's stream; retained DB authority needs reconciliation.
   try {
     const history = await prepareProjectionHistoryStep(input.messages, {
@@ -242,24 +243,30 @@ export async function runAgentWorkflow(
     // it and the queue retried it 4 times, each attempt a full agent run
     // that mailed the customer again (chat#1918).
     for (let iteration = 0; iteration < CHAT_AGENT_MAX_ITERATIONS; iteration++) {
-      result = await runAgentStep({
-        // Snapshot, not the live array — each iteration's input is a durable
-        // step input and must describe the conversation as it was at THAT
-        // call, unaffected by later appends.
-        modelMessages: [...modelMessages],
-        originalMessages: [pendingAssistantResponse],
-        nativeOriginalMessages: nativePendingAssistantResponse
-          ? [nativePendingAssistantResponse]
-          : undefined,
-        modelId: selection.modelId,
-        reasoningEffort: "routing" in selection ? selection.routing?.reasoningEffort : undefined,
-        accountId: input.accountId,
-        artistId: input.artistId,
-        interactive: input.interactive,
-        agentContext: input.agentContext,
-        writable,
-        assistantMessageId,
-      });
+      try {
+        result = await runAgentStep({
+          // Snapshot, not the live array — each iteration's input is a durable
+          // step input and must describe the conversation as it was at THAT
+          // call, unaffected by later appends.
+          modelMessages: [...modelMessages],
+          originalMessages: [pendingAssistantResponse],
+          nativeOriginalMessages: nativePendingAssistantResponse
+            ? [nativePendingAssistantResponse]
+            : undefined,
+          modelId: selection.modelId,
+          reasoningEffort: "routing" in selection ? selection.routing?.reasoningEffort : undefined,
+          accountId: input.accountId,
+          artistId: input.artistId,
+          interactive: input.interactive,
+          agentContext: input.agentContext,
+          writable,
+          assistantMessageId,
+        });
+      } catch (error) {
+        // No producer result means proof/usage may be unavailable even after output.
+        projectionFailure = true;
+        throw error;
+      }
 
       if (result.compatibilityFailure) {
         projectionFailure = true;
@@ -368,55 +375,63 @@ export async function runAgentWorkflow(
       await sendStreamFinish(writable);
       streamFinished = true;
     }
+  } catch (error) {
+    hasPrimaryFailure = true;
+    throw error;
   } finally {
-    if (writer) {
-      // No legacy slot clear/key revoke. The writer's CAS release is success-only.
-      // On required failure the original bound state remains for explicit reconciliation.
-      try {
-        if (projectionFailure) await sendProjectionFailureStep(writable);
-      } finally {
-        await closeChatStream(writable);
+    try {
+      if (writer) {
+        // No legacy slot clear/key revoke. The writer's CAS release is success-only.
+        // On required failure the original bound state remains for explicit reconciliation.
+        try {
+          if (projectionFailure) await sendProjectionFailureStep(writable);
+        } finally {
+          await closeChatStream(writable);
+        }
+      } else if (legacyCleanupEntered) {
+        // Run two cleanup steps in parallel:
+        //   1) `clearChatActiveStream` — CAS-gated DB clear of the chat's
+        //      `active_stream_id` so the recovery probe flips to false.
+        //   2) `closeChatStream` — explicitly close the workflow writable
+        //      so the client's SSE response ends NOW. Without this, the
+        //      writable stays open until Vercel Workflow's runtime
+        //      garbage-collects the run (observed ~2m), and the AI SDK
+        //      chat hook keeps `chat.status` in `submitted` waiting for
+        //      stream-end. Mirrors open-agents'
+        //      `Promise.all([clearActiveStream, sendFinish.then(closeStream)])`.
+        //
+        // A third cleanup step runs only for headless `/api/chat/runs` runs:
+        //   3) `deleteEphemeralKeyStep` — revoke the per-run, account-scoped
+        //      `recoup_sk_…` key minted for the sandbox the moment the run ends.
+        //      The key's ~15m TTL is only the backstop if this delete is missed.
+        //
+        // `Promise.all` is safe because all helpers swallow their own errors —
+        // a failure in one doesn't cancel the others.
+        // `finish` must precede the close on EVERY exit path. A stream that ends
+        // without it leaves the client in-flight forever — `useChat` waits for the
+        // terminal chunk and `WorkflowChatTransport` loops `while (!gotFinish)` —
+        // and once the run is terminal the resume route 204s, so the chunk is
+        // unreachable after the fact. Guarded by `streamFinished` so a successful
+        // turn does not emit two. Mirrors open-agents `chat.ts` L939 / L968-971:
+        // `sendFinish(writable).then(() => closeStream(writable))`.
+        await Promise.all([
+          clearChatActiveStream(input.chatId, workflowRunId),
+          (async () => {
+            try {
+              if (projectionFailure) await sendProjectionFailureStep(writable);
+              else if (!streamFinished) await sendStreamFinish(writable);
+            } finally {
+              await closeChatStream(writable);
+            }
+          })(),
+          ...(input.agentContext.ephemeralKeyId
+            ? [deleteEphemeralKeyStep(input.agentContext.ephemeralKeyId)]
+            : []),
+        ]);
       }
-    } else if (legacyCleanupEntered) {
-      // Run two cleanup steps in parallel:
-      //   1) `clearChatActiveStream` — CAS-gated DB clear of the chat's
-      //      `active_stream_id` so the recovery probe flips to false.
-      //   2) `closeChatStream` — explicitly close the workflow writable
-      //      so the client's SSE response ends NOW. Without this, the
-      //      writable stays open until Vercel Workflow's runtime
-      //      garbage-collects the run (observed ~2m), and the AI SDK
-      //      chat hook keeps `chat.status` in `submitted` waiting for
-      //      stream-end. Mirrors open-agents'
-      //      `Promise.all([clearActiveStream, sendFinish.then(closeStream)])`.
-      //
-      // A third cleanup step runs only for headless `/api/chat/runs` runs:
-      //   3) `deleteEphemeralKeyStep` — revoke the per-run, account-scoped
-      //      `recoup_sk_…` key minted for the sandbox the moment the run ends.
-      //      The key's ~15m TTL is only the backstop if this delete is missed.
-      //
-      // `Promise.all` is safe because all helpers swallow their own errors —
-      // a failure in one doesn't cancel the others.
-      // `finish` must precede the close on EVERY exit path. A stream that ends
-      // without it leaves the client in-flight forever — `useChat` waits for the
-      // terminal chunk and `WorkflowChatTransport` loops `while (!gotFinish)` —
-      // and once the run is terminal the resume route 204s, so the chunk is
-      // unreachable after the fact. Guarded by `streamFinished` so a successful
-      // turn does not emit two. Mirrors open-agents `chat.ts` L939 / L968-971:
-      // `sendFinish(writable).then(() => closeStream(writable))`.
-      await Promise.all([
-        clearChatActiveStream(input.chatId, workflowRunId),
-        (async () => {
-          try {
-            if (projectionFailure) await sendProjectionFailureStep(writable);
-            else if (!streamFinished) await sendStreamFinish(writable);
-          } finally {
-            await closeChatStream(writable);
-          }
-        })(),
-        ...(input.agentContext.ephemeralKeyId
-          ? [deleteEphemeralKeyStep(input.agentContext.ephemeralKeyId)]
-          : []),
-      ]);
+    } catch (cleanupError) {
+      if (!hasPrimaryFailure) throw cleanupError;
+      // Failure signalling itself can be unavailable; retain the original failure.
     }
   }
 }

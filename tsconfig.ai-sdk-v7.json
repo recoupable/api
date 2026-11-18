@@ -13,9 +13,9 @@
     "lib/chat/projection/**/*.ts",
     "app/lib/workflows/__tests__/runAgentStepProjection.test.ts",
     "app/lib/workflows/__tests__/runAgentWorkflowProjection.test.ts",
-    "app/lib/workflows/__tests__/persistProjectedAssistantStep.test.ts"
+    "app/lib/workflows/__tests__/persistProjectedAssistantStep.test.ts",
+    "app/lib/workflows/__tests__/runAgentStepProjectionStop.test.ts",
+    "app/lib/workflows/__tests__/projectionRedelivery.test.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules"]
 }

@@ -45,6 +45,7 @@ import {verifyProjectionObservation} from '@/lib/chat/projection/verifyProjectio
 import {createProjectionEvidencePorts} from '@/lib/chat/projection/createProjectionEvidencePorts';
 import {recordProjectionProofStep} from '@/app/lib/workflows/projection/recordProjectionProofStep';
 import {prepareProjectionHistoryStep} from '@/app/lib/workflows/projection/prepareProjectionHistoryStep';
+import {assertFirstChatEffectAttempt} from '@/app/lib/workflows/projection/assertFirstChatEffectAttempt';
 async function emit(input:any) {
  'use step';
  const runId=getWorkflowMetadata().workflowRunId; const stepId=getStepMetadata().stepId;
@@ -72,6 +73,20 @@ async function verify(input:any) {
 export async function readProbe(input:any) {
  'use workflow';
  return verify(input);
+}
+async function attemptEffect(input:any) {
+ 'use step';
+ const {appendFileSync}=await import('node:fs');
+ const metadata=getStepMetadata();
+ appendFileSync(input.log,JSON.stringify({kind:'entry',attempt:metadata.attempt,stepId:metadata.stepId})+'\\n');
+ assertFirstChatEffectAttempt('generation');
+ if(input.mode==='before-effect') throw new Error('Synthetic failure before effect');
+ appendFileSync(input.log,JSON.stringify({kind:'effect',attempt:metadata.attempt,stepId:metadata.stepId})+'\\n');
+ return {stepId:metadata.stepId,attempt:metadata.attempt};
+}
+export async function attemptProbe(input:any) {
+ 'use workflow';
+ return attemptEffect(input);
 }
 `,
   );
@@ -116,7 +131,7 @@ export async function readProbe(input:any) {
     (await import(pathToFileURL(join(temp, "generated/workflows.cjs")))).POST,
   );
   await world.start();
-  const { originProbe, readProbe } = await import(
+  const { originProbe, readProbe, attemptProbe } = await import(
     pathToFileURL(join(temp, "generated/client.mjs"))
   );
   const input = {
@@ -199,12 +214,54 @@ export async function readProbe(input:any) {
   await assert.rejects(within(refused.returnValue), /Projection history evidence unavailable/);
   const refusedSteps = await getWorld().steps.list({ runId: refused.runId, resolveData: "none" });
   assert(!refusedSteps.data.some(step => step.stepName.endsWith("//emit")));
+  const attemptCases = [];
+  const createEvent = world.events.create.bind(world.events);
+  const guardedSteps = new Set();
+  let mode,
+    injected = false;
+  world.events.create = async (...args) => {
+    const event = args[1];
+    const target = event.eventType === "step_completed" && guardedSteps.has(event.correlationId);
+    if (target && !injected && mode === "completion-lost") {
+      injected = true;
+      throw new Error("Synthetic completion lost before persistence");
+    }
+    const result = await createEvent(...args);
+    if (event.eventType === "step_started" && result.step?.stepName.endsWith("//attemptEffect"))
+      guardedSteps.add(result.step.stepId);
+    if (target && !injected && mode === "ack-lost") {
+      injected = true;
+      throw new Error("Synthetic completion persisted but ACK lost");
+    }
+    return result;
+  };
+  for (mode of ["completion-lost", "ack-lost", "before-effect"]) {
+    injected = false;
+    const log = join(temp, mode + ".jsonl");
+    const probe = await start(attemptProbe, [{ mode, log }]);
+    if (mode === "ack-lost") assert.equal((await within(probe.returnValue)).attempt, 1);
+    else await assert.rejects(within(probe.returnValue), /reconciliation/);
+    const records = (await readFile(log, "utf8"))
+      .trim()
+      .split("\n")
+      .map(line => JSON.parse(line));
+    const effects = records.filter(record => record.kind === "effect");
+    assert.equal(effects.length, mode === "before-effect" ? 0 : 1);
+    assert.deepEqual(
+      records.filter(record => record.kind === "entry").map(record => record.attempt),
+      mode === "ack-lost" ? [1] : [1, 2],
+    );
+    assert.equal(new Set(records.map(record => record.stepId)).size, 1);
+    attemptCases.push({ mode, records, injected });
+  }
+  world.events.create = createEvent;
   assert.equal(attempts(), 0);
   const sourcePaths = [
     "package.json",
     "pnpm-lock.yaml",
     "app/lib/workflows/projection/recordProjectionProofStep.ts",
     "app/lib/workflows/projection/prepareProjectionHistoryStep.ts",
+    "app/lib/workflows/projection/assertFirstChatEffectAttempt.ts",
     "scripts/chat-projection-proof-fixture.mjs",
     ...(await readdir(join(root, "lib/chat/projection")))
       .filter(name => name.endsWith(".ts"))
@@ -223,6 +280,7 @@ export async function readProbe(input:any) {
     node: process.version,
     workflow: "4.2.4",
     networkAttempts: attempts(),
+    attemptCases,
     canonicalReadback: true,
     completedProofReadback: true,
     separateWorkflowAwaitedProofStep: true,

@@ -1,3 +1,4 @@
+import { sendProjectionFailureStep } from "../projection/sendProjectionFailureStep";
 import { prepareCatalogSurfaceStep } from "../prepareCatalogSurfaceStep";
 import { sendCatalogSurfaceStep } from "../sendCatalogSurfaceStep";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -43,6 +44,7 @@ vi.mock("@/app/lib/workflows/persistAssistantMessageStep", () => ({
 }));
 vi.mock("@/app/lib/workflows/sendStreamStart", () => ({ sendStreamStart: vi.fn() }));
 vi.mock("@/app/lib/workflows/sendStreamFinish", () => ({ sendStreamFinish: vi.fn() }));
+vi.mock("../projection/sendProjectionFailureStep", () => ({ sendProjectionFailureStep: vi.fn() }));
 vi.mock("@/lib/credits/handleChatCredits", () => ({
   handleChatCredits: vi.fn(),
 }));
@@ -183,13 +185,14 @@ describe("runAgentWorkflow", () => {
    * Mirrors open-agents `chat.ts` L939 / L968-971:
    *   sendFinish(writable).then(() => closeStream(writable))
    */
-  it("sends finish before closing when runAgentStep throws", async () => {
+  it("sends an explicit error finish before closing when runAgentStep throws", async () => {
     vi.mocked(runAgentStep).mockRejectedValue(new Error("model exploded"));
 
     await expect(runAgentWorkflow(baseInput)).rejects.toThrow("model exploded");
 
-    expect(sendStreamFinish).toHaveBeenCalledTimes(1);
-    expect(sendStreamFinish).toHaveBeenCalledWith(writableStub);
+    expect(sendStreamFinish).not.toHaveBeenCalled();
+    expect(sendProjectionFailureStep).toHaveBeenCalledTimes(1);
+    expect(sendProjectionFailureStep).toHaveBeenCalledWith(writableStub);
     expect(closeChatStream).toHaveBeenCalledTimes(1);
   });
 

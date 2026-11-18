@@ -1,6 +1,8 @@
-import type { ProjectionObservation } from "./projectionSchemas";
+import type { ProjectionObservation, ProjectionProof } from "./projectionSchemas";
 /** Fixed legacy-compatible expansion; identities never come from random values. */
-export function projectionEvents(observation: ProjectionObservation) {
+export function projectionEvents(
+  observation: ProjectionObservation,
+): ProjectionProof["observations"][number]["events"] {
   const id = `${observation.id}:fallback`;
   return [
     observation,

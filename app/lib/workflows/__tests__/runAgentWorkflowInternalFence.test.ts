@@ -57,6 +57,7 @@ const writableStub = new WritableStream();
 vi.mock("workflow", async importOriginal => ({
   ...(await importOriginal<typeof import("workflow")>()),
   getWritable: vi.fn(() => writableStub),
+  getStepMetadata: vi.fn(() => ({ attempt: 1 })),
   getWorkflowMetadata: vi.fn(() => ({
     workflowRunId: "wrun_from_metadata",
     workflowName: "runAgentWorkflow",
@@ -325,5 +326,14 @@ it("does not release fenced authority or charge on compatibility generation fail
   expect(actions()).toEqual(["bind", "write"]);
   expect(handleChatCredits).not.toHaveBeenCalled();
   expect(autoCommitChatTurn).not.toHaveBeenCalled();
+  expect(sendStreamFinish).not.toHaveBeenCalled();
+});
+
+it("signals thrown fenced producer failure without releasing or masking its cause", async () => {
+  const failure = new Error("producer result missing");
+  vi.mocked(runAgentStep).mockRejectedValue(failure);
+  await expect(runAgentWorkflow(fencedInput())).rejects.toBe(failure);
+  expect(actions()).toEqual(["bind", "write"]);
+  expect(handleChatCredits).not.toHaveBeenCalled();
   expect(sendStreamFinish).not.toHaveBeenCalled();
 });

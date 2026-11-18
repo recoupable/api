@@ -1,3 +1,4 @@
+import { assertFirstChatEffectAttempt } from "./projection/assertFirstChatEffectAttempt";
 import { collectCanonicalProjection } from "@/lib/chat/projection/collectCanonicalProjection";
 import {
   ProjectionEvidenceError,
@@ -128,6 +129,8 @@ export type RunAgentStepResult = {
 export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentStepResult> {
   "use step";
 
+  assertFirstChatEffectAttempt("generation");
+
   console.log("[runAgentStep] start", {
     modelId: input.modelId,
     messageCount: input.modelMessages.length,
@@ -201,7 +204,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     seed: previousMetadata,
   });
 
-  let observedMetadata: AgentMessageMetadata | undefined;
+  let observedMetadata: AgentMessageMetadata | undefined = previousMetadata;
   const messageMetadata: ReturnType<typeof buildMessageMetadataCallback> = event => {
     const metadata = buildMetadata(event);
     if (metadata) observedMetadata = metadata;
@@ -233,6 +236,10 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
           : { id: input.assistantMessageId, role: "assistant", parts: [] },
       runId: workflowRunId,
       stepId: () => getStepMetadata().stepId,
+      isCancellation: async error =>
+        isAbortError(error) ||
+        cancelController.signal.aborted ||
+        (await isRunCancelled(workflowRunId)),
       onProjection: () => {
         projected = true;
       },
@@ -269,12 +276,21 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     if (canonical.generatedProjectionObservations.observations.length)
       generatedProjectionObservations = canonical.generatedProjectionObservations;
 
+    if (canonical.cancelled) throw new DOMException("Confirmed user Stop", "AbortError");
+
     // v7 exposes the complete generated history separately from response metadata.
     const [reason, messages] = await Promise.all([result.finishReason, result.responseMessages]);
     finishReason = reason;
     responseMessages = messages;
   } catch (error) {
-    if (error instanceof ProjectionEvidenceError || projected) {
+    // A typed projection/write failure stays a failure even when cancellation also
+    // fires. Mere presence of verified projected history is not a failure latch.
+    const confirmedStop =
+      !(error instanceof ProjectionEvidenceError) &&
+      (isAbortError(error) ||
+        cancelController.signal.aborted ||
+        (await isRunCancelled(workflowRunId)));
+    if (error instanceof ProjectionEvidenceError || (projected && !confirmedStop)) {
       cancelController.abort();
       void Promise.resolve(result.finishReason).catch(() => {});
       void Promise.resolve(result.responseMessages).catch(() => {});
@@ -295,12 +311,7 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     // writable underneath us and the write threw something unrelated before
     // the poller noticed. Confirm the last case against the run itself so a
     // genuine failure still propagates.
-    if (
-      !isAbortError(error) &&
-      !cancelController.signal.aborted &&
-      !(await isRunCancelled(workflowRunId))
-    )
-      throw error;
+    if (!confirmedStop) throw error;
 
     // User-stop. `result.finishReason` / `result.responseMessages` reject once
     // streamText aborts — swallow them so they don't surface as unhandled.
@@ -309,10 +320,20 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     finishReason = "stop";
     // Close any tool-call parts left without a terminal result, otherwise a
     // reload renders them spinning forever. The workflow body persists it.
-    if (responseMessage) responseMessage = closeOpenToolCalls(responseMessage);
+    if (responseMessage) {
+      responseMessage = closeOpenToolCalls(responseMessage);
+      if (projected && observedMetadata)
+        responseMessage = { ...responseMessage, metadata: observedMetadata };
+    }
 
     console.log("[runAgentStep] aborted", { hasResponseMessage: !!responseMessage });
-    return { finishReason, responseMessage, responseMessages: [], aborted: true };
+    return {
+      finishReason,
+      responseMessage,
+      responseMessages: [],
+      aborted: true,
+      ...(projected ? { nativeResponseMessage, generatedProjectionObservations } : {}),
+    };
   } finally {
     poller.stop();
     cancelController.abort();

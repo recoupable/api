@@ -2,6 +2,10 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { persistProjectedAssistantStep } from "../projection/persistProjectedAssistantStep";
 import { upsertChatMessage } from "@/lib/supabase/chat_messages/upsertChatMessage";
 import { updateChat } from "@/lib/supabase/chats/updateChat";
+vi.mock("workflow", async original => ({
+  ...(await original<typeof import("workflow")>()),
+  getStepMetadata: () => ({ attempt: 1 }),
+}));
 vi.mock("@/lib/supabase/chat_messages/upsertChatMessage", () => ({ upsertChatMessage: vi.fn() }));
 vi.mock("@/lib/supabase/chats/updateChat", () => ({ updateChat: vi.fn() }));
 const message = {
