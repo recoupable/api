@@ -36,6 +36,20 @@ jobs:
       - name: Check actual internal fenced workflow with offline effect seams
         run: pnpm test:chat-fence-workflow
 
+      - name: Check unwired pack scheduler replay with offline effects
+        run: pnpm test:pack-scheduler-workflow
+
+      - name: Check unwired pack foundation with offline durable ports
+        run: pnpm test:pack-foundation-workflow
+
+      - name: Check unwired pack admission wait and restart
+        run: pnpm test:pack-admission-workflow
+
+      - name: Check actual unwired pack foundation port compilation
+        run: |
+          PACK_FOUNDATION_PORTS_COMPILE_OUTPUT=./pack-foundation-ports-compile.json node scripts/pack-foundation-durable-ports-compile.mjs
+          test -s pack-foundation-ports-compile.json
+
       - name: Check production TypeScript configuration
         run: pnpm exec tsc --noEmit --project tsconfig.build.json
 

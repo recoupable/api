@@ -1,13 +1,11 @@
-import { hashApiKey } from "@/lib/keys/hashApiKey";
-import { PRIVY_PROJECT_SECRET } from "@/lib/const";
-import { selectAccountApiKeys } from "@/lib/supabase/account_api_keys/selectAccountApiKeys";
+import { getAccountIdByApiKey } from "@/lib/auth/getAccountIdByApiKey";
 
 export interface ApiKeyDetails {
   accountId: string;
 }
 
 /**
- * Retrieves the account ID for an API key.
+ * Retrieves the account ID using the shared API-key lookup and expiry policy.
  *
  * All API keys are personal — they resolve to the account that created them.
  * Org access is determined at access-check time via account memberships.
@@ -21,18 +19,8 @@ export async function getApiKeyDetails(apiKey: string): Promise<ApiKeyDetails | 
   }
 
   try {
-    const keyHash = hashApiKey(apiKey, PRIVY_PROJECT_SECRET);
-    const apiKeys = await selectAccountApiKeys({ keyHash });
-
-    if (apiKeys === null || apiKeys.length === 0) {
-      return null;
-    }
-
-    const accountId = apiKeys[0]?.account ?? null;
-
-    if (!accountId) {
-      return null;
-    }
+    const accountId = await getAccountIdByApiKey(apiKey);
+    if (!accountId) return null;
 
     return { accountId };
   } catch (error) {

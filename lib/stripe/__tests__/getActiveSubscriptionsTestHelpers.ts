@@ -4,7 +4,7 @@ export function getActiveSubscriptionsTestHelpers() {
   const testAccountId = "acc-a";
 
   function subscription(id: string, accountId: string): Stripe.Subscription {
-    return { id, metadata: { accountId } } as Stripe.Subscription;
+    return { id, metadata: { accountId } } as unknown as Stripe.Subscription;
   }
 
   function subscriptionListPage(

@@ -458,3 +458,9 @@ recipe. `planning/dispatchPlannedContextModule.ts` still accepts only its existi
 MusicBrainz, MLC recording and Spotify release modules; no brief recipe selects
 `catalog_valuation`. Local fixtures verify label persistence, not hosted deployment,
 licensed analytics access, actual revenue or an appraisal.
+
+### Catalog snapshot storage size
+
+The schema's 1 MiB compact UTF-8 JSON check is a preflight guard, not a guarantee of storage acceptance. The authoritative bound is 1,048,576 bytes of PostgreSQL JSONB text for the saved snapshot, including its server-assigned revision. Decimal expansion of finite exponential numbers, JSONB formatting, and revision digit growth can exceed that bound even when compact JSON passes. Values are never rounded, coerced or truncated.
+
+The inactive Database #137 proposal emits `22001` / `CATALOG_SNAPSHOT_TOO_LARGE` for this explicit size refusal, after exact-key replay and before mutation. That SQL behavior is pending separate release approval; the original SQL retains its generic failure handling. When the dedicated signal is present, the API returns a fixed safe validation message with status 400 and private/no-store caching; MCP retains `isError: true` and JSON text. Other storage failures keep their existing handling. Reduce an oversized snapshot deliberately; clients do not automatically retry or mint a new key. The existing SQL table check remains defense in depth.

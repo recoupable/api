@@ -11,6 +11,7 @@ const PAGE_LIMIT = 100;
 export const getActiveSubscriptions = async (
   accountId: string,
   eligible: (subscription: Stripe.Subscription) => boolean = () => true,
+  options: { throwOnError?: boolean } = {},
 ) => {
   try {
     const now = Math.floor(Date.now() / 1000);
@@ -48,6 +49,7 @@ export const getActiveSubscriptions = async (
 
     return activeSubscriptions;
   } catch (error) {
+    if (options.throwOnError) throw error;
     console.error("Error fetching subscriptions:", error);
     return [];
   }

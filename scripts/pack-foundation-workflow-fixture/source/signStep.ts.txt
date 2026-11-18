@@ -1,0 +1,10 @@
+import type { PackFile } from "@/lib/content/packs/packTypes";
+import { fixtureState } from "./fixtureState";
+export async function signStep(file: PackFile) {
+  "use step";
+  return fixtureState("sign", state => {
+    if (!state.assets.some(a => a.files.some(f => f.storage_key === file.storage_key)))
+      throw new Error("Unknown retained file");
+    return "https://fixture.invalid/retained.png";
+  });
+}

@@ -1,0 +1,65 @@
+name: Sites evidence API SQL bridge (offline only)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/sites-evidence-sql-bridge/**"
+      - "lib/sites/**"
+      - "lib/supabase/site_publish_evidence/**"
+      - "pnpm-lock.yaml"
+      - "package.json"
+      - "tsconfig.json"
+      - "lib/supabase/serverClient.ts"
+      - "lib/supabase/sites/selectSite.ts"
+      - "lib/organizations/validateOrganizationAccess.ts"
+      - "lib/supabase/artist_organization_ids/selectArtistOrganizationIds.ts"
+      - "lib/artists/checkAccountArtistAccess.ts"
+      - "lib/supabase/accounts/selectAccounts.ts"
+      - "lib/supabase/site_fan_connections/selectFanConfig.ts"
+      - ".github/workflows/sites-evidence-sql-bridge.yml"
+permissions:
+  contents: read
+jobs:
+  disposable-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: [15, 17]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          repository: recoupable/database
+          ref: afd214aa73dfd70b0f2b860fce90c12ceb23f28b
+          path: .worktrees/sites-database-source
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc -p scripts/sites-evidence-sql-bridge/tsconfig.json
+      - name: Install PostgreSQL
+        timeout-minutes: 12
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get update
+          sudo apt-get install -y postgresql-${{ matrix.postgres }}
+      - name: Qualify actual Sites API and SQL
+        run: python3 scripts/sites-evidence-sql-bridge/run.py --database-repo "$GITHUB_WORKSPACE/.worktrees/sites-database-source" --pg-bin "/usr/lib/postgresql/${{ matrix.postgres }}/bin" --evidence-dir "$RUNNER_TEMP/sites-evidence"
+      - name: Qualify parent cleanup under lifecycle faults
+        run: python3 scripts/sites-evidence-sql-bridge/run.py --database-repo "$GITHUB_WORKSPACE/.worktrees/sites-database-source" --pg-bin "/usr/lib/postgresql/${{ matrix.postgres }}/bin" --evidence-dir "$RUNNER_TEMP/sites-evidence/cleanup-faults" --self-test-cleanup
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sites-evidence-pg${{ matrix.postgres }}
+          path: ${{ runner.temp }}/sites-evidence

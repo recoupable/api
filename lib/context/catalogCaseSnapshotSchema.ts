@@ -171,7 +171,10 @@ export const catalogCaseSnapshotSchema = z
   })
   .superRefine((snapshot, ctx) => {
     if (Buffer.byteLength(JSON.stringify(snapshot), "utf8") > 1048576) {
-      ctx.addIssue({ code: "custom", message: "Snapshot exceeds 1 MiB" });
+      ctx.addIssue({
+        code: "custom",
+        message: "Snapshot exceeds 1 MiB compact JSON preflight limit",
+      });
       return;
     }
     const records = new Map<string, { depends_on?: string[]; stale?: boolean }>();

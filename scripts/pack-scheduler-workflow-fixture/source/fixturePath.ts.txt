@@ -1,0 +1,6 @@
+import { join } from "node:path";
+export function fixturePath(name: string) {
+  const dir = process.env.PACK_SCHEDULER_EFFECTS;
+  if (!dir) throw new Error("Missing controlled fixture directory");
+  return join(dir, name);
+}

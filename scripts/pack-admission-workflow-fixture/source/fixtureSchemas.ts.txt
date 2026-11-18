@@ -1,0 +1,16 @@
+import { z } from "zod";
+// Required by the unchanged shared strict-type negative control.
+export type { PackAsset as FixtureAsset } from "@/lib/content/packs/packTypes";
+export const admissionStateSchema = z.object({
+  scenario: z.enum([
+    "immediate",
+    "delayed",
+    "deadline",
+    "different-run",
+    "read-failure",
+    "expired-hold",
+    "hold-expiry",
+  ]),
+  savedRunId: z.string().nullable(),
+  holdExpiresAt: z.string(),
+});

@@ -1,0 +1,9 @@
+import type { PackActor } from "@/lib/content/packs/packTypes";
+import { fixtureState } from "./fixtureState";
+export async function prepareStep(_actor: PackActor, _jobId: string) {
+  "use step";
+  return fixtureState("prepare", state => ({
+    job: state.job,
+    assetIds: state.assets.filter(a => a.status === "pending").map(a => a.id),
+  }));
+}

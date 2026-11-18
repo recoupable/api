@@ -1,0 +1,37 @@
+import { createHook } from "workflow";
+import { runPackFoundationBatch } from "@/lib/content/packs/foundation/runPackFoundationBatch";
+import type { PackFoundationServices } from "@/lib/content/packs/foundation/packFoundationServices";
+import { readStep } from "./readStep";
+import { prepareStep } from "./prepareStep";
+import { persistStep } from "./persistStep";
+import { produceStep } from "./produceStep";
+import { planStep } from "./planStep";
+import { bindStep } from "./bindStep";
+import { signStep } from "./signStep";
+import { settleStep } from "./settleStep";
+// The existing local-world harness expects this export name. Never app-registered.
+export async function packSchedulerFixture(jobId: string, limit: number) {
+  "use workflow";
+  const services: PackFoundationServices = {
+    read: readStep,
+    prepare: prepareStep,
+    produce: produceStep,
+    createPlan: planStep,
+    bindFiles: bindStep,
+    signFile: signStep,
+    settle: settleStep,
+    persist: async (actor, job, record) => {
+      await persistStep(actor, job, record);
+      if (record.state !== "pending") await createHook({ token: `${jobId}:readiness` });
+    },
+  };
+  const result = await runPackFoundationBatch(
+    { accountId: "owner" },
+    jobId,
+    limit,
+    { dependentAssetIds: ["video-0"] },
+    services,
+  );
+  await createHook({ token: `${jobId}:finished` });
+  return result;
+}
