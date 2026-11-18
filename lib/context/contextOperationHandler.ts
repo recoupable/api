@@ -14,8 +14,12 @@ import { getContextFailureMessage } from "./getContextFailureMessage";
 export async function contextOperationHandler(request: NextRequest) {
   const parsed = validateContextOperationBody(await request.json().catch(() => null));
   if (parsed instanceof NextResponse) return parsed;
+  const savedBrief = parsed.action === "read_brief" || parsed.action === "save_brief";
   const auth = await validateAuthContext(request, { organizationId: parsed.organization_id });
-  if (auth instanceof NextResponse) return auth;
+  if (auth instanceof NextResponse) {
+    if (savedBrief) auth.headers.set("Cache-Control", "private, no-store");
+    return auth;
+  }
   const evidence = [
     "attach_evidence",
     "read_evidence_attachment",
@@ -29,7 +33,7 @@ export async function contextOperationHandler(request: NextRequest) {
   ].includes(parsed.action);
   const headers = {
     ...getCorsHeaders(),
-    ...(parsed.action === "read" || evidence || catalogCase
+    ...(parsed.action === "read" || savedBrief || evidence || catalogCase
       ? { "Cache-Control": "private, no-store" }
       : {}),
   };
