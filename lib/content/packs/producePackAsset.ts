@@ -22,6 +22,8 @@ export type PackProductionServices = {
     start: number;
     seconds: number;
     visualizer: boolean;
+    /** Internal local injection only; active production callers never populate this field. */
+    lyrics?: unknown;
   }) => Promise<PackComposition>;
   inspect: (input: {
     files: PackFile[];
