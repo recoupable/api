@@ -177,8 +177,9 @@ pixel budget; it is NOT a whole-process RSS cap. Encoder buffers are additional.
 Qualification records observed RSS and elapsed time without promising all
 content will fit. Deadline/byte/failure paths abort owned commands, clean the
 owned directory and reach storage only after cleanup succeeds. After the 180s
-work limit, abort and cleanup each have a separate 5s settlement deadline. An
-abort failure or unknown closure preserves owned files and refuses storage;
+work limit, abort, callback settlement and cleanup each have a separate 5s
+deadline, in that order. Abort failure, unknown closure or an unsettled callback
+preserves owned files and refuses storage;
 cleanup timeout reports unconfirmed cleanup, never success. No paid retries.
 
 ### Local qualification versus CI
@@ -197,8 +198,10 @@ abort sends TERM, escalates to KILL after 250ms, and requires pipe closure withi
 group; cleanup/disposal refuse while children or termination uncertainty remain. A real measured-mode
 cancellation test verifies that an active unbounded command settles after abort
 and that its process group no longer appears in the OS process inventory.
-These are test-only
-local controls, never API inputs.
+The leaf restricts media protocols to file/pipe, rejects overrides, and validates
+owned input/output and filesystem names. Fixed trusted filters remain required;
+this is not an OS sandbox or a general safe executor for arbitrary FFmpeg filters.
+These are test-only local controls, never API inputs.
 
 Fixtures check 24fps, 60fps and VFR visuals with nonzero PTS; exact highlight/gap
 frames; selected nonzero audio excerpts against a contrasting motion soundtrack;

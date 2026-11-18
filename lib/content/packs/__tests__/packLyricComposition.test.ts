@@ -112,6 +112,34 @@ it.skipIf(!fontPath)(
   },
   5000,
 );
+it.skipIf(!fontPath)(
+  "LOCAL QUALIFICATION: owned paths and local protocols are enforced before I/O",
+  async () => {
+    const fixture = await localLyricCapability(fontPath!, Buffer.alloc(0), Buffer.alloc(0));
+    try {
+      await fixture.capability.withRuntime(async runtime => {
+        for (const path of ["", ".", "..", "../outside", "/outside", "nested/file"]) {
+          await expect(runtime.writeFiles([{ path, content: Buffer.alloc(0) }])).rejects.toThrow(
+            /Unsafe/,
+          );
+          await expect(runtime.fileSize(path)).rejects.toThrow(/Unsafe/);
+          await expect(runtime.readFileToBuffer({ path })).rejects.toThrow(/Unsafe/);
+          await expect(runtime.removeFiles([path])).rejects.toThrow(/Unsafe/);
+        }
+        await expect(
+          runtime.runCommand("ffmpeg", ["-protocol_whitelist", "http", "-version"]),
+        ).rejects.toThrow(/protocol/);
+        await expect(
+          runtime.runCommand("ffmpeg", ["-i", "../outside", "output.mp4"]),
+        ).rejects.toThrow(/Unsafe/);
+        expect(fixture.trace).toHaveLength(0);
+        await runtime.cleanup();
+      });
+    } finally {
+      await fixture.dispose();
+    }
+  },
+);
 // Explicit qualification prerequisite: CI without the ignored local font does NOT qualify rendering.
 it
   .skipIf(!fontPath)

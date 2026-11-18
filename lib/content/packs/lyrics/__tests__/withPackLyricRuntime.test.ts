@@ -95,14 +95,25 @@ it("rejects command concurrency", async () => {
     ),
   ).rejects.toThrow(/concurrency/);
 });
-it("aborts and cleans at the 180-second deadline", async () => {
+it("aborts then waits for callback settlement before cleanup at the deadline", async () => {
   vi.useFakeTimers();
   try {
     const { runtime, cap } = controlled();
-    const work = vi.fn(() => new Promise<never>(() => {}));
+    let rejectWork: (error: Error) => void = () => {};
+    const work = vi.fn(
+      () =>
+        new Promise<never>((_, reject) => {
+          rejectWork = reject;
+        }),
+    );
+    vi.mocked(runtime.abort).mockImplementation(async () => {
+      setTimeout(() => rejectWork(new Error("aborted")), 100);
+    });
     const result = withPackLyricRuntime(cap, work);
     const rejected = expect(result).rejects.toThrow(/deadline/);
     await vi.advanceTimersByTimeAsync(180000);
+    expect(runtime.cleanup).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(100);
     await rejected;
     expect(work).toHaveBeenCalled();
     expect(runtime.abort).toHaveBeenCalled();
@@ -154,4 +165,21 @@ it("requires a successful known-font probe before callback", async () => {
   const work = vi.fn();
   await expect(withPackLyricRuntime(cap, work)).rejects.toThrow(/Known font/);
   expect(work).not.toHaveBeenCalled();
+});
+it("preserves files if the callback does not settle after abort", async () => {
+  vi.useFakeTimers();
+  try {
+    const { runtime, cap } = controlled();
+    let failure: unknown;
+    const result = withPackLyricRuntime(cap, () => new Promise<never>(() => {})).catch(error => {
+      failure = error;
+    });
+    await vi.advanceTimersByTimeAsync(185001);
+    expect(String(failure)).toMatch(/callback.*unconfirmed/);
+    expect(runtime.abort).toHaveBeenCalled();
+    expect(runtime.cleanup).not.toHaveBeenCalled();
+    await result;
+  } finally {
+    vi.useRealTimers();
+  }
 });

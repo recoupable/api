@@ -20,8 +20,14 @@ export async function withPackLyricRuntime<T>(
     let busy = false,
       expired = false;
     const bounded: PackLyricRuntime = {
-      fileSize: runtime.fileSize.bind(runtime),
-      removeFiles: runtime.removeFiles.bind(runtime),
+      fileSize: async path => {
+        if (expired) throw new Error("Lyric runtime deadline exceeded");
+        return runtime.fileSize(path);
+      },
+      removeFiles: async paths => {
+        if (expired) throw new Error("Lyric runtime deadline exceeded");
+        return runtime.removeFiles(paths);
+      },
       abort: runtime.abort.bind(runtime),
       cleanup: runtime.cleanup.bind(runtime),
       writeFiles: async files => {
@@ -92,63 +98,68 @@ export async function withPackLyricRuntime<T>(
         reject(new Error("Lyric runtime deadline exceeded"));
       }, 180000);
     });
-    try {
-      return await Promise.race([
-        deadline,
-        (async () => {
-          const version = await bounded.runCommand(ffmpeg, ["-version"]);
-          if (
-            version.exitCode !== 0 ||
-            createHash("sha256")
-              .update(await version.stdout())
-              .digest("hex") !== capability.rendererBuildSha256
-          )
-            throw new Error("Unqualified renderer build");
-          await bounded.writeFiles([{ path: "lyric-font.ttf", content: fontBytes }]);
-          // A missing font must fail: a successful render would reveal implicit Fontconfig fallback.
-          const missing = await bounded.runCommand(ffmpeg, [
-            "-v",
-            "error",
-            "-f",
-            "lavfi",
-            "-i",
-            "color=s=16x16",
-            "-vf",
-            "drawtext=fontfile=lyric-absent.ttf:text=check",
-            "-frames:v",
-            "1",
-            "-f",
-            "null",
-            "-",
-          ]);
-          if (missing.exitCode === 0) throw new Error("Implicit font fallback is not qualified");
-          const known = await bounded.runCommand(ffmpeg, [
-            "-v",
-            "error",
-            "-f",
-            "lavfi",
-            "-i",
-            "color=s=16x16",
-            "-vf",
-            "drawtext=fontfile=lyric-font.ttf:text=check:expansion=none",
-            "-frames:v",
-            "1",
-            "-f",
-            "null",
-            "-",
-          ]);
-          if (known.exitCode !== 0) throw new Error("Known font drawtext probe failed");
-          return run(bounded, ffmpeg, ffprobe);
-        })(),
+    const work = (async () => {
+      const version = await bounded.runCommand(ffmpeg, ["-version"]);
+      if (
+        version.exitCode !== 0 ||
+        createHash("sha256")
+          .update(await version.stdout())
+          .digest("hex") !== capability.rendererBuildSha256
+      )
+        throw new Error("Unqualified renderer build");
+      await bounded.writeFiles([{ path: "lyric-font.ttf", content: fontBytes }]);
+      // A missing font must fail: a successful render would reveal implicit Fontconfig fallback.
+      const missing = await bounded.runCommand(ffmpeg, [
+        "-v",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=s=16x16",
+        "-vf",
+        "drawtext=fontfile=lyric-absent.ttf:text=check",
+        "-frames:v",
+        "1",
+        "-f",
+        "null",
+        "-",
       ]);
+      if (missing.exitCode === 0) throw new Error("Implicit font fallback is not qualified");
+      const known = await bounded.runCommand(ffmpeg, [
+        "-v",
+        "error",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=s=16x16",
+        "-vf",
+        "drawtext=fontfile=lyric-font.ttf:text=check:expansion=none",
+        "-frames:v",
+        "1",
+        "-f",
+        "null",
+        "-",
+      ]);
+      if (known.exitCode !== 0) throw new Error("Known font drawtext probe failed");
+      return run(bounded, ffmpeg, ffprobe);
+    })();
+    try {
+      return await Promise.race([deadline, work]);
     } finally {
       if (timer) clearTimeout(timer);
       expired = true;
-      const settle = async (phase: "abort" | "cleanup") => {
+      const settle = async (phase: "abort" | "callback" | "cleanup") => {
         let settlementTimer: ReturnType<typeof setTimeout> | undefined;
         try {
           await Promise.race([
-            Promise.resolve().then(() => runtime[phase]()),
+            Promise.resolve().then(() =>
+              phase === "callback"
+                ? work.then(
+                    () => undefined,
+                    () => undefined,
+                  )
+                : runtime[phase](),
+            ),
             new Promise<never>((_, reject) => {
               settlementTimer = setTimeout(
                 () =>
@@ -167,6 +178,7 @@ export async function withPackLyricRuntime<T>(
       };
       // Never delete files while owned-process termination is unknown.
       await settle("abort");
+      await settle("callback");
       await settle("cleanup");
     }
   });

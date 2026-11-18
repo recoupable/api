@@ -24,6 +24,10 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
     throw error;
   }
   const env = { ...process.env, FONTCONFIG_FILE: join(root, "fonts.conf"), FONTCONFIG_PATH: root };
+  const ownedPath = (path: string) => {
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9.-]*$/.test(path)) throw new Error("Unsafe fixture path");
+    return join(root, path);
+  };
   const children = new Set<ReturnType<typeof execFile>>();
   const uncertain = new Set<number>();
   const killed = new WeakSet<ReturnType<typeof execFile>>();
@@ -69,19 +73,30 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
         {
           writeFiles: async files => {
             for (const f of files) {
-              if (!/^[a-zA-Z0-9.-]+$/.test(f.path)) throw new Error("Unsafe fixture path");
-              await writeFile(join(root, f.path), f.content);
+              await writeFile(ownedPath(f.path), f.content);
             }
           },
           runCommand: async (cmd, args) => {
             if (!["ffmpeg", "ffprobe"].includes(cmd)) throw new Error("Forbidden fixture command");
+            if (args.some(arg => /^-protocol_(white|black)list(?:[:=]|$)/.test(arg)))
+              throw new Error("Unsafe fixture protocol override");
+            for (let i = 0; i < args.length; i++) {
+              if (args[i] === "-i") {
+                const input = args[i + 1];
+                if (!["color=s=16x16", "color=c=black:s=16384x256:r=1"].includes(input))
+                  ownedPath(input);
+              }
+            }
+            if (!args.includes("-version") && args.at(-1) !== "-" && args.at(-1) !== "pipe:1")
+              ownedPath(args.at(-1)!);
+            const localArgs = ["-protocol_whitelist", "file,pipe", ...args];
             const entry: {
               command: string;
               args: string[];
               elapsedMs?: number;
               peakRssBytes?: number;
               processGroup?: number;
-            } = { command: cmd, args };
+            } = { command: cmd, args: localArgs };
             trace.push(entry);
             const started = Date.now();
             active++;
@@ -93,7 +108,7 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
                     process.env.PACK_LYRIC_MEASURE_RSS === "1" && process.platform === "darwin";
                   const child = spawn(
                     measure ? "/usr/bin/time" : cmd,
-                    measure ? ["-l", cmd, ...args] : args,
+                    measure ? ["-l", cmd, ...localArgs] : localArgs,
                     { cwd: root, env, detached: true, stdio: ["ignore", "pipe", "pipe"] },
                   );
                   entry.processGroup = child.pid;
@@ -145,14 +160,14 @@ export async function localLyricCapability(fontPath: string, audio: Buffer, visu
               active--;
             }
           },
-          fileSize: async path => (await stat(join(root, path))).size,
+          fileSize: async path => (await stat(ownedPath(path))).size,
           readFileToBuffer: async ({ path }) => {
-            if ((await stat(join(root, path))).size > 50 * 1024 * 1024)
+            if ((await stat(ownedPath(path))).size > 50 * 1024 * 1024)
               throw new Error("Read bound");
-            return readFile(join(root, path));
+            return readFile(ownedPath(path));
           },
           removeFiles: async paths => {
-            for (const path of paths) await rm(join(root, path), { force: true });
+            for (const path of paths) await rm(ownedPath(path), { force: true });
           },
           abort: async () => {
             await Promise.all(
