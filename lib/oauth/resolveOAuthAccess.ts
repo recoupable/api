@@ -1,3 +1,5 @@
+import type { SelectedContext } from "./selectedContextSchema";
+import { oauthGrantContextSchema } from "./oauthGrantContextSchema";
 import type { AdapterFactory, Provider } from "oidc-provider";
 
 export type OAuthAccess = {
@@ -8,6 +10,7 @@ export type OAuthAccess = {
   expiresAt: number;
   resource: string;
   context: "personal";
+  selectedContext?: SelectedContext;
 };
 
 /** Check every authority binding, including the current grant, before accepting a bearer. */
@@ -31,7 +34,6 @@ export async function resolveOAuthAccess(
     !grant ||
     grant.isExpired ||
     !attribution ||
-    attribution.extra?.context !== "personal" ||
     grant.accountId !== token.accountId ||
     grant.clientId !== token.clientId ||
     attribution.accountId !== token.accountId ||
@@ -40,6 +42,8 @@ export async function resolveOAuthAccess(
     !(await accountExists(token.accountId))
   )
     return undefined;
+  const authority = oauthGrantContextSchema.safeParse(attribution.extra);
+  if (!authority.success) return undefined;
   const scopes = (token.scope ?? "").split(" ").filter(Boolean);
   const approved = attribution.extra.scopes;
   const resourceScopes = new Set(grant.getResourceScope(resource).split(" "));
@@ -49,7 +53,17 @@ export async function resolveOAuthAccess(
     scopes.some(scope => !approved.includes(scope) || !resourceScopes.has(scope))
   )
     return undefined;
+  const selectedContext =
+    authority.data.context === "selected_context_v1" ? authority.data.selectedContext : undefined;
+  if (
+    selectedContext &&
+    (!scopes.includes("mcp:tools") ||
+      (selectedContext.kind === "personal" &&
+        selectedContext.ownerId !== token.accountId.toLowerCase()))
+  )
+    return undefined;
   return {
+    ...(selectedContext ? { selectedContext } : {}),
     accountId: token.accountId,
     clientId: token.clientId,
     grantId: token.grantId,

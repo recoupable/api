@@ -98,3 +98,30 @@ it("rejects approval tickets issued before the until-disconnected policy", async
   await expect(tickets.consume(csrf, binding)).rejects.toThrow("Invalid OAuth approval");
   expect(adapter.consume).not.toHaveBeenCalled();
 });
+
+it("binds selected context separately from legacy approval and rejects workspace substitution", async () => {
+  const { tickets, adapter } = fixture();
+  const selectedContext = {
+    version: 1,
+    capabilityVersion: "context-workspace-v1",
+    mode: "selected_context",
+    kind: "organization",
+    ownerId: "00000000-0000-4000-8000-000000000002",
+    organizationId: "00000000-0000-4000-8000-000000000002",
+  } as const;
+  const selected = { ...binding, scopes: ["mcp:tools"], selectedContext };
+  const csrf = await tickets.issue(selected);
+  await expect(
+    tickets.consume(csrf, {
+      ...selected,
+      selectedContext: {
+        ...selectedContext,
+        ownerId: "00000000-0000-4000-8000-000000000003",
+        organizationId: "00000000-0000-4000-8000-000000000003",
+      },
+    }),
+  ).rejects.toThrow();
+  await expect(tickets.consume(csrf, { ...binding, scopes: ["mcp:tools"] })).rejects.toThrow();
+  expect(adapter.consume).not.toHaveBeenCalled();
+  await tickets.consume(csrf, selected);
+});

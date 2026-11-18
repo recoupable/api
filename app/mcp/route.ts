@@ -43,6 +43,17 @@ const fullOAuthHandler = createMcpHandler(
   { serverInfo: createRecoupServerInfo("0.2.0") },
 );
 
+const selectedContextHandler = createMcpHandler(
+  server =>
+    registerFullOAuthTools(
+      server,
+      verifyOAuthBearer,
+      createFullOAuthToolServices(),
+      "selected_context",
+    ),
+  { serverInfo: createRecoupServerInfo("0.3.0") },
+);
+
 async function handler(req: Request) {
   const bearer = /^Bearer +([^\s]+)$/i.exec(req.headers.get("authorization") ?? "")?.[1];
   const auth = await verifyBearerToken(req, bearer);
@@ -55,7 +66,9 @@ async function handler(req: Request) {
   const response = await withMcpAuth(
     auth?.extra.oauth
       ? auth.scopes.includes("mcp:tools")
-        ? fullOAuthHandler
+        ? auth.extra.oauth.selectedContext
+          ? selectedContextHandler
+          : fullOAuthHandler
         : oauthHandler
       : baseHandler,
     async () => auth,

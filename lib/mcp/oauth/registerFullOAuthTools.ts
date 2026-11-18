@@ -7,6 +7,9 @@ import { registerAllTools } from "../tools";
 import { resolveAccountId } from "../resolveAccountId";
 import type { McpAuthInfo } from "../verifyApiKey";
 import type { OAuthAccess } from "../../oauth/resolveOAuthAccess";
+import { selectedContextActions } from "../../oauth/selectedContextActions";
+import { selectedContextSchema } from "../../oauth/selectedContextSchema";
+import { createSelectedContextAuthorizer } from "./createSelectedContextAuthorizer";
 import { contextToolOperations } from "./contextToolOperations";
 import { fullOAuthToolPolicy } from "./fullOAuthToolPolicy";
 import { isStandardOnlyContextTool } from "./isStandardOnlyContextTool";
@@ -29,6 +32,7 @@ export function registerFullOAuthTools(
   server: McpServer,
   verify: (token: string) => Promise<OAuthAccess | undefined>,
   services: FullOAuthToolServices,
+  mode?: "selected_context",
 ) {
   const register = (
     name: string,
@@ -42,6 +46,11 @@ export function registerFullOAuthTools(
       openWorld: boolean;
     },
   ) => {
+    if (
+      mode === "selected_context" &&
+      (name !== "context" || (operation && !selectedContextActions.has(operation.action)))
+    )
+      return;
     // Credentials never belong in model-visible output. Professional roster tools
     // remain excluded until their delegated organization-grant audit is complete.
     if (
@@ -168,15 +177,54 @@ export function registerFullOAuthTools(
             current.clientId !== auth.clientId
           )
             throw new Error();
+          const selected = current.selectedContext;
+          if ((mode === "selected_context") !== !!selected) throw new Error();
+          if (
+            selected &&
+            (!operation || name !== "context" || !selectedContextActions.has(operation.action))
+          )
+            throw new Error();
           // Parse again so direct handler invocations cannot smuggle owner overrides.
           const parsed = inputSchema.parse(raw) as Args;
+          if (selected) {
+            const approved = selectedContextSchema.parse(selected);
+            if (
+              JSON.stringify(approved) !==
+              JSON.stringify(selectedContextSchema.parse(auth.extra.oauth.selectedContext))
+            )
+              throw new Error();
+            if (
+              parsed.organization_id !== undefined &&
+              (typeof parsed.organization_id !== "string" ||
+                parsed.organization_id.toLowerCase() !== approved.organizationId)
+            )
+              throw new Error();
+            if (approved.organizationId) parsed.organization_id = approved.organizationId;
+          }
           const validated = sourceSchema.parse({
             ...parsed,
             ...(operation ? { action: operation.action } : {}),
             ...(hasOwner ? { account_id: current.accountId } : {}),
           }) as Args;
           const args = await services.prepare(name, validated, current.accountId);
-          const run = () => handler(args, extra);
+          const selectedContextAuthorize = selected
+            ? createSelectedContextAuthorizer(current, auth.token, verify)
+            : undefined;
+          if (selectedContextAuthorize)
+            await selectedContextAuthorize(
+              current.accountId,
+              selected!.organizationId ?? undefined,
+            );
+          const executionExtra = selectedContextAuthorize
+            ? {
+                ...extra,
+                authInfo: {
+                  ...auth,
+                  extra: { ...auth.extra, oauth: current, selectedContextAuthorize },
+                },
+              }
+            : extra;
+          const run = () => handler(args, executionExtra);
           return await (services.execute
             ? services.execute(name, args, current.accountId, run)
             : run());

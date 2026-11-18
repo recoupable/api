@@ -80,3 +80,53 @@ it("rejects expired/revoked tokens, wrong audience, changed authority and scope 
     expect(await resolveOAuthAccess(f.options, "secret")).toBeUndefined();
   }
 });
+
+it("fails closed for present malformed selected context and limited grant upgrades", async () => {
+  for (const selectedContext of [
+    null,
+    {},
+    { version: 2 },
+    {
+      version: 1,
+      capabilityVersion: "context-workspace-v1",
+      mode: "selected_context",
+      kind: "personal",
+      ownerId: "00000000-0000-4000-8000-000000000001",
+      organizationId: null,
+    },
+  ]) {
+    const f = fixture();
+    Object.assign(f.attribution.extra, { selectedContext });
+    expect(await resolveOAuthAccess(f.options, "secret")).toBeUndefined();
+  }
+});
+
+it("preserves valid selected workspace attribution and rejects a different personal owner", async () => {
+  const f = fixture();
+  const actor = "00000000-0000-4000-8000-000000000001";
+  f.token.accountId = f.grant.accountId = f.attribution.accountId = actor;
+  f.token.scope = "mcp:tools";
+  f.grant.getResourceScope = () => "mcp:tools";
+  f.attribution.extra.scopes = ["mcp:tools"];
+  const selectedContext = {
+    version: 1,
+    capabilityVersion: "context-workspace-v1",
+    mode: "selected_context",
+    kind: "personal",
+    ownerId: actor,
+    organizationId: null,
+  };
+  Object.assign(f.attribution.extra, { selectedContext });
+  expect(await resolveOAuthAccess(f.options, "secret")).toBeUndefined();
+  f.attribution.extra.context = "selected_context_v1";
+  expect(await resolveOAuthAccess(f.options, "secret")).toMatchObject({ selectedContext });
+  f.token.scope = "mcp:read";
+  f.grant.getResourceScope = () => "mcp:read";
+  f.attribution.extra.scopes = ["mcp:read"];
+  expect(await resolveOAuthAccess(f.options, "secret")).toBeUndefined();
+  f.token.scope = "mcp:tools";
+  f.grant.getResourceScope = () => "mcp:tools";
+  f.attribution.extra.scopes = ["mcp:tools"];
+  selectedContext.ownerId = "00000000-0000-4000-8000-000000000002";
+  expect(await resolveOAuthAccess(f.options, "secret")).toBeUndefined();
+});

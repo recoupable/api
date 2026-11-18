@@ -7,6 +7,7 @@ import type { OAuthAccess } from "@/lib/oauth/resolveOAuthAccess";
 export interface McpAuthInfoExtra extends Record<string, unknown> {
   accountId: string;
   oauth?: OAuthAccess;
+  selectedContextAuthorize?: typeof import("@/lib/context/authorizeContextOwner").authorizeContextOwner;
 }
 
 export interface McpAuthInfo extends AuthInfo {

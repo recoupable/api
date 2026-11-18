@@ -1,6 +1,7 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import type { AdapterFactory } from "oidc-provider";
 import { z } from "zod";
+import { selectedContextSchema } from "../selectedContextSchema";
 import { oauthScopes } from "../oauthScopes";
 
 const bindingSchema = z.object({
@@ -10,6 +11,7 @@ const bindingSchema = z.object({
   clientId: z.string().min(1),
   resource: z.string().url(),
   scopes: z.array(z.string()).min(1),
+  selectedContext: selectedContextSchema.optional(),
 });
 export type OAuthConsentBinding = z.infer<typeof bindingSchema>;
 

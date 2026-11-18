@@ -39,12 +39,17 @@ export async function handleContextToolOperation(
         ...getToolResultError("Catalog case operations are unavailable for delegated OAuth."),
         isError: true,
       };
+    if (authInfo?.extra.oauth?.selectedContext && !authInfo.extra.selectedContextAuthorize)
+      throw new Error("Selected Context authority required");
     return getToolResultSuccess(
       await processContextOperation(accountId, args, {
         rpc: callContextRpc,
         dispatch: dispatchContextRequest,
         dispatchRelease: dispatchContextReleaseVerification,
         dispatchReleaseTracks: dispatchContextReleaseTrackIsrcs,
+        ...(authInfo?.extra.oauth?.selectedContext
+          ? { authorize: authInfo.extra.selectedContextAuthorize }
+          : {}),
         includeMaterialEvidence: !authInfo?.extra?.oauth,
       }),
     );
