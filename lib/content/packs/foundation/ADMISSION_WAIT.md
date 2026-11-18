@@ -57,6 +57,12 @@ terminal replay. Fresh polls already due at restart are allowed distinct IDs.
 The delayed case simulates persistence of the original dispatch ID outside the
 workflow; it does not perform self-admission or start a second workflow.
 
+On an outcome assertion failure, `PACK_ADMISSION_ASSERTION_FAILURE` in the CI log
+retains the synthetic read trace, decoded observations and journal event IDs,
+correlations, timestamps and wait lifecycle before temporary files are removed.
+This distinguishes repeated storage events from distinct logical waits. No events
+or wake timestamps are deduplicated; extra, early and late waits still fail.
+
 This is local compiled replay with synthetic database reads. It does not establish
 SQL atomicity, authenticated hosting, provider execution, production timeout policy,
 or owner-facing continuation. The existing unconditional `run` write, reused preparation

@@ -8,7 +8,7 @@ import { waitFor } from "../pack-scheduler-workflow-fixture/waitFor.mjs";
 import { readAdmissionJournal } from "./readAdmissionJournal.mjs";
 import { readAdmissionResults } from "./readAdmissionResults.mjs";
 import { writeAdmissionReceipt } from "./writeAdmissionReceipt.mjs";
-import { assertOutcome } from "./assertOutcome.mjs";
+import { assertOutcomeWithDiagnostics } from "./assertOutcomeWithDiagnostics.mjs";
 export async function runWorker(temp, scenario, phase, attempts) {
   const effects = join(temp, scenario);
   const ctx = await createFixtureWorld(temp, effects);
@@ -71,7 +71,16 @@ export async function runWorker(temp, scenario, phase, attempts) {
     const beforeCrash = await readJson(join(effects, "before-crash.json"));
     assert.deepEqual(trace.slice(0, beforeCrash.length), beforeCrash);
     // Fresh polls may already be due at restart. Exact step IDs distinguish them from replayed effects.
-    assertOutcome(scenario, runId, state, trace, events, value, startClock, decoded.observations);
+    assertOutcomeWithDiagnostics({
+      scenario,
+      runId,
+      state,
+      trace,
+      journal: events,
+      value,
+      startClock,
+      observations: decoded.observations,
+    });
     const before = ctx.counts().deliveries;
     await ctx.reenqueueRun(ctx.world, runId);
     await waitFor(() => idle() && ctx.counts().deliveries > before);

@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { assertOutcomeWithDiagnostics } from "../assertOutcomeWithDiagnostics.mjs";
 import { assertOutcome } from "../assertOutcome.mjs";
 function specimen() {
   const runId = "run";
@@ -192,5 +193,76 @@ for (const scenario of ["hold-expiry", "deadline"]) {
     verify();
     f.observations.at(-1).observedAt = boundary - 1;
     assert.throws(verify, "must reject reconciliation before the observation reaches its boundary");
+  });
+}
+
+for (const [name, mutate] of [
+  [
+    "early logical wait",
+    f => {
+      f.journal.at(-1).eventData.resumeAt = new Date(2000);
+    },
+  ],
+  [
+    "late logical wait",
+    f => {
+      f.journal.at(-1).eventData.resumeAt = new Date(2002);
+    },
+  ],
+  [
+    "extra distinct logical wait",
+    f => {
+      f.journal.push({ ...f.journal.at(-1), eventId: "event-extra", correlationId: "wait-extra" });
+    },
+  ],
+  [
+    "repeated storage event",
+    f => {
+      f.journal.push(f.journal.at(-1));
+    },
+  ],
+]) {
+  test(`retains raw diagnostic evidence and rejects ${name}`, t => {
+    const f = delayed();
+    f.journal.at(-1).eventId = "event-wait";
+    f.journal.at(-1).correlationId = "wait-original";
+    f.journal.push({
+      eventType: "wait_completed",
+      eventId: "event-completed",
+      correlationId: "wait-original",
+    });
+    const completion = f.journal.pop();
+    mutate(f);
+    f.journal.push(completion);
+    const emitted = [];
+    t.mock.method(console, "error", (...args) => emitted.push(args));
+    assert.throws(
+      () =>
+        assertOutcomeWithDiagnostics({
+          scenario: "delayed",
+          runId: f.runId,
+          state: f.state,
+          trace: f.trace,
+          journal: f.journal,
+          value: f.value,
+          startClock: f.clock,
+          observations: f.observations,
+        }),
+      { code: "ERR_ASSERTION" },
+    );
+    assert.equal(emitted.length, 1);
+    assert.equal(emitted[0][0], "PACK_ADMISSION_ASSERTION_FAILURE");
+    const saved = JSON.parse(emitted[0][1]);
+    assert.deepEqual(saved.observations, f.observations);
+    assert.deepEqual(saved.trace, f.trace);
+    assert.deepEqual(
+      saved.journal.map(e => e.eventId),
+      f.journal.map(e => e.eventId),
+    );
+    assert.deepEqual(
+      saved.journal.map(e => e.correlationId),
+      f.journal.map(e => e.correlationId),
+    );
+    assert.equal(saved.journal.at(-1).eventType, "wait_completed");
   });
 }
