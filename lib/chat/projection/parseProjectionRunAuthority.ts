@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { internalWorkflowFenceSchema } from "@/app/lib/workflows/fence/TrustedFencedWorkflowInput";
 import { ProjectionEvidenceError } from "./ProjectionEvidenceError";
+import { streamProtocolSchema } from "../continuation/streamProtocol";
 const id = z.string().min(1);
 const inputSchema = z
   .object({
+    streamProtocol: streamProtocolSchema.optional(),
     accountId: id,
     chatId: id,
     sessionId: id,

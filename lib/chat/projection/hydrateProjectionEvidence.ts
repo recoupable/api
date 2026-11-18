@@ -9,20 +9,22 @@ import type { getWorld } from "workflow/runtime";
 import { ProjectionEvidenceError } from "./ProjectionEvidenceError";
 import { readProjectionEvidence } from "./readProjectionEvidence";
 type World = Pick<ReturnType<typeof getWorld>, "runs" | "getEncryptionKeyForRun">;
+function readResolvedRun(world: World, runId: string) {
+  return world.runs.get(runId, { resolveData: "all" });
+}
 /** Existing configured-World decryption only; never manufacture or accept a caller key. */
 export async function hydrateProjectionEvidence(
   value: unknown,
   runId: string,
   world: World,
   signal: AbortSignal,
+  resolvedRun?: Awaited<ReturnType<typeof readResolvedRun>>,
 ) {
   const encrypted = isEncryptedData(value);
   let key;
   if (encrypted) {
-    const run = await readProjectionEvidence(
-      () => world.runs.get(runId, { resolveData: "all" }),
-      signal,
-    );
+    const run =
+      resolvedRun ?? (await readProjectionEvidence(() => readResolvedRun(world, runId), signal));
     const rawKey = await readProjectionEvidence(
       async () => world.getEncryptionKeyForRun?.(run),
       signal,

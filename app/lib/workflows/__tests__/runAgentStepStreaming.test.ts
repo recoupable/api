@@ -14,6 +14,7 @@ vi.mock("@/lib/chat/persistAssistantMessage", () => ({
   persistAssistantMessage: vi.fn(),
 }));
 vi.mock("workflow", () => ({
+  getStepMetadata: vi.fn(() => ({ attempt: 1, stepId: "synthetic-streaming-step" })),
   getWorkflowMetadata: vi.fn(() => ({
     workflowRunId: "test-run-id",
     workflowName: "test",
@@ -104,8 +105,13 @@ describe("runAgentStep — streaming shape (mirrors upstream open-agents)", () =
           throw abortError;
         })(),
       ),
-      finishReason: Promise.reject(abortError),
-      responseMessages: Promise.reject(abortError),
+      // Match the SDK accessors: no eagerly rejected test-only promises.
+      get finishReason() {
+        return Promise.reject(abortError);
+      },
+      get responseMessages() {
+        return Promise.reject(abortError);
+      },
     } as never);
     const { stream } = makeWritable();
 
