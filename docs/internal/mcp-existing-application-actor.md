@@ -20,7 +20,9 @@ The actual `validateProposedRegistrationActor` guard requires original actor,
 effective account and account ID equality; self access; null organization; strict
 API-key/Privy identity evidence; and unresolved execution-resource authority.
 Known shared-auth failure responses are preserved. Unexpected provider or guard
-failures become a generic 503 without raw exception details.
+failures become a generic 503 without raw exception details in responses or logs.
+Helper-owned failures use the shared error envelope and CORS headers; existing
+authentication responses retain their existing envelopes.
 
 Success contains only `{actor, workspace, verificationEvidence}`. Evidence is
 copied per invocation and is private, point-in-time identity metadata. It must
@@ -40,8 +42,8 @@ UUID into verifier evidence. Legacy `clientId` is not a verified client identity
 
 Full/limited OAuth execution wrappers retain their current grant rechecks and
 allowlists. App2104 operations remain excluded. No delegated application policy is
-introduced. Sites' create/read functions still accept their own authenticated
-request; no caller-supplied evidence/actor bypass was added. Their future trusted
+introduced. `createProposedApplicationRegistration` and
+`readProposedApplicationRegistration` still accept their own authenticated request; no caller-supplied evidence/actor bypass was added. Their future trusted
 invocation seam needs a separate review. Reverify at the operation boundary if
 execution is separated from initial verification; no cached observation is a grant.
 

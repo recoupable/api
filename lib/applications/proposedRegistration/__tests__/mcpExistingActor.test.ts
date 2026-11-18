@@ -30,12 +30,14 @@ async function verify(req = request()) {
   );
   return verifyExistingApplicationMcpActor(req);
 }
-async function denied(req: NextRequest) {
+async function denied(req: NextRequest, status: number) {
   const result = await verify(req);
   expect(result).toBeInstanceOf(NextResponse);
   const response = result as NextResponse;
-  expect([401, 403, 503]).toContain(response.status);
+  expect(response.status).toBe(status);
+  expect(response.headers.get("Access-Control-Allow-Origin")).toBe("*");
   const text = await response.text();
+  expect(JSON.parse(text).status).toBe("error");
   expect(text).not.toMatch(/recoup_sk_|synthetic-privy|PRIVATE_SENTINEL|fixture@example|Basic /);
 }
 beforeEach(() => {
@@ -86,11 +88,26 @@ afterEach(() => {
 it.each([undefined, "false", "TRUE"])("disabled OAuth %s never imports its runtime", async flag => {
   vi.stubEnv("OAUTH_ENABLED", flag);
   const result = await verify();
-  expect(result).toMatchObject({
+  expect(result).toEqual({
     actor: fixture.actor,
     workspace: fixture.actor,
-    verificationEvidence: { principal: { mechanism: "recoup_api_key", keyId: fixture.keyId } },
+    verificationEvidence: {
+      principal: {
+        mechanism: "recoup_api_key",
+        keyId: fixture.keyId,
+        actorAccountId: fixture.actor,
+      },
+      effectiveAccountId: fixture.actor,
+      accountAccess: { basis: "self" },
+      organizationAccess: null,
+      executionResources: {
+        status: "unresolved",
+        reason: "resource_authorization_contract_missing",
+      },
+    },
   });
+  expect(JSON.stringify(result)).not.toContain(fixture.key);
+  expect(JSON.stringify(result)).not.toMatch(/authToken|linked_accounts|fixture@example/);
   expect(leaves.runtimeImports).toBe(0);
   expect(leaves.verifyAccess).not.toHaveBeenCalled();
   expect(fixture.queries).toEqual(["account_api_keys"]);
@@ -98,7 +115,7 @@ it.each([undefined, "false", "TRUE"])("disabled OAuth %s never imports its runti
   expect(fetch).not.toHaveBeenCalled();
 });
 it("disabled OAuth rejects opaque tokens without importing runtime or provisioning", async () => {
-  await denied(request("synthetic-opaque"));
+  await denied(request("synthetic-opaque"), 401);
   expect(leaves.runtimeImports).toBe(0);
   expect(leaves.verifyAccess).not.toHaveBeenCalled();
   expect(fixture.queries).toEqual([]);
@@ -109,7 +126,7 @@ it("standard storage failure produces only a bounded unavailable result", async 
     throw new Error("PRIVATE_SENTINEL storage detail");
   });
   try {
-    await denied(request());
+    await denied(request(), 503);
   } finally {
     failure.mockRestore();
   }
@@ -127,7 +144,7 @@ it.each([["mcp:tools"], ["mcp:read"]])(
       context: "personal",
       expiresAt: 9999999999,
     });
-    await denied(request("synthetic-oauth"));
+    await denied(request("synthetic-oauth"), 403);
     expect(leaves.runtimeImports).toBe(1);
     expect(leaves.verifyAccess).toHaveBeenCalledExactlyOnceWith("synthetic-oauth");
     expect(leaves.privy).not.toHaveBeenCalled();
@@ -138,14 +155,14 @@ it.each([["mcp:tools"], ["mcp:read"]])(
 it("enabled undefined classification requires independent supported verification", async () => {
   vi.stubEnv("OAUTH_ENABLED", "true");
   expect(await verify()).toMatchObject({ actor: fixture.actor });
-  await denied(request("synthetic-invalid-or-revoked-opaque"));
+  await denied(request("synthetic-invalid-or-revoked-opaque"), 401);
   expect(leaves.verifyAccess).toHaveBeenCalledTimes(2);
   expect(fixture.queries).toEqual(["account_api_keys"]);
 });
 it("runtime failure denies without any legacy fallback or secret error", async () => {
   vi.stubEnv("OAUTH_ENABLED", "true");
   leaves.verifyAccess.mockRejectedValue(new Error("PRIVATE_SENTINEL"));
-  await denied(request());
+  await denied(request(), 503);
   expect(fixture.queries).toEqual([]);
   expect(leaves.privy).not.toHaveBeenCalled();
   expect(fetch).not.toHaveBeenCalled();
@@ -153,11 +170,17 @@ it("runtime failure denies without any legacy fallback or secret error", async (
 it("returns only copied internal evidence for an existing Privy account", async () => {
   const result = await verify(request("synthetic-privy"));
   expect(Object.keys(result).sort()).toEqual(["actor", "verificationEvidence", "workspace"]);
-  expect(result).toMatchObject({
+  expect(result).toEqual({
     actor: fixture.actor,
     workspace: fixture.actor,
     verificationEvidence: {
-      principal: { mechanism: "privy", subject: leaves.subject },
+      principal: {
+        mechanism: "privy",
+        subject: leaves.subject,
+        appId: leaves.appId,
+        issuer: "privy.io",
+        actorAccountId: fixture.actor,
+      },
       effectiveAccountId: fixture.actor,
       accountAccess: { basis: "self" },
       organizationAccess: null,
@@ -176,24 +199,24 @@ it("returns only copied internal evidence for an existing Privy account", async 
 });
 it("denies an unknown existing account without provisioning", async () => {
   fixture.accountPresent = false;
-  await denied(request("synthetic-privy"));
+  await denied(request("synthetic-privy"), 401);
   expect(fixture.queries).toEqual(["account_emails"]);
 });
 it.each(["app", "profile"])("denies mismatched Privy %s evidence", async field => {
   if (field === "app") leaves.appId = "wrong-app";
   else leaves.profileId = "wrong-profile";
-  await denied(request("synthetic-privy"));
+  await denied(request("synthetic-privy"), 401);
   expect(fixture.queries).toEqual([]);
 });
 it("denies absent/malformed keys and a malformed actor through the actual strict guard", async () => {
   fixture.keyPresent = false;
-  await denied(request());
+  await denied(request(), 401);
   fixture.keyPresent = true;
   fixture.keyId = "PRIVATE_SENTINEL";
-  await denied(request());
+  await denied(request(), 503);
   fixture.keyId = "22222222-2222-4222-8222-222222222222";
   fixture.actor = "PRIVATE_SENTINEL";
-  await denied(request());
+  await denied(request(), 503);
 });
 it("rejects unsupported headers before auth and ignores body principal/token assertions", async () => {
   for (const headers of [
@@ -209,6 +232,7 @@ it("rejects unsupported headers before auth and ignores body principal/token ass
         headers,
         body: JSON.stringify({ account_id: fixture.actor, token: fixture.key }),
       }),
+      401,
     );
   }
   expect(fixture.queries).toEqual([]);
