@@ -38,6 +38,8 @@ def main():
     sources.update({name: read(args.database_repo, pins['database_proposal_head'], name, digest) for name, digest in pins['database_proposal_files'].items()})
     lifecycle = read(args.lifecycle_repo, pins['lifecycle_commit'], pins['lifecycle_path'], pins['lifecycle_sha256'])
     node = shutil.which('node'); pg = args.pg_bin.resolve()
+    if node is None:
+        raise RuntimeError('Node.js is required before creating a disposable fixture')
     root = pathlib.Path(tempfile.mkdtemp(prefix='catalog-size-', dir='/tmp')).resolve()
     fixture = None; child = None; report = {'root': str(root), 'files_removed': False}
     env = {'PATH': str(pg) + ':' + str(pathlib.Path(node).parent) + ':/usr/bin:/bin', 'HOME': str(root), 'TMPDIR': str(root), 'LANG': 'en_US.UTF-8' if sys.platform == 'darwin' else 'C.UTF-8', 'LC_ALL': 'en_US.UTF-8' if sys.platform == 'darwin' else 'C.UTF-8'}
