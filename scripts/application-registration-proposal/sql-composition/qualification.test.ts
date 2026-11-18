@@ -413,13 +413,15 @@ describe("actual domain and helpers to restricted disposable SQL wrappers", () =
     expect(await register()).toEqual(original);
   });
   it.each(
-    [0, 0xd800, 0xdc00].flatMap(code => [
-      { field: "key", code },
-      { field: "name", code },
+    [[0], [0xd800], [0xdc00], [0xd800, 0x61], [0xdc00, 0xd800]].flatMap(units => [
+      { field: "key", units },
+      { field: "name", units },
     ]),
-  )("rejects invalid $field code unit $code before any SQL query", async ({ field, code }) => {
-    const character = String.fromCharCode(code);
-    expect(character.charCodeAt(0)).toBe(code);
+  )("rejects invalid $field code units $units before any SQL query", async ({ field, units }) => {
+    const character = String.fromCharCode(...units);
+    expect(
+      Array.from({ length: character.length }, (_, index) => character.charCodeAt(index)),
+    ).toEqual(units);
     const value =
       field === "key"
         ? { ...input, idempotency_key: `req-${character}` }
@@ -463,9 +465,11 @@ describe("actual domain and helpers to restricted disposable SQL wrappers", () =
     });
     try {
       await client.connect(transport);
-      for (const code of [0, 0xd800, 0xdc00]) {
-        const character = String.fromCharCode(code);
-        expect(character.charCodeAt(0)).toBe(code);
+      for (const units of [[0], [0xd800], [0xdc00], [0xd800, 0x61], [0xdc00, 0xd800]]) {
+        const character = String.fromCharCode(...units);
+        expect(
+          Array.from({ length: character.length }, (_, index) => character.charCodeAt(index)),
+        ).toEqual(units);
         for (const value of [
           { ...input, idempotency_key: `req-${character}` },
           { ...input, registration: { ...input.registration, name: `Name${character}` } },
@@ -479,8 +483,18 @@ describe("actual domain and helpers to restricted disposable SQL wrappers", () =
           expect(calls).toHaveLength(before);
         }
       }
+      const literalUnits = [0x5c, 0x75, 0x30, 0x30, 0x30, 0x30, 0x5c, 0x75, 0x44, 0x38, 0x30, 0x30];
+      const literal = String.fromCharCode(...literalUnits);
+      expect(
+        Array.from({ length: literal.length }, (_, index) => literal.charCodeAt(index)),
+      ).toEqual(literalUnits);
+      const sdkInput = {
+        ...input,
+        idempotency_key: ` key-${literal} `,
+        registration: { ...input.registration, name: `  Name${literal}  ` },
+      };
       const created = await oneStorage(() =>
-        client.callTool({ name: "create_application_registration", arguments: input }),
+        client.callTool({ name: "create_application_registration", arguments: sdkInput }),
       );
       expect(created.isError).not.toBe(true);
       const original = (
@@ -490,6 +504,18 @@ describe("actual domain and helpers to restricted disposable SQL wrappers", () =
       const content = created.content as Array<{ type: string; text: string }>;
       expect(content[0].type).toBe("text");
       expect(JSON.parse(content[0].text)).toEqual(original);
+      expect(original.snapshot.name).toBe(`Name${literal}`);
+      const storedKey = (
+        await fixtureQuery("SELECT key FROM application_registration_proposal.requests")
+      ).rows[0].key;
+      expect(storedKey).toBe(sdkInput.idempotency_key);
+      expect(Buffer.from(storedKey)).toEqual(Buffer.from(sdkInput.idempotency_key));
+      const saved = await registrationState();
+      const replay = await oneStorage(() =>
+        client.callTool({ name: "create_application_registration", arguments: sdkInput }),
+      );
+      expect(replay.content).toEqual(created.content);
+      expect(await registrationState()).toEqual(saved);
       await grantRead(original.application_id);
       const selected = await oneStorage(() =>
         client.callTool({ name: "read_application_registration", arguments: select(original) }),

@@ -405,19 +405,18 @@ describe("strict receipt acceptance", () => {
   });
 });
 
-const invalidText = [
-  String.fromCharCode(0),
-  String.fromCharCode(0xd800),
-  String.fromCharCode(0xdc00),
-];
+const invalidText = [[0], [0xd800], [0xdc00], [0xd800, 0x61], [0xdc00, 0xd800]];
 describe("proposal-local PostgreSQL text boundary", () => {
   it.each(
-    invalidText.flatMap(character => [
-      { field: "key", character },
-      { field: "name", character },
+    invalidText.flatMap(units => [
+      { field: "key", units },
+      { field: "name", units },
     ]),
-  )("rejects actual invalid code units in $field before storage", async ({ field, character }) => {
-    expect([0, 0xd800, 0xdc00]).toContain(character.charCodeAt(0));
+  )("rejects actual invalid code units in $field before storage", async ({ field, units }) => {
+    const character = String.fromCharCode(...units);
+    expect(
+      Array.from({ length: character.length }, (_, index) => character.charCodeAt(index)),
+    ).toEqual(units);
     const value =
       field === "key"
         ? { ...input, idempotency_key: `req-${character}` }
@@ -428,29 +427,40 @@ describe("proposal-local PostgreSQL text boundary", () => {
     expect(deps.storage.create).not.toHaveBeenCalled();
     expect(deps.storage.read).not.toHaveBeenCalled();
   });
-  it.each([String.fromCharCode(0xd83d, 0xde80), String.fromCharCode(0xfffd), "Música 音楽"])(
-    "preserves valid Unicode and existing name trimming",
-    async text => {
-      const key = ` key-${text} `;
-      const value = {
-        ...input,
-        idempotency_key: key,
-        registration: { ...input.registration, name: `  Name${text}  ` },
-      };
-      const parsed = proposedCreateInputSchema.parse(value);
-      expect(parsed.idempotency_key).toBe(key);
-      expect(parsed.registration.name).toBe(`Name${text}`);
-      expect(Buffer.from(parsed.idempotency_key)).toEqual(Buffer.from(key));
-      const deps = dependencies();
-      const receipt = structuredClone(golden.createReceipt);
-      receipt.snapshot.name = `Name${text}`;
-      deps.storage.create.mockResolvedValue(receipt);
-      expect(await create(request(), value, deps)).toEqual(receipt);
-      expect(deps.storage.create).toHaveBeenCalledExactlyOnceWith({
-        ...golden.input,
-        key,
-        registration: { ...golden.input.registration, name: `Name${text}` },
-      });
-    },
-  );
+  it.each([
+    String.fromCharCode(0xd83d, 0xde80),
+    String.fromCharCode(0xfffd),
+    "Música 音楽",
+    String.fromCharCode(0x5c, 0x75, 0x30, 0x30, 0x30, 0x30),
+    String.fromCharCode(0x5c, 0x75, 0x44, 0x38, 0x30, 0x30),
+  ])("preserves valid Unicode and existing name trimming", async text => {
+    if (text.charCodeAt(0) === 0x5c) {
+      const units = Array.from({ length: text.length }, (_, index) => text.charCodeAt(index));
+      expect([
+        [0x5c, 0x75, 0x30, 0x30, 0x30, 0x30],
+        [0x5c, 0x75, 0x44, 0x38, 0x30, 0x30],
+      ]).toContainEqual(units);
+      expect(text).toHaveLength(6);
+    }
+    const key = ` key-${text} `;
+    const value = {
+      ...input,
+      idempotency_key: key,
+      registration: { ...input.registration, name: `  Name${text}  ` },
+    };
+    const parsed = proposedCreateInputSchema.parse(value);
+    expect(parsed.idempotency_key).toBe(key);
+    expect(parsed.registration.name).toBe(`Name${text}`);
+    expect(Buffer.from(parsed.idempotency_key)).toEqual(Buffer.from(key));
+    const deps = dependencies();
+    const receipt = structuredClone(golden.createReceipt);
+    receipt.snapshot.name = `Name${text}`;
+    deps.storage.create.mockResolvedValue(receipt);
+    expect(await create(request(), value, deps)).toEqual(receipt);
+    expect(deps.storage.create).toHaveBeenCalledExactlyOnceWith({
+      ...golden.input,
+      key,
+      registration: { ...golden.input.registration, name: `Name${text}` },
+    });
+  });
 });
