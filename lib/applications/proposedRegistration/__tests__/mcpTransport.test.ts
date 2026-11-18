@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import golden from "../../../../scripts/application-registration-proposal/receipt-golden.json";
 import { fixture } from "../../../../scripts/application-registration-proposal/setup";
 import { handleProposedRegistrationMcpRequest as handle } from "@/lib/mcp/applications/handleProposedRegistrationMcpRequest";
@@ -307,6 +308,48 @@ it.each([
     body: String(body),
   });
   expect((await handle(r, deps())).status).toBe(status);
+});
+it.each([
+  ["Application/JSON; charset=utf-8", "Application/JSON, Text/Event-Stream", 200],
+  ["application/json", 'application/json; note="a,b; c", text/event-stream;q=0.5', 200],
+  ["text/plain; note=application/json", "application/json, text/event-stream", 415],
+  ['text/plain; note="application/json"', "application/json, text/event-stream", 415],
+  ["application/json-seq", "application/json, text/event-stream", 415],
+  ["application/json", 'text/plain; note="application/json", text/event-stream', 406],
+  ["application/json", "application/json;q=0, text/event-stream", 406],
+  ["application/json", "application/json, text/event-stream;Q=0.000", 406],
+  ["application/json", "application/json;q=0, text/event-stream, */*;q=1", 406],
+  ["application/json", "application/json;q=1, application/json;q=0, text/event-stream", 406],
+  ["application/json", "application/json;q=1.1, text/event-stream", 406],
+  ["application/json", "application/json;q=garbage, text/event-stream", 406],
+  ["application/json", "application/json;q=0;q=1, text/event-stream", 406],
+  ["application/json", "*/*", 406],
+])("validates actual media ranges through the SDK (%s, %s)", async (type, accept, status) => {
+  const sdk = vi.spyOn(WebStandardStreamableHTTPServerTransport.prototype, "handleRequest");
+  const d = deps();
+  const r = request(call());
+  r.headers.set("content-type", String(type));
+  r.headers.set("accept", String(accept));
+  r.headers.set("mcp-protocol-version", "2025-11-25");
+  const before = Object.fromEntries(r.headers);
+  const response = await handle(r, d);
+  expect(response.status).toBe(status);
+  expect(r.headers.get("authorization")).toBe(before.authorization);
+  expect(r.headers.get("mcp-protocol-version")).toBe(before["mcp-protocol-version"]);
+  expect(d.storage.create).toHaveBeenCalledTimes(status === 200 ? 1 : 0);
+  if (status === 200) {
+    expect((await response.json()).result.isError).not.toBe(true);
+    expect(sdk.mock.calls[0][0]).toBe(r);
+    expect(r.bodyUsed).toBe(true);
+    expect(r.headers.get("accept")).toBe(
+      String(accept)
+        .replaceAll("Application/JSON", "application/json")
+        .replaceAll("Text/Event-Stream", "text/event-stream"),
+    );
+  } else {
+    expect(sdk).not.toHaveBeenCalled();
+    expect(Object.fromEntries(r.headers)).toEqual(before);
+  }
 });
 it("accepts exactly 64KiB and counts bytes despite lying length", async () => {
   const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list" });

@@ -111,6 +111,14 @@ response can still be delivered. Cleanup uncertainty yields503. Early denial own
 and cancels unread input too. These are inactive source contracts, not deployed
 limits or client acceptance.
 
+Media admission parses complete case-insensitive type tokens and quoted parameters.
+Accept must explicitly allow both JSON and event-stream with valid positive quality;
+wildcards do not replace that MCP requirement, and a zero-quality duplicate excludes
+the type. Parameter text cannot establish a media type. After validation, only media
+type tokens are lowercased on the same original request for the pinned SDK's own
+case-sensitive checks. Parameters, credentials, protocol headers and body remain
+intact; no reconstructed request or SDK check bypass is used.
+
 The real SDK uses JSON response mode. The owner closes server/transport before
 returning a completed JSON response, including202 notifications and errors. Request
 abort/deadline races bound every asynchronous stage and observe losing rejections;
