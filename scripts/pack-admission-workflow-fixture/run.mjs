@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import assert from "node:assert/strict";
 import { mkdtemp, realpath, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -10,6 +11,10 @@ import { runScenario } from "./runScenario.mjs";
 const attempts = denyNetwork();
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, "../..");
+process.env.PACK_ADMISSION_SOURCE_HEAD ??= execFileSync("git", ["rev-parse", "HEAD"], {
+  cwd: root,
+  encoding: "utf8",
+}).trim();
 if (process.argv[2] === "worker")
   await runWorker(process.argv[3], process.argv[4], process.argv[5], attempts);
 else {

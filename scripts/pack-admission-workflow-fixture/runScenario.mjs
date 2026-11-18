@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
+import { captureAdmissionFailure } from "./captureAdmissionFailure.mjs";
 import { join } from "node:path";
 import { readJson } from "../pack-scheduler-workflow-fixture/readJson.mjs";
 import { waitFor } from "../pack-scheduler-workflow-fixture/waitFor.mjs";
 import { spawn } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
-export async function runScenario(root, here, temp, scenario) {
+export async function runScenario(root, here, temp, scenario, { resumeTimeoutMs = 60000 } = {}) {
   const effects = join(temp, scenario);
   await mkdir(effects);
   await writeFile(join(effects, "events.jsonl"), "");
@@ -24,10 +25,22 @@ export async function runScenario(root, here, temp, scenario) {
   let child;
   try {
     const launch = phase => {
-      const c = spawn(process.execPath, [join(here, "run.mjs"), "worker", temp, scenario, phase], {
-        cwd: root,
-        stdio: ["ignore", "pipe", "pipe"],
-      });
+      const c = spawn(
+        process.execPath,
+        [
+          "--import",
+          join(here, "installAdmissionObserver.mjs"),
+          join(here, "run.mjs"),
+          "worker",
+          temp,
+          scenario,
+          phase,
+        ],
+        {
+          cwd: root,
+          stdio: ["ignore", "pipe", "pipe", "ipc"],
+        },
+      );
       c.stdout.on("data", bytes => process.stdout.write(bytes));
       c.stderr.on("data", bytes => process.stderr.write(bytes));
       return c;
@@ -59,17 +72,10 @@ export async function runScenario(root, here, temp, scenario) {
       await writeFile(join(effects, "state.json"), JSON.stringify({ ...state, savedRunId: runId }));
     }
     child = launch("resume");
-    await waitFor(async () => child.exitCode !== null || child.signalCode !== null, 60000);
-    if (child.exitCode !== 0) {
-      try {
-        console.error(
-          "PACK_ADMISSION_SAVED_FAILURE",
-          JSON.stringify(await readJson(join(effects, "assertion-evidence.json"))),
-        );
-      } catch (error) {
-        console.error("PACK_ADMISSION_CAPTURE_UNAVAILABLE", error.message);
-      }
-    }
+    await waitFor(
+      async () => child.exitCode !== null || child.signalCode !== null,
+      resumeTimeoutMs,
+    );
     assert.equal(child.exitCode, 0);
     child = undefined;
     const result = await readJson(join(effects, "result.json"));
@@ -78,6 +84,13 @@ export async function runScenario(root, here, temp, scenario) {
       startNetworkAttempts: startReceipt.networkAttempts,
       resumeNetworkAttempts: result.networkAttempts,
     };
+  } catch (error) {
+    try {
+      await captureAdmissionFailure(child, effects, error);
+    } catch (captureError) {
+      console.error("PACK_ADMISSION_CAPTURE_UNAVAILABLE", captureError.message);
+    }
+    throw error;
   } finally {
     if (child && child.exitCode === null && child.signalCode === null) {
       const exited = new Promise(resolve => child.once("exit", resolve));

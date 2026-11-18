@@ -45,8 +45,8 @@ read-only calls and zero retry settings.
 
 The separate `scripts/pack-admission-workflow-fixture` compiles the actual composition,
 coordinator and durable steps, replacing only the read RPC with a typed synthetic
-boundary. It uses the unchanged shared local-world, network-denial, polling and
-strict-type helpers. Scenarios cover immediate admission, delayed persistence across
+boundary. It uses a fixture-local adapter around the installed SDK, plus unchanged shared
+network-denial, failure-delivery, polling and strict-type helpers. Scenarios cover immediate admission, delayed persistence across
 process restart, deadline across restart, different ID, read/access failure and
 expired hold, and expiry while waiting. The fixture retains the decoded original journaled start-clock result
 and checks the exact deadline, distinct read-step correlations, one original start,
@@ -72,3 +72,43 @@ SQL atomicity, authenticated hosting, provider execution, production timeout pol
 or owner-facing continuation. The existing unconditional `run` write, reused preparation
 write and point-in-time authorization still do not fence cross-run takeover. Production
 wiring and those authority/continuation contracts remain separate prerequisites.
+
+
+## Local SDK concurrency boundary and fixture recovery
+
+The local fixture resumes its saved run through `world.start()` recovery exactly
+once. It does not also enqueue that active run explicitly. The separate explicit
+terminal replay remains mandatory. A passive observer records SDK queue message
+IDs, attempts, per-handler AsyncLocalStorage context, event create requests/results,
+list cursors and returned event IDs. The queue observer is installed before startup
+through an isolated loader with an exact SDK source hash; installed files are not
+changed. It returns original SDK promises/results and adds no locks, retries or
+serialization. JSONL persistence is asynchronous and bounded; dropped entries or
+persistence errors fail successful recovery-trace qualification.
+
+`probeRecoveryEnqueues.mjs` uses identical saved-run bytes and the actual SDK queue
+with a bounded synthetic receiver. Startup-only and explicit-only each produce one
+message; combining them produces two distinct messages. This probes enqueue
+provenance, not generated workflow replay. `probeWaitCreation.mjs` separately gates
+the actual installed filesystem writer after both wait-path absence checks, through
+a byte-verified isolated loader seam. Serial duplicate creation conflicts; controlled
+overlap can store distinct event IDs for the same correlation, including conflicting
+wake times. The write logic and installed files remain unchanged. These deterministic
+controls reproduce an SDK mechanism; they cannot retrospectively classify the earlier
+CI failure whose log lacked event IDs. Removing a redundant fixture enqueue does not
+establish general SDK concurrency fencing or production safety.
+
+Run either bounded probe with `node --import
+./scripts/pack-admission-workflow-fixture/installAdmissionObserver.mjs` followed by
+its script path. Receipts distinguish scope, actual requests, returned IDs, raw
+records, the seam and source hashes. The exact scheduled-wake and read-effect
+oracles remain strict; repeated records are retained, and contradictory payloads
+for one event ID fail. Distinct waits at the same timestamp are not deduplicated.
+
+Failure capture now also covers parent timeout, signal and early child exit. The
+parent requests a bounded live snapshot, drains incremental operation records and
+reads raw journal/wait files before owned-child cleanup. It preserves the original
+error and explicitly marks unavailable or truncated evidence. Snapshots from these
+sources are not an atomic view of a live process. Tests force these paths and verify
+retained evidence and child cleanup; they do not claim a hung event loop can answer
+an IPC request.
