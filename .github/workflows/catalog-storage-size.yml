@@ -8,6 +8,12 @@ on:
       - "lib/supabase/context_requests/**"
       - "lib/mcp/tools/context/**"
       - ".github/workflows/catalog-storage-size.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig.json"
+      - "types/database.types.ts"
+      - "lib/supabase/serverClient.ts"
+      - "scripts/sites-evidence-sql-bridge/network-deny.ts"
 permissions:
   contents: read
 jobs:
@@ -20,10 +26,12 @@ jobs:
         postgres: [15, 17]
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/checkout@v4
         with:
           repository: recoupable/database
-          ref: codex/catalog-snapshot-size-proposal
+          ref: 5472d76b3ac0ff243b2a649fef64bed1bcabb0c6
           fetch-depth: 0
           path: .worktrees/catalog-database
           persist-credentials: false
