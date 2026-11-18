@@ -8,7 +8,7 @@ const schema = z
   })
   .strict();
 
-/** The browser may decide, but cannot choose the account, client, or permissions. */
+/** Parse decision/workspace choice; server resolution authorizes it and binds identity/scopes. */
 export function validateOAuthConsentBody(body: unknown) {
   return z
     .union([

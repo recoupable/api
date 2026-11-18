@@ -246,6 +246,7 @@ it("does not issue a selected ticket until a workspace is chosen and rechecks me
     `?consent_version=2&workspace_kind=organization&organization_id=${org}`,
   );
   expect(preview.status).toBe(200);
+  expect(preview.body.csrf).toEqual(expect.stringMatching(/^[A-Za-z0-9_-]{43}$/));
   membership.allowed = false;
   expect(
     (
@@ -279,4 +280,50 @@ it("revokes only the newly created selected grant on attribution write failure",
   ).toBe(400);
   expect(f.store.revokeGrant).toHaveBeenCalledOnce();
   expect(f.provider.interactionResult).not.toHaveBeenCalled();
+});
+
+it("allows ticket-bound denial after selected workspace membership is lost", async () => {
+  const f = fixture();
+  f.details.params.scope = "mcp:tools";
+  const org = "00000000-0000-4000-8000-000000000002";
+  const preview = await f.request(
+    undefined,
+    `?consent_version=2&workspace_kind=organization&organization_id=${org}`,
+  );
+  expect(preview.body.csrf).toEqual(expect.stringMatching(/^[A-Za-z0-9_-]{43}$/));
+  membership.allowed = false;
+  const body = {
+    decision: "deny",
+    csrf: preview.body.csrf,
+    consent_version: 2,
+    workspace_kind: "organization",
+    organization_id: org,
+  };
+  expect(
+    (await f.request({ ...body, organization_id: "00000000-0000-4000-8000-000000000003" })).status,
+  ).toBe(400);
+  expect((await f.request(body)).status).toBe(200);
+  expect(f.provider.interactionResult).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.anything(),
+    { error: "access_denied" },
+    { mergeWithLastSubmission: false },
+  );
+  expect((await f.request(body)).status).toBe(400);
+  expect(f.store.revokeGrant).not.toHaveBeenCalled();
+});
+
+it("keeps co-requested limited scope descriptions distinct in selected consent", async () => {
+  const f = fixture();
+  f.details.params.scope = "mcp:read mcp:write mcp:tools";
+  const preview = await f.request(undefined, "?consent_version=2&workspace_kind=personal");
+  expect(preview.status).toBe(200);
+  expect(preview.body.permissions).toEqual([
+    {
+      scope: "mcp:read",
+      description: "Read your personal artist profiles, social profiles, and chat list",
+    },
+    { scope: "mcp:write", description: "Create personal artists and update their profiles" },
+    { scope: "mcp:tools", description: expect.stringContaining("one selected workspace") },
+  ]);
 });

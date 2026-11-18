@@ -1,5 +1,5 @@
 /** Frozen consent capability v1. Do not derive this set from the evolving tool catalog. */
-export const selectedContextActions: ReadonlySet<string> = new Set([
+const actions = new Set<string>([
   "list_release_cases",
   "read_release_case",
   "read_release_case_review",
@@ -28,3 +28,8 @@ export const selectedContextActions: ReadonlySet<string> = new Set([
   "read",
   "brief",
 ]);
+
+/** Expose membership without exposing runtime Set mutation methods. */
+export const selectedContextActions = Object.freeze({
+  has: (action: string) => actions.has(action),
+});

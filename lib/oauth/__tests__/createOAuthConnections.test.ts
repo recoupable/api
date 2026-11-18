@@ -68,6 +68,7 @@ it.each([
     clientName: "Agent",
     ...(selected ? { selectedContext } : {}),
   });
+  expect(result.connections[0].selectedContext).toEqual(selected ? selectedContext : undefined);
   await expect(connections.list("00000000-0000-4000-8000-000000000002")).rejects.toThrow();
   await expect(
     connections.revoke("00000000-0000-4000-8000-000000000002", saved.idHash),

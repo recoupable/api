@@ -118,6 +118,13 @@ it("preserves valid selected workspace attribution and rejects a different perso
   };
   Object.assign(f.attribution.extra, { selectedContext });
   expect(await resolveOAuthAccess(f.options, "secret")).toMatchObject({ selectedContext });
+  f.token.scope = "mcp:read";
+  f.grant.getResourceScope = () => "mcp:read";
+  f.attribution.extra.scopes = ["mcp:read"];
+  expect(await resolveOAuthAccess(f.options, "secret")).toBeUndefined();
+  f.token.scope = "mcp:tools";
+  f.grant.getResourceScope = () => "mcp:tools";
+  f.attribution.extra.scopes = ["mcp:tools"];
   selectedContext.ownerId = "00000000-0000-4000-8000-000000000002";
   expect(await resolveOAuthAccess(f.options, "secret")).toBeUndefined();
 });

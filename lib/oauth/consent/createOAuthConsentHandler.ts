@@ -3,6 +3,7 @@ import type { AdapterFactory, Provider } from "oidc-provider";
 import type { OAuthRuntimeConfig } from "../loadOAuthConfig";
 import { oauthLaunchScopes } from "../oauthLaunchScopes";
 import type { OAuthConsentBinding } from "./createOAuthConsentTickets";
+import { parseSelectedContext } from "./parseSelectedContext";
 import { resolveSelectedContext } from "./resolveSelectedContext";
 import { listOAuthWorkspaces } from "./listOAuthWorkspaces";
 import { createOAuthConsentTickets } from "./createOAuthConsentTickets";
@@ -109,7 +110,7 @@ export function createOAuthConsentHandler(options: {
           permissions: scopes.map(scope => ({
             scope,
             description:
-              version === "2"
+              version === "2" && scope === "mcp:tools"
                 ? "Use Context tools to read and save briefs, ingest research, review releases, and plan or run Context jobs in one selected workspace. Jobs may contact external research services."
                 : oauthLaunchScopes[scope as keyof typeof oauthLaunchScopes],
           })),
@@ -123,11 +124,10 @@ export function createOAuthConsentHandler(options: {
       }
       if ("consent_version" in body) {
         const { decision: _decision, csrf: _csrf, consent_version: _version, ...selection } = body;
-        binding.selectedContext = await resolveSelectedContext(
-          identity.accountId,
-          scopes,
-          selection,
-        );
+        binding.selectedContext =
+          body.decision === "deny"
+            ? parseSelectedContext(identity.accountId, scopes, selection)
+            : await resolveSelectedContext(identity.accountId, scopes, selection);
       }
       await tickets.consume(body.csrf, binding);
       if (body.decision === "deny") {
