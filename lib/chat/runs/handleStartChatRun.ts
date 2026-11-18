@@ -1,3 +1,7 @@
+import { selectStreamProtocol } from "../continuation/selectStreamProtocol";
+import { buildContinuationMarker } from "../continuation/buildContinuationMarker";
+import { CONTINUATION_HEADER, type StreamProtocol } from "../continuation/streamProtocol";
+import { ContinuationError } from "../continuation/ContinuationError";
 import { prepareProjectionHistory } from "@/lib/chat/projection/prepareProjectionHistory";
 import { NextRequest, NextResponse } from "next/server";
 import { start } from "workflow/api";
@@ -48,6 +52,24 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
     return errorResponse("Projection history evidence unavailable", 400);
   }
 
+  let streamProtocol: StreamProtocol;
+  try {
+    streamProtocol = selectStreamProtocol(
+      messages,
+      false,
+      request.headers.get(CONTINUATION_HEADER),
+    );
+    if (streamProtocol === "canonical-base-v1") {
+      const base = messages.at(-1)!;
+      await buildContinuationMarker(base, base.id);
+    }
+  } catch (error) {
+    const code = error instanceof ContinuationError ? error.code : "stream_continuation_invalid";
+    return errorResponse(code, code === "stream_continuation_upgrade_required" ? 409 : 400, {
+      admission: "not_admitted",
+    });
+  }
+
   let ephemeralKeyId: string | undefined;
   try {
     const provisioned = await provisionRunSession({
@@ -63,6 +85,7 @@ export async function handleStartChatRun(request: NextRequest): Promise<Response
     const run = await start(runAgentWorkflow, [
       buildRunAgentInput({
         messages,
+        streamProtocol,
         chatId: provisioned.chat.id,
         sessionId: provisioned.session.id,
         accountId,

@@ -1,3 +1,4 @@
+import { gateStoredContinuation } from "@/lib/chat/continuation/gateStoredContinuation";
 import { it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -12,6 +13,9 @@ import { selectChats } from "@/lib/supabase/chats/selectChats";
 import { isSandboxActive } from "@/lib/sandbox/isSandboxActive";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
 import { start, getRun } from "workflow/api";
+vi.mock("@/lib/chat/continuation/gateStoredContinuation", () => ({
+  gateStoredContinuation: vi.fn(async () => null),
+}));
 
 vi.mock("@/lib/chat/validateChatWorkflow", () => ({ validateChatWorkflow: vi.fn() }));
 vi.mock("@/lib/supabase/sessions/selectSessions", () => ({ selectSessions: vi.fn() }));
@@ -89,7 +93,9 @@ vi.mock("@/lib/chat/validateStopChatWorkflowRequest", () => ({
   validateStopChatWorkflowRequest: vi.fn(),
 }));
 beforeEach(() => {
+  vi.mocked(gateStoredContinuation).mockResolvedValue(null);
   vi.resetAllMocks();
+  vi.mocked(gateStoredContinuation).mockResolvedValue(null);
   vi.useFakeTimers();
   mockValidated();
   mockSessionOwnedActive();

@@ -1,3 +1,4 @@
+import type { StreamProtocol } from "./continuation/streamProtocol";
 import type { UIMessage } from "ai";
 import type { RunAgentWorkflowInput } from "@/app/lib/workflows/runAgentWorkflow";
 import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
@@ -9,6 +10,7 @@ import type { CatalogSurfaceRequest } from "@/lib/intelligent-ui/catalogSurfaceR
 
 export type BuildRunAgentInputParams = {
   messages: UIMessage[];
+  streamProtocol?: StreamProtocol;
   devCatalogSurface?: CatalogSurfaceRequest;
   chatId: string;
   sessionId: string;
@@ -45,6 +47,7 @@ export type BuildRunAgentInputParams = {
  */
 export function buildRunAgentInput({
   messages,
+  streamProtocol,
   devCatalogSurface,
   chatId,
   sessionId,
@@ -65,6 +68,11 @@ export function buildRunAgentInput({
 
   return {
     messages,
+    streamProtocol:
+      streamProtocol ??
+      (!devCatalogSurface && messages.at(-1)?.role === "assistant"
+        ? "canonical-base-v1"
+        : "unmarked-v1"),
     ...(devCatalogSurface ? { devCatalogSurface } : {}),
     chatId,
     sessionId,

@@ -221,6 +221,7 @@ try {
     metadata: { trace: "original" },
   };
   const input = {
+    streamProtocol: "canonical-base-v1",
     chatId: "chat",
     sessionId: "session",
     accountId: authority.effectiveAccount,
@@ -388,6 +389,7 @@ try {
       sessionId: editPayload.admission_envelope.sessionId,
       messages: structuredClone(editPayload.admission_envelope.messages),
       modelId: editPayload.execution_snapshot.content.options.modelId,
+      streamProtocol: editPayload.execution_snapshot.content.streamProtocol,
       artistId: editPayload.execution_snapshot.content.options.artistId ?? undefined,
       interactive: editPayload.execution_snapshot.content.options.interactive,
       sessionTitle: editPayload.execution_snapshot.content.sessionTitle ?? undefined,

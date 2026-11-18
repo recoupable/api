@@ -1,7 +1,19 @@
+import { NextRequest } from "next/server";
+import { gateStoredContinuation } from "@/lib/chat/continuation/gateStoredContinuation";
+import { validateChatOwnership } from "@/lib/chat/validateChatOwnership";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { getRun } from "workflow/api";
 import { stopFencedChatWorkflow } from "../stopFencedChatWorkflow";
 import { resumeFencedChatStream } from "../resumeFencedChatStream";
+vi.mock("@/lib/chat/continuation/gateStoredContinuation", () => ({
+  gateStoredContinuation: vi.fn(async () => null),
+}));
+vi.mock("@/lib/chat/validateChatOwnership", () => ({
+  validateChatOwnership: vi.fn(async () => ({
+    auth: { accountId: "11111111-1111-4111-8111-111111111111" },
+    chat: { id: "chat", session_id: "session" },
+  })),
+}));
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("@/lib/supabase/serverClient", () => ({ default: { rpc } }));
 vi.mock("workflow/api", () => ({ getRun: vi.fn() }));
@@ -20,10 +32,15 @@ const current = {
   phase: "running",
   run_id: target.runId,
 };
-const url = new URL("https://api.test/stream?startIndex=3");
+const url = new NextRequest("https://api.test/stream?startIndex=3");
 const cancel = vi.fn();
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(gateStoredContinuation).mockResolvedValue(null);
+  vi.mocked(validateChatOwnership).mockResolvedValue({
+    auth: { accountId: target.effectiveAccount },
+    chat: { id: target.chatId, session_id: "session" },
+  } as never);
   vi.useFakeTimers();
   rpc.mockImplementation(async (_name, args) => ({
     data: args.p_action === "state" ? current : { released: true },
@@ -253,8 +270,25 @@ it.each(["running", "pending"])(
 );
 it("invalid resume index returns400 before lifecycle/SDK effects", async () => {
   expect(
-    (await resumeFencedChatStream(target, new URL("https://api.test?startIndex=-1"))).status,
+    (await resumeFencedChatStream(target, new NextRequest("https://api.test?startIndex=-1")))
+      .status,
   ).toBe(400);
   expect(rpc).not.toHaveBeenCalled();
   expect(getRun).not.toHaveBeenCalled();
 });
+it.each(["running", "completed"])(
+  "requires stored protocol before fenced %s reader or terminal release",
+  async status => {
+    vi.mocked(getRun).mockReturnValue({
+      status: Promise.resolve(status),
+      getReadable: vi.fn(),
+    } as never);
+    vi.mocked(gateStoredContinuation).mockResolvedValueOnce(
+      new Response(null, { status: 409 }) as never,
+    );
+    const response = await resumeFencedChatStream(target, url);
+    expect(response.status).toBe(409);
+    expect(getRun).not.toHaveBeenCalled();
+    expect(rpc.mock.calls.map(([, args]) => args.p_action)).toEqual(["state"]);
+  },
+);

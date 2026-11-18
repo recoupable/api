@@ -1,3 +1,4 @@
+import { assertMarkerFreeHistory } from "../continuation/assertMarkerFreeHistory";
 import type { UIMessage } from "ai";
 import { ProjectionEvidenceError } from "./ProjectionEvidenceError";
 import type { ProjectionOriginal } from "./projectionSchemas";
@@ -6,6 +7,7 @@ export async function prepareProjectionHistory(
   messages: UIMessage[],
   verify?: (observation: unknown, message: UIMessage) => Promise<ProjectionOriginal>,
 ): Promise<{ canonical: UIMessage[]; native: UIMessage[] }> {
+  assertMarkerFreeHistory(messages);
   const native: UIMessage[] = [];
   for (const message of messages) {
     const parts = [];

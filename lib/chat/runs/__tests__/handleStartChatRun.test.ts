@@ -140,7 +140,7 @@ describe("handleStartChatRun", () => {
   // output live". That route keys on chats.active_stream_id, so a headless run
   // that never claims the slot is unresumable (chat#1923).
   it("claims chats.active_stream_id with the run id so the run is resumable", async () => {
-    await handleStartChatRun({} as never);
+    await handleStartChatRun({ headers: new Headers() } as never);
 
     expect(compareAndSetChatActiveStreamId).toHaveBeenCalledWith("chat-1", null, "wrun_abc");
   });

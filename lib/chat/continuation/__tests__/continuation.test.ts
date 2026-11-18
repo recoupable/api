@@ -45,7 +45,6 @@ describe("canonical continuation contract", () => {
     { ...base, parts: [{ type: "custom", kind: "x" }] },
     { ...base, parts: [{ type: "text", text: 1 }] },
     { ...base, metadata: { recoupStream: {} } },
-    { ...base, parts: [{ type: "data-x", data: { recoupStream: {} } }] },
     { ...base, parts: Array.from({ length: 2049 }, () => ({ type: "text", text: "x" })) },
     { ...base, parts: [{ type: "text", text: "x".repeat(1_048_576) }] },
     { ...base, metadata: { bad: NaN } },
@@ -119,4 +118,73 @@ it("preserves originals nested inside canonical observation data", async () => {
     ],
   };
   expect((await buildContinuationMarker(canonical, "a")).base).toEqual(canonical);
+});
+it("retains opaque reserved-name keys inside provider originals and tool output", async () => {
+  const opaque = { recoupStream: { ordinary: "opaque value" } };
+  const canonical = {
+    ...base,
+    parts: [
+      {
+        type: "data-recoup-sdk-observation",
+        id: "observation",
+        data: {
+          original: {
+            type: "custom",
+            kind: "provider-content",
+            providerMetadata: { provider: opaque },
+          },
+        },
+      },
+      {
+        type: "tool-example",
+        toolCallId: "tool",
+        state: "output-available",
+        input: {},
+        output: opaque,
+      },
+    ],
+  };
+  expect(() => assertMarkerFreeHistory([canonical])).not.toThrow();
+  expect((await buildContinuationMarker(canonical, "a")).base).toEqual(canonical);
+});
+it("parses only the actual fenced tuple and binds its authority", () => {
+  const accountId = "11111111-1111-4111-8111-111111111111";
+  const run = record();
+  delete run.input[0].runId;
+  const invocation = {
+    kind: "internal-fenced/v1",
+    input: { ...run.input[0], accountId },
+    fence: {
+      authority: {
+        chatId: "chat",
+        effectiveAccount: accountId,
+        epoch: 1,
+        owner: "22222222-2222-4222-8222-222222222222",
+      },
+      attemptId: "33333333-3333-4333-8333-333333333333",
+      turn: { kind: "same-turn-resume", assistantId: "a" },
+    },
+  };
+  expect(
+    validateContinuationRun(
+      { ...run, input: [invocation] },
+      { ...scope, accountId },
+      "canonical-base-v1",
+    ),
+  ).toBe("canonical-base-v1");
+  expect(() =>
+    validateContinuationRun(
+      { ...run, input: { arbitrary: [invocation] } },
+      { ...scope, accountId },
+      "canonical-base-v1",
+    ),
+  ).toThrow();
+  invocation.fence.authority.chatId = "other";
+  expect(() =>
+    validateContinuationRun(
+      { ...run, input: [invocation] },
+      { ...scope, accountId },
+      "canonical-base-v1",
+    ),
+  ).toThrow();
 });

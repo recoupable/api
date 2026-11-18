@@ -43,6 +43,7 @@ vi.mock("workflow", () => ({
 }));
 
 const baseInput = {
+  streamProtocol: "canonical-base-v1" as const,
   messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }] } as never],
   chatId: "chat-1",
   sessionId: "session-1",
@@ -157,7 +158,7 @@ describe("runAgentWorkflow — per-iteration agent loop", () => {
     await runAgentWorkflow(baseInput);
 
     expect(sendStreamStart).toHaveBeenCalledTimes(1);
-    expect(sendStreamStart).toHaveBeenCalledWith(writableStub, "asst-loop-id");
+    expect(sendStreamStart).toHaveBeenCalledWith(writableStub, "asst-loop-id", undefined);
     expect(sendStreamFinish).toHaveBeenCalledTimes(1);
   });
 

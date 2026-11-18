@@ -1,3 +1,4 @@
+import { assertMarkerFreeHistory } from "./assertMarkerFreeHistory";
 import { validateUIMessages, type UIMessage } from "ai";
 import { z } from "zod";
 import { encodeBoundedContinuationValue } from "./encodeBoundedContinuationValue";
@@ -12,9 +13,10 @@ const schema = z
   .strict();
 /** Canonical base only; validation never translates or removes observation payloads. */
 export async function buildContinuationMarker(value: unknown, messageId: string) {
+  assertMarkerFreeHistory([value]);
   const marker = { version: 1 as const, mode: "continuation" as const, base: value };
   // Bounds apply to the complete marker, including its wrapper.
-  const json = encodeBoundedContinuationValue(marker, { rejectMarker: true });
+  const json = encodeBoundedContinuationValue(marker);
   const base = schema.safeParse(value);
   if (
     !base.success ||

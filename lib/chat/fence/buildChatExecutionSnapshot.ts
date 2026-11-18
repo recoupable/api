@@ -1,3 +1,4 @@
+import { assertMarkerFreeHistory } from "../continuation/assertMarkerFreeHistory";
 import { createHash } from "node:crypto";
 import type { RunAgentWorkflowInput } from "@/app/lib/workflows/runAgentWorkflow";
 import { chatExecutionSnapshotSchema } from "./chatExecutionSnapshotSchema";
@@ -15,6 +16,7 @@ export function buildChatExecutionSnapshot({
   workflowInput: RunAgentWorkflowInput;
   credentialPolicy: unknown;
 }) {
+  assertMarkerFreeHistory(input.messages);
   const { sandbox, skills, recoupOrgId } = input.agentContext;
   const { state } = sandbox;
   const source = state.source;
@@ -26,6 +28,7 @@ export function buildChatExecutionSnapshot({
     chatId: input.chatId,
     sessionId: input.sessionId,
     content: {
+      streamProtocol: input.streamProtocol,
       options: {
         modelId: input.modelId,
         artistId: input.artistId ?? null,

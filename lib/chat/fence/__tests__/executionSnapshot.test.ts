@@ -140,3 +140,20 @@ it("rejects a bound original whose dispatch history says never attempted", () =>
     }).receipt.bound_run_id,
   ).toBe("original-run");
 });
+
+it("binds stream protocol in the execution digest and rejects missing requirement", () => {
+  const base = { id: "protocol-snapshot", requestId, workflowInput, credentialPolicy: policy };
+  const original = buildChatExecutionSnapshot(base);
+  const changed = buildChatExecutionSnapshot({
+    ...base,
+    workflowInput: { ...workflowInput, streamProtocol: "canonical-base-v1" },
+  });
+  expect(changed.digest).not.toBe(original.digest);
+  expect(changed.snapshot.content.streamProtocol).toBe("canonical-base-v1");
+  expect(() =>
+    buildChatExecutionSnapshot({
+      ...base,
+      workflowInput: { ...workflowInput, streamProtocol: undefined } as never,
+    }),
+  ).toThrow();
+});

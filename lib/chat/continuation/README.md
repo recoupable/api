@@ -11,7 +11,8 @@ The base is canonical history after verification, never restored native history.
 Original payloads inside verified observation parts remain unchanged. Outer start
 ID must equal base ID (1..256 characters). Marker/base unknown keys, non-JSON
 values, invalid UI parts, raw custom/reasoning-file parts and nested recoupStream
-keys fail closed. Limits: complete marker UTF-8 JSON <=1,048,576 bytes, <=2048
+keys in message metadata fail closed. Opaque observation originals, provider metadata
+and tool input/output are data: a property named recoupStream there is preserved. Limits: complete marker UTF-8 JSON <=1,048,576 bytes, <=2048
 parts, depth <=32, <=50,000 visited values. No truncation or URL fetching.
 
 Every reader (initial, resume, tail and terminal success) first verifies current
@@ -35,3 +36,13 @@ before advertising capability. Remove only recoupStream; preserve other metadata
 Unmarked fresh/full replay/new ID/late-start and no-start-tail behavior remain App
 controls, as do collisions, scope cancellation and errors. Source tests with
 synthetic World/effect ports are not hosted retention, deployment or release proof.
+
+The three chat preflights (POST /api/chat, GET /api/chat/{chatId}/stream and
+POST /api/chat/runs) opt into this additional allowed request header through
+getCorsHeaders. Other published CORS contracts are unchanged. Initial readback
+also requires the stored requirement to equal the server-selected requirement.
+
+The disabled fenced reconnect adapter accepts a request, verifies current
+ownership, matches the captured original account/chat, then runs the same stored
+protocol gate before status, reader/tail or terminal release. It remains disabled;
+this change does not grant adapter deployment or database admission.

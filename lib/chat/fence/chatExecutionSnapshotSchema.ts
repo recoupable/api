@@ -1,3 +1,4 @@
+import { streamProtocolSchema } from "../continuation/streamProtocol";
 import { z } from "zod";
 import { chatAdmissionSchema } from "./chatAdmissionSchema";
 const text = z.string().min(1);
@@ -45,6 +46,7 @@ export const chatExecutionSnapshotSchema = z
     content: z
       .object({
         options: chatAdmissionSchema.shape.options,
+        streamProtocol: streamProtocolSchema,
         sessionTitle: z.string().nullable(),
         repoOwner: optionalText,
         repoName: optionalText,

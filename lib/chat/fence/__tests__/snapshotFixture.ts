@@ -3,6 +3,7 @@ import { canonicalizeChatAdmission } from "../canonicalizeChatAdmission";
 export const account = "11111111-1111-4111-8111-111111111111";
 export const requestId = "22222222-2222-4222-8222-222222222222";
 export const workflowInput = {
+  streamProtocol: "unmarked-v1" as const,
   messages: [
     { id: "user-1", role: "user" as const, parts: [{ type: "text" as const, text: "hello" }] },
   ],

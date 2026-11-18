@@ -73,6 +73,7 @@ beforeEach(() => {
 });
 
 const baseInput = {
+  streamProtocol: "canonical-base-v1" as const,
   messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }] } as never],
   chatId: "chat-1",
   sessionId: "session-1",

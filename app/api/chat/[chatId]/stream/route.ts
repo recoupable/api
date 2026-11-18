@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
-    headers: getCorsHeaders(),
+    headers: getCorsHeaders({ streamContinuation: true }),
   });
 }
 

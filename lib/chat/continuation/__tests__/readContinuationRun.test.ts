@@ -103,3 +103,19 @@ it("requires capability for marked runs and does not reclassify from a header", 
   fixture([{ ...input[0], streamProtocol: "unmarked-v1" }]);
   expect(await gateStoredContinuation(new Request("https://test"), scope, "existing")).toBeNull();
 });
+it("rejects initial readback that changes the server-selected requirement", async () => {
+  fixture([{ ...input[0], streamProtocol: "unmarked-v1" }]);
+  const response = await gateStoredContinuation(
+    new Request("https://test", {
+      headers: { "X-Recoup-Stream-Continuation": "canonical-base-v1" },
+    }),
+    scope,
+    "admitted",
+    "canonical-base-v1",
+  );
+  expect(response?.status).toBe(503);
+  expect(await response?.json()).toMatchObject({
+    admission: "admitted",
+    error: "stream_continuation_evidence_unavailable",
+  });
+});

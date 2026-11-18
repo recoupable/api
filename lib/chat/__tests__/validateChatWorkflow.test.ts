@@ -212,3 +212,14 @@ it("rejects actor overrides, missing explicit dates and obsolete context shape",
     vi.unstubAllEnvs();
   }
 });
+it("never accepts a body override of the server-owned stream requirement", async () => {
+  vi.mocked(validateAuthContext).mockResolvedValue({ accountId: ACCOUNT_ID, orgId: null } as never);
+  const result = await validateChatWorkflow(
+    new NextRequest("https://test/api/chat", {
+      method: "POST",
+      body: JSON.stringify({ ...validBody, streamProtocol: "canonical-base-v1" }),
+    }),
+  );
+  expect(result).not.toBeInstanceOf(NextResponse);
+  expect(result).not.toHaveProperty("streamProtocol");
+});

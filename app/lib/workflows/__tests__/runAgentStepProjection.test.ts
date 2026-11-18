@@ -1,6 +1,12 @@
+import { sendStreamStart } from "../sendStreamStart";
 import { beforeEach, expect, it, vi } from "vitest";
 import { createGateway } from "@ai-sdk/gateway";
-import { readUIMessageStream, type UIMessage, type UIMessageChunk } from "ai";
+import {
+  createUIMessageStreamResponse,
+  readUIMessageStream,
+  type UIMessage,
+  type UIMessageChunk,
+} from "ai";
 import { createRequire } from "node:module";
 import { writeFileSync } from "node:fs";
 import { runAgentStep } from "../runAgentStep";
@@ -51,7 +57,9 @@ async function produce(
     {
       type: "custom",
       kind: "provider.synthetic",
-      providerMetadata: { provider: { opaque: "kept" } },
+      providerMetadata: {
+        provider: { opaque: "kept", recoupStream: { ordinary: "opaque value" } },
+      },
     },
     { type: "reasoning-file", mediaType: "image/png", data: { type: "data", data: "AA==" } },
     {
@@ -241,4 +249,61 @@ it("actual SDK cancellation after projection returns canonical Stop with fresh p
     ),
   ).toBe(false);
   expect(result.generatedProjectionObservations?.observations.length).toBeGreaterThan(0);
+});
+
+it("exports actual marked producer wire for paired App replay qualification", async () => {
+  const first = await produce();
+  const cases = [];
+  // Durable history enters as JSON; SDK-only undefined properties are not stored.
+  for (const base of [
+    seed,
+    JSON.parse(JSON.stringify(first.result.responseMessage!)) as UIMessage,
+  ]) {
+    const generated = await produce(false, base);
+    const start: UIMessageChunk[] = [];
+    await sendStreamStart(
+      new WritableStream({
+        write(chunk) {
+          start.push(chunk);
+        },
+      }),
+      base.id,
+      base,
+    );
+    const chunks: UIMessageChunk[] = [
+      ...start,
+      ...generated.chunks,
+      { type: "finish", finishReason: "stop" },
+    ];
+    expect(start).toEqual([
+      {
+        type: "start",
+        messageId: base.id,
+        messageMetadata: { recoupStream: { version: 1, mode: "continuation", base } },
+      },
+    ]);
+    const wire = await createUIMessageStreamResponse({
+      stream: new ReadableStream({
+        start(controller) {
+          for (const chunk of chunks) controller.enqueue(chunk);
+          controller.close();
+        },
+      }),
+    }).text();
+    cases.push({ seed: base, chunks, result: generated.result, wire });
+  }
+  if (process.env.CHAT_CONTINUATION_FIXTURE_OUTPUT)
+    writeFileSync(
+      process.env.CHAT_CONTINUATION_FIXTURE_OUTPUT,
+      JSON.stringify(
+        {
+          contract: "canonical-base-v1",
+          cases,
+          scope:
+            "Actual start producer, runAgentStep, SDK7/Gateway with synthetic fetch, and actual API SSE serializer. Canonical seed originates from preceding synthetic SDK output; no live World proof admission. App full transport qualification is separate.",
+        },
+        null,
+        2,
+      ),
+    );
 });

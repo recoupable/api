@@ -1,9 +1,13 @@
+import { gateStoredContinuation } from "../continuation/gateStoredContinuation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 import { handleResumeChatStream } from "@/lib/chat/handleResumeChatStream";
 import { validateChatOwnership } from "@/lib/chat/validateChatOwnership";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
 import { getRun } from "workflow/api";
+vi.mock("../continuation/gateStoredContinuation", () => ({
+  gateStoredContinuation: vi.fn(async () => null),
+}));
 
 vi.mock("@/lib/chat/validateChatOwnership", () => ({ validateChatOwnership: vi.fn() }));
 vi.mock("@/lib/chat/compareAndSetChatActiveStreamId", () => ({
@@ -173,3 +177,19 @@ describe("handleResumeChatStream", () => {
     expect(res.headers.get("x-workflow-stream-tail-index")).toBeNull();
   });
 });
+
+it.each(["running", "completed"])(
+  "gates %s before status, reader, tail or stale-slot clear",
+  async status => {
+    withChat(RUN_ID);
+    const readable = withRun(status);
+    vi.mocked(gateStoredContinuation).mockResolvedValueOnce(
+      NextResponse.json({ error: "stream_continuation_upgrade_required" }, { status: 409 }),
+    );
+    const response = await handleResumeChatStream(request("?startIndex=99"), CHAT_ID);
+    expect(response.status).toBe(409);
+    expect(getRun).not.toHaveBeenCalled();
+    expect(readable).not.toHaveBeenCalled();
+    expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
+  },
+);

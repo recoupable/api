@@ -179,3 +179,14 @@ describe("canAccessAccount", () => {
     });
   });
 });
+it("does not treat null membership IDs as organization authority", async () => {
+  vi.mocked(getAccountOrganizations).mockResolvedValue([
+    { organization_id: null },
+    { organization_id: "org" },
+  ] as never);
+  vi.mocked(selectAccountOrganizationIds).mockResolvedValue([]);
+  expect(await canAccessAccount({ currentAccountId: "caller", targetAccountId: "target" })).toBe(
+    false,
+  );
+  expect(selectAccountOrganizationIds).toHaveBeenLastCalledWith("target", ["org"]);
+});

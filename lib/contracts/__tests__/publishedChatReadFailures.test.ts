@@ -1,3 +1,4 @@
+import { gateStoredContinuation } from "@/lib/chat/continuation/gateStoredContinuation";
 import Ajv from "ajv";
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,6 +23,9 @@ import { deleteChat } from "@/lib/supabase/chats/deleteChat";
 import { upsertChatRead } from "@/lib/supabase/chat_reads/upsertChatRead";
 import { start, getRun } from "workflow/api";
 import fixture from "../fixtures/published-docs.json";
+vi.mock("@/lib/chat/continuation/gateStoredContinuation", () => ({
+  gateStoredContinuation: vi.fn(async () => null),
+}));
 
 vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
 vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
@@ -74,6 +78,7 @@ function request(method: string, path: string, body?: unknown) {
 }
 
 beforeEach(() => {
+  vi.mocked(gateStoredContinuation).mockResolvedValue(null);
   vi.clearAllMocks();
   vi.mocked(validateAuthContext).mockResolvedValue({
     accountId,
