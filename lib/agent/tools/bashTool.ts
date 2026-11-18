@@ -1,5 +1,7 @@
-import { tool } from "ai";
+import { agentContextSchema } from "./agentContextSchema";
+import { tool, type ToolExecutionOptions } from "ai";
 import { z } from "zod";
+import type { AgentContext } from "@/lib/agent/tools/AgentContext";
 import * as path from "path";
 import { buildRecoupExecEnv } from "@/lib/agent/tools/buildRecoupExecEnv";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
@@ -60,8 +62,12 @@ IMPORTANT:
 - Never use interactive commands (vim, nano, top, bash, ssh, etc.)
 - Always quote file paths that may contain spaces
 - Use detached: true to start dev servers / long-running processes in the background`,
+  contextSchema: agentContextSchema,
   inputSchema: bashInputSchema,
-  execute: async ({ command, cwd, detached }, { experimental_context, abortSignal }) => {
+  execute: async (
+    { command, cwd, detached },
+    { context: experimental_context, abortSignal }: ToolExecutionOptions<AgentContext>,
+  ) => {
     const sandbox = await getSandbox(experimental_context, "bash");
     const workingDirectory = sandbox.workingDirectory;
     const workingDir = cwd

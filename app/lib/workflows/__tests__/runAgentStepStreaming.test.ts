@@ -14,6 +14,7 @@ vi.mock("@/lib/chat/persistAssistantMessage", () => ({
   persistAssistantMessage: vi.fn(),
 }));
 vi.mock("workflow", () => ({
+  getStepMetadata: vi.fn(() => ({ attempt: 1, stepId: "synthetic-streaming-step" })),
   getWorkflowMetadata: vi.fn(() => ({
     workflowRunId: "test-run-id",
     workflowName: "test",
@@ -70,7 +71,7 @@ describe("runAgentStep — streaming shape (mirrors upstream open-agents)", () =
         })(),
       ),
       finishReason: Promise.resolve("stop"),
-      response: Promise.resolve({ messages: [] }),
+      responseMessages: Promise.resolve([]),
     } as never);
     const { stream, written } = makeWritable();
 
@@ -86,7 +87,7 @@ describe("runAgentStep — streaming shape (mirrors upstream open-agents)", () =
     vi.mocked(streamText).mockReturnValue({
       toUIMessageStream: vi.fn(() => (async function* () {})()),
       finishReason: Promise.resolve("stop"),
-      response: Promise.resolve({ messages: [] }),
+      responseMessages: Promise.resolve([]),
     } as never);
     const { stream } = makeWritable();
 
@@ -104,8 +105,13 @@ describe("runAgentStep — streaming shape (mirrors upstream open-agents)", () =
           throw abortError;
         })(),
       ),
-      finishReason: Promise.reject(abortError),
-      response: Promise.reject(abortError),
+      // Match the SDK accessors: no eagerly rejected test-only promises.
+      get finishReason() {
+        return Promise.reject(abortError);
+      },
+      get responseMessages() {
+        return Promise.reject(abortError);
+      },
     } as never);
     const { stream } = makeWritable();
 

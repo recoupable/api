@@ -20,6 +20,10 @@ import tls from "node:tls";
 import http from "node:http";
 import https from "node:https";
 const require = createRequire(import.meta.url);
+// Standalone ESM bundle includes installed SDK CommonJS dependencies.
+// Same real require bridge as the projection fixture; no validation mocks.
+const previousRequire = globalThis.require;
+globalThis.require = require;
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 let networkAttempts = 0;
 const deny = () => {
@@ -49,12 +53,19 @@ async function copy(from, to) {
   bindings.push({ path: from, sha256: createHash("sha256").update(bytes).digest("hex") });
 }
 await copy("app/lib/workflows/runAgentWorkflow.ts", "workflow.ts");
+await mkdir(join(source, "projection"));
+for (const name of await readdir(join(root, "app/lib/workflows/projection")))
+  if (name.endsWith(".ts"))
+    await copy(`app/lib/workflows/projection/${name}`, `projection/${name}`);
 await mkdir(join(source, "fence"));
 for (const name of await readdir(join(root, "app/lib/workflows/fence")))
   if (name.endsWith(".ts")) await copy(`app/lib/workflows/fence/${name}`, `fence/${name}`);
 await copy("lib/chat/auto-commit/autoCommitChatTurn.ts", "autoCommitChatTurn.ts");
 for (const path of [
   "lib/chat/fence/encodeStrictJson.ts",
+  "lib/chat/continuation/buildContinuationMarker.ts",
+  "lib/chat/continuation/assertMarkerFreeHistory.ts",
+  "lib/chat/continuation/encodeBoundedContinuationValue.ts",
   "lib/chat/fence/persistence/createFencedMessageWriter.ts",
   "lib/supabase/chat_fence/executeChatFenceCommand.ts",
   "lib/chat/upsertAssistantDataPart.ts",
@@ -95,6 +106,9 @@ return {error:null,data:args.p_action==="bind"?{bound:true}:args.p_action==="rel
 }};
 `,
 );
+// Load the installed SDK natively in the synthetic provider seam. Bundling its
+// CJS OIDC dependency into the standalone ESM client breaks native require.
+// The real reader and network-denial assertions remain unchanged.
 const seams = [
   [
     "@/app/lib/workflows/generateAssistantMessageId",
@@ -117,7 +131,7 @@ const seams = [
   [
     "@/app/lib/workflows/runAgentStep",
     "runAgentStep",
-    'record("provider",{original:args[0].originalMessages}); const {readUIMessageStream}=await import("ai"); const initial=args[0].originalMessages[0]; const stream=new ReadableStream({start(c){c.enqueue({type:"start",messageId:initial.id});c.enqueue({type:"text-start",id:"generated"});c.enqueue({type:"text-delta",id:"generated",delta:"synthetic result"});c.enqueue({type:"text-end",id:"generated"});c.enqueue({type:"finish"});c.close();}}); let responseMessage; for await(const value of readUIMessageStream({message:initial,stream})) responseMessage=value; record("sdk-optional",Object.hasOwn(responseMessage.parts.at(-1),"providerMetadata")); return {finishReason:scenario().fail==="iteration"?"tool-calls":"stop",aborted:false,responseMessages:[],responseMessage};',
+    'record("provider",{original:args[0].originalMessages}); const sdkModule="ai"; const {readUIMessageStream}=await import(sdkModule); const initial=args[0].originalMessages[0]; const stream=new ReadableStream({start(c){c.enqueue({type:"start",messageId:initial.id});c.enqueue({type:"text-start",id:"generated"});c.enqueue({type:"text-delta",id:"generated",delta:"synthetic result"});c.enqueue({type:"text-end",id:"generated"});c.enqueue({type:"finish"});c.close();}}); let responseMessage; for await(const value of readUIMessageStream({message:initial,stream})) responseMessage=value; record("sdk-optional",Object.hasOwn(responseMessage.parts.at(-1),"providerMetadata")); return {finishReason:scenario().fail==="iteration"?"tool-calls":"stop",aborted:false,responseMessages:[],responseMessage};',
   ],
   [
     "@/app/lib/workflows/persistAssistantMessageStep",
@@ -214,6 +228,7 @@ try {
     metadata: { trace: "original" },
   };
   const input = {
+    streamProtocol: "canonical-base-v1",
     chatId: "chat",
     sessionId: "session",
     accountId: authority.effectiveAccount,
@@ -259,6 +274,9 @@ try {
     "catalog",
     "new-object",
     "resume",
+    "resume-unmarked",
+    "resume-malformed",
+    "resume-oversized",
     "legacy",
   ]) {
     await writeFile(join(effects, "events.jsonl"), "");
@@ -274,17 +292,22 @@ try {
     };
     if (name === "catalog" || name === "catalog-fail") invocation.input.devCatalogSurface = {};
     if (name === "iteration") invocation.input.modelId = "synthetic";
-    if (name === "new-object" || name === "resume")
+    if (name === "new-object" || name.startsWith("resume"))
       invocation.input.messages.push({
         id: "historical-assistant",
         role: "assistant",
         parts: [{ type: "text", text: "OLD" }],
         metadata: { trace: "old" },
       });
-    if (name === "resume")
+    if (name.startsWith("resume"))
       invocation.fence.turn = { kind: "same-turn-resume", assistantId: "historical-assistant" };
+    if (name === "resume-unmarked") invocation.input.streamProtocol = "unmarked-v1";
+    if (name === "resume-malformed") invocation.input.messages.at(-1).parts[0].text = 3;
+    if (name === "resume-oversized") invocation.input.messages.at(-1).parts = Array.from({ length: 2049 }, () => ({ type: "text", text: "prior" }));
     const run = await start(runAgentWorkflow, [name === "legacy" ? invocation.input : invocation]);
-    if (
+    if (name.startsWith("resume-"))
+      await assert.rejects(bounded(run.returnValue), /Continuation/);
+    else if (
       [
         "bind",
         "user",
@@ -314,6 +337,13 @@ try {
         assert.equal(c.p.owner, authority.owner);
       }
       if (name === "bind") assert.deepEqual(actions, ["rpc"]);
+      if (name.startsWith("resume-")) {
+        assert.deepEqual(commands.map(c => c.p_action), ["bind"]);
+        assert(!actions.includes("provider"));
+        assert(!actions.includes("stream-start"));
+        assert(!actions.includes("credits"));
+        assert(!actions.includes("commit"));
+      }
       if (name === "user") {
         assert(!actions.includes("routing"));
         assert(!actions.includes("provider"));
@@ -381,6 +411,7 @@ try {
       sessionId: editPayload.admission_envelope.sessionId,
       messages: structuredClone(editPayload.admission_envelope.messages),
       modelId: editPayload.execution_snapshot.content.options.modelId,
+      streamProtocol: editPayload.execution_snapshot.content.streamProtocol,
       artistId: editPayload.execution_snapshot.content.options.artistId ?? undefined,
       interactive: editPayload.execution_snapshot.content.options.interactive,
       sessionTitle: editPayload.execution_snapshot.content.sessionTitle ?? undefined,
@@ -496,6 +527,8 @@ try {
     ),
   );
 } finally {
+  if (previousRequire === undefined) delete globalThis.require;
+  else globalThis.require = previousRequire;
   await world?.close();
   process.chdir(old);
   await rm(temp, { recursive: true, force: true });

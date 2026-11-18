@@ -1,3 +1,11 @@
+import { assertFirstChatEffectAttempt } from "./projection/assertFirstChatEffectAttempt";
+import { collectCanonicalProjection } from "@/lib/chat/projection/collectCanonicalProjection";
+import {
+  ProjectionEvidenceError,
+  type ProjectionEvidenceCode,
+} from "@/lib/chat/projection/ProjectionEvidenceError";
+import type { ProjectionProof } from "@/lib/chat/projection/projectionSchemas";
+import { buildToolsContext } from "@/lib/agent/tools/buildToolsContext";
 import { streamText, type ModelMessage, type UIMessage, type UIMessageChunk } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
@@ -13,7 +21,7 @@ import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
 import { closeOpenToolCalls } from "@/lib/chat/closeOpenToolCalls";
 import { isAbortError } from "@/lib/chat/isAbortError";
 import { isRunCancelled } from "@/lib/chat/isRunCancelled";
-import { getWorkflowMetadata } from "workflow";
+import { getWorkflowMetadata, getStepMetadata } from "workflow";
 
 export type RunAgentStepInput = {
   /**
@@ -29,6 +37,7 @@ export type RunAgentStepInput = {
    * cumulative and each persist overwrites one row.
    */
   originalMessages: UIMessage[];
+  nativeOriginalMessages?: UIMessage[];
   modelId: string;
   reasoningEffort?: "low" | "medium" | "high";
   writable: WritableStream<UIMessageChunk>;
@@ -72,6 +81,13 @@ export type RunAgentStepInput = {
 
 export type RunAgentStepResult = {
   finishReason: string;
+  nativeResponseMessage?: UIMessage;
+  generatedProjectionObservations?: ProjectionProof;
+  compatibilityFailure?: {
+    code: ProjectionEvidenceCode;
+    observedMetadata?: AgentMessageMetadata;
+    usageComplete: boolean;
+  };
   /**
    * The assembled assistant message captured from the stream's `onFinish`,
    * cumulative across iterations via `originalMessages`. `undefined` if the
@@ -86,7 +102,7 @@ export type RunAgentStepResult = {
    * next iteration continues the conversation instead of repeating it.
    */
   responseMessages: ModelMessage[];
-  /** True when the user stopped the run; `runAgentWorkflow` skips billing + auto-commit on abort. */
+  /** True for confirmed user-stop; existing usage billing remains, auto-commit is skipped. */
   aborted: boolean;
 };
 
@@ -112,6 +128,8 @@ export type RunAgentStepResult = {
  */
 export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentStepResult> {
   "use step";
+
+  assertFirstChatEffectAttempt("generation");
 
   console.log("[runAgentStep] start", {
     modelId: input.modelId,
@@ -166,11 +184,11 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     ...(input.modelId === "openai/gpt-6-astra"
       ? { providerOptions: { openai: { reasoningEffort: input.reasoningEffort ?? "medium" } } }
       : {}),
-    system: systemPrompt,
+    instructions: systemPrompt,
     messages: addCacheControlToMessages({ messages: input.modelMessages, model: input.modelId }),
     tools,
     abortSignal: cancelController.signal,
-    experimental_context: agentContext,
+    toolsContext: buildToolsContext(tools, agentContext),
   });
 
   // `messageMetadata` emits {modelId, usage, cost} chunks the UI renders as
@@ -181,10 +199,17 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     previousMessage?.role === "assistant"
       ? (previousMessage.metadata as AgentMessageMetadata | undefined)
       : undefined;
-  const messageMetadata = buildMessageMetadataCallback({
+  const buildMetadata = buildMessageMetadataCallback({
     modelId: input.modelId,
     seed: previousMetadata,
   });
+
+  let observedMetadata: AgentMessageMetadata | undefined = previousMetadata;
+  const messageMetadata: ReturnType<typeof buildMessageMetadataCallback> = event => {
+    const metadata = buildMetadata(event);
+    if (metadata) observedMetadata = metadata;
+    return metadata;
+  };
 
   // Drive the stream directly and write each part to the shared writable,
   // mirroring upstream open-agents. There is deliberately no
@@ -195,67 +220,120 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // from the transcript (chat#1918). Persistence now lives in the workflow
   // body via `persistAssistantMessageStep`.
   let responseMessage: UIMessage | undefined;
+  let nativeResponseMessage: UIMessage | undefined;
+  let generatedProjectionObservations: ProjectionProof | undefined;
+  let projected = input.originalMessages.some(message =>
+    message.parts.some(part => part.type === "data-recoup-sdk-observation"),
+  );
   let finishReason: string;
   let responseMessages: ModelMessage[] = [];
 
   try {
-    for await (const part of result.toUIMessageStream<UIMessage>({
-      messageMetadata,
-      generateMessageId: () => input.assistantMessageId,
-      // Continue building the in-progress assistant message rather than
-      // starting a new one, so `responseMessage` stays cumulative across
-      // iterations and each persist overwrites a single row.
-      originalMessages: input.originalMessages,
-      // The turn's `start`/`finish` chunks are emitted ONCE by the workflow
-      // body (`sendStreamStart` / `sendStreamFinish`). Without this the client
-      // would see one per iteration and render N assistant messages.
-      sendStart: false,
-      sendFinish: false,
-      onFinish: ({ responseMessage: finalMessage }) => {
-        responseMessage = finalMessage;
+    const canonical = await collectCanonicalProjection({
+      previous:
+        previousMessage?.role === "assistant"
+          ? previousMessage
+          : { id: input.assistantMessageId, role: "assistant", parts: [] },
+      runId: workflowRunId,
+      stepId: () => getStepMetadata().stepId,
+      isCancellation: async error =>
+        isAbortError(error) ||
+        cancelController.signal.aborted ||
+        (await isRunCancelled(workflowRunId)),
+      onProjection: () => {
+        projected = true;
       },
-    })) {
-      // A writer lock taken inside a step applies only within that step, so
-      // sequential steps can share one stream. Release per part so the step's
-      // request can terminate.
-      const writer = input.writable.getWriter();
-      try {
-        await writer.write(part);
-      } finally {
-        writer.releaseLock();
-      }
-    }
+      stream: result.toUIMessageStream<UIMessage>({
+        messageMetadata,
+        generateMessageId: () => input.assistantMessageId,
+        // Continue building the in-progress assistant message rather than
+        // starting a new one, so `responseMessage` stays cumulative across
+        // iterations and each persist overwrites a single row.
+        originalMessages: input.nativeOriginalMessages ?? input.originalMessages,
+        // The turn's `start`/`finish` chunks are emitted ONCE by the workflow
+        // body (`sendStreamStart` / `sendStreamFinish`). Without this the client
+        // would see one per iteration and render N assistant messages.
+        sendStart: false,
+        sendFinish: false,
+        onEnd: ({ responseMessage: finalMessage }) => {
+          nativeResponseMessage = finalMessage;
+          responseMessage = finalMessage;
+        },
+      }),
+      write: async part => {
+        // A writer lock taken inside a step applies only within that step, so
+        // sequential steps can share one stream. Release per part so the step's
+        // request can terminate.
+        const writer = input.writable.getWriter();
+        try {
+          await writer.write(part);
+        } finally {
+          writer.releaseLock();
+        }
+      },
+    });
+    if (projected) responseMessage = canonical.message;
+    if (canonical.generatedProjectionObservations.observations.length)
+      generatedProjectionObservations = canonical.generatedProjectionObservations;
 
-    // `response.messages` is the assistant message for this call plus any
-    // tool-result message — exactly what the next iteration needs appended.
-    // (`result.responseMessages` is ai@7; this repo is on 6.0.190.)
-    const [reason, response] = await Promise.all([result.finishReason, result.response]);
+    if (canonical.cancelled) throw new DOMException("Confirmed user Stop", "AbortError");
+
+    // v7 exposes the complete generated history separately from response metadata.
+    const [reason, messages] = await Promise.all([result.finishReason, result.responseMessages]);
     finishReason = reason;
-    responseMessages = response.messages;
+    responseMessages = messages;
   } catch (error) {
+    // A typed projection/write failure stays a failure even when cancellation also
+    // fires. Mere presence of verified projected history is not a failure latch.
+    const confirmedStop =
+      !(error instanceof ProjectionEvidenceError) &&
+      (isAbortError(error) ||
+        cancelController.signal.aborted ||
+        (await isRunCancelled(workflowRunId)));
+    if (error instanceof ProjectionEvidenceError || (projected && !confirmedStop)) {
+      cancelController.abort();
+      void Promise.resolve(result.finishReason).catch(() => {});
+      void Promise.resolve(result.responseMessages).catch(() => {});
+      return {
+        finishReason: "error",
+        responseMessage: undefined,
+        responseMessages: [],
+        aborted: false,
+        compatibilityFailure: {
+          code: error instanceof ProjectionEvidenceError ? error.code : "evidence_unavailable",
+          observedMetadata,
+          usageComplete: false,
+        },
+      };
+    }
     // Three ways a user-stop surfaces here: the stream throws AbortError; the
     // poller already flipped our signal; or `run.cancel()` closed the workflow
     // writable underneath us and the write threw something unrelated before
     // the poller noticed. Confirm the last case against the run itself so a
     // genuine failure still propagates.
-    if (
-      !isAbortError(error) &&
-      !cancelController.signal.aborted &&
-      !(await isRunCancelled(workflowRunId))
-    )
-      throw error;
+    if (!confirmedStop) throw error;
 
-    // User-stop. `result.finishReason` / `result.response` reject once
+    // User-stop. `result.finishReason` / `result.responseMessages` reject once
     // streamText aborts — swallow them so they don't surface as unhandled.
     void Promise.resolve(result.finishReason).catch(() => {});
-    void Promise.resolve(result.response).catch(() => {});
+    void Promise.resolve(result.responseMessages).catch(() => {});
     finishReason = "stop";
     // Close any tool-call parts left without a terminal result, otherwise a
     // reload renders them spinning forever. The workflow body persists it.
-    if (responseMessage) responseMessage = closeOpenToolCalls(responseMessage);
+    if (responseMessage) {
+      responseMessage = closeOpenToolCalls(responseMessage);
+      if (projected && observedMetadata)
+        responseMessage = { ...responseMessage, metadata: observedMetadata };
+    }
 
     console.log("[runAgentStep] aborted", { hasResponseMessage: !!responseMessage });
-    return { finishReason, responseMessage, responseMessages: [], aborted: true };
+    return {
+      finishReason,
+      responseMessage,
+      responseMessages: [],
+      aborted: true,
+      ...(projected ? { nativeResponseMessage, generatedProjectionObservations } : {}),
+    };
   } finally {
     poller.stop();
     cancelController.abort();
@@ -267,5 +345,11 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     hasResponseMessage: !!responseMessage,
     responseMessageCount: responseMessages.length,
   });
-  return { finishReason, responseMessage, responseMessages, aborted: false };
+  return {
+    finishReason,
+    responseMessage,
+    responseMessages,
+    aborted: false,
+    ...(projected ? { nativeResponseMessage, generatedProjectionObservations } : {}),
+  };
 }

@@ -13,7 +13,7 @@ export const maxDuration = 800;
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
-    headers: getCorsHeaders(),
+    headers: getCorsHeaders({ streamContinuation: true }),
   });
 }
 

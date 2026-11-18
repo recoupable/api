@@ -1,3 +1,4 @@
+import { gateStoredContinuation } from "@/lib/chat/continuation/gateStoredContinuation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -9,6 +10,9 @@ import { isSandboxActive } from "@/lib/sandbox/isSandboxActive";
 import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatActiveStreamId";
 import { persistLatestUserMessage } from "@/lib/chat/persistLatestUserMessage";
 import { start, getRun } from "workflow/api";
+vi.mock("@/lib/chat/continuation/gateStoredContinuation", () => ({
+  gateStoredContinuation: vi.fn(async () => null),
+}));
 
 vi.mock("@/lib/chat/validateChatWorkflow", () => ({ validateChatWorkflow: vi.fn() }));
 vi.mock("@/lib/supabase/sessions/selectSessions", () => ({ selectSessions: vi.fn() }));
@@ -102,7 +106,9 @@ function mockStartedRun(runId = "wrun_test_run_1") {
 }
 
 beforeEach(() => {
+  vi.mocked(gateStoredContinuation).mockResolvedValue(null);
   vi.resetAllMocks();
+  vi.mocked(gateStoredContinuation).mockResolvedValue(null);
   mockValidated();
   vi.mocked(validateChatWorkflow).mockResolvedValue({
     messages: [
@@ -150,6 +156,7 @@ describe("POST start recovery with the real reconciliation path", () => {
       expect(response.status).toBe(409);
       expect(await response.json()).toMatchObject({
         error: expect.stringContaining("GET /api/chat/"),
+        admission: "not_admitted",
       });
       expect(response.headers.get("x-workflow-run-id")).toBeNull();
       expect(getReadable).not.toHaveBeenCalled();

@@ -1,3 +1,5 @@
+import { raceToolExecution } from "./raceToolExecution";
+import { wrapToolAsyncIterable } from "./wrapToolAsyncIterable";
 import type { ToolSet } from "ai";
 
 export class ToolAbortedError extends Error {
@@ -8,7 +10,8 @@ export class ToolAbortedError extends Error {
 }
 
 /**
- * Races every tool's `execute` promise against `signal`. On abort, even tools
+ * Preserves synchronous async-iterable results and races each operation against `signal`.
+ * On abort, even tools
  * that ignore their own abortSignal reject with {@link ToolAbortedError} so
  * `streamText` can move on instead of hanging the agent loop.
  */
@@ -20,23 +23,29 @@ export function wrapToolsWithAbort<T extends ToolSet>(tools: T, signal: AbortSig
       wrapped[name] = tool;
       continue;
     }
-    const originalExecute = execute.bind(tool) as (
-      input: unknown,
-      options: unknown,
-    ) => Promise<unknown>;
+    const originalExecute = execute.bind(tool) as (input: unknown, options: unknown) => unknown;
     wrapped[name] = {
       ...tool,
-      execute: async (input: unknown, options: unknown) => {
-        if (signal.aborted) throw new ToolAbortedError(name);
-        let onAbort: (() => void) | undefined;
-        const abortPromise = new Promise<never>((_, reject) => {
-          onAbort = () => reject(new ToolAbortedError(name));
-          signal.addEventListener("abort", onAbort, { once: true });
-        });
+      execute: (input: unknown, options: unknown) => {
+        const createAbortError = () => new ToolAbortedError(name);
+        if (signal.aborted) return Promise.reject(createAbortError());
         try {
-          return await Promise.race([originalExecute(input, options), abortPromise]);
-        } finally {
-          if (onAbort) signal.removeEventListener("abort", onAbort);
+          const result = originalExecute(input, options);
+          if (
+            result !== null &&
+            typeof result === "object" &&
+            Symbol.asyncIterator in result &&
+            typeof result[Symbol.asyncIterator] === "function"
+          ) {
+            return wrapToolAsyncIterable(
+              result as AsyncIterable<unknown>,
+              signal,
+              createAbortError,
+            );
+          }
+          return raceToolExecution(result, signal, createAbortError);
+        } catch (error) {
+          return Promise.reject(error);
         }
       },
     } as T[keyof T];

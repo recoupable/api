@@ -1,5 +1,7 @@
-import { tool } from "ai";
+import { agentContextSchema } from "./agentContextSchema";
+import { tool, type ToolExecutionOptions } from "ai";
 import { z } from "zod";
+import type { AgentContext } from "@/lib/agent/tools/AgentContext";
 import * as path from "path";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
 import { shellEscape } from "@/lib/agent/tools/shellEscape";
@@ -53,10 +55,11 @@ IMPORTANT:
 - ALWAYS use this tool for code/content searches instead of running grep/rg via bashTool
 - Use caseSensitive: false for case-insensitive searches
 - Hidden files and node_modules are skipped when searching directories`,
+  contextSchema: agentContextSchema,
   inputSchema: grepInputSchema,
   execute: async (
     { pattern, path: searchPath, glob, caseSensitive = true },
-    { experimental_context, abortSignal },
+    { context: experimental_context, abortSignal }: ToolExecutionOptions<AgentContext>,
   ) => {
     const sandbox = await getSandbox(experimental_context, "grep");
     const workingDirectory = sandbox.workingDirectory;

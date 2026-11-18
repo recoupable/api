@@ -4,7 +4,7 @@
     "initial": {
       "request_id": "22222222-2222-4222-8222-222222222222",
       "expected_epoch": 0,
-      "input_hash": "71acdefa8e3a92effd0291467252e6572358c4e67870e5c132de325f69841cec",
+      "input_hash": "db2e9511bb983e896faffdbf8e2366f6b86a6338af44689e32e2c5db6015b49b",
       "admission_envelope": {
         "contractVersion": "chat-admission/v1",
         "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -61,7 +61,7 @@
         },
         "executionSnapshot": {
           "id": "original-success",
-          "digest": "8543a2e837dd8e78d88d642378c661cf7411c5f5d8dcb8e11b50fa86d2b65512"
+          "digest": "b7b2df2e87bdd789bcaced96661a0d1e5948bc8bb9ea8043e816633a8c49cea0"
         }
       },
       "execution_snapshot": {
@@ -78,6 +78,7 @@
             "interactive": true,
             "devSurface": null
           },
+          "streamProtocol": "unmarked-v1",
           "sessionTitle": null,
           "repoOwner": null,
           "repoName": null,
@@ -115,20 +116,20 @@
           }
         }
       },
-      "admission_canonical": "{\"chatId\":\"edited-success\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"8543a2e837dd8e78d88d642378c661cf7411c5f5d8dcb8e11b50fa86d2b65512\",\"id\":\"original-success\"},\"expectedEpoch\":0,\"messages\":[{\"id\":\"success/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"success/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"success/old-user\",\"parts\":[{\"text\":\"old\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"success/old-assistant\",\"parts\":[{\"text\":\"old answer\",\"type\":\"text\"}],\"role\":\"assistant\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-success\"}",
-      "execution_canonical": "{\"chatId\":\"edited-success\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"original-success\",\"requestId\":\"22222222-2222-4222-8222-222222222222\",\"sessionId\":\"session-success\"}"
+      "admission_canonical": "{\"chatId\":\"edited-success\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"b7b2df2e87bdd789bcaced96661a0d1e5948bc8bb9ea8043e816633a8c49cea0\",\"id\":\"original-success\"},\"expectedEpoch\":0,\"messages\":[{\"id\":\"success/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"success/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"success/old-user\",\"parts\":[{\"text\":\"old\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"success/old-assistant\",\"parts\":[{\"text\":\"old answer\",\"type\":\"text\"}],\"role\":\"assistant\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-success\"}",
+      "execution_canonical": "{\"chatId\":\"edited-success\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"original-success\",\"requestId\":\"22222222-2222-4222-8222-222222222222\",\"sessionId\":\"session-success\"}"
     },
     "prepared": {
       "admission": {
         "action": "admit",
         "payload": {
-          "admission_canonical": "{\"chatId\":\"edited-success\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"90cbf801b236d5cae7ab572293b65a604f77f75edc891eab40b5e0b2829d7019\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"success/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"success/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"success/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"edited\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-success\"}",
+          "admission_canonical": "{\"chatId\":\"edited-success\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"64c1ff194002dd8ce5fedce22180d1476165710dfd7daa2075fe0339cd71b66f\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"success/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"success/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"success/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"edited\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-success\"}",
           "admission_envelope": {
             "chatId": "edited-success",
             "contractVersion": "chat-admission/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
             "executionSnapshot": {
-              "digest": "90cbf801b236d5cae7ab572293b65a604f77f75edc891eab40b5e0b2829d7019",
+              "digest": "64c1ff194002dd8ce5fedce22180d1476165710dfd7daa2075fe0339cd71b66f",
               "id": "edited-snapshot"
             },
             "expectedEpoch": 2,
@@ -175,7 +176,7 @@
             },
             "sessionId": "session-success"
           },
-          "execution_canonical": "{\"chatId\":\"edited-success\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-success\"}",
+          "execution_canonical": "{\"chatId\":\"edited-success\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-success\"}",
           "execution_snapshot": {
             "chatId": "edited-success",
             "content": {
@@ -219,7 +220,8 @@
                 "workingDirectory": "/workspace"
               },
               "sessionTitle": null,
-              "skills": []
+              "skills": [],
+              "streamProtocol": "unmarked-v1"
             },
             "contractVersion": "chat-execution/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -228,7 +230,7 @@
             "sessionId": "session-success"
           },
           "expected_epoch": 2,
-          "input_hash": "61d8a4c23264639bfd1bb977652e7f191bb0f4d27cd2413e3830796b4b3a8a52",
+          "input_hash": "0ea37bfb32b621a31d90a414380ad450427ab0ceac98d885197536156107244f",
           "request_id": "66666666-6666-4666-8666-666666666666"
         }
       },
@@ -245,13 +247,13 @@
       "admission": {
         "action": "admit",
         "payload": {
-          "admission_canonical": "{\"chatId\":\"edited-success\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"90cbf801b236d5cae7ab572293b65a604f77f75edc891eab40b5e0b2829d7019\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"success/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"success/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"success/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"changed-content-same-identity\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-success\"}",
+          "admission_canonical": "{\"chatId\":\"edited-success\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"64c1ff194002dd8ce5fedce22180d1476165710dfd7daa2075fe0339cd71b66f\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"success/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"success/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"success/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"changed-content-same-identity\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-success\"}",
           "admission_envelope": {
             "chatId": "edited-success",
             "contractVersion": "chat-admission/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
             "executionSnapshot": {
-              "digest": "90cbf801b236d5cae7ab572293b65a604f77f75edc891eab40b5e0b2829d7019",
+              "digest": "64c1ff194002dd8ce5fedce22180d1476165710dfd7daa2075fe0339cd71b66f",
               "id": "edited-snapshot"
             },
             "expectedEpoch": 2,
@@ -298,7 +300,7 @@
             },
             "sessionId": "session-success"
           },
-          "execution_canonical": "{\"chatId\":\"edited-success\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-success\"}",
+          "execution_canonical": "{\"chatId\":\"edited-success\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-success\"}",
           "execution_snapshot": {
             "chatId": "edited-success",
             "content": {
@@ -342,7 +344,8 @@
                 "workingDirectory": "/workspace"
               },
               "sessionTitle": null,
-              "skills": []
+              "skills": [],
+              "streamProtocol": "unmarked-v1"
             },
             "contractVersion": "chat-execution/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -351,7 +354,7 @@
             "sessionId": "session-success"
           },
           "expected_epoch": 2,
-          "input_hash": "aa50b715562a45a932d575bc6623aad20f7881f67b7b44b85be9b83bac24475d",
+          "input_hash": "060a6f17985c24d1b7f8bcc78d1b6c470600130409fdaa5eb7053efc4539319c",
           "request_id": "66666666-6666-4666-8666-666666666666"
         }
       },
@@ -387,7 +390,7 @@
     "initial": {
       "request_id": "22222222-2222-4222-8222-222222222222",
       "expected_epoch": 0,
-      "input_hash": "641559616b79385c8f3831ba84b33f78e0ededd9d7605c4e613c00a86c145073",
+      "input_hash": "00d8cc47ac056924c94a29c0e336c2db2dd897213ee9f3f9969e5a4b8bf55ced",
       "admission_envelope": {
         "contractVersion": "chat-admission/v1",
         "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -444,7 +447,7 @@
         },
         "executionSnapshot": {
           "id": "original-newer-owner",
-          "digest": "c7f434f99fd5b1b9ccb1aac0e874f1726d686572af53940ed6bb34b6522e66d9"
+          "digest": "20c812c4e12819d19bea2e1604b944d321812c0f694fed0a8152ee98a2c78b1b"
         }
       },
       "execution_snapshot": {
@@ -461,6 +464,7 @@
             "interactive": true,
             "devSurface": null
           },
+          "streamProtocol": "unmarked-v1",
           "sessionTitle": null,
           "repoOwner": null,
           "repoName": null,
@@ -498,20 +502,20 @@
           }
         }
       },
-      "admission_canonical": "{\"chatId\":\"edited-newer-owner\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"c7f434f99fd5b1b9ccb1aac0e874f1726d686572af53940ed6bb34b6522e66d9\",\"id\":\"original-newer-owner\"},\"expectedEpoch\":0,\"messages\":[{\"id\":\"newer-owner/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"newer-owner/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"newer-owner/old-user\",\"parts\":[{\"text\":\"old\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"newer-owner/old-assistant\",\"parts\":[{\"text\":\"old answer\",\"type\":\"text\"}],\"role\":\"assistant\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-newer-owner\"}",
-      "execution_canonical": "{\"chatId\":\"edited-newer-owner\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"original-newer-owner\",\"requestId\":\"22222222-2222-4222-8222-222222222222\",\"sessionId\":\"session-newer-owner\"}"
+      "admission_canonical": "{\"chatId\":\"edited-newer-owner\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"20c812c4e12819d19bea2e1604b944d321812c0f694fed0a8152ee98a2c78b1b\",\"id\":\"original-newer-owner\"},\"expectedEpoch\":0,\"messages\":[{\"id\":\"newer-owner/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"newer-owner/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"newer-owner/old-user\",\"parts\":[{\"text\":\"old\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"newer-owner/old-assistant\",\"parts\":[{\"text\":\"old answer\",\"type\":\"text\"}],\"role\":\"assistant\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-newer-owner\"}",
+      "execution_canonical": "{\"chatId\":\"edited-newer-owner\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"original-newer-owner\",\"requestId\":\"22222222-2222-4222-8222-222222222222\",\"sessionId\":\"session-newer-owner\"}"
     },
     "prepared": {
       "admission": {
         "action": "admit",
         "payload": {
-          "admission_canonical": "{\"chatId\":\"edited-newer-owner\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"17f03111138ef9ef6990b1ca0855f5095bf5dc4ab0a92f2af641b132ac9e9fad\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"newer-owner/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"newer-owner/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"newer-owner/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"edited\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-newer-owner\"}",
+          "admission_canonical": "{\"chatId\":\"edited-newer-owner\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"e1e57db476a02603517e8c0312732b7ffbe5fcb780783fc20a2ce3ad6411412a\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"newer-owner/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"newer-owner/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"newer-owner/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"edited\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-newer-owner\"}",
           "admission_envelope": {
             "chatId": "edited-newer-owner",
             "contractVersion": "chat-admission/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
             "executionSnapshot": {
-              "digest": "17f03111138ef9ef6990b1ca0855f5095bf5dc4ab0a92f2af641b132ac9e9fad",
+              "digest": "e1e57db476a02603517e8c0312732b7ffbe5fcb780783fc20a2ce3ad6411412a",
               "id": "edited-snapshot"
             },
             "expectedEpoch": 2,
@@ -558,7 +562,7 @@
             },
             "sessionId": "session-newer-owner"
           },
-          "execution_canonical": "{\"chatId\":\"edited-newer-owner\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-newer-owner\"}",
+          "execution_canonical": "{\"chatId\":\"edited-newer-owner\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-newer-owner\"}",
           "execution_snapshot": {
             "chatId": "edited-newer-owner",
             "content": {
@@ -602,7 +606,8 @@
                 "workingDirectory": "/workspace"
               },
               "sessionTitle": null,
-              "skills": []
+              "skills": [],
+              "streamProtocol": "unmarked-v1"
             },
             "contractVersion": "chat-execution/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -611,7 +616,7 @@
             "sessionId": "session-newer-owner"
           },
           "expected_epoch": 2,
-          "input_hash": "23802908f4fd5668406d79e303c5bc31cee6d534673129d0656ab5e81bbc3ec7",
+          "input_hash": "35499dcd20ac78248b3482c8a3fd3c745076fe220411e946b09ad62dc05444b9",
           "request_id": "66666666-6666-4666-8666-666666666666"
         }
       },
@@ -628,13 +633,13 @@
       "admission": {
         "action": "admit",
         "payload": {
-          "admission_canonical": "{\"chatId\":\"edited-newer-owner\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"17f03111138ef9ef6990b1ca0855f5095bf5dc4ab0a92f2af641b132ac9e9fad\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"newer-owner/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"newer-owner/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"newer-owner/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"changed-content-same-identity\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-newer-owner\"}",
+          "admission_canonical": "{\"chatId\":\"edited-newer-owner\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"e1e57db476a02603517e8c0312732b7ffbe5fcb780783fc20a2ce3ad6411412a\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"newer-owner/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"newer-owner/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"newer-owner/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"changed-content-same-identity\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-newer-owner\"}",
           "admission_envelope": {
             "chatId": "edited-newer-owner",
             "contractVersion": "chat-admission/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
             "executionSnapshot": {
-              "digest": "17f03111138ef9ef6990b1ca0855f5095bf5dc4ab0a92f2af641b132ac9e9fad",
+              "digest": "e1e57db476a02603517e8c0312732b7ffbe5fcb780783fc20a2ce3ad6411412a",
               "id": "edited-snapshot"
             },
             "expectedEpoch": 2,
@@ -681,7 +686,7 @@
             },
             "sessionId": "session-newer-owner"
           },
-          "execution_canonical": "{\"chatId\":\"edited-newer-owner\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-newer-owner\"}",
+          "execution_canonical": "{\"chatId\":\"edited-newer-owner\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-newer-owner\"}",
           "execution_snapshot": {
             "chatId": "edited-newer-owner",
             "content": {
@@ -725,7 +730,8 @@
                 "workingDirectory": "/workspace"
               },
               "sessionTitle": null,
-              "skills": []
+              "skills": [],
+              "streamProtocol": "unmarked-v1"
             },
             "contractVersion": "chat-execution/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -734,7 +740,7 @@
             "sessionId": "session-newer-owner"
           },
           "expected_epoch": 2,
-          "input_hash": "93780ab6180ccb80d1c60913988832158f3e8deb56ff3b39abcca62d61282d05",
+          "input_hash": "605df57107d127dedf59b28c14a2273be025b8b5da6b702727fc15083e5182f9",
           "request_id": "66666666-6666-4666-8666-666666666666"
         }
       },
@@ -770,7 +776,7 @@
     "initial": {
       "request_id": "22222222-2222-4222-8222-222222222222",
       "expected_epoch": 0,
-      "input_hash": "737ac1bb5d9b7c914776c3a75e60f48e0063c6313a1b185de9af8529def25b77",
+      "input_hash": "d86e134571806d70ec5470ef4d407213534a1fb291f34329168cc16e3792936a",
       "admission_envelope": {
         "contractVersion": "chat-admission/v1",
         "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -827,7 +833,7 @@
         },
         "executionSnapshot": {
           "id": "original-lost-ack",
-          "digest": "0802593b918330a6791dbce8073caea7de722ef726ea7cf4bd97f5a90548c5de"
+          "digest": "61940111022aefc55f0aaf6b72c4423428b0a8f5e6e06c50300ad953a74cc7c9"
         }
       },
       "execution_snapshot": {
@@ -844,6 +850,7 @@
             "interactive": true,
             "devSurface": null
           },
+          "streamProtocol": "unmarked-v1",
           "sessionTitle": null,
           "repoOwner": null,
           "repoName": null,
@@ -881,20 +888,20 @@
           }
         }
       },
-      "admission_canonical": "{\"chatId\":\"edited-lost-ack\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"0802593b918330a6791dbce8073caea7de722ef726ea7cf4bd97f5a90548c5de\",\"id\":\"original-lost-ack\"},\"expectedEpoch\":0,\"messages\":[{\"id\":\"lost-ack/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"lost-ack/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"lost-ack/old-user\",\"parts\":[{\"text\":\"old\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"lost-ack/old-assistant\",\"parts\":[{\"text\":\"old answer\",\"type\":\"text\"}],\"role\":\"assistant\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-lost-ack\"}",
-      "execution_canonical": "{\"chatId\":\"edited-lost-ack\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"original-lost-ack\",\"requestId\":\"22222222-2222-4222-8222-222222222222\",\"sessionId\":\"session-lost-ack\"}"
+      "admission_canonical": "{\"chatId\":\"edited-lost-ack\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"61940111022aefc55f0aaf6b72c4423428b0a8f5e6e06c50300ad953a74cc7c9\",\"id\":\"original-lost-ack\"},\"expectedEpoch\":0,\"messages\":[{\"id\":\"lost-ack/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"lost-ack/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"lost-ack/old-user\",\"parts\":[{\"text\":\"old\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"lost-ack/old-assistant\",\"parts\":[{\"text\":\"old answer\",\"type\":\"text\"}],\"role\":\"assistant\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-lost-ack\"}",
+      "execution_canonical": "{\"chatId\":\"edited-lost-ack\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"original-lost-ack\",\"requestId\":\"22222222-2222-4222-8222-222222222222\",\"sessionId\":\"session-lost-ack\"}"
     },
     "prepared": {
       "admission": {
         "action": "admit",
         "payload": {
-          "admission_canonical": "{\"chatId\":\"edited-lost-ack\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"8c9542e8f382396eccabe1d2b43f7af56f4d5f88bcbf05084711fdb02b8fafe3\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"lost-ack/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"lost-ack/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"lost-ack/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"edited\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-lost-ack\"}",
+          "admission_canonical": "{\"chatId\":\"edited-lost-ack\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"c1949f071bc64158b303f72e252e2dcce43d0d6935a8270064f9caa70f0278cd\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"lost-ack/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"lost-ack/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"lost-ack/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"edited\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-lost-ack\"}",
           "admission_envelope": {
             "chatId": "edited-lost-ack",
             "contractVersion": "chat-admission/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
             "executionSnapshot": {
-              "digest": "8c9542e8f382396eccabe1d2b43f7af56f4d5f88bcbf05084711fdb02b8fafe3",
+              "digest": "c1949f071bc64158b303f72e252e2dcce43d0d6935a8270064f9caa70f0278cd",
               "id": "edited-snapshot"
             },
             "expectedEpoch": 2,
@@ -941,7 +948,7 @@
             },
             "sessionId": "session-lost-ack"
           },
-          "execution_canonical": "{\"chatId\":\"edited-lost-ack\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-lost-ack\"}",
+          "execution_canonical": "{\"chatId\":\"edited-lost-ack\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-lost-ack\"}",
           "execution_snapshot": {
             "chatId": "edited-lost-ack",
             "content": {
@@ -985,7 +992,8 @@
                 "workingDirectory": "/workspace"
               },
               "sessionTitle": null,
-              "skills": []
+              "skills": [],
+              "streamProtocol": "unmarked-v1"
             },
             "contractVersion": "chat-execution/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -994,7 +1002,7 @@
             "sessionId": "session-lost-ack"
           },
           "expected_epoch": 2,
-          "input_hash": "f317c4033bdba0eaa82a94c4f5b517af91c8549c9645993c847720eed4ab7d09",
+          "input_hash": "71fd0835a500f1904a5d6dd973348fbd9ead9c9b2c4ed4fac9d50958d976831b",
           "request_id": "66666666-6666-4666-8666-666666666666"
         }
       },
@@ -1011,13 +1019,13 @@
       "admission": {
         "action": "admit",
         "payload": {
-          "admission_canonical": "{\"chatId\":\"edited-lost-ack\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"8c9542e8f382396eccabe1d2b43f7af56f4d5f88bcbf05084711fdb02b8fafe3\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"lost-ack/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"lost-ack/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"lost-ack/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"changed-content-same-identity\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-lost-ack\"}",
+          "admission_canonical": "{\"chatId\":\"edited-lost-ack\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"c1949f071bc64158b303f72e252e2dcce43d0d6935a8270064f9caa70f0278cd\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"lost-ack/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"lost-ack/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"lost-ack/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"changed-content-same-identity\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-lost-ack\"}",
           "admission_envelope": {
             "chatId": "edited-lost-ack",
             "contractVersion": "chat-admission/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
             "executionSnapshot": {
-              "digest": "8c9542e8f382396eccabe1d2b43f7af56f4d5f88bcbf05084711fdb02b8fafe3",
+              "digest": "c1949f071bc64158b303f72e252e2dcce43d0d6935a8270064f9caa70f0278cd",
               "id": "edited-snapshot"
             },
             "expectedEpoch": 2,
@@ -1064,7 +1072,7 @@
             },
             "sessionId": "session-lost-ack"
           },
-          "execution_canonical": "{\"chatId\":\"edited-lost-ack\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-lost-ack\"}",
+          "execution_canonical": "{\"chatId\":\"edited-lost-ack\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-lost-ack\"}",
           "execution_snapshot": {
             "chatId": "edited-lost-ack",
             "content": {
@@ -1108,7 +1116,8 @@
                 "workingDirectory": "/workspace"
               },
               "sessionTitle": null,
-              "skills": []
+              "skills": [],
+              "streamProtocol": "unmarked-v1"
             },
             "contractVersion": "chat-execution/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -1117,7 +1126,7 @@
             "sessionId": "session-lost-ack"
           },
           "expected_epoch": 2,
-          "input_hash": "461e888a65ef67ac464797dc001a98ec48102a6f00fa73132c6429462e69c227",
+          "input_hash": "b8b42a3ed66e6ec31e48f01d4121180c57ccd8c75c4a2813ea51113f7b1af943",
           "request_id": "66666666-6666-4666-8666-666666666666"
         }
       },
@@ -1153,7 +1162,7 @@
     "initial": {
       "request_id": "22222222-2222-4222-8222-222222222222",
       "expected_epoch": 0,
-      "input_hash": "951d2ccb35721bb153d6a8a24bea2394d28e6df9887b6d6b1551074c987b9c1a",
+      "input_hash": "f389dd6c1bde043f29f50deec07088dd0f9c027788953984cea0106e37b7692c",
       "admission_envelope": {
         "contractVersion": "chat-admission/v1",
         "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -1210,7 +1219,7 @@
         },
         "executionSnapshot": {
           "id": "original-unseen-collision",
-          "digest": "5712e7a7fda12a127761c5f26aee4e1d23ec776d37a463d53d4eb2497846db0c"
+          "digest": "6f5258277aeeb864c4454c6592e3da9a853e961d49cabced24bece1bc40156d4"
         }
       },
       "execution_snapshot": {
@@ -1227,6 +1236,7 @@
             "interactive": true,
             "devSurface": null
           },
+          "streamProtocol": "unmarked-v1",
           "sessionTitle": null,
           "repoOwner": null,
           "repoName": null,
@@ -1264,20 +1274,20 @@
           }
         }
       },
-      "admission_canonical": "{\"chatId\":\"edited-unseen-collision\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"5712e7a7fda12a127761c5f26aee4e1d23ec776d37a463d53d4eb2497846db0c\",\"id\":\"original-unseen-collision\"},\"expectedEpoch\":0,\"messages\":[{\"id\":\"unseen-collision/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"unseen-collision/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"unseen-collision/old-user\",\"parts\":[{\"text\":\"old\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"unseen-collision/old-assistant\",\"parts\":[{\"text\":\"old answer\",\"type\":\"text\"}],\"role\":\"assistant\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-unseen-collision\"}",
-      "execution_canonical": "{\"chatId\":\"edited-unseen-collision\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"original-unseen-collision\",\"requestId\":\"22222222-2222-4222-8222-222222222222\",\"sessionId\":\"session-unseen-collision\"}"
+      "admission_canonical": "{\"chatId\":\"edited-unseen-collision\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"6f5258277aeeb864c4454c6592e3da9a853e961d49cabced24bece1bc40156d4\",\"id\":\"original-unseen-collision\"},\"expectedEpoch\":0,\"messages\":[{\"id\":\"unseen-collision/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"unseen-collision/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"unseen-collision/old-user\",\"parts\":[{\"text\":\"old\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"unseen-collision/old-assistant\",\"parts\":[{\"text\":\"old answer\",\"type\":\"text\"}],\"role\":\"assistant\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-unseen-collision\"}",
+      "execution_canonical": "{\"chatId\":\"edited-unseen-collision\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"original-unseen-collision\",\"requestId\":\"22222222-2222-4222-8222-222222222222\",\"sessionId\":\"session-unseen-collision\"}"
     },
     "prepared": {
       "admission": {
         "action": "admit",
         "payload": {
-          "admission_canonical": "{\"chatId\":\"edited-unseen-collision\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"5fa55fd399ef2339983587412ed2b22137ff35e168c1e89bb4d6f3f772ec560a\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"unseen-collision/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"unseen-collision/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"unseen-collision/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"edited\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-unseen-collision\"}",
+          "admission_canonical": "{\"chatId\":\"edited-unseen-collision\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"e4cc763f8d4ff4858537d5521f1d2dde0ac115191a90b251c93f1ef9c7f9df61\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"unseen-collision/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"unseen-collision/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"unseen-collision/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"edited\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-unseen-collision\"}",
           "admission_envelope": {
             "chatId": "edited-unseen-collision",
             "contractVersion": "chat-admission/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
             "executionSnapshot": {
-              "digest": "5fa55fd399ef2339983587412ed2b22137ff35e168c1e89bb4d6f3f772ec560a",
+              "digest": "e4cc763f8d4ff4858537d5521f1d2dde0ac115191a90b251c93f1ef9c7f9df61",
               "id": "edited-snapshot"
             },
             "expectedEpoch": 2,
@@ -1324,7 +1334,7 @@
             },
             "sessionId": "session-unseen-collision"
           },
-          "execution_canonical": "{\"chatId\":\"edited-unseen-collision\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-unseen-collision\"}",
+          "execution_canonical": "{\"chatId\":\"edited-unseen-collision\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-unseen-collision\"}",
           "execution_snapshot": {
             "chatId": "edited-unseen-collision",
             "content": {
@@ -1368,7 +1378,8 @@
                 "workingDirectory": "/workspace"
               },
               "sessionTitle": null,
-              "skills": []
+              "skills": [],
+              "streamProtocol": "unmarked-v1"
             },
             "contractVersion": "chat-execution/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -1377,7 +1388,7 @@
             "sessionId": "session-unseen-collision"
           },
           "expected_epoch": 2,
-          "input_hash": "9815f7bbdeec645017fdb0563d0b1b11d487f4be0a9152f01d471604055e5454",
+          "input_hash": "9d46791c8f8b9ca9d1a90f8ef928bb658b4128eb2265f6377f3a9b1fcb99a8bb",
           "request_id": "66666666-6666-4666-8666-666666666666"
         }
       },
@@ -1394,13 +1405,13 @@
       "admission": {
         "action": "admit",
         "payload": {
-          "admission_canonical": "{\"chatId\":\"edited-unseen-collision\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"5fa55fd399ef2339983587412ed2b22137ff35e168c1e89bb4d6f3f772ec560a\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"unseen-collision/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"unseen-collision/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"unseen-collision/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"changed-content-same-identity\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-unseen-collision\"}",
+          "admission_canonical": "{\"chatId\":\"edited-unseen-collision\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"e4cc763f8d4ff4858537d5521f1d2dde0ac115191a90b251c93f1ef9c7f9df61\",\"id\":\"edited-snapshot\"},\"expectedEpoch\":2,\"messages\":[{\"id\":\"unseen-collision/prefix-user\",\"parts\":[{\"text\":\"prefix\",\"type\":\"text\"}],\"role\":\"user\"},{\"id\":\"unseen-collision/prefix-assistant\",\"parts\":[{\"text\":\"prefix answer\",\"type\":\"text\"}],\"role\":\"assistant\"},{\"id\":\"unseen-collision/fresh-edited-user\",\"metadata\":{\"origin\":\"edit\"},\"parts\":[{\"text\":\"changed-content-same-identity\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session-unseen-collision\"}",
           "admission_envelope": {
             "chatId": "edited-unseen-collision",
             "contractVersion": "chat-admission/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
             "executionSnapshot": {
-              "digest": "5fa55fd399ef2339983587412ed2b22137ff35e168c1e89bb4d6f3f772ec560a",
+              "digest": "e4cc763f8d4ff4858537d5521f1d2dde0ac115191a90b251c93f1ef9c7f9df61",
               "id": "edited-snapshot"
             },
             "expectedEpoch": 2,
@@ -1447,7 +1458,7 @@
             },
             "sessionId": "session-unseen-collision"
           },
-          "execution_canonical": "{\"chatId\":\"edited-unseen-collision\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-unseen-collision\"}",
+          "execution_canonical": "{\"chatId\":\"edited-unseen-collision\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"edited-snapshot\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session-unseen-collision\"}",
           "execution_snapshot": {
             "chatId": "edited-unseen-collision",
             "content": {
@@ -1491,7 +1502,8 @@
                 "workingDirectory": "/workspace"
               },
               "sessionTitle": null,
-              "skills": []
+              "skills": [],
+              "streamProtocol": "unmarked-v1"
             },
             "contractVersion": "chat-execution/v1",
             "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -1500,7 +1512,7 @@
             "sessionId": "session-unseen-collision"
           },
           "expected_epoch": 2,
-          "input_hash": "a65f008b31fc208f5e6275f2a54f859e5e49c4b9bb4a588f12e13fba251012be",
+          "input_hash": "397bd16cf485b85fe0aad1d062cad8cdb784424390cbb45d914b379c7b6902d6",
           "request_id": "66666666-6666-4666-8666-666666666666"
         }
       },

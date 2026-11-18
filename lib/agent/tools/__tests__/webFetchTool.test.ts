@@ -28,7 +28,7 @@ describe("webFetchTool", () => {
     );
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const result = (await webFetchTool.execute!({ url: "https://example.com/api" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as { success: boolean; status: number; body: string; truncated: boolean };
     expect(result).toEqual({
       success: true,
@@ -50,7 +50,7 @@ describe("webFetchTool", () => {
     );
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const result = (await webFetchTool.execute!({ url: "https://example.com/huge" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as { success: boolean; truncated: boolean };
     expect(result.success).toBe(true);
     expect(result.truncated).toBe(true);
@@ -68,7 +68,7 @@ describe("webFetchTool", () => {
     );
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     const result = (await webFetchTool.execute!({ url: "https://example.com/unreachable" }, {
-      experimental_context: ctx,
+      context: ctx,
     } as never)) as { success: boolean; error: string };
     expect(result.success).toBe(false);
     expect(result.error).toMatch(/Failed to connect/);
@@ -87,7 +87,7 @@ describe("webFetchTool", () => {
     vi.mocked(connectVercel).mockResolvedValue(sb as never);
     await webFetchTool.execute!(
       { url: "https://example.com/api", method: "POST", body: '{"x":1}' },
-      { experimental_context: ctx } as never,
+      { context: ctx } as never,
     );
     const cmd = sb.exec.mock.calls[0]?.[0] as string;
     expect(cmd).toContain("-X POST");

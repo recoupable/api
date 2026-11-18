@@ -1,3 +1,4 @@
+import { gateStoredContinuation } from "../continuation/gateStoredContinuation";
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { getRun } from "workflow/api";
@@ -5,6 +6,9 @@ import { handleStopChatWorkflow } from "@/lib/chat/handleStopChatWorkflow";
 import { handleResumeChatStream } from "@/lib/chat/handleResumeChatStream";
 import { stopFencedChatWorkflow } from "../fence/lifecycle/stopFencedChatWorkflow";
 import { resumeFencedChatStream } from "../fence/lifecycle/resumeFencedChatStream";
+vi.mock("../continuation/gateStoredContinuation", () => ({
+  gateStoredContinuation: vi.fn(async () => null),
+}));
 const { rpc, ownership, stopValidation, cas } = vi.hoisted(() => ({
   rpc: vi.fn(),
   ownership: vi.fn(),
@@ -31,11 +35,12 @@ const target = {
 const request = new NextRequest("https://api.test/stream?streamLifecycle=explicit-stop-v1");
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.mocked(gateStoredContinuation).mockResolvedValue(null);
   vi.useFakeTimers();
   cas.mockResolvedValue({ ok: true, claimed: true });
   const validated = {
     auth: { accountId: target.effectiveAccount },
-    chat: { id: "chat", active_stream_id: target.runId },
+    chat: { id: "chat", session_id: "session", active_stream_id: target.runId },
   };
   ownership.mockResolvedValue(validated);
   stopValidation.mockResolvedValue(validated);
@@ -57,7 +62,7 @@ it.each(["pending", "cancel-failed", "timeout"])(
     if (mode === "pending") {
       input = { ...target, phase: "pending", runId: null };
       stopValidation.mockResolvedValue({
-        chat: { id: "chat", active_stream_id: "pending-original" },
+        chat: { id: "chat", session_id: "session", active_stream_id: "pending-original" },
       });
     }
     const cancel = vi.fn(async () => {
@@ -89,7 +94,7 @@ it("preserves actual resume status-read failure contract instead of fake complet
     },
   } as never);
   const legacy = await handleResumeChatStream(request, "chat");
-  const fenced = await resumeFencedChatStream(target, new URL(request.url));
+  const fenced = await resumeFencedChatStream(target, request);
   expect(fenced.status).toBe(502);
   expect(fenced.status).toBe(legacy.status);
   expect(await fenced.json()).toEqual(await legacy.json());
@@ -98,7 +103,7 @@ it("preserves actual resume status-read failure contract instead of fake complet
 it("preserves finish-only terminal resume shape after successful authoritative release", async () => {
   vi.mocked(getRun).mockReturnValue({ status: Promise.resolve("completed") } as never);
   const legacy = await handleResumeChatStream(request, "chat");
-  const fenced = await resumeFencedChatStream(target, new URL(request.url));
+  const fenced = await resumeFencedChatStream(target, request);
   expect(fenced.status).toBe(200);
   expect(await fenced.text()).toEqual(await legacy.text());
   expect(cas).toHaveBeenCalledExactlyOnceWith("chat", target.runId, null);

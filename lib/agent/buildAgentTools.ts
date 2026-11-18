@@ -14,7 +14,7 @@ import type { SkillMetadata } from "@/lib/skills/skillTypes";
 /**
  * Factory for the full agent tool set passed into `streamText({ tools })`.
  * Each tool reads its sandbox handle + per-prompt context from
- * `experimental_context` at execute time — the factory is otherwise stateless.
+ * `toolsContext` at execute time — the factory is otherwise stateless.
  *
  * Currently ships 11 tools:
  *

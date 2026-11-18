@@ -1,7 +1,7 @@
 import type { AgentContext } from "@/lib/agent/tools/AgentContext";
 
 /**
- * Type-guard that confirms an arbitrary `experimental_context` shape has
+ * Type-guard that confirms an arbitrary `toolsContext` shape has
  * the AgentContext fields tools rely on at runtime. Validates each required
  * leaf (sandbox object, state object, non-empty workingDirectory) so callers
  * can trust the narrowed type — earlier weaker guards returned true for

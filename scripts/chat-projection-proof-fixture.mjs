@@ -1,0 +1,301 @@
+import assert from "node:assert/strict";
+import { createRequire } from "node:module";
+import { pathToFileURL, fileURLToPath } from "node:url";
+import {
+  mkdtemp,
+  realpath,
+  mkdir,
+  writeFile,
+  symlink,
+  rm,
+  readFile,
+  readdir,
+} from "node:fs/promises";
+import { join, dirname } from "node:path";
+import { tmpdir } from "node:os";
+import { createHash } from "node:crypto";
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const out = process.env.CHAT_PROJECTION_RECEIPT;
+const require = createRequire(join(root, "package.json"));
+const { denyNetwork } = await import(
+  pathToFileURL(join(root, "scripts/pack-scheduler-workflow-fixture/denyNetwork.mjs"))
+);
+const attempts = denyNetwork();
+const builders = createRequire(require.resolve("workflow/next"));
+const { StandaloneBuilder } = await import(pathToFileURL(builders.resolve("@workflow/builders")));
+const temp = await realpath(await mkdtemp(join(tmpdir(), "workflow-origin-probe-")));
+const source = join(temp, "source");
+const cwd = process.cwd();
+let world;
+// StandaloneBuilder emits an ESM client containing bundled CommonJS SDK dependencies.
+// Supply Node's real require for that generated client; no production module is mocked.
+const previousRequire = globalThis.require;
+globalThis.require = require;
+try {
+  await mkdir(source);
+  await symlink(join(root, "node_modules"), join(temp, "node_modules"), "dir");
+  await writeFile(
+    join(source, "workflow.ts"),
+    `import {getWritable,getWorkflowMetadata,getStepMetadata} from 'workflow';
+import {getWorld} from 'workflow/runtime';
+import {getRun} from 'workflow/api';
+import {hydrateResourceIO,observabilityRevivers} from 'workflow/observability';
+import {collectCanonicalProjection} from '@/lib/chat/projection/collectCanonicalProjection';
+import {verifyProjectionObservation} from '@/lib/chat/projection/verifyProjectionObservation';
+import {createProjectionEvidencePorts} from '@/lib/chat/projection/createProjectionEvidencePorts';
+import {recordProjectionProofStep} from '@/app/lib/workflows/projection/recordProjectionProofStep';
+import {prepareProjectionHistoryStep} from '@/app/lib/workflows/projection/prepareProjectionHistoryStep';
+import {assertFirstChatEffectAttempt} from '@/app/lib/workflows/projection/assertFirstChatEffectAttempt';
+async function emit(input:any) {
+ 'use step';
+ const runId=getWorkflowMetadata().workflowRunId; const stepId=getStepMetadata().stepId;
+ const w=getWritable().getWriter();
+ try {
+  await w.write({type:'start',messageId:'synthetic-assistant'});
+  const collected=await collectCanonicalProjection({stream:(async function*(){yield {type:'custom',kind:'provider.synthetic',providerMetadata:{provider:{opaque:'unchanged'}}};})(),previous:{id:'synthetic-assistant',role:'assistant',parts:[]},runId,stepId:()=>stepId,onProjection(){},write:chunk=>w.write(chunk)});
+  await w.write({type:'finish'});await w.close();
+  return {generatedProjectionObservations:collected.generatedProjectionObservations};
+ }finally{w.releaseLock();}
+}
+export async function originProbe(input:any) {
+ 'use workflow';
+ await prepareProjectionHistoryStep(input.messages,{accountId:input.accountId,chatId:input.chatId,sessionId:input.sessionId});
+ const producer = await emit(input);
+ await recordProjectionProofStep(producer.generatedProjectionObservations.observations[0].observation.data.originStepId,producer.generatedProjectionObservations);
+ return producer;
+}
+async function verify(input:any) {
+ 'use step';
+ const world=getWorld();
+ const ports=createProjectionEvidencePorts({world});
+ return verifyProjectionObservation({...input,ports,signal:new AbortController().signal});
+}
+export async function readProbe(input:any) {
+ 'use workflow';
+ return verify(input);
+}
+async function attemptEffect(input:any) {
+ 'use step';
+ const {appendFileSync}=await import('node:fs');
+ const metadata=getStepMetadata();
+ appendFileSync(input.log,JSON.stringify({kind:'entry',attempt:metadata.attempt,stepId:metadata.stepId})+'\\n');
+ assertFirstChatEffectAttempt('generation');
+ if(input.mode==='before-effect') throw new Error('Synthetic failure before effect');
+ appendFileSync(input.log,JSON.stringify({kind:'effect',attempt:metadata.attempt,stepId:metadata.stepId})+'\\n');
+ return {stepId:metadata.stepId,attempt:metadata.attempt};
+}
+export async function attemptProbe(input:any) {
+ 'use workflow';
+ return attemptEffect(input);
+}
+`,
+  );
+  await writeFile(
+    join(source, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: {
+        target: "ES2022",
+        module: "ESNext",
+        moduleResolution: "bundler",
+        paths: { "@/*": [join(root, "*")] },
+      },
+    }),
+  );
+  process.chdir(source);
+  await new StandaloneBuilder({
+    buildTarget: "standalone",
+    workingDir: source,
+    projectRoot: source,
+    dirs: ["."],
+    stepsBundlePath: "../generated/steps.cjs",
+    workflowsBundlePath: "../generated/workflows.cjs",
+    webhookBundlePath: "../generated/webhook.cjs",
+    clientBundlePath: join(temp, "generated/client.mjs"),
+  }).build();
+  const { createLocalWorld } = await import(
+    pathToFileURL(createRequire(require.resolve("@workflow/core")).resolve("@workflow/world-local"))
+  );
+  const { setWorld, getWorld } = await import(pathToFileURL(require.resolve("workflow/runtime")));
+  const { start, getRun } = await import(pathToFileURL(require.resolve("workflow/api")));
+  const { hydrateResourceIO, observabilityRevivers } = await import(
+    pathToFileURL(require.resolve("workflow/observability"))
+  );
+  world = createLocalWorld({ dataDir: join(temp, "journal") });
+  setWorld(world);
+  world.registerHandler(
+    "__wkf_step_",
+    (await import(pathToFileURL(join(temp, "generated/steps.cjs")))).POST,
+  );
+  world.registerHandler(
+    "__wkf_workflow_",
+    (await import(pathToFileURL(join(temp, "generated/workflows.cjs")))).POST,
+  );
+  await world.start();
+  const { originProbe, readProbe, attemptProbe } = await import(
+    pathToFileURL(join(temp, "generated/client.mjs"))
+  );
+  const input = {
+    chatId: "synthetic-chat",
+    sessionId: "synthetic-session",
+    accountId: "synthetic-account",
+    messages: [],
+    modelId: "synthetic",
+    agentContext: {},
+  };
+  const run = await start(originProbe, [input]);
+  let timer;
+  const within = async promise => {
+    try {
+      return await Promise.race([
+        promise,
+        new Promise((_, reject) => {
+          timer = setTimeout(() => reject(new Error("probe timeout")), 15000);
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+  const result = await within(run.returnValue);
+  const observation = result.generatedProjectionObservations.observations[0].observation;
+  const record = await getWorld().runs.get(run.runId, { resolveData: "all" });
+  const steps = await getWorld().steps.get(run.runId, observation.data.originStepId, {
+    resolveData: "all",
+  });
+  assert.deepEqual(hydrateResourceIO(record, observabilityRevivers).input, [input]);
+  const recordedSteps = await getWorld().steps.list({ runId: run.runId, resolveData: "none" });
+  const proofStep = recordedSteps.data.find(step =>
+    step.stepName.endsWith("//recordProjectionProofStep"),
+  );
+  assert(proofStep && proofStep.status === "completed");
+  const portsOps = [];
+  const chunks = [];
+  for await (const chunk of getRun(run.runId).getReadable({ ops: portsOps })) chunks.push(chunk);
+  await Promise.all(portsOps);
+  const { readUIMessageStream } = await import(pathToFileURL(require.resolve("ai")));
+  let message;
+  for await (const current of readUIMessageStream({
+    stream: new ReadableStream({
+      start(controller) {
+        for (const chunk of chunks) controller.enqueue(chunk);
+        controller.close();
+      },
+    }),
+  }))
+    message = current;
+  assert.deepEqual(JSON.parse(JSON.stringify(message.parts)), [
+    observation,
+    { type: "text", text: observation.data.fallback.text, state: "done" },
+  ]);
+  const verified = await start(readProbe, [
+    {
+      observation,
+      message,
+      scope: { chatId: input.chatId, sessionId: input.sessionId, accountId: input.accountId },
+      producers: [
+        {
+          deploymentId: record.deploymentId,
+          workflowName: record.workflowName,
+          stepName: steps.stepName,
+          proofStepName: proofStep.stepName,
+        },
+      ],
+    },
+  ]);
+  assert.deepEqual(await within(verified.returnValue), observation.data.original);
+  const refused = await start(originProbe, [
+    {
+      ...input,
+      messages: [
+        { id: "caller", role: "assistant", parts: [{ type: "custom", kind: "caller.unverified" }] },
+      ],
+    },
+  ]);
+  await assert.rejects(within(refused.returnValue), /Projection history evidence unavailable/);
+  const refusedSteps = await getWorld().steps.list({ runId: refused.runId, resolveData: "none" });
+  assert(!refusedSteps.data.some(step => step.stepName.endsWith("//emit")));
+  const attemptCases = [];
+  const createEvent = world.events.create.bind(world.events);
+  const guardedSteps = new Set();
+  let mode,
+    injected = false;
+  world.events.create = async (...args) => {
+    const event = args[1];
+    const target = event.eventType === "step_completed" && guardedSteps.has(event.correlationId);
+    if (target && !injected && mode === "completion-lost") {
+      injected = true;
+      throw new Error("Synthetic completion lost before persistence");
+    }
+    const result = await createEvent(...args);
+    if (event.eventType === "step_started" && result.step?.stepName.endsWith("//attemptEffect"))
+      guardedSteps.add(result.step.stepId);
+    if (target && !injected && mode === "ack-lost") {
+      injected = true;
+      throw new Error("Synthetic completion persisted but ACK lost");
+    }
+    return result;
+  };
+  for (mode of ["completion-lost", "ack-lost", "before-effect"]) {
+    injected = false;
+    const log = join(temp, mode + ".jsonl");
+    const probe = await start(attemptProbe, [{ mode, log }]);
+    if (mode === "ack-lost") assert.equal((await within(probe.returnValue)).attempt, 1);
+    else await assert.rejects(within(probe.returnValue), /reconciliation/);
+    const records = (await readFile(log, "utf8"))
+      .trim()
+      .split("\n")
+      .map(line => JSON.parse(line));
+    const effects = records.filter(record => record.kind === "effect");
+    assert.equal(effects.length, mode === "before-effect" ? 0 : 1);
+    assert.deepEqual(
+      records.filter(record => record.kind === "entry").map(record => record.attempt),
+      mode === "ack-lost" ? [1] : [1, 2],
+    );
+    assert.equal(new Set(records.map(record => record.stepId)).size, 1);
+    attemptCases.push({ mode, records, injected });
+  }
+  world.events.create = createEvent;
+  assert.equal(attempts(), 0);
+  const sourcePaths = [
+    "package.json",
+    "pnpm-lock.yaml",
+    "app/lib/workflows/projection/recordProjectionProofStep.ts",
+    "app/lib/workflows/projection/prepareProjectionHistoryStep.ts",
+    "app/lib/workflows/projection/assertFirstChatEffectAttempt.ts",
+    "scripts/chat-projection-proof-fixture.mjs",
+    ...(await readdir(join(root, "lib/chat/projection")))
+      .filter(name => name.endsWith(".ts"))
+      .map(name => "lib/chat/projection/" + name),
+  ];
+  const sourcePins = [];
+  for (const path of sourcePaths)
+    sourcePins.push({
+      path,
+      sha256: createHash("sha256")
+        .update(await readFile(join(root, path)))
+        .digest("hex"),
+    });
+  const receipt = {
+    sourcePins,
+    node: process.version,
+    workflow: "4.2.4",
+    networkAttempts: attempts(),
+    attemptCases,
+    canonicalReadback: true,
+    completedProofReadback: true,
+    separateWorkflowAwaitedProofStep: true,
+    installedSdkCanonicalAssembly: true,
+    verifiedInsideJournaledStep: true,
+    rejectedIngressBeforeProducer: true,
+    scope:
+      "Actual production pure proof writer and verifier compiled into synthetic local workflows. Readback required; no write ACK or atomicity claim. No deployment admission, production World/key/provider/DB or activation.",
+  };
+  if (out) await writeFile(out, JSON.stringify(receipt, null, 2) + "\n");
+  console.log(JSON.stringify(receipt));
+} finally {
+  await world?.close();
+  if (previousRequire === undefined) delete globalThis.require;
+  else globalThis.require = previousRequire;
+  process.chdir(cwd);
+  await rm(temp, { recursive: true, force: true });
+}

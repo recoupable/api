@@ -4,7 +4,7 @@
     {
       "request_id": "22222222-2222-4222-8222-222222222222",
       "expected_epoch": 0,
-      "input_hash": "6f7b32cc047392658b8d441b97c5bc249a95eba872c844e21c63cd58407a8ab1",
+      "input_hash": "041dc38b0c784604d6bf1f451ba694f6bc5468aaccd9ba8e2ef5940e7eeb37be",
       "admission_envelope": {
         "contractVersion": "chat-admission/v1",
         "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -31,7 +31,7 @@
         },
         "executionSnapshot": {
           "id": "persistence-0",
-          "digest": "f25dc0ad169a6b40e988dcd6978ff6111732b1f7d2cd9db5da4d6c086d936477"
+          "digest": "c8df8db0952ebb065ee2f5cea7976e64a8072a7b21f77a755cff4860ff42ba66"
         }
       },
       "execution_snapshot": {
@@ -48,6 +48,7 @@
             "interactive": true,
             "devSurface": null
           },
+          "streamProtocol": "unmarked-v1",
           "sessionTitle": null,
           "repoOwner": null,
           "repoName": null,
@@ -85,13 +86,13 @@
           }
         }
       },
-      "admission_canonical": "{\"chatId\":\"chat\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"f25dc0ad169a6b40e988dcd6978ff6111732b1f7d2cd9db5da4d6c086d936477\",\"id\":\"persistence-0\"},\"expectedEpoch\":0,\"messages\":[{\"id\":\"user-1\",\"parts\":[{\"text\":\"hello\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session\"}",
-      "execution_canonical": "{\"chatId\":\"chat\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"persistence-0\",\"requestId\":\"22222222-2222-4222-8222-222222222222\",\"sessionId\":\"session\"}"
+      "admission_canonical": "{\"chatId\":\"chat\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"c8df8db0952ebb065ee2f5cea7976e64a8072a7b21f77a755cff4860ff42ba66\",\"id\":\"persistence-0\"},\"expectedEpoch\":0,\"messages\":[{\"id\":\"user-1\",\"parts\":[{\"text\":\"hello\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session\"}",
+      "execution_canonical": "{\"chatId\":\"chat\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"persistence-0\",\"requestId\":\"22222222-2222-4222-8222-222222222222\",\"sessionId\":\"session\"}"
     },
     {
       "request_id": "55555555-5555-4555-8555-555555555555",
       "expected_epoch": 1,
-      "input_hash": "25f13b74df873042fa5028031edf9c6e47bcf535f5c314fbe325eaef172bf84c",
+      "input_hash": "b4711e058050bdb26ef15594ff301960ee8c2c8c2702ca2bee4d7533aa7922eb",
       "admission_envelope": {
         "contractVersion": "chat-admission/v1",
         "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -118,7 +119,7 @@
         },
         "executionSnapshot": {
           "id": "persistence-1",
-          "digest": "a3d2179fa3891637dbb1f931793d39cab35fbf8612d97a10ad48a864af858388"
+          "digest": "93465975d23085b3d99bf44e73faac8662a385987a922f600b113b9cc7831d95"
         }
       },
       "execution_snapshot": {
@@ -135,6 +136,7 @@
             "interactive": true,
             "devSurface": null
           },
+          "streamProtocol": "unmarked-v1",
           "sessionTitle": null,
           "repoOwner": null,
           "repoName": null,
@@ -172,13 +174,13 @@
           }
         }
       },
-      "admission_canonical": "{\"chatId\":\"chat\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"a3d2179fa3891637dbb1f931793d39cab35fbf8612d97a10ad48a864af858388\",\"id\":\"persistence-1\"},\"expectedEpoch\":1,\"messages\":[{\"id\":\"user-1\",\"parts\":[{\"text\":\"hello\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session\"}",
-      "execution_canonical": "{\"chatId\":\"chat\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"persistence-1\",\"requestId\":\"55555555-5555-4555-8555-555555555555\",\"sessionId\":\"session\"}"
+      "admission_canonical": "{\"chatId\":\"chat\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"93465975d23085b3d99bf44e73faac8662a385987a922f600b113b9cc7831d95\",\"id\":\"persistence-1\"},\"expectedEpoch\":1,\"messages\":[{\"id\":\"user-1\",\"parts\":[{\"text\":\"hello\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session\"}",
+      "execution_canonical": "{\"chatId\":\"chat\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"persistence-1\",\"requestId\":\"55555555-5555-4555-8555-555555555555\",\"sessionId\":\"session\"}"
     },
     {
       "request_id": "66666666-6666-4666-8666-666666666666",
       "expected_epoch": 3,
-      "input_hash": "de84aae1e7509affaed1d557e934253e59142debc7555d8889b44f3afc0f1c53",
+      "input_hash": "bc1fa300b7961543d9ea0f8d3a3aa5d0aaa0334ae79ed1f851cde4db289a3e55",
       "admission_envelope": {
         "contractVersion": "chat-admission/v1",
         "effectiveAccountId": "11111111-1111-4111-8111-111111111111",
@@ -205,7 +207,7 @@
         },
         "executionSnapshot": {
           "id": "persistence-2",
-          "digest": "eb10183fd115553fe1c73b683f3137285d3ab7527f9f7d8cf3357a593fff1952"
+          "digest": "6cafef6e067fcf5bf865f0ddb309e6b20ccfbdfaaa47e72aafb67ec9078a1b33"
         }
       },
       "execution_snapshot": {
@@ -222,6 +224,7 @@
             "interactive": true,
             "devSurface": null
           },
+          "streamProtocol": "unmarked-v1",
           "sessionTitle": null,
           "repoOwner": null,
           "repoName": null,
@@ -259,8 +262,8 @@
           }
         }
       },
-      "admission_canonical": "{\"chatId\":\"chat\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"eb10183fd115553fe1c73b683f3137285d3ab7527f9f7d8cf3357a593fff1952\",\"id\":\"persistence-2\"},\"expectedEpoch\":3,\"messages\":[{\"id\":\"user-1\",\"parts\":[{\"text\":\"hello\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session\"}",
-      "execution_canonical": "{\"chatId\":\"chat\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[]},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"persistence-2\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session\"}"
+      "admission_canonical": "{\"chatId\":\"chat\",\"contractVersion\":\"chat-admission/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"executionSnapshot\":{\"digest\":\"6cafef6e067fcf5bf865f0ddb309e6b20ccfbdfaaa47e72aafb67ec9078a1b33\",\"id\":\"persistence-2\"},\"expectedEpoch\":3,\"messages\":[{\"id\":\"user-1\",\"parts\":[{\"text\":\"hello\",\"type\":\"text\"}],\"role\":\"user\"}],\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"sessionId\":\"session\"}",
+      "execution_canonical": "{\"chatId\":\"chat\",\"content\":{\"credentialPolicy\":{\"authorization\":{\"basis\":\"self\",\"permissions\":[\"chat:execute\"],\"version\":\"synthetic/v1\"},\"credentialIntentId\":\"33333333-3333-4333-8333-333333333333\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"organizationId\":null,\"policyVersion\":\"chat-credential/v1\",\"principal\":{\"accountId\":\"11111111-1111-4111-8111-111111111111\",\"keyId\":\"44444444-4444-4444-8444-444444444444\",\"mechanism\":\"recoup_api_key\"},\"recovery\":\"reauthenticate_proven_never_dispatched\"},\"options\":{\"artistId\":null,\"devSurface\":null,\"interactive\":true,\"modelId\":\"synthetic-model\"},\"recoupOrgId\":null,\"repoName\":null,\"repoOwner\":null,\"sandbox\":{\"currentBranch\":null,\"state\":{\"expiresAt\":null,\"sandboxId\":null,\"sandboxName\":\"synthetic-sandbox\",\"snapshotId\":null,\"source\":null},\"workingDirectory\":\"/workspace\"},\"sessionTitle\":null,\"skills\":[],\"streamProtocol\":\"unmarked-v1\"},\"contractVersion\":\"chat-execution/v1\",\"effectiveAccountId\":\"11111111-1111-4111-8111-111111111111\",\"id\":\"persistence-2\",\"requestId\":\"66666666-6666-4666-8666-666666666666\",\"sessionId\":\"session\"}"
     }
   ],
   "commands": {

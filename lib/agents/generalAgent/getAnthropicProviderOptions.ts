@@ -14,13 +14,13 @@ const ADAPTIVE_THINKING_MODELS = new Set([
  * @param modelId - The model ID selected for the general agent.
  * @returns Anthropic options accepted by the installed SDK.
  */
-export function getAnthropicProviderOptions(modelId: string): AnthropicProviderOptions {
+export function getAnthropicProviderOptions(modelId: string) {
   if (ADAPTIVE_THINKING_MODELS.has(modelId)) {
     return {
       thinking: { type: "adaptive", display: "summarized" },
       effort: "medium",
-    };
+    } satisfies AnthropicProviderOptions;
   }
 
-  return { thinking: { type: "enabled", budgetTokens: 12000 } };
+  return { thinking: { type: "enabled", budgetTokens: 12000 } } satisfies AnthropicProviderOptions;
 }

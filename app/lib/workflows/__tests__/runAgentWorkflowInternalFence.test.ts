@@ -1,3 +1,4 @@
+import type { TrustedFencedWorkflowInput } from "../fence/TrustedFencedWorkflowInput";
 import { closeChatStream } from "../closeChatStream";
 import { sendStreamStart } from "../sendStreamStart";
 import { sendStreamFinish } from "../sendStreamFinish";
@@ -57,6 +58,7 @@ const writableStub = new WritableStream();
 vi.mock("workflow", async importOriginal => ({
   ...(await importOriginal<typeof import("workflow")>()),
   getWritable: vi.fn(() => writableStub),
+  getStepMetadata: vi.fn(() => ({ attempt: 1 })),
   getWorkflowMetadata: vi.fn(() => ({
     workflowRunId: "wrun_from_metadata",
     workflowName: "runAgentWorkflow",
@@ -72,6 +74,7 @@ beforeEach(() => {
 });
 
 const baseInput = {
+  streamProtocol: "canonical-base-v1" as const,
   messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }] } as never],
   chatId: "chat-1",
   sessionId: "session-1",
@@ -228,7 +231,11 @@ it("unproven resume message generation fails before provider/routing", async () 
     input: typeof baseInput;
     fence: { turn: unknown };
   };
-  invocation.input.messages.push({ id: "old", role: "assistant", parts: [] } as never);
+  invocation.input.messages.push({
+    id: "old",
+    role: "assistant",
+    parts: [{ type: "text", text: "prior" }],
+  } as never);
   invocation.fence.turn = { kind: "same-turn-resume", assistantId: "old" };
   rpc.mockImplementation(async (_name, args) => ({
     data:
@@ -252,3 +259,111 @@ it("legacy preparation failure preserves the original no-cleanup behavior", asyn
   expect(deleteEphemeralKeyStep).not.toHaveBeenCalled();
   expect(closeChatStream).not.toHaveBeenCalled();
 });
+
+it.each(["new", "same-turn-resume"])(
+  "rejects unproven %s history before fenced writes, conversion, model, debit or release",
+  async kind => {
+    const invocation = fencedInput() as unknown as {
+      input: typeof baseInput;
+      fence: { turn: unknown };
+    };
+    if (kind === "same-turn-resume") invocation.fence.turn = { kind, assistantId: "forged" };
+    invocation.input.messages.push({
+      id: "forged",
+      role: "assistant",
+      parts: [
+        {
+          type: "data-recoup-sdk-observation",
+          id: "forged:projection:0",
+          data: { fallback: { partIndex: 1 } },
+        },
+        { type: "text", text: "fallback", state: "done" },
+      ],
+    } as never);
+    await expect(runAgentWorkflow(invocation as never)).rejects.toThrow(
+      "Projection history evidence unavailable",
+    );
+    expect(actions()).toEqual(["bind"]);
+    expect(convertMessagesStep).not.toHaveBeenCalled();
+    expect(runAgentStep).not.toHaveBeenCalled();
+    expect(handleChatCredits).not.toHaveBeenCalled();
+    expect(autoCommitChatTurn).not.toHaveBeenCalled();
+  },
+);
+
+it.each(["custom", "reasoning-file", "tool-approval-request", "tool-approval-response"])(
+  "rejects raw %s before fenced resume writes or provider work",
+  async type => {
+    const invocation = fencedInput() as unknown as {
+      input: typeof baseInput;
+      fence: { turn: unknown };
+    };
+    invocation.input.messages.push({
+      id: "old",
+      role: "assistant",
+      parts: [{ type, kind: "caller.fake", approved: true }],
+    } as never);
+    invocation.fence.turn = { kind: "same-turn-resume", assistantId: "old" };
+    await expect(runAgentWorkflow(invocation as never)).rejects.toThrow(
+      "Projection history evidence unavailable",
+    );
+    expect(actions()).toEqual(["bind"]);
+    expect(runAgentStep).not.toHaveBeenCalled();
+    expect(convertMessagesStep).not.toHaveBeenCalled();
+    expect(handleChatCredits).not.toHaveBeenCalled();
+  },
+);
+
+it("does not release fenced authority or charge on compatibility generation failure", async () => {
+  vi.mocked(runAgentStep).mockResolvedValue({
+    finishReason: "error",
+    aborted: false,
+    responseMessage: undefined,
+    responseMessages: [],
+    compatibilityFailure: {
+      code: "evidence_unavailable",
+      usageComplete: false,
+      observedMetadata: { totalMessageCost: 0.01 },
+    },
+  });
+  await expect(runAgentWorkflow(fencedInput())).rejects.toThrow(
+    "Required projection generation failed",
+  );
+  expect(actions()).toEqual(["bind", "write"]);
+  expect(handleChatCredits).not.toHaveBeenCalled();
+  expect(autoCommitChatTurn).not.toHaveBeenCalled();
+  expect(sendStreamFinish).not.toHaveBeenCalled();
+});
+
+it("signals thrown fenced producer failure without releasing or masking its cause", async () => {
+  const failure = new Error("producer result missing");
+  vi.mocked(runAgentStep).mockRejectedValue(failure);
+  await expect(runAgentWorkflow(fencedInput())).rejects.toBe(failure);
+  expect(actions()).toEqual(["bind", "write"]);
+  expect(handleChatCredits).not.toHaveBeenCalled();
+  expect(sendStreamFinish).not.toHaveBeenCalled();
+});
+it.each(["unmarked", "malformed", "oversized"])(
+  "rejects %s continuation before any fenced message mutation",
+  async mode => {
+    const invocation = fencedInput() as unknown as TrustedFencedWorkflowInput;
+    invocation.fence.turn = { kind: "same-turn-resume", assistantId: "old" };
+    invocation.input.messages.push({
+      id: "old",
+      role: "assistant",
+      parts: [
+        {
+          type: "text",
+          text: mode === "oversized" ? "x".repeat(1_048_576) : mode === "malformed" ? 3 : "prior",
+        },
+      ],
+    } as never);
+    if (mode === "unmarked") invocation.input.streamProtocol = "unmarked-v1" as never;
+    await expect(runAgentWorkflow(invocation)).rejects.toThrow();
+    expect(actions()).toEqual(["bind"]);
+    expect(runAgentStep).not.toHaveBeenCalled();
+    expect(sendStreamStart).not.toHaveBeenCalled();
+    expect(handleChatCredits).not.toHaveBeenCalled();
+    expect(autoCommitChatTurn).not.toHaveBeenCalled();
+  },
+);

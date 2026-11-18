@@ -3,11 +3,15 @@
  *
  * @returns The CORS headers.
  */
-export function getCorsHeaders(): Record<string, string> {
+export function getCorsHeaders(
+  options: { streamContinuation?: boolean } = {},
+): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS, PATCH",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, x-api-key",
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization, X-Requested-With, x-api-key" +
+      (options.streamContinuation ? ", X-Recoup-Stream-Continuation" : ""),
     // Browsers hide every non-safelisted response header from cross-origin JS
     // unless it is named here. Without this `x-workflow-run-id` — documented
     // as part of the 200 on the chat endpoints since the workflow cutover —

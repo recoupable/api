@@ -49,7 +49,7 @@ export async function canAccessAccount(params: CanAccessAccountParams): Promise<
     return true;
   }
 
-  const orgIds = currentOrgs.map(m => m.organization_id);
+  const orgIds = currentOrgs.map(m => m.organization_id).filter((id): id is string => id !== null);
   if (orgIds.includes(targetAccountId)) {
     params.onAllowed?.({ basis: "organization_membership", organizationId: targetAccountId });
     return true;

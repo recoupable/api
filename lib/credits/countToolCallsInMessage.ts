@@ -1,6 +1,7 @@
-import { isToolUIPart, type UIMessage } from "ai";
+import type { UIMessage } from "ai";
 
-/** Counts tool UI parts in the accumulated message, regardless of execution state. */
+/** Counts tool UI parts without importing the Node-dependent SDK into durable workflow code. */
 export function countToolCallsInMessage(message: UIMessage): number {
-  return message.parts.filter(isToolUIPart).length;
+  return message.parts.filter(part => part.type === "dynamic-tool" || part.type.startsWith("tool-"))
+    .length;
 }

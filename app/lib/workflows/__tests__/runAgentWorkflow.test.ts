@@ -1,3 +1,4 @@
+import { sendProjectionFailureStep } from "../projection/sendProjectionFailureStep";
 import { prepareCatalogSurfaceStep } from "../prepareCatalogSurfaceStep";
 import { sendCatalogSurfaceStep } from "../sendCatalogSurfaceStep";
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -43,6 +44,7 @@ vi.mock("@/app/lib/workflows/persistAssistantMessageStep", () => ({
 }));
 vi.mock("@/app/lib/workflows/sendStreamStart", () => ({ sendStreamStart: vi.fn() }));
 vi.mock("@/app/lib/workflows/sendStreamFinish", () => ({ sendStreamFinish: vi.fn() }));
+vi.mock("../projection/sendProjectionFailureStep", () => ({ sendProjectionFailureStep: vi.fn() }));
 vi.mock("@/lib/credits/handleChatCredits", () => ({
   handleChatCredits: vi.fn(),
 }));
@@ -68,6 +70,7 @@ beforeEach(() => {
 });
 
 const baseInput = {
+  streamProtocol: "canonical-base-v1" as const,
   messages: [{ id: "m1", role: "user", parts: [{ type: "text", text: "hi" }] } as never],
   chatId: "chat-1",
   sessionId: "session-1",
@@ -183,13 +186,14 @@ describe("runAgentWorkflow", () => {
    * Mirrors open-agents `chat.ts` L939 / L968-971:
    *   sendFinish(writable).then(() => closeStream(writable))
    */
-  it("sends finish before closing when runAgentStep throws", async () => {
+  it("sends an explicit error finish before closing when runAgentStep throws", async () => {
     vi.mocked(runAgentStep).mockRejectedValue(new Error("model exploded"));
 
     await expect(runAgentWorkflow(baseInput)).rejects.toThrow("model exploded");
 
-    expect(sendStreamFinish).toHaveBeenCalledTimes(1);
-    expect(sendStreamFinish).toHaveBeenCalledWith(writableStub);
+    expect(sendStreamFinish).not.toHaveBeenCalled();
+    expect(sendProjectionFailureStep).toHaveBeenCalledTimes(1);
+    expect(sendProjectionFailureStep).toHaveBeenCalledWith(writableStub);
     expect(closeChatStream).toHaveBeenCalledTimes(1);
   });
 
@@ -331,7 +335,13 @@ describe("runAgentWorkflow", () => {
       source: "api",
       resourceUrl: "/sessions/session-1/chats/chat-1",
       gatewayCostUsd: undefined,
-      usage: { inputTokens: 0, cachedInputTokens: 0, outputTokens: 0 },
+      usage: {
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        inputTokenDetails: { noCacheTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+        outputTokenDetails: { textTokens: 0, reasoningTokens: 0 },
+      },
     });
   });
 
@@ -559,7 +569,12 @@ it("reuses a resumed Auto decision and preserves accumulated cost", async () => 
       reason: "Saved decision",
     },
   };
-  const assistant = { id: "saved", role: "assistant" as const, parts: [], metadata };
+  const assistant = {
+    id: "saved",
+    role: "assistant" as const,
+    parts: [{ type: "text" as const, text: "prior" }],
+    metadata,
+  };
   vi.mocked(runAgentStep).mockResolvedValue({
     finishReason: "stop",
     aborted: false,

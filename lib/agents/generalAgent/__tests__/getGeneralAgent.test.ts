@@ -519,6 +519,23 @@ describe("getGeneralAgent", () => {
       });
     });
 
+    it("restores base instructions when a tool-chain override ends", async () => {
+      const result = await getGeneralAgent({
+        accountId: "account-123",
+        orgId: null,
+        messages: [{ id: "1", role: "user", content: "Hello" }],
+      });
+      const settings = (result.agent as any).settings;
+      const next = settings.prepareStep({
+        steps: [],
+        stepNumber: 2,
+        model: settings.model,
+        messages: [],
+        instructions: "previous chain override",
+      });
+      expect(next.instructions).toBe(finalInstructions);
+    });
+
     it("creates ToolLoopAgent with prepareStep function", async () => {
       const body: ChatRequestBody = {
         accountId: "account-123",

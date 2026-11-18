@@ -33,7 +33,12 @@ describe("gateChatStreamStart", () => {
     expect(res).not.toBeNull();
     expect(res!.status).toBe(409);
     expect(res!.headers.get("x-workflow-run-id")).toBeNull();
-    expect(await res!.json()).toMatchObject({ error: expect.stringContaining("GET /api/chat/") });
+    const body = await res!.json();
+    expect(body).toMatchObject({
+      error: expect.stringContaining("GET /api/chat/"),
+      admission: "not_admitted",
+    });
+    expect(body).not.toHaveProperty("runId");
   });
 
   it("returns a retryable 503 on an unresolved slot", async () => {

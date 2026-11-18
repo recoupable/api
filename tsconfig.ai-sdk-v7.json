@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "incremental": false
+  },
+  "include": [
+    "lib/agent/tools/__tests__/sdkV7Runtime.test.ts",
+    "lib/agent/tools/__tests__/agentContextSchema.test.ts",
+    "lib/agents/generalAgent/__tests__/getAnthropicProviderOptions.test.ts",
+    "lib/agent/contextManagement/__tests__/wrapToolsWithAbortIterable.test.ts",
+    "lib/agent/tools/__tests__/wrappedTaskSdk.test.ts",
+    "lib/credits/__tests__/getCreditUsageStepBoundary.test.ts",
+    "lib/chat/projection/**/*.ts",
+    "lib/chat/continuation/**/*.ts",
+    "lib/chat/__tests__/continuationCors.test.ts",
+    "app/lib/workflows/__tests__/sendStreamStartContinuation.test.ts",
+    "app/lib/workflows/__tests__/runAgentStepProjection.test.ts",
+    "app/lib/workflows/__tests__/runAgentWorkflowProjection.test.ts",
+    "app/lib/workflows/__tests__/persistProjectedAssistantStep.test.ts",
+    "app/lib/workflows/__tests__/runAgentStepProjectionStop.test.ts",
+    "app/lib/workflows/__tests__/projectionRedelivery.test.ts"
+  ],
+  "exclude": ["node_modules"]
+}

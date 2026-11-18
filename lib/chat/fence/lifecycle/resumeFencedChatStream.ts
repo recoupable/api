@@ -1,4 +1,6 @@
-import { NextResponse } from "next/server";
+import { validateChatOwnership } from "@/lib/chat/validateChatOwnership";
+import { gateStoredContinuation } from "@/lib/chat/continuation/gateStoredContinuation";
+import { NextRequest, NextResponse } from "next/server";
 import { getRun } from "workflow/api";
 import { createUIMessageStreamResponse } from "ai";
 import { TERMINAL_WORKFLOW_RUN_STATUSES } from "@/lib/const";
@@ -14,9 +16,13 @@ import type { ChatLifecycleTarget } from "./chatLifecycleTargetSchema";
 /** Disabled read-only reconnect adapter; disconnect never cancels a workflow. */
 export async function resumeFencedChatStream(
   input: ChatLifecycleTarget,
-  url: URL,
+  request: NextRequest,
 ): Promise<Response> {
-  const startIndex = parseStreamStartIndex(url);
+  const validated = await validateChatOwnership(request, input.chatId);
+  if (validated instanceof NextResponse) return validated;
+  if (validated.auth.accountId !== input.effectiveAccount || validated.chat.id !== input.chatId)
+    return errorResponse("Forbidden", 403);
+  const startIndex = parseStreamStartIndex(new URL(request.url));
   if (startIndex instanceof NextResponse) return startIndex;
   const original = await readOriginalChatLifecycle(input);
   if (original.state === "pending")
@@ -27,6 +33,17 @@ export async function resumeFencedChatStream(
       503,
     );
   const target = original.target;
+  const gate = await gateStoredContinuation(
+    request,
+    {
+      runId: target.runId,
+      accountId: validated.auth.accountId,
+      chatId: validated.chat.id,
+      sessionId: validated.chat.session_id,
+    },
+    "existing",
+  );
+  if (gate) return gate;
   let run, status;
   try {
     run = getRun(target.runId);

@@ -1,3 +1,9 @@
+import { selectStreamProtocol } from "./continuation/selectStreamProtocol";
+import { buildContinuationMarker } from "./continuation/buildContinuationMarker";
+import { CONTINUATION_HEADER, type StreamProtocol } from "./continuation/streamProtocol";
+import { gateStoredContinuation } from "./continuation/gateStoredContinuation";
+import { ContinuationError } from "./continuation/ContinuationError";
+import { prepareAuthorizedProjectionHistory } from "./projection/prepareAuthorizedProjectionHistory";
 import { DEFAULT_MODEL } from "@/lib/const";
 import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStreamResponse } from "ai";
@@ -73,6 +79,34 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
     return errorResponse("Chat not found", 404);
   }
 
+  try {
+    await prepareAuthorizedProjectionHistory(
+      validated.messages,
+      { accountId: validated.accountId, chatId: validated.chatId, sessionId: validated.sessionId },
+      request.signal,
+    );
+  } catch {
+    return errorResponse("Projection history evidence unavailable", 400);
+  }
+
+  let streamProtocol: StreamProtocol;
+  try {
+    streamProtocol = selectStreamProtocol(
+      validated.messages,
+      !!validated.devCatalogSurface,
+      request.headers.get(CONTINUATION_HEADER),
+    );
+    if (streamProtocol === "canonical-base-v1") {
+      const base = validated.messages.at(-1)!;
+      await buildContinuationMarker(base, base.id);
+    }
+  } catch (error) {
+    const code = error instanceof ContinuationError ? error.code : "stream_continuation_invalid";
+    return errorResponse(code, code === "stream_continuation_upgrade_required" ? 409 : 400, {
+      admission: "not_admitted",
+    });
+  }
+
   // Reject an unaccepted new turn rather than returning an older response.
   const recovery = await gateChatStreamStart(validated.chatId, chat.active_stream_id);
   if (recovery) return recovery;
@@ -84,7 +118,9 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   const claimed = await compareAndSetChatActiveStreamId(validated.chatId, null, placeholder);
   if (!claimed.ok) return errorResponse("Internal server error", 500);
   if (!claimed.claimed) {
-    return errorResponse("Another workflow is already running for this chat", 409);
+    return errorResponse("Another workflow is already running for this chat", 409, {
+      admission: "not_admitted",
+    });
   }
 
   // We own the slot — safe to start the workflow.
@@ -125,6 +161,7 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
   const run = await start(runAgentWorkflow, [
     buildRunAgentInput({
       messages: validated.messages,
+      streamProtocol,
       devCatalogSurface: validated.devCatalogSurface,
       chatId: validated.chatId,
       sessionId: validated.sessionId,
@@ -150,8 +187,25 @@ export async function handleChatWorkflowStream(request: NextRequest): Promise<Re
     } catch (error) {
       console.error("[handleChatWorkflowStream] cancel after slot-loss failed:", error);
     }
-    return errorResponse("Another workflow is already running for this chat", 409);
+    // The run was created. A cancellation attempt does not undo admission or prove completion.
+    return errorResponse("chat_stream_ownership_lost", 409, {
+      admission: "admitted",
+      runId: run.runId,
+    });
   }
+
+  const gate = await gateStoredContinuation(
+    request,
+    {
+      runId: run.runId,
+      accountId: validated.accountId,
+      chatId: validated.chatId,
+      sessionId: validated.sessionId,
+    },
+    "admitted",
+    streamProtocol,
+  );
+  if (gate) return gate;
 
   return createUIMessageStreamResponse({
     stream: wrapWorkflowStreamWatcher(run.runId, getChatWorkflowReadable(run), {

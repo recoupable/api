@@ -20,6 +20,7 @@ export async function gateChatStreamStart(
     return errorResponse(
       "A response is already streaming for this chat; reconnect via GET /api/chat/{chatId}/stream before retrying this message",
       409,
+      { admission: "not_admitted" },
     );
   }
   if (reconciled.action === "conflict") {

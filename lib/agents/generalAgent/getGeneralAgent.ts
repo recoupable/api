@@ -1,5 +1,5 @@
-import { ToolLoopAgent } from "ai";
-import { CHAT_AGENT_STOP_WHEN } from "@/lib/chat/const";
+import { ToolLoopAgent, isStepCount } from "ai";
+import { CHAT_AGENT_MAX_ITERATIONS } from "@/lib/chat/const";
 import { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
 import { OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
 import { DEFAULT_MODEL } from "@/lib/const";
@@ -53,7 +53,7 @@ export default async function getGeneralAgent(body: ChatRequestBody): Promise<Ro
 
   const tools = await setupToolsForRequest(body);
   const model = bodyModel || DEFAULT_MODEL;
-  const stopWhen = CHAT_AGENT_STOP_WHEN;
+  const stopWhen = isStepCount(CHAT_AGENT_MAX_ITERATIONS);
 
   const agent = new ToolLoopAgent({
     model,
@@ -62,8 +62,7 @@ export default async function getGeneralAgent(body: ChatRequestBody): Promise<Ro
     stopWhen,
     prepareStep: options => {
       const next = getPrepareStepResult(options);
-      if (next) return { ...options, ...next };
-      return options;
+      return { ...options, instructions, ...next };
     },
     providerOptions: {
       anthropic: getAnthropicProviderOptions(model),

@@ -1,3 +1,4 @@
+import { agentContextSchema } from "./agentContextSchema";
 import { tool } from "ai";
 import { z } from "zod";
 import * as path from "path";
@@ -38,8 +39,9 @@ IMPORTANT:
 - Prefer editing existing files over creating new ones unless a new file is explicitly needed
 - NEVER proactively create documentation files (e.g., *.md) unless the user explicitly requests them
 - Do not write files that contain secrets or credentials (API keys, passwords, .env, etc.)`,
+  contextSchema: agentContextSchema,
   inputSchema: writeInputSchema,
-  execute: async ({ filePath, content }, { experimental_context }) => {
+  execute: async ({ filePath, content }, { context: experimental_context }) => {
     const sandbox = await getSandbox(experimental_context, "write");
     const workingDirectory = sandbox.workingDirectory;
 

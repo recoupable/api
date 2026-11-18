@@ -1,3 +1,5 @@
+import { NextRequest } from "next/server";
+import { validateChatOwnership } from "@/lib/chat/validateChatOwnership";
 import { buildChatExecutionSnapshot } from "../../buildChatExecutionSnapshot";
 import { canonicalizeChatAdmission } from "../../canonicalizeChatAdmission";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -6,6 +8,15 @@ import { getRun } from "workflow/api";
 import { stopFencedChatWorkflow } from "../stopFencedChatWorkflow";
 import { resumeFencedChatStream } from "../resumeFencedChatStream";
 import { account, requestId, workflowInput, policy } from "../../__tests__/snapshotFixture";
+vi.mock("@/lib/chat/continuation/gateStoredContinuation", () => ({
+  gateStoredContinuation: vi.fn(async () => null),
+}));
+vi.mock("@/lib/chat/validateChatOwnership", () => ({
+  validateChatOwnership: vi.fn(async () => ({
+    auth: { accountId: "11111111-1111-4111-8111-111111111111" },
+    chat: { id: "chat", session_id: "session" },
+  })),
+}));
 const { rpc } = vi.hoisted(() => ({ rpc: vi.fn() }));
 vi.mock("@/lib/supabase/serverClient", () => ({ default: { rpc } }));
 vi.mock("workflow/api", () => ({ getRun: vi.fn() }));
@@ -117,8 +128,12 @@ it("records actual adapter RPC commands and synthetic SDK evidence for pinned SQ
     const input = name.startsWith("pending")
       ? { ...target, phase: "pending" as const, runId: null }
       : target;
+    vi.mocked(validateChatOwnership).mockResolvedValue({
+      auth: { accountId: target.effectiveAccount },
+      chat: { id: target.chatId, session_id: inputSnapshot.sessionId },
+    } as never);
     const response = name.includes("resume")
-      ? await resumeFencedChatStream(input, new URL("https://api.test/stream"))
+      ? await resumeFencedChatStream(input, new NextRequest("https://api.test/stream"))
       : await stopFencedChatWorkflow(input);
     const status =
       name === "pending-close-wins" || name === "stop-success" || name === "resume-terminal"

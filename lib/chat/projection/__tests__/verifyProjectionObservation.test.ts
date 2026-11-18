@@ -1,0 +1,410 @@
+import { describe, expect, it, vi } from "vitest";
+import { createProjectionEvidencePorts } from "../createProjectionEvidencePorts";
+import { recordProjectionProofStep } from "@/app/lib/workflows/projection/recordProjectionProofStep";
+import { verifyProjectionObservation } from "../verifyProjectionObservation";
+
+const scope = { accountId: "account", chatId: "chat", sessionId: "session" };
+const producer = {
+  deploymentId: "deployment",
+  workflowName: "workflow//chat//run",
+  stepName: "step//chat//runAgentStep",
+  proofStepName: "step//chat//recordProjectionProofStep",
+};
+const baseObservation = {
+  type: "data-recoup-sdk-observation",
+  id: "assistant:projection:0",
+  data: {
+    version: 1,
+    originRunId: "run",
+    originStepId: "step",
+    assistantMessageId: "assistant",
+    ordinal: 0,
+    original: {
+      type: "custom",
+      kind: "provider.kind",
+      providerMetadata: { provider: { opaque: ["retained", 1] } },
+    },
+    fallback: {
+      partIndex: 1,
+      text: "This view cannot display additional model content.",
+    },
+  },
+};
+const baseEvents = [
+  baseObservation,
+  { type: "text-start", id: "assistant:projection:0:fallback" },
+  {
+    type: "text-delta",
+    id: "assistant:projection:0:fallback",
+    delta: baseObservation.data.fallback.text,
+  },
+  { type: "text-end", id: "assistant:projection:0:fallback" },
+];
+function fixture() {
+  const observation = structuredClone(baseObservation);
+  const events = structuredClone(baseEvents);
+  const run = {
+    runId: "run",
+    ...producer,
+    input: [{ ...scope, modelId: "model", messages: [], agentContext: {} }],
+  };
+  const step = {
+    runId: "run",
+    stepId: "step",
+    stepName: producer.stepName,
+    status: "completed",
+    output: {
+      generatedProjectionObservations: {
+        contract: "recoup-sdk-projection/v1",
+        observations: [{ observation, events, canonicalWrite: "requires-readback" }],
+      },
+    },
+  };
+  const receipt = {
+    runId: "run",
+    stepId: "proof-step",
+    stepName: producer.proofStepName,
+    status: "completed",
+    output: {
+      contract: "recoup-sdk-projection-proof/v1",
+      producerStepId: "step",
+      generatedProjectionObservations: step.output.generatedProjectionObservations,
+    },
+  };
+  const ports = {
+    readRun: vi.fn(async () => run),
+    readStep: vi.fn(async () => step),
+    readReceipt: vi.fn(async () => receipt),
+    readCanonical: vi.fn(async () => [{ type: "start", messageId: "assistant" }, ...events]),
+  };
+  const input = {
+    observation,
+    message: {
+      id: "assistant",
+      role: "assistant",
+      parts: [observation, { type: "text", text: observation.data.fallback.text, state: "done" }],
+    },
+    scope,
+    producers: [producer],
+    ports,
+    signal: new AbortController().signal,
+  };
+  return { run, step, receipt, ports, input };
+}
+describe("journal-backed projection verification", () => {
+  it("requires exact fresh proof and canonical pair under server authority", async () => {
+    const { input } = fixture();
+    expect(await verifyProjectionObservation(input)).toEqual(baseObservation.data.original);
+  });
+  it.each(["accountId", "chatId", "sessionId"] as const)(
+    "rejects wrong recorded %s",
+    async field => {
+      const { input, run, ports } = fixture();
+      run.input[0][field] = "other";
+      await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+        code: "authority_mismatch",
+      });
+      expect(ports.readStep).not.toHaveBeenCalled();
+    },
+  );
+  it.each(["workflowName", "deploymentId"] as const)("rejects unapproved %s", async field => {
+    const { input, run } = fixture();
+    run[field] = "other";
+    await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+      code: "producer_mismatch",
+    });
+  });
+  it("fails closed with no configured trusted producer", async () => {
+    const { input, ports } = fixture();
+    input.producers = [];
+    await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+      code: "producer_mismatch",
+    });
+    expect(ports.readRun).not.toHaveBeenCalled();
+  });
+  it("never accepts an aggregate response seed as generated proof", async () => {
+    const { input, step } = fixture();
+    Object.assign(step.output, { responseMessage: input.message });
+    delete (step.output as Record<string, unknown>).generatedProjectionObservations;
+    await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+      code: "proof_missing",
+    });
+  });
+  it.each(["runId", "stepId", "stepName"] as const)(
+    "rejects wrong recorded step %s",
+    async field => {
+      const { input, step } = fixture();
+      step[field] = "other";
+      await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+        code: "producer_mismatch",
+      });
+    },
+  );
+  it("rejects an incomplete step even with a matching aggregate", async () => {
+    const { input, step } = fixture();
+    step.status = "running";
+    await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+      code: "proof_pending",
+    });
+  });
+  it("requires actual stored stream equality even when a completed step result matches", async () => {
+    const { input, ports } = fixture();
+    ports.readCanonical.mockResolvedValue([{ type: "start", messageId: "assistant" }]);
+    await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+      code: "canonical_mismatch",
+    });
+  });
+  it("does not promote partial fallback text", async () => {
+    const { input } = fixture();
+    input.message.parts[1] = { type: "text", text: "Additional", state: "done" };
+    await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+      code: "span_mismatch",
+    });
+  });
+  it("does not restore from a different assistant", async () => {
+    const { input } = fixture();
+    input.message.id = "other";
+    await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+      code: "span_mismatch",
+    });
+  });
+  it("rejects expired input without trusting any row", async () => {
+    const { input, run } = fixture();
+    (run as Record<string, unknown>).input = [{ expiredAt: "2026-01-01" }];
+    await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+      code: "evidence_expired",
+    });
+  });
+  it("preserves distinct unavailable evidence failures", async () => {
+    const { input, ports } = fixture();
+    ports.readRun.mockRejectedValue(new Error("private transport details"));
+    await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+      code: "evidence_unavailable",
+      message: "Projection history evidence unavailable",
+    });
+  });
+  it("rejects invalid original semantics such as approvals", async () => {
+    const { input } = fixture();
+    (input.observation.data as Record<string, unknown>).original = {
+      type: "tool-approval-response",
+      approved: true,
+    };
+    await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+      code: "invalid_observation",
+    });
+  });
+  it("bounds an uncooperative metadata read and observes cancellation", async () => {
+    const { input, ports } = fixture();
+    const controller = new AbortController();
+    input.signal = controller.signal;
+    ports.readRun.mockImplementation(() => new Promise(() => {}));
+    const pending = verifyProjectionObservation(input);
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ code: "cancelled" });
+  });
+});
+it("rejects duplicate completed proof entries instead of selecting one", async () => {
+  const { input, step } = fixture();
+  step.output.generatedProjectionObservations.observations.push(
+    structuredClone(step.output.generatedProjectionObservations.observations[0]),
+  );
+  await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+    code: "invalid_evidence",
+  });
+});
+it("requires an approved identity even when caller namespace/version looks valid", async () => {
+  const { input, run } = fixture();
+  (run as Record<string, unknown>).deploymentId = undefined;
+  await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+    code: "producer_mismatch",
+  });
+});
+it("rejects a second copy in the stream as ambiguous rather than reusing an index", async () => {
+  const { input, ports } = fixture();
+  ports.readCanonical.mockResolvedValue([
+    { type: "start", messageId: "assistant" },
+    ...baseEvents,
+    ...baseEvents,
+  ]);
+  await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+    code: "canonical_mismatch",
+  });
+});
+it("does not accept arbitrarily nested input authority", async () => {
+  const { input, run } = fixture();
+  (run as Record<string, unknown>).input = [{ unrelated: { ...scope } }];
+  await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+    code: "invalid_evidence",
+  });
+});
+it("rejects leftover encrypted or unresolved input bytes", async () => {
+  const { input, run } = fixture();
+  (run as Record<string, unknown>).input = new Uint8Array([1, 2]);
+  await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+    code: "invalid_evidence",
+  });
+});
+it("requires a separate completed receipt with present output", async () => {
+  const { input, receipt } = fixture();
+  delete (receipt as Record<string, unknown>).output;
+  await expect(verifyProjectionObservation(input)).rejects.toMatchObject({ code: "proof_missing" });
+});
+it("does not substitute the producer step for the distinct proof step", async () => {
+  const { input, receipt } = fixture();
+  receipt.stepId = "step";
+  await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+    code: "producer_mismatch",
+  });
+});
+it("checks the receipt producer linkage, not just identical observations", async () => {
+  const { input, receipt } = fixture();
+  receipt.output.producerStepId = "other-step";
+  await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+    code: "producer_mismatch",
+  });
+});
+it("verifies a valid large observation whose duplicated proof exceeds one MiB", async () => {
+  const { input, step, ports } = fixture();
+  input.observation.data.original.providerMetadata.provider.opaque = ["x".repeat(600_000), 1];
+  step.output.generatedProjectionObservations.observations[0].events[0] = input.observation;
+  ports.readCanonical.mockResolvedValue([
+    { type: "start", messageId: "assistant" },
+    ...step.output.generatedProjectionObservations.observations[0].events,
+  ]);
+  await expect(verifyProjectionObservation(input)).resolves.toEqual(
+    input.observation.data.original,
+  );
+});
+it("sanitizes an aggregate proof exceeding its separate sixteen MiB budget", async () => {
+  const { input, step } = fixture();
+  const item = step.output.generatedProjectionObservations.observations[0];
+  step.output.generatedProjectionObservations.observations = Array.from(
+    { length: 32 },
+    (_, index) => {
+      const copy = structuredClone(item);
+      copy.observation.data.ordinal = index;
+      copy.observation.data.original.providerMetadata.provider.opaque = ["x".repeat(600_000), 1];
+      return copy;
+    },
+  );
+  await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+    code: "evidence_limit",
+    message: "Projection history evidence unavailable",
+  });
+});
+it("uses the aggregate budget for multiple individually bounded observations", async () => {
+  const { input, step, receipt, ports } = fixture();
+  const first = step.output.generatedProjectionObservations.observations[0];
+  first.observation.data.original.providerMetadata.provider.opaque = ["x".repeat(300_000), 1];
+  first.events[0] = first.observation;
+  const second = structuredClone(first);
+  second.observation.id = "assistant:projection:1";
+  second.observation.data.ordinal = 1;
+  second.observation.data.fallback.partIndex = 3;
+  second.events = [
+    second.observation,
+    { type: "text-start", id: "assistant:projection:1:fallback" },
+    {
+      type: "text-delta",
+      id: "assistant:projection:1:fallback",
+      delta: second.observation.data.fallback.text,
+    },
+    { type: "text-end", id: "assistant:projection:1:fallback" },
+  ];
+  step.output.generatedProjectionObservations.observations.push(second);
+  receipt.output.generatedProjectionObservations = structuredClone(
+    step.output.generatedProjectionObservations,
+  );
+  ports.readCanonical.mockResolvedValue([
+    { type: "start", messageId: "assistant" },
+    ...first.events,
+    ...second.events,
+  ]);
+  await expect(verifyProjectionObservation(input)).resolves.toEqual(
+    input.observation.data.original,
+  );
+});
+
+it.each(
+  [
+    [...baseEvents, { type: "start", messageId: "assistant" }],
+    [
+      { type: "start", messageId: "assistant" },
+      { type: "start", messageId: "other" },
+      ...baseEvents,
+    ],
+    [{ type: "start", messageId: "assistant" }, { type: "finish" }, ...baseEvents],
+  ].map(chunks => ({ chunks })),
+)("rejects projection outside the active canonical assistant", async ({ chunks }) => {
+  const { input, ports } = fixture();
+  ports.readCanonical.mockResolvedValue(chunks as never);
+  await expect(verifyProjectionObservation(input)).rejects.toMatchObject({
+    code: "canonical_mismatch",
+  });
+});
+it.each([
+  [new Date("2000-01-01"), "evidence_expired"],
+  [new Date("2999-01-01"), "evidence_unavailable"],
+  [undefined, undefined],
+])(
+  "preserves and refuses ambiguous or expired World metadata through the real adapter",
+  async (expiredAt, code) => {
+    const { input, run, ports } = fixture();
+    const world = {
+      runs: {
+        get: vi.fn(async () => ({
+          ...run,
+          expiredAt,
+          input: new TextEncoder().encode(
+            'devl[[1],{"accountId":2,"chatId":3,"sessionId":4,"modelId":5,"messages":6,"agentContext":7},"account","chat","session","model",[],{}]',
+          ),
+        })),
+      },
+    };
+    const adapter = createProjectionEvidencePorts({ world: world as never });
+    input.ports.readRun = vi.fn(adapter.readRun);
+    if (code) {
+      await expect(verifyProjectionObservation(input)).rejects.toMatchObject({ code });
+      expect(ports.readStep).not.toHaveBeenCalled();
+    } else {
+      await expect(verifyProjectionObservation(input)).resolves.toEqual(
+        input.observation.data.original,
+      );
+    }
+  },
+);
+it("records and verifies the same 600 KB observation budget", async () => {
+  const { input, step, receipt, ports } = fixture();
+  input.observation.data.original.providerMetadata.provider.opaque = ["x".repeat(600_000), 1];
+  step.output.generatedProjectionObservations.observations[0].events[0] = input.observation;
+  receipt.output = (await recordProjectionProofStep(
+    "step",
+    step.output.generatedProjectionObservations,
+  )) as typeof receipt.output;
+  ports.readCanonical.mockResolvedValue([
+    { type: "start", messageId: "assistant" },
+    ...step.output.generatedProjectionObservations.observations[0].events,
+  ]);
+  await expect(verifyProjectionObservation(input)).resolves.toEqual(
+    input.observation.data.original,
+  );
+});
+it("rejects an oversized individual observation at receipt recording with a typed error", async () => {
+  const { input, step } = fixture();
+  input.observation.data.original.providerMetadata.provider.opaque = ["x".repeat(1_048_576), 1];
+  await expect(
+    recordProjectionProofStep("step", step.output.generatedProjectionObservations),
+  ).rejects.toMatchObject({
+    code: "evidence_limit",
+    message: "Projection history evidence unavailable",
+  });
+});
+it("rejects oversized aggregate receipts with a typed limit error", async () => {
+  const { step } = fixture();
+  const item = step.output.generatedProjectionObservations.observations[0];
+  item.observation.data.original.providerMetadata.provider.opaque = ["x".repeat(600_000), 1];
+  step.output.generatedProjectionObservations.observations = Array.from({ length: 32 }, () => item);
+  await expect(
+    recordProjectionProofStep("step", step.output.generatedProjectionObservations),
+  ).rejects.toMatchObject({ code: "evidence_limit" });
+});

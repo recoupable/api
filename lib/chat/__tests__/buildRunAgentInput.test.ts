@@ -59,3 +59,13 @@ describe("buildRunAgentInput", () => {
     expect(parseGitHubRepoIdentifiers).toHaveBeenCalledWith(null);
   });
 });
+it("records explicit server requirements for fresh and headless continuation inputs", () => {
+  expect(buildRunAgentInput(base).streamProtocol).toBe("unmarked-v1");
+  expect(
+    buildRunAgentInput({
+      ...base,
+      interactive: false,
+      messages: [{ id: "a", role: "assistant", parts: [] }],
+    }).streamProtocol,
+  ).toBe("canonical-base-v1");
+});

@@ -2,7 +2,7 @@ import type { LanguageModel } from "ai";
 import { isAgentContext } from "@/lib/agent/tools/isAgentContext";
 
 /**
- * Resolve the main agent's language model from `experimental_context`.
+ * Resolve the main agent's language model from `toolsContext`.
  * Mirrors open-agents' `getMainModel` (`tools/utils.ts`). Throws with a
  * descriptive error if the context wasn't populated by `runAgentStep`.
  *
@@ -19,7 +19,7 @@ export function getMainModel(experimental_context: unknown, toolName?: string): 
       : "Context is undefined or null";
     throw new Error(
       `Model not initialized in context${toolInfo}. ${contextInfo}. ` +
-        "Ensure runAgentStep sets experimental_context: { model, ... }",
+        "Ensure runAgentStep sets toolsContext for this tool with { model, ... }",
     );
   }
   return context.model;

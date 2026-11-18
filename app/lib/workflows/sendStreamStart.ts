@@ -1,4 +1,5 @@
-import type { UIMessageChunk } from "ai";
+import { buildContinuationMarker } from "@/lib/chat/continuation/buildContinuationMarker";
+import type { UIMessage, UIMessageChunk } from "ai";
 
 /**
  * Emit the single `start` chunk that opens an assistant turn.
@@ -13,12 +14,20 @@ import type { UIMessageChunk } from "ai";
 export async function sendStreamStart(
   writable: WritableStream<UIMessageChunk>,
   messageId: string,
+  canonicalBase?: UIMessage,
 ): Promise<void> {
   "use step";
 
+  const marker = canonicalBase
+    ? await buildContinuationMarker(canonicalBase, messageId)
+    : undefined;
   const writer = writable.getWriter();
   try {
-    await writer.write({ type: "start", messageId });
+    await writer.write({
+      type: "start",
+      messageId,
+      ...(marker ? { messageMetadata: { recoupStream: marker } } : {}),
+    });
   } finally {
     writer.releaseLock();
   }

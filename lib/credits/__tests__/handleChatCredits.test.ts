@@ -18,7 +18,7 @@ const mockRecordCreditDeduction = vi.mocked(recordCreditDeduction);
 const USAGE = {
   inputTokens: 1000,
   outputTokens: 500,
-  cachedInputTokens: 0,
+  inputTokenDetails: { cacheReadTokens: 0 },
 } as never;
 
 describe("handleChatCredits", () => {
@@ -29,6 +29,41 @@ describe("handleChatCredits", () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it("still charges persisted sparse usage without nested cache details", async () => {
+    mockGetCreditUsage.mockResolvedValue(0.05);
+    await handleChatCredits({
+      usage: { inputTokens: 1000, outputTokens: 500, totalTokens: 1500 } as never,
+      model: "fixture-model",
+      accountId: "account-123",
+      source: "api",
+      toolCallCount: 2,
+    });
+    expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        accountId: "account-123",
+        creditsToDeduct: 50_000,
+        source: "api",
+        toolCallCount: 2,
+        cachedInputTokens: undefined,
+      }),
+    );
+  });
+
+  it("preserves cached tokens from persisted v6 usage in the audit row", async () => {
+    mockGetCreditUsage.mockResolvedValue(0.05);
+    await handleChatCredits({
+      usage: { inputTokens: 1000, outputTokens: 500, cachedInputTokens: 125 } as never,
+      model: "fixture-model",
+      accountId: "account-123",
+    });
+    expect(mockRecordCreditDeduction).toHaveBeenCalledWith(
+      expect.objectContaining({
+        creditsToDeduct: 50_000,
+        cachedInputTokens: 125,
+      }),
+    );
   });
 
   describe("credit deduction", () => {

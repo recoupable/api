@@ -1,3 +1,4 @@
+import { prepareProjectionHistory } from "@/lib/chat/projection/prepareProjectionHistory";
 import { convertToModelMessages } from "ai";
 import { MAX_MESSAGES } from "./const";
 import { type ChatConfig } from "./types";
@@ -16,6 +17,7 @@ import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
  * @returns ChatConfig ready for use with AI SDK
  */
 export async function setupChatRequest(body: ChatRequestBody): Promise<ChatConfig> {
+  await prepareProjectionHistory(body.messages);
   const decision = await getGeneralAgent(body);
 
   const convertedMessages = (

@@ -140,7 +140,7 @@ describe("handleStartChatRun", () => {
   // output live". That route keys on chats.active_stream_id, so a headless run
   // that never claims the slot is unresumable (chat#1923).
   it("claims chats.active_stream_id with the run id so the run is resumable", async () => {
-    await handleStartChatRun({} as never);
+    await handleStartChatRun({ headers: new Headers() } as never);
 
     expect(compareAndSetChatActiveStreamId).toHaveBeenCalledWith("chat-1", null, "wrun_abc");
   });
@@ -189,4 +189,16 @@ describe("handleStartChatRun trigger_run_id link (chat#2006 item 4a)", () => {
     expect(res.status).toBe(202);
     expect(await res.json()).toEqual({ runId: "wrun_abc", chatId: "chat-1", sessionId: "sess-1" });
   });
+});
+
+it("rejects carried projection before provisioning or minting a key", async () => {
+  vi.clearAllMocks();
+  vi.mocked(validateChatRunRequest).mockResolvedValue({
+    ...validated,
+    messages: [{ id: "a", role: "assistant", parts: [{ type: "data-recoup-sdk-observation" }] }],
+  } as never);
+  expect((await handleStartChatRun(req())).status).toBe(400);
+  expect(provisionRunSession).not.toHaveBeenCalled();
+  expect(mintEphemeralAccountKey).not.toHaveBeenCalled();
+  expect(start).not.toHaveBeenCalled();
 });

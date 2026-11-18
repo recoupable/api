@@ -11,7 +11,7 @@ import { handleStartChatRun } from "@/lib/chat/runs/handleStartChatRun";
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,
-    headers: getCorsHeaders(),
+    headers: getCorsHeaders({ streamContinuation: true }),
   });
 }
 

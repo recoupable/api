@@ -1,3 +1,5 @@
+import { CONTINUATION_WORKFLOW } from "../continuation/streamProtocol";
+import { createRequire } from "node:module";
 import { it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
 
@@ -93,6 +95,10 @@ beforeEach(() => {
   vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue({ ok: true, claimed: true });
 });
 
+const require = createRequire(import.meta.url);
+const { stringify } = createRequire(require.resolve("@workflow/core/serialization-format"))(
+  "devalue",
+);
 const runId = "wrun_synthetic_sdk_boundary";
 function syntheticWorld(mode: "cancel" | "eof" | "error") {
   let entered!: () => void;
@@ -102,7 +108,27 @@ function syntheticWorld(mode: "cancel" | "eof" | "error") {
   const events = vi.fn(async () => ({}));
   const release = vi.fn();
   setWorld({
-    runs: { get: async () => ({ runId, status: "running" }) },
+    runs: {
+      get: async () => ({
+        runId,
+        status: "running",
+        workflowName: CONTINUATION_WORKFLOW,
+        input: new TextEncoder().encode(
+          "devl" +
+            stringify([
+              {
+                accountId: ACCOUNT_ID,
+                chatId: CHAT_ID,
+                sessionId: SESSION_ID,
+                modelId: "model",
+                messages: [],
+                agentContext: {},
+                streamProtocol: "unmarked-v1",
+              },
+            ]),
+        ),
+      }),
+    },
     events: { create: events },
     getStreamInfo: async () => ({ tailIndex: 17 }),
     readFromStream: async () => {
@@ -121,7 +147,7 @@ function syntheticWorld(mode: "cancel" | "eof" | "error") {
   vi.mocked(start).mockResolvedValue(getRun(runId) as never);
   vi.mocked(validateChatOwnership).mockResolvedValue({
     auth: { accountId: ACCOUNT_ID },
-    chat: { id: CHAT_ID, active_stream_id: runId },
+    chat: { id: CHAT_ID, session_id: SESSION_ID, active_stream_id: runId },
   } as never);
   return { subscribed, events, release };
 }

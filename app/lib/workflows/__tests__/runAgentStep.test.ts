@@ -15,7 +15,9 @@ vi.mock("@ai-sdk/gateway", () => ({
 // runAgentStep now reads workflowRunId via getWorkflowMetadata() and polls
 // getRun(runId).status to source its abort signal. Stub both so the tests
 // don't pull in the workflow runtime.
-vi.mock("workflow", () => ({
+vi.mock("workflow", async original => ({
+  ...(await original<typeof import("workflow")>()),
+  getStepMetadata: vi.fn(() => ({ attempt: 1, stepId: "step" })),
   getWorkflowMetadata: vi.fn(() => ({
     workflowRunId: "test-run-id",
     workflowName: "test",
@@ -46,7 +48,7 @@ type StreamOpts = {
   messageMetadata?: unknown;
   generateMessageId?: unknown;
   originalMessages?: unknown[];
-  onFinish?: (e: { responseMessage: unknown }) => unknown;
+  onEnd?: (e: { responseMessage: unknown }) => unknown;
 };
 
 function makeStreamResult(opts?: {
@@ -67,12 +69,12 @@ function makeStreamResult(opts?: {
         yield { type: "text-start", id: "t1" };
         yield { type: "text-end", id: "t1" };
         if (opts && "emitResponseMessage" in opts) {
-          streamOpts.onFinish?.({ responseMessage: opts.emitResponseMessage });
+          streamOpts.onEnd?.({ responseMessage: opts.emitResponseMessage });
         }
       })();
     }),
     finishReason: Promise.resolve("stop"),
-    response: Promise.resolve({ messages: [] }),
+    responseMessages: Promise.resolve([]),
   };
 }
 
@@ -165,10 +167,10 @@ describe("runAgentStep", () => {
       writable: stream,
     } as never);
 
-    const args = vi.mocked(streamText).mock.calls[0]?.[0] as { system?: string };
-    expect(args.system).toMatch(/# Environment/);
-    expect(args.system).toMatch(/Working directory: \. \(workspace root\)/);
-    expect(args.system).toMatch(/workspace-relative paths/);
+    const args = vi.mocked(streamText).mock.calls[0]?.[0] as { instructions?: string };
+    expect(args.instructions).toMatch(/# Environment/);
+    expect(args.instructions).toMatch(/Working directory: \. \(workspace root\)/);
+    expect(args.instructions).toMatch(/workspace-relative paths/);
   });
 
   it("wraps tools with anthropic cacheControl on the last tool before passing to streamText", async () => {
@@ -241,7 +243,7 @@ describe("runAgentStep", () => {
         return (async function* () {})();
       }),
       finishReason: Promise.resolve("stop"),
-      response: Promise.resolve({ messages: [] }),
+      responseMessages: Promise.resolve([]),
     } as never);
     const { stream } = makeWritable();
 
@@ -256,7 +258,7 @@ describe("runAgentStep", () => {
     vi.mocked(streamText).mockReturnValue({
       toUIMessageStream: vi.fn(() => (async function* () {})()),
       finishReason: Promise.resolve("tool-calls"),
-      response: Promise.resolve({ messages: produced }),
+      responseMessages: Promise.resolve(produced),
     } as never);
     const { stream } = makeWritable();
 
@@ -303,7 +305,7 @@ describe("runAgentStep", () => {
     expect(result.finishReason).toBe("stop");
   });
 
-  it("returns the responseMessage captured from onFinish (so the workflow can charge credits)", async () => {
+  it("returns the responseMessage captured from onEnd (so the workflow can charge credits)", async () => {
     const emitted = {
       id: "asst-test-id",
       role: "assistant",
@@ -320,8 +322,8 @@ describe("runAgentStep", () => {
     expect(result.responseMessage).toEqual(emitted);
   });
 
-  it("returns responseMessage: undefined when onFinish never fires", async () => {
-    // Default mock never invokes onFinish.
+  it("returns responseMessage: undefined when onEnd never fires", async () => {
+    // Default mock never invokes onEnd.
     vi.mocked(streamText).mockReturnValue(makeStreamResult() as never);
     const { stream } = makeWritable();
 
@@ -354,7 +356,7 @@ describe("runAgentStep", () => {
           })(),
         ),
         finishReason: Promise.resolve("length"),
-        response: Promise.resolve({ messages: [] }),
+        responseMessages: Promise.resolve([]),
       } as never);
       const { stream } = makeWritable();
 

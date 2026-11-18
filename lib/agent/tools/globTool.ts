@@ -1,5 +1,7 @@
-import { tool } from "ai";
+import { agentContextSchema } from "./agentContextSchema";
+import { tool, type ToolExecutionOptions } from "ai";
 import { z } from "zod";
+import type { AgentContext } from "@/lib/agent/tools/AgentContext";
 import * as path from "path";
 import { getSandbox } from "@/lib/agent/tools/getSandbox";
 import { shellEscape } from "@/lib/agent/tools/shellEscape";
@@ -51,10 +53,11 @@ USAGE:
 IMPORTANT:
 - Patterns are matched primarily on the final path segment (file name), with basic "*" and "**" support
 - Use this to narrow down candidate files before calling readFileTool or grepTool`,
+  contextSchema: agentContextSchema,
   inputSchema: globInputSchema,
   execute: async (
     { pattern, path: basePath, limit = DEFAULT_LIMIT },
-    { experimental_context, abortSignal },
+    { context: experimental_context, abortSignal }: ToolExecutionOptions<AgentContext>,
   ) => {
     const sandbox = await getSandbox(experimental_context, "glob");
     const workingDirectory = sandbox.workingDirectory;

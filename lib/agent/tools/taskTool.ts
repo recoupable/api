@@ -1,6 +1,16 @@
-import { streamText, stepCountIs, tool, type LanguageModelUsage, type ModelMessage } from "ai";
+import { agentContextSchema } from "./agentContextSchema";
+import {
+  streamText,
+  isStepCount,
+  tool,
+  type LanguageModelUsage,
+  type ModelMessage,
+  type ToolExecutionOptions,
+} from "ai";
 import { z } from "zod";
+import type { AgentContext } from "@/lib/agent/tools/AgentContext";
 import { buildSubagentTools } from "@/lib/agent/tools/buildSubagentTools";
+import { buildToolsContext } from "@/lib/agent/tools/buildToolsContext";
 import { getSubagentModel } from "@/lib/agent/tools/getSubagentModel";
 import { sumLanguageModelUsage } from "@/lib/agent/messageMetadata/sumLanguageModelUsage";
 
@@ -94,9 +104,13 @@ IMPORTANT:
 - Be explicit and concrete — the subagent cannot ask clarifying questions
 - Include critical context (APIs, function names, file paths) in the instructions
 - The parent agent does not see the subagent's internal tool calls, only its final summary`,
+  contextSchema: agentContextSchema,
   inputSchema: taskInputSchema,
   outputSchema: taskOutputSchema,
-  execute: async function* ({ task, instructions }, { experimental_context, abortSignal }) {
+  execute: async function* (
+    { task, instructions },
+    { context: experimental_context, abortSignal }: ToolExecutionOptions<AgentContext>,
+  ) {
     const subagentModel = getSubagentModel(experimental_context, "task");
     const subagentModelId =
       typeof subagentModel === "string"
@@ -106,13 +120,14 @@ IMPORTANT:
     // `prompt` (not `messages: []`) is required — the AI SDK records zero
     // steps and throws NoOutputGeneratedError if the model has only a
     // system prompt with no user turn. Mirrors open-agents' task tool.
+    const subagentTools = buildSubagentTools();
     const result = streamText({
       model: subagentModel,
-      system: `${SUBAGENT_SYSTEM_PROMPT}\n\n## Your Task\n${task}\n\n## Instructions\n${instructions}`,
+      instructions: `${SUBAGENT_SYSTEM_PROMPT}\n\n## Your Task\n${task}\n\n## Instructions\n${instructions}`,
       prompt: "Complete this task and provide a summary of what you accomplished.",
-      tools: buildSubagentTools(),
-      stopWhen: stepCountIs(SUBAGENT_STEP_LIMIT),
-      experimental_context,
+      tools: subagentTools,
+      stopWhen: isStepCount(SUBAGENT_STEP_LIMIT),
+      toolsContext: buildToolsContext(subagentTools, experimental_context),
       abortSignal,
     });
 
@@ -126,7 +141,7 @@ IMPORTANT:
     // the first step finishes.
     yield { toolCallCount, startedAt, modelId: subagentModelId };
 
-    for await (const part of result.fullStream) {
+    for await (const part of result.stream) {
       if (part.type === "tool-call") {
         toolCallCount += 1;
         pending = { name: part.toolName, input: part.input };
@@ -141,10 +156,10 @@ IMPORTANT:
       }
     }
 
-    const response = await result.response;
+    const responseMessages = await result.responseMessages;
     const finalUsage = usage ?? (await result.totalUsage);
     yield {
-      final: response.messages,
+      final: responseMessages,
       toolCallCount,
       usage: finalUsage,
       startedAt,

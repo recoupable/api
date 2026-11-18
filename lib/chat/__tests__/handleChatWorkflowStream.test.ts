@@ -1,3 +1,4 @@
+import { gateStoredContinuation } from "../continuation/gateStoredContinuation";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -11,6 +12,9 @@ import { compareAndSetChatActiveStreamId } from "@/lib/chat/compareAndSetChatAct
 import { gateChatStreamStart } from "@/lib/chat/gateChatStreamStart";
 import { persistLatestUserMessage } from "@/lib/chat/persistLatestUserMessage";
 import { start, getRun } from "workflow/api";
+vi.mock("../continuation/gateStoredContinuation", () => ({
+  gateStoredContinuation: vi.fn(async () => null),
+}));
 
 vi.mock("@/lib/chat/validateChatWorkflow", () => ({ validateChatWorkflow: vi.fn() }));
 vi.mock("@/lib/supabase/sessions/selectSessions", () => ({ selectSessions: vi.fn() }));
@@ -375,4 +379,146 @@ describe("handleChatWorkflowStream", () => {
       expect(res.status).toBe(409);
     });
   });
+});
+
+it("rejects unproven projection before claiming, writing or starting a run", async () => {
+  mockSessionOwnedActive();
+  mockChatOwned();
+  vi.mocked(validateChatWorkflow).mockResolvedValue({
+    accountId: ACCOUNT_ID,
+    chatId: CHAT_ID,
+    sessionId: SESSION_ID,
+    orgId: null,
+    messages: [
+      {
+        id: "a",
+        role: "assistant",
+        parts: [
+          {
+            type: "data-recoup-sdk-observation",
+            id: "a:projection:0",
+            data: { fallback: { partIndex: 1 } },
+          },
+        ],
+      },
+    ],
+  });
+  const response = await handleChatWorkflowStream(makeRequest());
+  expect(response.status).toBe(400);
+  expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
+  expect(persistLatestUserMessage).not.toHaveBeenCalled();
+  expect(start).not.toHaveBeenCalled();
+});
+
+it.each(["custom", "reasoning-file", "tool-approval-request", "tool-approval-response"])(
+  "rejects caller raw %s before persistence or workflow start",
+  async type => {
+    mockSessionOwnedActive();
+    mockChatOwned();
+    vi.mocked(validateChatWorkflow).mockResolvedValue({
+      accountId: ACCOUNT_ID,
+      chatId: CHAT_ID,
+      sessionId: SESSION_ID,
+      orgId: null,
+      messages: [
+        { id: "a", role: "assistant", parts: [{ type, kind: "caller.fake", approved: true }] },
+      ],
+    });
+    expect((await handleChatWorkflowStream(makeRequest())).status).toBe(400);
+    expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
+    expect(persistLatestUserMessage).not.toHaveBeenCalled();
+    expect(start).not.toHaveBeenCalled();
+  },
+);
+
+it("refuses an unsupported continuation before claim, persistence, or workflow start", async () => {
+  mockValidated();
+  mockSessionOwnedActive();
+  mockChatOwned();
+  const validated = await vi.mocked(validateChatWorkflow).getMockImplementation()!(makeRequest());
+  vi.mocked(validateChatWorkflow).mockResolvedValue({
+    ...validated,
+    messages: [{ id: "a", role: "assistant", parts: [{ type: "text", text: "prior" }] }],
+  } as never);
+  const response = await handleChatWorkflowStream(makeRequest());
+  expect(response.status).toBe(409);
+  expect(await response.json()).toMatchObject({
+    error: "stream_continuation_upgrade_required",
+    admission: "not_admitted",
+  });
+  expect(compareAndSetChatActiveStreamId).not.toHaveBeenCalled();
+  expect(persistLatestUserMessage).not.toHaveBeenCalled();
+  expect(start).not.toHaveBeenCalled();
+});
+it("reports admitted readback failure without cancelling, restarting, or creating a reader", async () => {
+  mockValidated();
+  mockSessionOwnedActive();
+  mockChatOwned();
+  vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValue({
+    ok: true,
+    claimed: true,
+  } as never);
+  const getReadable = vi.fn();
+  const cancel = vi.fn();
+  vi.mocked(start).mockResolvedValue({ runId: "run", getReadable } as never);
+  vi.mocked(getRun).mockReturnValue({ cancel } as never);
+  vi.mocked(gateStoredContinuation).mockResolvedValueOnce(
+    NextResponse.json(
+      { error: "stream_continuation_evidence_unavailable", admission: "admitted", runId: "run" },
+      { status: 503 },
+    ),
+  );
+  const response = await handleChatWorkflowStream(makeRequest());
+  expect(response.status).toBe(503);
+  expect(await response.json()).toMatchObject({ admission: "admitted", runId: "run" });
+  expect(start).toHaveBeenCalledTimes(1);
+  expect(getReadable).not.toHaveBeenCalled();
+  expect(cancel).not.toHaveBeenCalled();
+});
+it.each([
+  { promotion: "race", cancelFails: false },
+  { promotion: "race", cancelFails: true },
+  { promotion: "unavailable", cancelFails: false },
+  { promotion: "unavailable", cancelFails: true },
+])("reports the admitted run after promotion loss: %j", async ({ promotion, cancelFails }) => {
+  mockValidated();
+  mockSessionOwnedActive();
+  mockChatOwned();
+  vi.mocked(compareAndSetChatActiveStreamId)
+    .mockResolvedValueOnce({ ok: true, claimed: true })
+    .mockResolvedValueOnce(
+      (promotion === "race" ? { ok: true, claimed: false } : { ok: false }) as never,
+    );
+  const getReadable = vi.fn();
+  const cancel = vi.fn(async () => {
+    if (cancelFails) throw new Error("synthetic cancellation failure");
+  });
+  vi.mocked(start).mockResolvedValue({ runId: "wrun_created", getReadable } as never);
+  vi.mocked(getRun).mockReturnValue({ cancel } as never);
+  const response = await handleChatWorkflowStream(makeRequest());
+  expect(response.status).toBe(409);
+  expect(await response.json()).toEqual({
+    status: "error",
+    error: "chat_stream_ownership_lost",
+    admission: "admitted",
+    runId: "wrun_created",
+  });
+  expect(start).toHaveBeenCalledTimes(1);
+  expect(getRun).toHaveBeenCalledExactlyOnceWith("wrun_created");
+  expect(cancel).toHaveBeenCalledTimes(1);
+  expect(getReadable).not.toHaveBeenCalled();
+  expect(gateStoredContinuation).not.toHaveBeenCalled();
+});
+it("reports a preclaim conflict as not admitted without inventing a run ID", async () => {
+  mockValidated();
+  mockSessionOwnedActive();
+  mockChatOwned();
+  vi.mocked(compareAndSetChatActiveStreamId).mockResolvedValueOnce({ ok: true, claimed: false });
+  const response = await handleChatWorkflowStream(makeRequest());
+  expect(response.status).toBe(409);
+  const body = await response.json();
+  expect(body.admission).toBe("not_admitted");
+  expect(body).not.toHaveProperty("runId");
+  expect(start).not.toHaveBeenCalled();
+  expect(getRun).not.toHaveBeenCalled();
 });

@@ -1,3 +1,4 @@
+import { normalizeLanguageModelUsage } from "@/lib/agent/messageMetadata/normalizeLanguageModelUsage";
 import { getCreditUsage } from "./getCreditUsage";
 import { usdToCredits } from "@/lib/credits/usdToCredits";
 import { recordCreditDeduction } from "./recordCreditDeduction";
@@ -65,7 +66,7 @@ export const handleChatCredits = async ({
       modelId: model,
       inputTokens: usage.inputTokens,
       outputTokens: usage.outputTokens,
-      cachedInputTokens: usage.cachedInputTokens,
+      cachedInputTokens: normalizeLanguageModelUsage(usage).inputTokenDetails.cacheReadTokens,
       ...(resourceUrl ? { resourceUrl } : {}),
       ...(toolCallCount !== undefined ? { toolCallCount } : {}),
     });

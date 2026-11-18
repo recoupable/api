@@ -1,3 +1,4 @@
+import { gateStoredContinuation } from "./continuation/gateStoredContinuation";
 import { TERMINAL_WORKFLOW_RUN_STATUSES } from "@/lib/const";
 import { NextRequest, NextResponse } from "next/server";
 import { createUIMessageStreamResponse } from "ai";
@@ -42,6 +43,18 @@ export async function handleResumeChatStream(
 
   const activeStreamId = validated.chat.active_stream_id;
   if (!activeStreamId) return createNothingToResumeResponse();
+
+  const gate = await gateStoredContinuation(
+    request,
+    {
+      runId: activeStreamId,
+      accountId: validated.auth.accountId,
+      chatId: validated.chat.id,
+      sessionId: validated.chat.session_id,
+    },
+    "existing",
+  );
+  if (gate) return gate;
 
   const run = getRun(activeStreamId);
 
