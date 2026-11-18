@@ -1,5 +1,5 @@
 {
-  "databaseHead": "df7be4c65b98924373b38c7d257f4b1c1820d6b7",
+  "databaseHead": "f507a77696f20429f977df9885d6c8c11a5f304b",
   "serverVersion": "15.10 (Homebrew)",
   "serverEncoding": "UTF8",
   "input": {
@@ -51,19 +51,19 @@
         "https://music.example/return"
       ],
       "workspace_id": "11111111-1111-4111-8111-111111111111",
-      "application_id": "cbbb51b5-aca4-405c-9a97-aee7612b0cd4",
+      "application_id": "1dec8fc0-2cec-4653-859b-53e0a83fc9a1",
       "allowed_origins": [
         "https://music.example",
         "https://preview.example"
       ]
     },
-    "receipt_id": "c5ac9418-b749-4e6b-966b-6d5a3314c73d",
+    "receipt_id": "989252ef-7470-475c-9527-fb64c2619e94",
     "environment": "production",
-    "recorded_at": "2026-11-18T02:41:27.506401+00:00",
+    "recorded_at": "2026-11-18T05:12:41.526502+00:00",
     "workspace_id": "11111111-1111-4111-8111-111111111111",
     "evidence_kind": "disposable_parent_assertion",
     "policy_status": "proposed_unadopted",
-    "application_id": "cbbb51b5-aca4-405c-9a97-aee7612b0cd4",
+    "application_id": "1dec8fc0-2cec-4653-859b-53e0a83fc9a1",
     "policy_version": "proposed-personal-v1",
     "runtime_enabled": false,
     "access_activated": false,
@@ -98,19 +98,19 @@
         "https://music.example/return"
       ],
       "workspace_id": "11111111-1111-4111-8111-111111111111",
-      "application_id": "cbbb51b5-aca4-405c-9a97-aee7612b0cd4",
+      "application_id": "1dec8fc0-2cec-4653-859b-53e0a83fc9a1",
       "allowed_origins": [
         "https://music.example",
         "https://preview.example"
       ]
     },
-    "receipt_id": "c5ac9418-b749-4e6b-966b-6d5a3314c73d",
+    "receipt_id": "989252ef-7470-475c-9527-fb64c2619e94",
     "environment": "production",
-    "recorded_at": "2026-11-18T02:41:27.506401+00:00",
+    "recorded_at": "2026-11-18T05:12:41.526502+00:00",
     "workspace_id": "11111111-1111-4111-8111-111111111111",
     "evidence_kind": "disposable_parent_assertion",
     "policy_status": "proposed_unadopted",
-    "application_id": "cbbb51b5-aca4-405c-9a97-aee7612b0cd4",
+    "application_id": "1dec8fc0-2cec-4653-859b-53e0a83fc9a1",
     "policy_version": "proposed-personal-v1",
     "runtime_enabled": false,
     "access_activated": false,

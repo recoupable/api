@@ -166,6 +166,20 @@ describe("unwired create/read transaction binding", () => {
       create(request(), input, { policy, storage: {} } as ProposedDependencies),
     ).rejects.toThrow("unavailable");
   });
+  it.each(["df7be4c65b98924373b38c7d257f4b1c1820d6b7", "wrong"])(
+    "rejects incompatible database descriptor %s before either storage port",
+    async databaseHead => {
+      const deps = dependencies();
+      const incompatible = {
+        ...deps,
+        policy: { ...policy, databaseHead },
+      } as ProposedDependencies;
+      await expect(create(request(), input, incompatible)).rejects.toThrow();
+      await expect(read(request(), selected, incompatible)).rejects.toThrow();
+      expect(deps.storage.create).not.toHaveBeenCalled();
+      expect(deps.storage.read).not.toHaveBeenCalled();
+    },
+  );
   it("uses bytewise canonical ordering and preserves development loopback eligibility", async () => {
     const body = {
       name: "字",

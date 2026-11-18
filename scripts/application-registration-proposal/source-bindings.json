@@ -1,6 +1,6 @@
 {
   "apiBaseline": "5605ee143afc4ebcdba9ba33dc7b48378c70a47f",
-  "databaseHead": "df7be4c65b98924373b38c7d257f4b1c1820d6b7",
+  "databaseHead": "f507a77696f20429f977df9885d6c8c11a5f304b",
   "policyStatus": "proposed_unadopted",
   "apiInputs": {
     "lib/auth/validateAuthContext.ts": "055ac2965db8487c8f67d74c549101d866968ed507d295498ed4485d62867c28",
@@ -15,10 +15,10 @@
   },
   "databaseInputs": {
     "proposals/application-registration-2104/protocol-composition.py": "377791d3ef4a26103bd046609d4b8dbf8f63a3d475aa2c72faeba68b553aada5",
-    "proposals/application-registration-2104/registration.sql": "472440d1540a79eb34255efcbc7a6286bb394e1f3779e7ed6a6b7ace33cd9074",
+    "proposals/application-registration-2104/registration.sql": "3377dd6f86bdf3052a2dd00b66380540764e07a763003f6a1c46192c336e6409",
     "proposals/application-registration-2104/parents.sql": "2a1096eadf1ee947f2b1d6bb88f5750e26436ee8ea82ae1f306a279da8b41c2d",
     "proposals/application-registration-2104/qualification-bootstrap.sql": "6c318540735e46c8ace40cd686bf7cc1851fb3296b5a123d29e287f94be35c05",
-    "proposals/application-registration-2104/test_registration.py": "ca498687ee4983767f2cf592dfd424a954fe17d0acaa04e18ae9960ed62f3a16",
+    "proposals/application-registration-2104/test_registration.py": "4051b2581646cea5ac2d36a23d5d5e6271dd02cbf0997e0792623289914d230c",
     "proposals/application-proof-2104/proposal.sql": "2cf96399422cfc1e68b0578b7aeb7b58a97c56303d85b91ee6cf862329f6c86c",
     "proposals/application-proof-2104/fixture.sql": "b4435b1c5546d471c33b758f1ac8a7fd8ca199071b08cc541f4cb199e6412668",
     "proposals/application-proof-2104/test_configuration.py": "43b686a33660dfb8bfd7b26c4827a74527cc430466567311726cb54881406cad",
@@ -27,11 +27,13 @@
     "proposals/application-proof-2104/fixture-authority.sql": "0a2715a5a4f93c349df06d25a6334d513350f225a36af71ae8694fe1914c4c99",
     "proposals/application-proof-2104/configuration.sql": "148819c1363929e990bf2cfd67bae02f7567c2e2e2a05732cb17ea2248bad3b1"
   },
-  "goldenSha256": "357e2c82f6b9473d024cf6472bdec8d670de64531c0a51fa0843b94f1e70c1fe",
-  "captureDriverSha256": "86f6b0de4d43aadec92154a8fd9e51407eb4837f081f0e6d6ffae75455da595f",
-  "goldenCaptureLogSha256": "0eb40678c48643d87d2515c68236e62b23f2faf874f6794053b418378e071d6f",
+  "goldenSha256": "4b386f6dd38d689e08bb7f230ed2873a9764a3bc6f3038ca36cfc2442e1fb129",
+  "captureDriverSha256": "b9f4342e278704c8767f0a738f35b3c8f92ff84a6b0cedc49074d9602cdfa2dd",
+  "goldenCaptureLogSha256": "56cc23432ad600743f07d5d2b04f7b7e08c8c677e100293bbd975334002f1135",
   "scope": "No route, MCP registration, concrete Supabase adapter, factory, hosted execution, deployment or policy adoption",
   "originalApiBaseline": "1fff6b55b8c1b98826c375f99b4f4f66a5ba201c",
   "acceptedOAuthMerge": "5605ee143afc4ebcdba9ba33dc7b48378c70a47f",
-  "adapterBeforeComposition": "ce271f4be5570cb0774d582a5e1b832e406aec7f"
+  "adapterBeforeComposition": "ce271f4be5570cb0774d582a5e1b832e406aec7f",
+  "acceptedTransportSource": "2606c9104dff3731f59d56d00bba121d2a8e47ba",
+  "previousDatabaseHead": "df7be4c65b98924373b38c7d257f4b1c1820d6b7"
 }
