@@ -14,6 +14,8 @@ export async function readProposedRegistrationMcpBody(
     fail(415, "JSON content type required", -32000);
   if (Number(request.headers.get("content-length")) > 65536) fail(413, "Request body too large");
   if (!request.body) fail(400, "Invalid JSON", -32700);
+  // No asynchronous gap between checking the owner and registering the acquired reader.
+  life.assertActive();
   const reader = request.body!.getReader();
   let released = false;
   const release = () => {

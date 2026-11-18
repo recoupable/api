@@ -1,3 +1,4 @@
+import { readProposedRegistrationMcpBody } from "@/lib/mcp/applications/readProposedRegistrationMcpBody";
 import { afterEach, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { createProposedRegistrationMcpLifetime } from "@/lib/mcp/applications/createProposedRegistrationMcpLifetime";
@@ -352,3 +353,39 @@ it.each(["registration", "connect"])("owns teardown when %s fails", async stage 
   expect(close).toHaveBeenCalledTimes(1);
   expect(d.storage.create).not.toHaveBeenCalled();
 });
+
+it.each(["closed", "closing", "aborted"])(
+  "does not acquire or leave a reader locked for an owner already %s",
+  async state => {
+    const abort = new AbortController();
+    const request = req(abort.signal);
+    const life = createProposedRegistrationMcpLifetime(request);
+    const cleanup = barrier<void>();
+    let closing: Promise<void> | undefined;
+    if (state === "closing") {
+      life.own(() => cleanup.promise);
+      closing = life.close();
+    } else if (state === "closed") await life.close();
+    else abort.abort();
+    let acquired: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    const actualGetReader = request.body!.getReader.bind(request.body!);
+    const getReader = vi.spyOn(request.body!, "getReader").mockImplementation(() => {
+      acquired = actualGetReader();
+      return acquired;
+    });
+    try {
+      expect(request.body!.locked).toBe(false);
+      await expect(readProposedRegistrationMcpBody(request, life)).rejects.toBeDefined();
+      expect(request.body!.locked).toBe(false);
+      expect(getReader).not.toHaveBeenCalled();
+    } finally {
+      // Keep the deliberately failing RED regression from leaving its unowned reader locked.
+      cleanup.resolve();
+      try {
+        await (closing ?? life.close());
+      } finally {
+        acquired?.releaseLock();
+      }
+    }
+  },
+);
