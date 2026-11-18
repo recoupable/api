@@ -2,12 +2,20 @@ import { it, expect, vi } from "vitest";
 import { fetchPackLyricSources } from "../fetchPackLyricSources";
 import type { PackLyricMediaCapability } from "../packLyricRenderTypes";
 it("passes cancellation and byte limits to every local source leaf", async () => {
-  const fetchMedia = vi.fn(async () => ({ bytes: Buffer.from("x"), contentType: "audio/mp4" }));
+  const fetchMedia = vi.fn<PackLyricMediaCapability["fetchMedia"]>(async () => ({
+    bytes: Buffer.from("x"),
+    contentType: "audio/mp4",
+  }));
   expect(
     await fetchPackLyricSources({ fetchMedia } as unknown as PackLyricMediaCapability, ["a", "b"]),
   ).toHaveLength(2);
-  expect(fetchMedia).toHaveBeenCalledWith("a", {
+  expect(fetchMedia).toHaveBeenCalledTimes(2);
+  expect(fetchMedia).toHaveBeenNthCalledWith(1, "a", {
     signal: expect.any(AbortSignal),
+    maxBytes: 50 * 1024 * 1024,
+  });
+  expect(fetchMedia).toHaveBeenNthCalledWith(2, "b", {
+    signal: fetchMedia.mock.calls[0][1].signal,
     maxBytes: 50 * 1024 * 1024,
   });
 });
