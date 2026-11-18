@@ -9,7 +9,8 @@
     "lib/agents/generalAgent/__tests__/getAnthropicProviderOptions.test.ts",
     "lib/agent/contextManagement/__tests__/wrapToolsWithAbortIterable.test.ts",
     "lib/agent/tools/__tests__/wrappedTaskSdk.test.ts",
-    "lib/credits/__tests__/getCreditUsageStepBoundary.test.ts"
+    "lib/credits/__tests__/getCreditUsageStepBoundary.test.ts",
+    "lib/chat/projection/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

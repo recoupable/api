@@ -58,6 +58,9 @@ jobs:
           node scripts/chat-pricing-durable-compile.mjs
           node scripts/chat-pricing-step-fixture.mjs
 
+      - name: Check journal-backed projection proof with offline World
+        run: node scripts/chat-projection-proof-fixture.mjs
+
       - name: Check installed AI SDK v7 contract signatures
         run: pnpm exec tsc --noEmit --project tsconfig.ai-sdk-v7.json
 
