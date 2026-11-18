@@ -134,6 +134,69 @@ describe("abort wrapper with installed SDK async iterable execution", () => {
     expect(cleaned).toBe(true);
   });
 
+  it("bounds fallback throw when an iterator has no throw and cleanup does not settle", async () => {
+    const cleanupGate = deferred<IteratorResult<string>>();
+    const close = vi.fn(() => cleanupGate.promise);
+    const source: AsyncIterable<string> = {
+      [Symbol.asyncIterator]: () => ({
+        next: async () => ({ done: false, value: "pending" }),
+        return: close,
+      }),
+    };
+    const controller = new AbortController();
+    const wrapped = wrapToolsWithAbort(
+      { task: tool({ inputSchema: z.object({}), execute: () => source }) },
+      controller.signal,
+    );
+    const iterator = (wrapped.task.execute!({}, options) as AsyncIterable<string>)[
+      Symbol.asyncIterator
+    ]();
+    await iterator.next();
+    const failure = new Error("consumer failure");
+    const pending = iterator.throw!(failure).then(
+      () => undefined,
+      error => error,
+    );
+    await vi.waitFor(() => expect(close).toHaveBeenCalledOnce());
+    controller.abort();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    try {
+      const result = await Promise.race([
+        pending,
+        new Promise(resolve => {
+          timer = setTimeout(() => resolve("hung"), 100);
+        }),
+      ]);
+      expect(result).toBeInstanceOf(ToolAbortedError);
+    } finally {
+      clearTimeout(timer);
+      cleanupGate.resolve({ done: true, value: undefined });
+      await pending;
+    }
+    expect(close).toHaveBeenCalledOnce();
+  });
+
+  it("preserves the consumer error after fallback cleanup without abort", async () => {
+    const close = vi.fn(async () => ({ done: true as const, value: undefined }));
+    const source: AsyncIterable<string> = {
+      [Symbol.asyncIterator]: () => ({
+        next: async () => ({ done: false, value: "pending" }),
+        return: close,
+      }),
+    };
+    const wrapped = wrapToolsWithAbort(
+      { task: tool({ inputSchema: z.object({}), execute: () => source }) },
+      new AbortController().signal,
+    );
+    const iterator = (wrapped.task.execute!({}, options) as AsyncIterable<string>)[
+      Symbol.asyncIterator
+    ]();
+    await iterator.next();
+    const failure = new Error("consumer failure");
+    await expect(iterator.throw!(failure)).rejects.toBe(failure);
+    expect(close).toHaveBeenCalledOnce();
+  });
+
   it("forwards consumer throw to the generator and preserves its final result", async () => {
     const failure = new Error("consumer failure");
     const received = vi.fn();

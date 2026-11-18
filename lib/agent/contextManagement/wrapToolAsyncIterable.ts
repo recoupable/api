@@ -62,7 +62,7 @@ export function wrapToolAsyncIterable<T>(
         return: value => raceToolExecution(close(value), signal, createAbortError),
         throw: async error => {
           if (iterator.throw) return advance("throw", error);
-          await close();
+          await raceToolExecution(close(), signal, createAbortError);
           throw error;
         },
       };
