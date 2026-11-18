@@ -1,4 +1,4 @@
-import { getPlayerCapabilities } from "./getPlayerCapabilities";
+import { getPlayerReadResponse } from "./getPlayerReadResponse";
 import { requirePlayerAudio } from "./requirePlayerAudio";
 import { limitSiteRequest } from "@/lib/sites/activity/limitSiteRequest";
 import { z } from "zod";
@@ -61,12 +61,7 @@ export async function processPlayerOperation(
   const id = z.object({ id: z.string().uuid() }).parse(input).id;
   const player = await selectReleasePlayer(id);
   if (!player || player.owner_id !== owner) throw new SiteError(404, "Player not found");
-  if (operation === "get")
-    return {
-      player,
-      ...getPlayerLinks(player.id),
-      capabilities: getPlayerCapabilities(player.spotify_url),
-    };
+  if (operation === "get") return getPlayerReadResponse(player);
   const update = playerOperationSchemas.update.parse(input);
   if (player.revision !== update.revision)
     throw new SiteError(409, "Player changed; read the latest revision");
