@@ -115,27 +115,36 @@ it.each(inputs.flatMap(input => [401, 403].map(status => ({ input, status }))))(
   },
 );
 
-it.each(["brief", "read"])(
-  "preserves %s cache handling on success and auth failure",
-  async action => {
-    const input = {
-      action,
-      request_id: id,
-      organization_id: owner,
-      ...(action === "brief" ? { purpose: "company_onboarding" } : {}),
-    };
-    const response = await http(input);
-    expect(response.status).toBe(200);
-    expect(response.headers.get("Cache-Control")).toBe(
-      action === "read" ? "private, no-store" : null,
-    );
-    expectCors(response);
-    const denial = NextResponse.json({ error: "denied" }, { status: 403 });
-    vi.mocked(validateAuthContext).mockResolvedValue(denial);
-    expect(await http(input)).toBe(denial);
-    expect(denial.headers.get("Cache-Control")).toBeNull();
-  },
-);
+it("preserves existing read cache handling on success and auth failure", async () => {
+  const input = { action: "read", request_id: id, organization_id: owner };
+  const response = await http(input);
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  expectCors(response);
+  const denial = NextResponse.json({ error: "denied" }, { status: 403 });
+  vi.mocked(validateAuthContext).mockResolvedValue(denial);
+  expect(await http(input)).toBe(denial);
+  expect(denial.headers.get("Cache-Control")).toBeNull();
+});
+
+it("leaves unsaved brief handling outside this saved-snapshot change", async () => {
+  // Compatibility observation, not a recommended cache policy: this change is
+  // limited to read_brief/save_brief. Unsaved brief caching needs separate review.
+  const input = {
+    action: "brief",
+    request_id: id,
+    organization_id: owner,
+    purpose: "company_onboarding",
+  };
+  const response = await http(input);
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Cache-Control")).toBeNull();
+  expectCors(response);
+  const denial = NextResponse.json({ error: "denied" }, { status: 403 });
+  vi.mocked(validateAuthContext).mockResolvedValue(denial);
+  expect(await http(input)).toBe(denial);
+  expect(denial.headers.get("Cache-Control")).toBeNull();
+});
 
 it.each(inputs)("marks $action storage failures private without exposing details", async input => {
   vi.mocked(callContextRpc).mockRejectedValue(new Error("private storage detail"));
