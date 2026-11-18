@@ -1,0 +1,28 @@
+name: Proposed application registration (offline)
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - name: Install pinned dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Qualify inactive create/read adapter with synthetic leaves
+        run: node scripts/application-registration-proposal/run.mjs
