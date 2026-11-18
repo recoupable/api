@@ -44,17 +44,24 @@ it.each(["captured", "no-match", "too-many", "failure"])(
       expect(screenshot).toHaveBeenCalledWith(
         expect.objectContaining({
           path: "mobile-cover-hidden.png",
-          style: expect.stringContaining("visibility: hidden !important"),
+          mask: [images],
+          maskColor: "#808080",
           timeout: 5000,
         }),
       );
     else if (scenario !== "failure") expect(screenshot).not.toHaveBeenCalled();
-    expect(ui.locator.mock.calls.every(call => call[0] === "img")).toBe(true);
+    expect(ui.locator.mock.calls[0][0]).toBe("img");
+    expect(
+      ui.locator.mock.calls
+        .slice(1)
+        .every(call => call[0].startsWith("img[src=") && !call[0].includes("nth")),
+    ).toBe(true);
   },
 );
-it("executes exact URL and visibility matching without hiding unrelated images or changing DOM", async () => {
+it("uses source-exact browser masks despite inline visibility important, without positional targets or DOM changes", async () => {
   const make = (src: string, visible = true) => ({
     currentSrc: src,
+    style: { cssText: "visibility:visible!important" },
     getAttribute: () => src,
     hasAttribute: () => false,
     closest: () => null,
@@ -65,7 +72,7 @@ it("executes exact URL and visibility matching without hiding unrelated images o
   });
   const nodes = [make("https://assets.example/reference.png"), make(url), make(url, false)];
   const before = nodes.map(n => n.currentSrc);
-  const styles: string[] = [];
+  const selectors: string[] = [];
   const images = {
     count: async () => nodes.length,
     evaluateAll: async (fn: (...args: never[]) => unknown, arg: unknown) =>
@@ -83,15 +90,21 @@ it("executes exact URL and visibility matching without hiding unrelated images o
   };
   const capture = runInNewContext("(" + coverHiddenRunner + ")");
   const result = await capture(
-    { screenshot: async (options: { style: string }) => styles.push(options.style) },
-    { locator: () => images },
+    { screenshot: async () => {} },
+    {
+      locator: (selector: string) => {
+        selectors.push(selector);
+        return images;
+      },
+    },
     "mobile",
     { artworkUrl: url },
   );
   expect(result.masked.map((m: { index: number }) => m.index)).toEqual([1]);
-  expect(styles[0]).toContain(":not([srcset]):not(picture img)");
-  expect(styles[0]).not.toContain("nth");
+  expect(selectors[1]).toContain(":not([srcset]):not(picture img)");
+  expect(selectors[1]).not.toContain("nth");
   expect(nodes.map(n => n.currentSrc)).toEqual(before);
+  expect(nodes.every(n => n.style.cssText === "visibility:visible!important")).toBe(true);
 });
 it("rejects changed image ordering instead of binding stale indices to a capture", async () => {
   let calls = 0;
@@ -108,5 +121,6 @@ it("rejects changed image ordering instead of binding stale indices to a capture
   });
   expect(result.status).toBe("unverified");
   expect(result.masked).toEqual([]);
-  expect(screenshot.mock.calls[0][0]).not.toHaveProperty("mask");
+  expect(screenshot.mock.calls[0][0]).toHaveProperty("mask");
+  expect(screenshot.mock.calls[0][0]).not.toHaveProperty("style");
 });

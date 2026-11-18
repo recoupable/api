@@ -1,4 +1,4 @@
-/** Fixed runner code: screenshot-only hiding of exact-source inline images; no positional selectors. */
+/** Fixed runner code: screenshot-only masks of exact-source inline images; no positional selectors. */
 export const coverHiddenRunner = `async function captureCoverHidden(page,ui,name,input){
  const unavailable=(reason,status='unverified')=>({status,reason,masked:[]});
  if(!input.artworkUrl)return unavailable(input.reason,input.status==='missing-input'?'missing-input':'unverified');
@@ -15,9 +15,9 @@ export const coverHiddenRunner = `async function captureCoverHidden(page,ui,name
   if(matched.length>8)return unavailable('More than eight visible cover images; bounded hiding not attempted.');
   // Hex-escape every URL character. No model-supplied selector or positional lookup.
   const escaped=Array.from(input.artworkUrl,c=>'\\\\'+c.codePointAt(0).toString(16)+' ').join('');
-  const selector='img[src="'+escaped+'"]:not([srcset]):not(picture img)';
-  await page.screenshot({path:name+'-cover-hidden.png',style:selector+' { visibility: hidden !important; }',timeout:5000});
+  const selector='img[src="'+escaped+'"]:not([srcset]):not(picture img):visible';
+  await page.screenshot({path:name+'-cover-hidden.png',mask:[ui.locator(selector)],maskColor:'#808080',timeout:5000});
   if(JSON.stringify(await inspect())!==JSON.stringify(matched))return unavailable('Cover elements or geometry changed during capture; screenshot not used.');
-  return {status:'captured',reason:'Screenshot-only visibility style hides exact-source inline cover images while retaining layout. Other representations and later states are unverified.',masked:matched};
+  return {status:'captured',reason:'Browser-level neutral masks suppress exact-source inline cover boxes regardless of author CSS. Overlapping pixels are masked too; other representations and later states are unverified.',masked:matched};
  }catch{return unavailable('Cover identification or bounded screenshot capture failed.');}
 }`;

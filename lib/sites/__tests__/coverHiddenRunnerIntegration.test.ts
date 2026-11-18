@@ -26,8 +26,8 @@ it.each([true, false])(
       setContent: vi.fn(),
       locator: () => ({ evaluate: vi.fn() }),
       frameLocator: () => ui,
-      screenshot: async ({ path, style }: { path: string; style: string }) => {
-        expect(style).toContain("visibility: hidden");
+      screenshot: async ({ path, mask }: { path: string; mask: unknown[] }) => {
+        expect(mask).toHaveLength(1);
         captures.push(path);
       },
       close: vi.fn(),
