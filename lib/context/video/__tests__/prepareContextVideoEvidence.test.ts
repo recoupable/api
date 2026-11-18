@@ -277,3 +277,30 @@ it("uses an existing shared source kind and exact media-version bytes", async ()
   evidence.sources[0].mediaVersion = " upload-v1 ";
   await expect(prepare(deps)).rejects.toThrow();
 });
+
+it("rejects case aliases of the same video, recording or credited artist identity", async () => {
+  const { evidence, deps } = fixture();
+  const mixedId = "abcdefab-abcd-4abc-8abc-abcdefabcdef";
+  evidence.videoSubjectId = mixedId;
+  evidence.identity.creditedArtists[0].subjectId = mixedId.toUpperCase();
+  await expect(prepare(deps)).rejects.toThrow();
+  evidence.identity.creditedArtists[0].subjectId = artist;
+  evidence.identity.recordingSubjectId = mixedId.toUpperCase();
+  await expect(prepare(deps)).rejects.toThrow();
+  evidence.identity.recordingSubjectId = recording;
+  evidence.identity.creditedArtists = [
+    { subjectId: mixedId, name: "One" },
+    { subjectId: mixedId.toUpperCase(), name: "Duplicate" },
+  ];
+  evidence.videoSubjectId = videoSubject;
+  await expect(prepare(deps)).rejects.toThrow();
+});
+it("rejects duplicate retained source UUID aliases", async () => {
+  const { evidence, deps } = fixture();
+  const mixedId = "abcdefab-abcd-4abc-8abc-abcdefabcdef";
+  evidence.sources.push(
+    { ...evidence.sources[0], versionId: mixedId },
+    { ...evidence.sources[0], versionId: mixedId.toUpperCase() },
+  );
+  await expect(prepare(deps)).rejects.toThrow();
+});

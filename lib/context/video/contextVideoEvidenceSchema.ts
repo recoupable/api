@@ -9,7 +9,7 @@ const references = z
   .array(z.uuid())
   .min(1)
   .max(32)
-  .refine(ids => new Set(ids).size === ids.length);
+  .refine(ids => new Set(ids.map(id => id.toLowerCase())).size === ids.length);
 const range = {
   startSeconds: z.number().nonnegative().finite(),
   endSeconds: z.number().positive().finite(),
@@ -83,7 +83,7 @@ export const contextVideoEvidenceSchema = z
     ]),
   })
   .superRefine((evidence, ctx) => {
-    const ids = new Set(evidence.sources.map(source => source.versionId));
+    const ids = new Set(evidence.sources.map(source => source.versionId.toLowerCase()));
     const references = [
       ...evidence.performers.flatMap(person => person.sourceVersionIds),
       ...(evidence.identity.state === "matched" ? evidence.identity.sourceVersionIds : []),
@@ -96,7 +96,7 @@ export const contextVideoEvidenceSchema = z
     ];
     if (
       ids.size !== evidence.sources.length ||
-      references.some(id => !ids.has(id)) ||
+      references.some(id => !ids.has(id.toLowerCase())) ||
       evidence.sources.some(
         source =>
           source.videoId !== evidence.videoId || source.mediaVersion !== evidence.mediaVersion,
@@ -117,13 +117,13 @@ export const contextVideoEvidenceSchema = z
     const identity = evidence.identity;
     if (
       identity.state === "matched" &&
-      (identity.recordingSubjectId === evidence.videoSubjectId ||
+      (identity.recordingSubjectId.toLowerCase() === evidence.videoSubjectId.toLowerCase() ||
         identity.creditedArtists.some(
           artist =>
-            artist.subjectId === evidence.videoSubjectId ||
-            artist.subjectId === identity.recordingSubjectId,
+            artist.subjectId.toLowerCase() === evidence.videoSubjectId.toLowerCase() ||
+            artist.subjectId.toLowerCase() === identity.recordingSubjectId.toLowerCase(),
         ) ||
-        new Set(identity.creditedArtists.map(artist => artist.subjectId)).size !==
+        new Set(identity.creditedArtists.map(artist => artist.subjectId.toLowerCase())).size !==
           identity.creditedArtists.length)
     )
       ctx.addIssue({
