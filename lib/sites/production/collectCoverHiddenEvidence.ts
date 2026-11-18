@@ -35,7 +35,8 @@ export async function collectCoverHiddenEvidence(
     const run = await sandbox.runCommand("node", ["cover-review.cjs"]);
     if (run.exitCode !== 0) return { reports, images };
     const bytes = await sandbox.readFileToBuffer({ path: "cover-review-report.json" });
-    if (!bytes || bytes.length > 30000) return { reports, images };
+    // Covers 16 URLs x 4000 UTF-16 units even when JSON escapes every unit, plus metadata.
+    if (!bytes || bytes.length > 512000) return { reports, images };
     reports = reportSchema.parse(JSON.parse(bytes.toString()));
     if (new Set(reports.map(report => report.name)).size !== reports.length)
       return { reports: [], images };

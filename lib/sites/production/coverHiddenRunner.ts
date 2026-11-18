@@ -5,7 +5,9 @@ export const coverHiddenRunner = `async function captureCoverHidden(page,ui,name
  try{
   const images=ui.locator('img');
   if(await images.count()>200)return unavailable('Inline image inspection exceeds the 200-image bound.');
-  const inspect=()=>images.evaluateAll((nodes,url)=>nodes.flatMap((img,index)=>{
+  const inspect=()=>images.evaluateAll((nodes,url)=>{
+   if(nodes.length>200)return [];
+   return nodes.flatMap((img,index)=>{
    const box=img.getBoundingClientRect();const style=getComputedStyle(img);
    if(img.getAttribute('src')!==url||img.hasAttribute('srcset')||img.closest('picture')||img.currentSrc!==url||!img.complete||!img.naturalWidth||style.display==='none'||style.visibility!=='visible'||Number(style.opacity)===0||box.width<=0||box.height<=0||box.right<=0||box.bottom<=0||box.x>=innerWidth||box.y>=innerHeight)return [];
    // Opacity is composited through ancestors, not inherited by the image's computed style.
@@ -15,9 +17,9 @@ export const coverHiddenRunner = `async function captureCoverHidden(page,ui,name
    }
    if(ancestor)return []; // Unknown visibility beyond the finite inspection bound.
    return [{index,src:img.currentSrc,box:{x:box.x,y:box.y,width:box.width,height:box.height}}];
-  }),input.artworkUrl);
+  });},input.artworkUrl);
   const matched=await inspect();
-  if(!matched.length)return unavailable('No loaded visible exact-source inline cover; CSS backgrounds, canvas, picture/srcset and transformed copies are unverified.');
+  if(!matched.length)return unavailable('No loaded visible exact-source inline cover; CSS backgrounds, canvas, picture/srcset and different-source copies are unverified.');
   if(matched.length>8)return unavailable('More than eight visible cover images; bounded hiding not attempted.');
   // Hex-escape every URL character. No model-supplied selector or positional lookup.
   const escaped=Array.from(input.artworkUrl,c=>'\\\\'+c.codePointAt(0).toString(16)+' ').join('');

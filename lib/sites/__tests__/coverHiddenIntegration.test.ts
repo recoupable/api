@@ -234,3 +234,75 @@ it("preserves ordinary defects when supplemental cover evidence is missing", asy
   expect(result.verdict).toBe("revise");
   expect(result.issues).toEqual([issue]);
 });
+
+it("retains runtime failure admission when discarding an unsupported cover-only verdict", async () => {
+  const read = m.read.getMockImplementation()!;
+  m.read.mockImplementation(async arg => {
+    if (arg.path === "desktop-cover-hidden.png") return null;
+    if (arg.path === "review.json")
+      return Buffer.from(
+        JSON.stringify(
+          reports.map(r => ({ ...r, journeyPassed: false, errors: ["Script error"] })),
+        ),
+      );
+    return read(arg);
+  });
+  m.generate.mockResolvedValue({
+    verdict: "revise",
+    issues: [],
+    summary: "Cover-only opinion",
+    coverHiddenCritique: {
+      assessment: "needs-improvement",
+      reasons: ["Unsupported"],
+      improvements: [],
+    },
+  });
+  const result = await reviewStep(
+    snapshot,
+    { contract: {} } as CreativeDirection,
+    "account",
+    "site",
+    undefined,
+    { baseRevision: 7, releaseArtwork: url },
+  );
+  expect(result.verification?.coverHidden?.critique.assessment).toBe("unverified");
+  expect(result.verdict).toBe("revise");
+  expect(result.issues).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        severity: "blocking",
+        detail: expect.stringContaining("Script error"),
+      }),
+    ]),
+  );
+});
+
+it("discards structured cover-only issues without losing ordinary issues", async () => {
+  const read = m.read.getMockImplementation()!;
+  m.read.mockImplementation(async arg =>
+    arg.path === "desktop-cover-hidden.png" ? null : read(arg),
+  );
+  const coverIssue = {
+    severity: "visual",
+    module: "implementation",
+    detail: "Cover hidden opinion",
+    fix: "Change frame",
+    evidence: "cover-hidden",
+  };
+  m.generate.mockResolvedValue({
+    verdict: "revise",
+    issues: [coverIssue],
+    summary: "Cover-only",
+    coverHiddenCritique: { assessment: "unverified", reasons: ["Missing"], improvements: [] },
+  });
+  const result = await reviewStep(
+    snapshot,
+    { contract: {} } as CreativeDirection,
+    "account",
+    "site",
+    undefined,
+    { baseRevision: 7, releaseArtwork: url },
+  );
+  expect(result.verdict).toBe("pass");
+  expect(result.issues).toEqual([]);
+});

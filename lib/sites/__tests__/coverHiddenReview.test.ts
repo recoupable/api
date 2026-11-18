@@ -89,12 +89,14 @@ it("uses source-exact browser masks despite inline visibility important, without
       }),
   };
   const capture = runInNewContext("(" + coverHiddenRunner + ")");
+  const screenshot = vi.fn();
+  const targets = { count: async () => 1 };
   const result = await capture(
-    { screenshot: async () => {} },
+    { screenshot },
     {
       locator: (selector: string) => {
         selectors.push(selector);
-        return selector === "img" ? images : { count: async () => 1 };
+        return selector === "img" ? images : targets;
       },
     },
     "mobile",
@@ -102,6 +104,9 @@ it("uses source-exact browser masks despite inline visibility important, without
   );
   expect(result.masked.map((m: { index: number }) => m.index)).toEqual([1]);
   expect(selectors[1]).toContain(":not([srcset]):not(picture img)");
+  const escaped = Array.from(url, c => "\\" + c.codePointAt(0)!.toString(16) + " ").join("");
+  expect(selectors[1]).toBe('img[src="' + escaped + '"]:not([srcset]):not(picture img):visible');
+  expect(screenshot).toHaveBeenCalledWith(expect.objectContaining({ mask: [targets] }));
   expect(selectors[1]).not.toContain("nth");
   expect(nodes.map(n => n.currentSrc)).toEqual(before);
   expect(nodes.every(n => n.style.cssText === "visibility:visible!important")).toBe(true);
@@ -196,3 +201,23 @@ it.each(["transparent-parent", "over-depth"])(
     expect(screenshot).not.toHaveBeenCalled();
   },
 );
+
+it("bounds the actual DOM callback when images are appended after count", async () => {
+  const inspected = vi.fn();
+  const nodes = Array.from({ length: 201 }, () => ({ getBoundingClientRect: inspected }));
+  const images = {
+    count: async () => 1,
+    evaluateAll: async (fn: (...args: never[]) => unknown, arg: unknown) =>
+      runInNewContext("(" + fn.toString() + ")(nodes,arg)", { nodes, arg }),
+  };
+  const screenshot = vi.fn();
+  const result = await runInNewContext("(" + coverHiddenRunner + ")")(
+    { screenshot },
+    { locator: () => images },
+    "mobile",
+    { artworkUrl: url },
+  );
+  expect(result.status).toBe("unverified");
+  expect(inspected).not.toHaveBeenCalled();
+  expect(screenshot).not.toHaveBeenCalled();
+});
