@@ -1,0 +1,46 @@
+{
+  "database_head": "3f2c84903286f0c950faa03bd2cef72f20d5d8ad",
+  "database_base": "7708e337feca212563bdfa48934a72227bcf1b63",
+  "database_tree": "4a611d840e1e04d2b6f7d5a50e7789c4940d3b07",
+  "database_files": {
+    "tests/test_release_cases.py": "be4fd4d829c3182b6a17e9f2fc780f74160bfdd4ab4d9fb54e568df2f7bda77b",
+    "supabase/migrations/20260920010000_context_foundation.sql": "e298767479bf60f460dc78f12fe7cade571582bcc808f8e305e61fde72803fe9",
+    "supabase/migrations/20260920020000_context_spotify_pipeline.sql": "85975e5bbcf31356ca784aadca6fb24fe577c4a4cf0e534833d192951504f227",
+    "supabase/migrations/20260924050000_context_release_verification_scope.sql": "94c3e4d02076882852d61fb5ccd54bf218c6ce996c53a15b265ca51282187869",
+    "supabase/migrations/20260924060000_context_release_track_slots.sql": "b68e4dc5b015783f5b9e2678a7e4af4433be6be9fd65d05d87a31616b2b8c8cc",
+    "supabase/migrations/20260924070000_context_release_track_read.sql": "a8330755ebc43cc5a62604e77ab76287a73aeccba91f9e3f167226d5e961e54d",
+    "supabase/migrations/20260924110000_context_release_track_identity_review.sql": "b39a9522735c236041fcd5d582b2651c1aa9bc17a12bc6e23153f99ac34b44df",
+    "supabase/migrations/20261008030000_onboarding_membership_lock_privilege.sql": "6d6ff0bd683516b7fc5a15c26fd9998f48d44a7a1bddf1ebaf5f27136512f7d3",
+    "supabase/migrations/20261008160000_context_release_cases.sql": "095692a2d01d079993114a8b9c2acd0433ccc31efe9b8280ab18908631ac1884",
+    "supabase/migrations/20261008160100_context_release_case_cursor.sql": "06778f968d2a7f519e53f95ca4ec54fda246888ba4d36c82fec8bc8e7ea28e5c",
+    "supabase/migrations/20260630210000_create_email_send_log.sql": "0d218d1fb4107b74c90e3cd0bb3cd5fd8f19251279d3dbccb79a1ebd9afcb88b",
+    "supabase/migrations/20260630211500_finalize_email_send_log.sql": "2d2ccbd53ce9642af6d7c2c1b849773c0904d4bec071683dc4c1a2fd46b42fb5",
+    "supabase/migrations/20261022120000_context_catalog_cases.sql": "ca8bb67bb133e114757419dd08c98d86de98b051363aa9bbd80e468b73964b06",
+    "supabase/migrations/20261106120000_email_send_log_reason.sql": "3598b962f7e85e8126c70c8e98642aa4331846ced20bd1fa1007a9aafc277618",
+    "supabase/migrations/20261110010000_ingestion_catalog.sql": "b0b989299bb1fddc3091e85e62ea56ff75465f991faf4ea8e1637e8638f1300c",
+    "supabase/migrations/20261110010100_ingestion_catalog_page_budget.sql": "5cbacc6568fcd1921dbb6475d86c396fd93c8dd996c8fcd59e3dde33b091e671"
+  },
+  "lifecycle_commit": "4dcdc4f92ad419a4813719844d78a197f405efbc",
+  "lifecycle_path": "scripts/sites-evidence-sql-bridge/lifecycle.py",
+  "lifecycle_sha256": "36ac9cd948bcbae8e8d076f4deea797c90cecf4e09d69b172dc41b3345e9278e",
+  "api_files": {
+    "lib/context/catalogCaseSnapshotSchema.ts": "03e187cd58efa8b58fd6cbe2ae9a1ae1f01dd6e1efd6f55efa965c3e450f5793",
+    "lib/context/processCatalogCaseOperation.ts": "5454d61d4d6e310a3a279adeb28fe21604c6452bf33b4f09ea00445038c2e6f7",
+    "lib/context/catalogCaseResponseSchemas.ts": "acc83219abc5faf87bfa172fd89c3a1626c08f3fd87849879ad65f399f7229a9",
+    "lib/context/validateCatalogCaseResult.ts": "6a0c5a862a912ef56f58253b3623aa2181a20f55783440b70ca9dd09842d439e",
+    "lib/context/isCatalogJson.ts": "e82b322559419570ff5f617ec243dd063ff068a85ac3ef2966588a939769aeb0",
+    "lib/context/validateCatalogCaseDependencies.ts": "f7179e633f40c8db02ecb2c41058ddd7b7ae5f84603dbdfa65cc27dee12475a5",
+    "lib/context/sameCatalogUuid.ts": "2783bf26562b1246ea47afb0b3891541244a086a564f9d2f19733f7ba5320d18",
+    "lib/supabase/context_requests/callContextRpc.ts": "649fa86bbfee8e0ecdb1379a53ff5f1938824c9de33f24f3a796a9a744dca98f",
+    "lib/context/CatalogSnapshotTooLargeError.ts": "f3f2557a7a7fa27a7e98df630259d629685bffcbd92f5532a13a89104e32bbb1"
+  },
+  "synthetic_seams": [
+    "lib/supabase/serverClient.ts"
+  ],
+  "database_proposal_head": "5472d76b3ac0ff243b2a649fef64bed1bcabb0c6",
+  "database_proposal_files": {
+    "proposals/catalog-snapshot-size-2277/proposal.sql": "c63f8cf0ae134de6d50693c2e4773f6b1693bd8a879ea375242424d6a8f9b638",
+    "proposals/catalog-snapshot-size-2277/fixture.py": "39bee93273a2ddbd241f9c78e0496644156fc2f2de4fdf3d4b941e8a40a3a26c",
+    "proposals/catalog-snapshot-size-2277/README.md": "531ab77b684b4ca9222c4e03199295ae36ae2593733517b5856710b4cd3271f3"
+  }
+}

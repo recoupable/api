@@ -1,0 +1,64 @@
+name: Catalog stored snapshot size (offline)
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/catalog-storage-size/**"
+      - "lib/context/**"
+      - "lib/supabase/context_requests/**"
+      - "lib/mcp/tools/context/**"
+      - ".github/workflows/catalog-storage-size.yml"
+      - "package.json"
+      - "pnpm-lock.yaml"
+      - "tsconfig.json"
+      - "types/database.types.ts"
+      - "lib/supabase/serverClient.ts"
+      - "scripts/sites-evidence-sql-bridge/network-deny.ts"
+permissions:
+  contents: read
+jobs:
+  paired-postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        postgres: [15, 17]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          repository: recoupable/database
+          ref: 5472d76b3ac0ff243b2a649fef64bed1bcabb0c6
+          fetch-depth: 0
+          path: .worktrees/catalog-database
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: 4dcdc4f92ad419a4813719844d78a197f405efbc
+          path: .worktrees/catalog-lifecycle
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc -p scripts/catalog-storage-size/tsconfig.json
+      - name: Install PostgreSQL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get update
+          sudo apt-get install -y postgresql-${{ matrix.postgres }}
+      - name: Run exact source qualification
+        run: python3 scripts/catalog-storage-size/run.py --database-repo "$GITHUB_WORKSPACE/.worktrees/catalog-database" --lifecycle-repo "$GITHUB_WORKSPACE/.worktrees/catalog-lifecycle" --pg-bin "/usr/lib/postgresql/${{ matrix.postgres }}/bin" --evidence-dir "$RUNNER_TEMP/catalog-size"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: catalog-size-pg${{ matrix.postgres }}
+          path: ${{ runner.temp }}/catalog-size

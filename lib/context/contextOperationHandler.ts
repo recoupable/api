@@ -1,3 +1,4 @@
+import { CatalogSnapshotTooLargeError } from "./CatalogSnapshotTooLargeError";
 import { NextRequest, NextResponse } from "next/server";
 import { validateAuthContext } from "@/lib/auth/validateAuthContext";
 import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
@@ -46,6 +47,8 @@ export async function contextOperationHandler(request: NextRequest) {
       headers,
     });
   } catch (error) {
+    if (error instanceof CatalogSnapshotTooLargeError)
+      return NextResponse.json({ error: error.message }, { status: error.status, headers });
     if (parsed.action === "read") {
       console.error("[context] read failed", { reason: getContextFailureReason(error) });
     } else if (evidence || catalogCase) {
