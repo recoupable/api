@@ -42,6 +42,7 @@ export function fixtureSql(text: string) {
         HOME: socket,
         LANG: "C",
         PGCLIENTENCODING: "UTF8",
+        NODE_ENV: "test",
       },
     },
   );
