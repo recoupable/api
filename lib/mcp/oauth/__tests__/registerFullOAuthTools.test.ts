@@ -81,16 +81,21 @@ const extra = {
     extra: { accountId: "owner", oauth: access },
   },
 };
-function setup(current: unknown = access) {
+function setup(current: unknown = access, mode?: "selected_context") {
   const registered = new Map<string, { config: any; run: any }>();
   const server = {
     registerTool: vi.fn((name, config, run) => registered.set(name, { config, run })),
   };
   const prepare = vi.fn(async (_name: string, args: Record<string, unknown>) => args);
-  registerFullOAuthTools(server as unknown as McpServer, vi.fn().mockResolvedValue(current), {
-    prepare,
-    listArtists: vi.fn().mockResolvedValue([]),
-  });
+  registerFullOAuthTools(
+    server as unknown as McpServer,
+    vi.fn().mockResolvedValue(current),
+    {
+      prepare,
+      listArtists: vi.fn().mockResolvedValue([]),
+    },
+    mode,
+  );
   return { registered, prepare };
 }
 describe("full OAuth registry", () => {
@@ -178,3 +183,25 @@ describe("full OAuth registry", () => {
 });
 
 vi.mock("@/lib/organizations/canAccessAccount", () => ({ canAccessAccount: vi.fn() }));
+
+it("keeps selected Context discovery narrow and rejects direct non-Context calls", async () => {
+  const selected = {
+    ...access,
+    selectedContext: {
+      version: 1,
+      capabilityVersion: "context-workspace-v1",
+      mode: "selected_context",
+      kind: "personal",
+      ownerId: "11111111-1111-4111-8111-111111111111",
+      organizationId: null,
+    },
+  };
+  const narrow = setup(selected, "selected_context");
+  expect([...narrow.registered.keys()].sort()).toEqual([
+    "read_music_context",
+    "save_music_context_brief",
+  ]);
+  const broad = setup(selected);
+  expect((await broad.registered.get("get_tasks")!.run({}, extra)).isError).toBe(true);
+  expect(broad.prepare).not.toHaveBeenCalled();
+});

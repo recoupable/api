@@ -8,6 +8,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { registerOAuthTools } from "../../../lib/mcp/oauth/registerOAuthTools";
+import { resolveOAuthAccess as resolvePriorOAuthAccess } from "../fixtures/preSelectedResolveOAuthAccess";
 import { resolveOAuthAccess } from "../../../lib/oauth/resolveOAuthAccess";
 import { getOAuthResourceMetadata } from "../../../lib/oauth/getOAuthResourceMetadata";
 import { expect, it, vi } from "vitest";
@@ -22,6 +23,9 @@ import { createOAuthConnectionsHandler } from "../../../lib/oauth/connections/cr
 import { createPostgresTestStore } from "../fixtures/createPostgresTestStore";
 import { createPostgresTestAdapter } from "../fixtures/createPostgresTestAdapter";
 
+vi.mock("../../../lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
+  getAccountOrganizations: vi.fn(async () => []),
+}));
 const metadataDocuments = vi.hoisted(() => new Map<string, Record<string, unknown>>());
 vi.mock("../../../lib/oauth/createOAuthMetadataFetch", () => ({
   createOAuthMetadataFetch: () => async (input: string) => {
@@ -109,7 +113,7 @@ async function verifyConsent(mode: string) {
       : undefined;
     const callback = provider.callback();
     const handler = createOAuthNodeHandler(config.issuer, async (req, res) => {
-      const match = /^\/interaction\/([^/?]+)$/.exec(req.url ?? "");
+      const match = /^\/interaction\/([^/?]+)$/.exec(req.url?.split("?")[0] ?? "");
       if (manageConnections && /^\/connections(?:\/|\?|$)/.test(req.url ?? ""))
         await manageConnections(req, res);
       else if (match) await consent(req, res, match[1]);
@@ -117,6 +121,16 @@ async function verifyConsent(mode: string) {
     });
     const verify = (bearer: string) =>
       resolveOAuthAccess(
+        {
+          provider,
+          adapter,
+          resource: config.resource,
+          accountExists: async id => id === accountId,
+        },
+        bearer,
+      );
+    const verifyPrior = (bearer: string) =>
+      resolvePriorOAuthAccess(
         {
           provider,
           adapter,
@@ -354,17 +368,50 @@ async function verifyConsent(mode: string) {
     const metadataResponse = await browserFetch(interactionUrl, { headers });
     expect(metadataResponse.status).toBe(200);
     expect(metadataResponse.headers.get("access-control-allow-origin")).toBe(origin);
-    const metadata = await metadataResponse.json();
+    let metadata = await metadataResponse.json();
+    const selectedMode = mode.startsWith("full-selected");
+    const selection = { consent_version: 2, workspace_kind: "personal" };
+    if (selectedMode) {
+      const choices = await (
+        await browserFetch(`${interactionUrl}?consent_version=2`, { headers })
+      ).json();
+      expect(choices.csrf).toBeUndefined();
+      expect(choices.workspaces).toEqual([
+        { kind: "personal", organizationId: null, name: "Personal workspace" },
+      ]);
+      metadata = await (
+        await browserFetch(`${interactionUrl}?consent_version=2&workspace_kind=personal`, {
+          headers,
+        })
+      ).json();
+      expect(metadata.selectedContext).toMatchObject({
+        ownerId: accountId,
+        capabilityVersion: "context-workspace-v1",
+      });
+    }
     expect(metadata.permissions.map((p: { scope: string }) => p.scope)).toEqual(requestedScopes);
     if (mode === "full") expect(metadata.permissions[0].description).toContain("deleting data");
     const submit = (extra: object = {}, auth = "alice") =>
       browserFetch(interactionUrl, {
         method: "POST",
         headers: { ...headers, Authorization: `Bearer ${auth}` },
-        body: JSON.stringify({ decision: "approve", csrf: metadata.csrf, ...extra }),
+        body: JSON.stringify({
+          decision: "approve",
+          csrf: metadata.csrf,
+          ...(selectedMode ? selection : {}),
+          ...extra,
+        }),
       });
     expect((await submit({}, "bob")).status).toBe(400);
     expect((await submit({ scopes: ["mcp:delete"] })).status).toBe(400);
+    if (selectedMode) {
+      expect((await submit({ consent_version: undefined, workspace_kind: undefined })).status).toBe(
+        400,
+      );
+      expect(
+        (await submit({ workspace_kind: "organization", organization_id: accountId })).status,
+      ).toBe(400);
+    }
     const approved = await submit();
     expect(approved.status).toBe(200);
     expect((await submit()).status).toBe(400);
@@ -390,6 +437,8 @@ async function verifyConsent(mode: string) {
     expect(tokens.scope).toBe(requestedScopes.join(" "));
     expect(tokens.refresh_token).toEqual(expect.any(String));
     const delegated = await verify(tokens.access_token);
+    if (selectedMode) expect(await verifyPrior(tokens.access_token)).toBeUndefined();
+    else expect(await verifyPrior(tokens.access_token)).toMatchObject({ accountId });
     expect(delegated).toMatchObject({ accountId, scopes: requestedScopes });
     if (mode.endsWith("lifecycle") || mode.endsWith("connections")) {
       // Exercise real consent and token HTTP paths; no vendor host or production identity.
@@ -450,7 +499,12 @@ async function verifyConsent(mode: string) {
       const rotatedResponse = await refresh(client.client_id, tokens.refresh_token);
       expect(rotatedResponse.status).toBe(200);
       const rotated = await rotatedResponse.json();
+      if (selectedMode) expect(await verifyPrior(rotated.access_token)).toBeUndefined();
       expect(rotated.refresh_token).not.toBe(tokens.refresh_token);
+      if (selectedMode)
+        expect((await verify(rotated.access_token))?.selectedContext).toEqual(
+          metadata.selectedContext,
+        );
       if (manageConnections) {
         const list = async (login = "alice") => {
           const response = await fetch(`${config.issuer}/connections?account_id=${accountId}`, {
@@ -472,6 +526,7 @@ async function verifyConsent(mode: string) {
         );
         expect(selected.id).toMatch(/^[a-f0-9]{64}$/);
         expect(selected.scopes).toEqual(requestedScopes);
+        if (selectedMode) expect(selected.selectedContext).toEqual(metadata.selectedContext);
         // The query cannot make the other first-party account enumerate Alice's grants.
         expect((await list("bob")).connections).toEqual([]);
         const remove = (login: string, origin = config.consentOrigin) =>
@@ -532,7 +587,8 @@ async function verifyConsent(mode: string) {
       expect(await verify(secondRenewed.access_token)).toBeUndefined();
       return;
     }
-    if (mode === "full") {
+    if (mode === "full" || selectedMode) {
+      if (selectedMode) expect(delegated?.selectedContext).toEqual(metadata.selectedContext);
       const refreshed = await fetch(`${config.issuer}/token`, {
         method: "POST",
         body: new URLSearchParams({
@@ -544,10 +600,15 @@ async function verifyConsent(mode: string) {
       });
       expect(refreshed.status).toBe(200);
       const renewed = await refreshed.json();
+      if (selectedMode) expect(await verifyPrior(renewed.access_token)).toBeUndefined();
       expect(await verify(renewed.access_token)).toMatchObject({
         accountId,
         scopes: ["mcp:tools"],
       });
+      if (selectedMode)
+        expect((await verify(renewed.access_token))?.selectedContext).toEqual(
+          metadata.selectedContext,
+        );
       await adapter("Grant").revokeByGrantId(delegated!.grantId);
       expect(await verify(renewed.access_token)).toBeUndefined();
       return;
@@ -690,13 +751,15 @@ async function verifyConsent(mode: string) {
   }
 }
 
-it.each(["dcr", "cimd", "legacy", "full", "limited-lifecycle", "full-lifecycle"])(
+it.each(["dcr", "cimd", "legacy", "full", "full-selected", "limited-lifecycle", "full-lifecycle"])(
   "requires browser cookie, trusted origin, matching identity, and one-use consent before issuing tokens (%s)",
   verifyConsent,
 );
 
 // Requires the disposable Unix-socket harness; never substitutes production storage.
-it.skipIf(!process.env.OAUTH_TEST_PG_SOCKET).each(["limited-connections", "full-connections"])(
+it
+  .skipIf(!process.env.OAUTH_TEST_PG_SOCKET)
+  .each(["limited-connections", "full-connections", "full-selected-connections"])(
   "enforces owner-only HTTP connection revocation and preserves the second client (%s)",
   verifyConsent,
 );

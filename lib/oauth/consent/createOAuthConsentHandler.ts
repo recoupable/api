@@ -2,6 +2,10 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AdapterFactory, Provider } from "oidc-provider";
 import type { OAuthRuntimeConfig } from "../loadOAuthConfig";
 import { oauthLaunchScopes } from "../oauthLaunchScopes";
+import type { OAuthConsentBinding } from "./createOAuthConsentTickets";
+import { parseSelectedContext } from "./parseSelectedContext";
+import { resolveSelectedContext } from "./resolveSelectedContext";
+import { listOAuthWorkspaces } from "./listOAuthWorkspaces";
 import { createOAuthConsentTickets } from "./createOAuthConsentTickets";
 import { readOAuthConsentBody } from "./readOAuthConsentBody";
 import { getOAuthConsentRequest } from "./getOAuthConsentRequest";
@@ -55,7 +59,7 @@ export function createOAuthConsentHandler(options: {
       const identity = await resolveIdentity(bearer[1]);
       const { params } = details;
       const { clientId, requested, scopes } = getOAuthConsentRequest(params, config.resource);
-      const binding = {
+      const binding: OAuthConsentBinding = {
         ...identity,
         uid,
         clientId,
@@ -65,8 +69,37 @@ export function createOAuthConsentHandler(options: {
       if (req.method === "GET") {
         const client = await provider.Client.find(clientId);
         if (!client) throw new Error();
+        const query = new URL(req.url ?? "", config.resource).searchParams;
+        const version = query.get("consent_version");
+        if (version !== null && version !== "2") throw new Error();
+        if (version === null && (query.has("workspace_kind") || query.has("organization_id")))
+          throw new Error();
+        let selectedPreview = {};
+        if (version === "2") {
+          if (!scopes.includes("mcp:tools")) throw new Error();
+          const selection = {
+            ...(query.has("workspace_kind") ? { workspace_kind: query.get("workspace_kind") } : {}),
+            ...(query.has("organization_id")
+              ? { organization_id: query.get("organization_id") }
+              : {}),
+          };
+          if (Object.keys(selection).length)
+            binding.selectedContext = await resolveSelectedContext(
+              identity.accountId,
+              scopes,
+              selection,
+            );
+          selectedPreview = {
+            consent_version: 2,
+            workspaces: await listOAuthWorkspaces(identity.accountId),
+            ...(binding.selectedContext ? { selectedContext: binding.selectedContext } : {}),
+          };
+        }
         reply(200, {
-          csrf: await tickets.issue(binding),
+          ...selectedPreview,
+          ...(version !== "2" || binding.selectedContext
+            ? { csrf: await tickets.issue(binding) }
+            : {}),
           clientId: binding.clientId,
           clientName: client.clientName ?? "Unnamed agent",
           clientVerified: false,
@@ -76,7 +109,10 @@ export function createOAuthConsentHandler(options: {
           accessDurationDays: null,
           permissions: scopes.map(scope => ({
             scope,
-            description: oauthLaunchScopes[scope as keyof typeof oauthLaunchScopes],
+            description:
+              version === "2" && scope === "mcp:tools"
+                ? "Use Context tools to read and save briefs, ingest research, review releases, and plan or run Context jobs in one selected workspace. Jobs may contact external research services."
+                : oauthLaunchScopes[scope as keyof typeof oauthLaunchScopes],
           })),
         });
         return;
@@ -85,6 +121,13 @@ export function createOAuthConsentHandler(options: {
       if ("error" in body) {
         reply(body.status, { error: body.error });
         return;
+      }
+      if ("consent_version" in body) {
+        const { decision: _decision, csrf: _csrf, consent_version: _version, ...selection } = body;
+        binding.selectedContext =
+          body.decision === "deny"
+            ? parseSelectedContext(identity.accountId, scopes, selection)
+            : await resolveSelectedContext(identity.accountId, scopes, selection);
       }
       await tickets.consume(body.csrf, binding);
       if (body.decision === "deny") {
