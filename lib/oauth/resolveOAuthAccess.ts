@@ -1,3 +1,4 @@
+import { selectedContextSchema, type SelectedContext } from "./selectedContextSchema";
 import type { AdapterFactory, Provider } from "oidc-provider";
 
 export type OAuthAccess = {
@@ -8,6 +9,7 @@ export type OAuthAccess = {
   expiresAt: number;
   resource: string;
   context: "personal";
+  selectedContext?: SelectedContext;
 };
 
 /** Check every authority binding, including the current grant, before accepting a bearer. */
@@ -49,7 +51,19 @@ export async function resolveOAuthAccess(
     scopes.some(scope => !approved.includes(scope) || !resourceScopes.has(scope))
   )
     return undefined;
+  let selectedContext: SelectedContext | undefined;
+  if (Object.hasOwn(attribution.extra, "selectedContext")) {
+    const parsed = selectedContextSchema.safeParse(attribution.extra.selectedContext);
+    if (
+      !parsed.success ||
+      !scopes.includes("mcp:tools") ||
+      (parsed.data.kind === "personal" && parsed.data.ownerId !== token.accountId.toLowerCase())
+    )
+      return undefined;
+    selectedContext = parsed.data;
+  }
   return {
+    ...(selectedContext ? { selectedContext } : {}),
     accountId: token.accountId,
     clientId: token.clientId,
     grantId: token.grantId,

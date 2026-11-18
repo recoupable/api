@@ -5,7 +5,11 @@ import { createOAuthCipher } from "../createOAuthCipher";
 import type { OAuthRuntimeConfig } from "../loadOAuthConfig";
 import type { OAuthStore } from "../OAuthStore";
 
-it.each([100, null])("lists and revokes owned connections with expiry %s", async expiresAt => {
+it.each([
+  { expiresAt: 100, selected: false },
+  { expiresAt: null, selected: false },
+  { expiresAt: null, selected: true },
+])("lists and revokes owned connections %j", async ({ expiresAt, selected }) => {
   const config = {
     issuer: "issuer",
     indexKey: Buffer.alloc(32, 1),
@@ -26,6 +30,14 @@ it.each([100, null])("lists and revokes owned connections with expiry %s", async
     invalidGrant: () => new Error(),
   });
   const accountId = "00000000-0000-4000-8000-000000000001";
+  const selectedContext = {
+    version: 1,
+    capabilityVersion: "context-workspace-v1",
+    mode: "selected_context",
+    kind: "personal",
+    ownerId: accountId,
+    organizationId: null,
+  };
   await adapter("RecoupGrant").upsert(
     "secret-grant",
     {
@@ -34,6 +46,7 @@ it.each([100, null])("lists and revokes owned connections with expiry %s", async
       grantId: "secret-grant",
       extra: {
         context: "personal",
+        ...(selected ? { selectedContext } : {}),
         clientName: "Agent",
         scopes: ["recoup:read"],
         createdAt: 1,
@@ -50,7 +63,11 @@ it.each([100, null])("lists and revokes owned connections with expiry %s", async
   const result = await connections.list(accountId);
   expect(store.listConnections).toHaveBeenCalledWith("issuer", saved.accountHash);
   expect(JSON.stringify(result)).not.toContain("secret-grant");
-  expect(result.connections[0]).toMatchObject({ id: saved.idHash, clientName: "Agent" });
+  expect(result.connections[0]).toMatchObject({
+    id: saved.idHash,
+    clientName: "Agent",
+    ...(selected ? { selectedContext } : {}),
+  });
   await expect(connections.list("00000000-0000-4000-8000-000000000002")).rejects.toThrow();
   await expect(
     connections.revoke("00000000-0000-4000-8000-000000000002", saved.idHash),

@@ -1,3 +1,4 @@
+import { resolveSelectedContext } from "./resolveSelectedContext";
 import { oauthPersistentExpiry } from "../oauthPersistentExpiry";
 import { OAuthStorageUnavailableError } from "../OAuthStorageUnavailableError";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -14,6 +15,18 @@ export async function approveOAuthInteraction(
   requested: string[],
 ) {
   const { accountId, clientId, subject, resource, scopes } = binding;
+  if (binding.selectedContext) {
+    const selected = binding.selectedContext;
+    const current = await resolveSelectedContext(
+      accountId,
+      scopes,
+      selected.kind === "personal"
+        ? { workspace_kind: "personal" }
+        : { workspace_kind: "organization", organization_id: selected.organizationId },
+    );
+    if (JSON.stringify(current) !== JSON.stringify(selected))
+      throw new Error("Workspace approval changed");
+  }
   const grant = new provider.Grant({ accountId, clientId });
   grant.exp = oauthPersistentExpiry;
   grant.addResourceScope(resource, scopes);
@@ -29,6 +42,7 @@ export async function approveOAuthInteraction(
       clientId,
       grantId,
       extra: {
+        ...(binding.selectedContext ? { selectedContext: binding.selectedContext } : {}),
         subject,
         context: "personal",
         scopes,

@@ -1,4 +1,5 @@
 import type { AdapterFactory } from "oidc-provider";
+import { selectedContextSchema } from "./selectedContextSchema";
 import { z } from "zod";
 import type { OAuthRuntimeConfig } from "./loadOAuthConfig";
 import type { OAuthStore, OAuthStoredRecord } from "./OAuthStore";
@@ -11,6 +12,7 @@ const schema = z.object({
   extra: z.object({
     clientName: z.string(),
     context: z.literal("personal"),
+    selectedContext: selectedContextSchema.optional(),
     scopes: z.array(z.string()),
     createdAt: z.number().int(),
     expiresAt: z.number().int().nullable(),
@@ -40,6 +42,9 @@ export function createOAuthConnections(
         connections: records.map(record => {
           const payload = decode(accountId, record);
           return {
+            ...(payload.extra.selectedContext
+              ? { selectedContext: payload.extra.selectedContext }
+              : {}),
             id: record.id_hash,
             clientId: payload.clientId,
             clientName: payload.extra.clientName,

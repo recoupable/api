@@ -8,7 +8,23 @@ import type { OAuthRuntimeConfig } from "../loadOAuthConfig";
 import type { OAuthStore, OAuthStoredRecord } from "../OAuthStore";
 import { createOAuthConsentHandler } from "../consent/createOAuthConsentHandler";
 
-afterEach(() => vi.restoreAllMocks());
+const membership = vi.hoisted(() => ({ allowed: true }));
+vi.mock("@/lib/supabase/account_organization_ids/getAccountOrganizations", () => ({
+  getAccountOrganizations: vi.fn(async () =>
+    membership.allowed
+      ? [
+          {
+            organization_id: "00000000-0000-4000-8000-000000000002",
+            organization: { id: "00000000-0000-4000-8000-000000000002", name: "Fixture label" },
+          },
+        ]
+      : [],
+  ),
+}));
+afterEach(() => {
+  membership.allowed = true;
+  vi.restoreAllMocks();
+});
 
 function fixture() {
   const log = vi.spyOn(console, "error").mockImplementation(() => {});
@@ -101,9 +117,10 @@ function fixture() {
     adapter,
     resolveIdentity,
   });
-  const request = async (body?: unknown) => {
+  const request = async (body?: unknown, query = "") => {
     const req = Object.assign(Readable.from(body ? [JSON.stringify(body)] : []), {
       method: body ? "POST" : "GET",
+      url: `/interaction/private-interaction${query}`,
       headers: {
         origin: "https://chat.example",
         authorization: "Bearer private-token",
@@ -214,4 +231,52 @@ it("preserves cleanup and stays quiet on expected provider rejection after appro
   expect((await f.request({ decision: "approve", csrf: body.csrf })).status).toBe(400);
   expect(f.store.revokeGrant).toHaveBeenCalledOnce();
   expect(f.log).not.toHaveBeenCalled();
+});
+
+it("does not issue a selected ticket until a workspace is chosen and rechecks membership at approval", async () => {
+  const f = fixture();
+  f.details.params.scope = "mcp:tools";
+  const choices = await f.request(undefined, "?consent_version=2");
+  expect(choices.status).toBe(200);
+  expect(choices.body.csrf).toBeUndefined();
+  expect(choices.body.workspaces).toHaveLength(2);
+  const org = "00000000-0000-4000-8000-000000000002";
+  const preview = await f.request(
+    undefined,
+    `?consent_version=2&workspace_kind=organization&organization_id=${org}`,
+  );
+  expect(preview.status).toBe(200);
+  membership.allowed = false;
+  expect(
+    (
+      await f.request({
+        decision: "approve",
+        csrf: preview.body.csrf,
+        consent_version: 2,
+        workspace_kind: "organization",
+        organization_id: org,
+      })
+    ).status,
+  ).toBe(400);
+  expect(f.provider.interactionResult).not.toHaveBeenCalled();
+  expect(f.store.revokeGrant).not.toHaveBeenCalled();
+});
+it("revokes only the newly created selected grant on attribution write failure", async () => {
+  const f = fixture();
+  f.details.params.scope = "mcp:tools";
+  const preview = await f.request(undefined, "?consent_version=2&workspace_kind=personal");
+  expect(preview.status).toBe(200);
+  f.fail("RecoupGrant.upsert");
+  expect(
+    (
+      await f.request({
+        decision: "approve",
+        csrf: preview.body.csrf,
+        consent_version: 2,
+        workspace_kind: "personal",
+      })
+    ).status,
+  ).toBe(400);
+  expect(f.store.revokeGrant).toHaveBeenCalledOnce();
+  expect(f.provider.interactionResult).not.toHaveBeenCalled();
 });

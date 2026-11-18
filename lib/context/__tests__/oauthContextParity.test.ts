@@ -104,19 +104,37 @@ const operations = contextOperationSchema.options
     return { action, option, input, expected: option.parse({ ...input, action }) };
   });
 
-function setup() {
+function setup(selected = false) {
   const registered = new Map<string, { config: any; run: any }>();
   const server = {
     registerTool: vi.fn((name, config, run) => registered.set(name, { config, run })),
   };
   // Preparation is an injected boundary here; its resource policy has separate tests.
   const prepare = vi.fn(async (_name: string, args: Record<string, unknown>) => args);
-  const verify = vi.fn().mockResolvedValue(access);
-  registerFullOAuthTools(server as unknown as McpServer, verify, {
-    prepare,
-    listArtists: vi.fn().mockResolvedValue([]),
-  });
-  return { registered, prepare, verify };
+  const current = selected
+    ? {
+        ...access,
+        selectedContext: {
+          version: 1 as const,
+          capabilityVersion: "context-workspace-v1" as const,
+          mode: "selected_context" as const,
+          kind: "organization" as const,
+          ownerId: organization,
+          organizationId: organization,
+        },
+      }
+    : access;
+  const verify = vi.fn().mockResolvedValue(current);
+  registerFullOAuthTools(
+    server as unknown as McpServer,
+    verify,
+    {
+      prepare,
+      listArtists: vi.fn().mockResolvedValue([]),
+    },
+    selected ? "selected_context" : undefined,
+  );
+  return { registered, prepare, verify, current };
 }
 
 beforeEach(() => {
@@ -196,5 +214,67 @@ describe.each(operations)("OAuth Context parity: $action", ({ action, input, exp
     expect(JSON.stringify(vi.mocked(console.error).mock.calls)).not.toContain(canary);
     for (const [name, sink] of Object.entries(sinks))
       expect(sink, `${name} ran after a denial`).not.toHaveBeenCalled();
+  });
+});
+
+describe("selected Context workspace", () => {
+  it("pins all current v1 actions and injects the approved workspace for omitted input", async () => {
+    const { registered, current, verify } = setup(true);
+    expect(registered.size).toBe(27);
+    const scopedExtra = {
+      ...extra,
+      authInfo: { ...extra.authInfo, extra: { accountId: owner, oauth: current } },
+    };
+    for (const { action, input } of operations) {
+      vi.clearAllMocks();
+      const { organization_id: _org, ...omitted } = input;
+      await registered.get(contextToolOperations[action].name)!.run(omitted, scopedExtra);
+      expect(processContextOperation).toHaveBeenCalledWith(
+        owner,
+        expect.objectContaining({ action, organization_id: organization }),
+        expect.objectContaining({ authorize: expect.any(Function) }),
+      );
+      expect(verify.mock.calls.length).toBeGreaterThanOrEqual(3);
+      expect(authorizeContextOwner).toHaveBeenCalledWith(owner, organization);
+    }
+  });
+  it("rejects a different accessible workspace before any domain sink", async () => {
+    const { registered, current, prepare } = setup(true);
+    const scopedExtra = {
+      ...extra,
+      authInfo: { ...extra.authInfo, extra: { accountId: owner, oauth: current } },
+    };
+    const { action, input } = operations.find(value => value.action === "read")!;
+    const result = await registered
+      .get(contextToolOperations[action].name)!
+      .run({ ...input, organization_id: "33333333-3333-4333-8333-333333333333" }, scopedExtra);
+    expect(result.isError).toBe(true);
+    expect(prepare).not.toHaveBeenCalled();
+    expect(processContextOperation).not.toHaveBeenCalled();
+    for (const sink of Object.values(sinks)) expect(sink).not.toHaveBeenCalled();
+  });
+  it("rechecks revocation and membership between preparation and domain entry", async () => {
+    for (const loseMembership of [false, true]) {
+      vi.clearAllMocks();
+      const { registered, current, prepare, verify } = setup(true);
+      const scopedExtra = {
+        ...extra,
+        authInfo: { ...extra.authInfo, extra: { accountId: owner, oauth: current } },
+      };
+      prepare.mockImplementationOnce(async (_name, args) => {
+        if (loseMembership)
+          vi.mocked(authorizeContextOwner).mockRejectedValueOnce(new Error(canary));
+        else verify.mockResolvedValue(undefined);
+        return args;
+      });
+      const { action, input } = operations.find(value => value.action === "read")!;
+      const result = await registered
+        .get(contextToolOperations[action].name)!
+        .run(input, scopedExtra);
+      expect(result.isError).toBe(true);
+      expect(JSON.stringify(result)).not.toContain(canary);
+      expect(processContextOperation).not.toHaveBeenCalled();
+      for (const sink of Object.values(sinks)) expect(sink).not.toHaveBeenCalled();
+    }
   });
 });
