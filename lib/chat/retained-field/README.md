@@ -35,6 +35,11 @@ source diagnostics or authority details and is not retryable by the workflow.
   that reconstruction intentionally drops metadata. Its authenticated API-key
   account and room scope are unchanged. Existing redacted error/idle handling
   remains; no automatic retry is added.
+- Email's `generateEmailResponse` loads history through `getEmailRoomMessages`,
+  which checks raw stored content before extracting text and dropping metadata.
+  Marked history denies the entire generation, including sibling text; the
+  existing inbound handler retains its generic error response. Room lookup and
+  authenticated account/organization context are unchanged.
 - `getGeneralAgent` checks before account/knowledge/tool setup. Its actual
   `ToolLoopAgent.prepareStep` checks messages and tool results every iteration,
   and checks any tool-chain replacement messages. In the installed SDK this
