@@ -1,3 +1,6 @@
+import { getPackModelReadiness } from "./getPackModelReadiness";
+import { getPackPlannedModelTasks } from "./getPackPlannedModelTasks";
+import { packProductionContextSchema } from "./packProductionContextSchema";
 import { packCostAccounting } from "@/lib/const";
 import { getPackProgress } from "./getPackProgress";
 import { isPackAssetUsable } from "./isPackAssetUsable";
@@ -33,6 +36,19 @@ export async function readPackSnapshot(snapshot: PackSnapshot) {
     });
   }
   const readiness = getPackBriefReadiness(snapshot.job.brief);
+  const modelReadiness =
+    job.status === "awaiting_approval" && Array.isArray(job.quote?.assets)
+      ? getPackModelReadiness(
+          getPackPlannedModelTasks(
+            snapshot.job.brief,
+            job.quote!.assets,
+            !packProductionContextSchema.safeParse(snapshot.job.production_context).success,
+          ),
+        )
+      : undefined;
+  const restrictions = Object.entries(modelReadiness?.tasks ?? {}).filter(
+    ([, entry]) => entry.restriction,
+  );
   return {
     job: {
       ...job,
@@ -40,11 +56,13 @@ export async function readPackSnapshot(snapshot: PackSnapshot) {
       quote: job.quote ? { ...job.quote, cost_accounting: { ...packCostAccounting } } : null,
     },
     assets,
-    readiness,
+    readiness: { ...readiness, model_readiness: modelReadiness },
     progress: getPackProgress(snapshot),
     next_action: readiness.ready
       ? snapshot.job.status === "awaiting_approval"
-        ? "Review this complete quote and approve its budget before generation."
+        ? restrictions.length
+          ? `New provider work is blocked: ${restrictions.map(([task, entry]) => `${task}: ${entry.restriction}`).join("; ")}. Review the provider restriction before requesting generation; existing outputs are retained.`
+          : "Review this complete quote and approve its budget before generation."
         : snapshot.job.status === "running"
           ? "The approved pack is running. Poll this saved job; do not submit another pack."
           : snapshot.job.status === "completed"

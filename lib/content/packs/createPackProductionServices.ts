@@ -1,3 +1,4 @@
+import { assertPackModelRestrictions } from "./assertPackModelRestrictions";
 import { packExecutionSettings, PACK_CAPTION_MODEL } from "@/lib/const";
 import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
 import { generateText } from "ai";
@@ -35,6 +36,10 @@ export function createPackProductionServices(
           ...packExecutionSettings.image,
           image_urls: job.brief.reference_image_urls,
         });
+        if (!state[`image_submission_${index}`])
+          assertPackModelRestrictions([
+            job.brief.reference_image_urls.length ? "image_edit" : "image",
+          ]);
         const data = await runPackFalRequest({
           model: built.model,
           input: built.input,
@@ -51,6 +56,7 @@ export function createPackProductionServices(
     },
     generateMotion: async (prompt, image) => {
       if (!state.motion_submission) assertPackQuoteConfiguration(job.quote);
+      if (!state.motion_submission) assertPackModelRestrictions(["motion"]);
       const input = buildVideoInput({
         prompt,
         image_url: image,
@@ -76,6 +82,7 @@ export function createPackProductionServices(
     },
     caption: async prompt => {
       assertPackQuoteConfiguration(job.quote);
+      assertPackModelRestrictions(["caption"]);
       const result = await generateText({
         model: PACK_CAPTION_MODEL,
         ...packExecutionSettings.caption,
@@ -94,6 +101,11 @@ export function createPackProductionServices(
     },
     inspect: input => {
       assertPackQuoteConfiguration(job.quote);
+      assertPackModelRestrictions(
+        input.files.map(file =>
+          file.content_type === "video/mp4" ? "video_inspection" : "still_inspection",
+        ),
+      );
       return inspectPackMedia(input);
     },
     finish: result =>

@@ -1,4 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createSignedFileUrlByKey } from "@/lib/supabase/storage/createSignedFileUrlByKey";
+import { fetchPackMedia } from "../fetchPackMedia";
+import * as modelEvidence from "../getPackModelEvidence";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fal from "@/lib/fal/server";
 import { generateText } from "ai";
 import { createPackProductionServices } from "../createPackProductionServices";
@@ -18,10 +21,12 @@ vi.mock("@/lib/supabase/storage/createSignedFileUrlByKey", () => ({
   createSignedFileUrlByKey: vi.fn(),
 }));
 vi.mock("@/lib/flamingo/callFlamingoGenerate", () => ({ callFlamingoGenerate: vi.fn() }));
+vi.mock("../fetchPackMedia", () => ({ fetchPackMedia: vi.fn() }));
 vi.mock("../composePackMedia", () => ({ composePackMedia: vi.fn() }));
 vi.mock("../inspectPackMedia", () => ({ inspectPackMedia: vi.fn() }));
 vi.mock("../withPackMediaRuntime", () => ({ withPackMediaRuntime: vi.fn() }));
 beforeEach(() => vi.resetAllMocks());
+afterEach(() => vi.restoreAllMocks());
 const brief = releasePackBriefSchema.parse({
   artist_name: "Fixture",
   song_title: "Song",
@@ -106,5 +111,66 @@ describe("configuration guard at production boundaries", () => {
     } as never);
     await services.generateImages("prompt", 1);
     expect(fal.queue.submit).toHaveBeenCalledTimes(1);
+  });
+  it("refuses only new restricted analysis before storage or provider effects", async () => {
+    const { job } = fixture({}, true);
+    delete job.quote.model_readiness;
+    await expect(preparePackProduction({ accountId: "owner" }, job)).rejects.toThrow(
+      /analysis.*commercial use restricted/,
+    );
+    expect(callFlamingoGenerate).not.toHaveBeenCalled();
+    expect(runPackCommand).not.toHaveBeenCalled();
+    expect(createSignedFileUrlByKey).not.toHaveBeenCalled();
+    expect(fetchPackMedia).not.toHaveBeenCalled();
+  });
+  it("keeps legacy accepted receipt recovery, caption and local composition independent of motion evidence", async () => {
+    const evidence = modelEvidence.getPackModelEvidence();
+    evidence.tasks.motion.commercial_basis = "restricted";
+    vi.spyOn(modelEvidence, "getPackModelEvidence").mockReturnValue(evidence);
+    const { job, services } = fixture(
+      {
+        image_submission_0: {
+          state: "accepted",
+          request_id: "accepted",
+          model: "original-route",
+          charge_credits: 100,
+        },
+      },
+      true,
+    );
+    delete job.quote.model_readiness;
+    vi.mocked(fal.queue.status).mockResolvedValue({ status: "COMPLETED" } as never);
+    vi.mocked(fal.queue.result).mockResolvedValue({
+      data: { images: [{ url: "https://example.com/retained.png" }] },
+    } as never);
+    expect(await services.generateImages("prompt", 1)).toEqual([
+      "https://example.com/retained.png",
+    ]);
+    expect(fal.queue.status).toHaveBeenCalledWith("original-route", {
+      requestId: "accepted",
+      logs: false,
+    });
+    expect(fal.queue.submit).not.toHaveBeenCalled();
+    vi.mocked(generateText).mockResolvedValue({ text: "Retained caption" } as never);
+    expect(await services.caption("prompt")).toBe("Retained caption");
+    await services.compose({} as any);
+    expect(composePackMedia).toHaveBeenCalledOnce();
+    await expect(services.generateMotion("prompt", "image")).rejects.toThrow(
+      /motion.*commercial use restricted/,
+    );
+    expect(fal.queue.submit).not.toHaveBeenCalled();
+    expect(callFlamingoGenerate).not.toHaveBeenCalled();
+  });
+  it("checks only the inspection provider required by the actual output", () => {
+    const evidence = modelEvidence.getPackModelEvidence();
+    evidence.tasks.video_inspection.lifecycle = "retired";
+    vi.spyOn(modelEvidence, "getPackModelEvidence").mockReturnValue(evidence);
+    const { services } = fixture({}, true);
+    services.inspect({ files: [{ content_type: "image/png" }] } as any);
+    expect(inspectPackMedia).toHaveBeenCalledOnce();
+    expect(() => services.inspect({ files: [{ content_type: "video/mp4" }] } as any)).toThrow(
+      /video_inspection.*model retired/,
+    );
+    expect(inspectPackMedia).toHaveBeenCalledOnce();
   });
 });
