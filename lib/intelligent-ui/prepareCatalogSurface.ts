@@ -177,5 +177,18 @@ export async function prepareCatalogSurface(input: z.input<typeof inputSchema>) 
       ],
     },
   };
-  return { surface, fingerprint, lineage, mappingVersion: "catalog-streams-v1" as const };
+  return {
+    surface,
+    fingerprint,
+    lineage,
+    mappingVersion: "catalog-streams-v1" as const,
+    // Server-only durable step output, never inserted into the rendered Surface.
+    sourceEnvelope: {
+      version: 1 as const,
+      actorId: accountId,
+      assistantMessageId,
+      canonical,
+      surfaceSha256: createHash("sha256").update(JSON.stringify(surface)).digest("hex"),
+    },
+  };
 }

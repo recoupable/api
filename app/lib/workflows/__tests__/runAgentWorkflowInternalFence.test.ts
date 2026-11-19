@@ -1,3 +1,8 @@
+import { createHash } from "node:crypto";
+import { afterEach } from "vitest";
+import { prepareCatalogSurfaceStep } from "../prepareCatalogSurfaceStep";
+import { sendCatalogSurfaceStep } from "../sendCatalogSurfaceStep";
+import catalogFixture from "@/lib/intelligent-ui/__fixtures__/catalog-streams-v1.json";
 import { closeChatStream } from "../closeChatStream";
 import { sendStreamStart } from "../sendStreamStart";
 import { sendStreamFinish } from "../sendStreamFinish";
@@ -252,3 +257,87 @@ it("legacy preparation failure preserves the original no-cleanup behavior", asyn
   expect(deleteEphemeralKeyStep).not.toHaveBeenCalled();
   expect(closeChatStream).not.toHaveBeenCalled();
 });
+
+afterEach(() => vi.unstubAllEnvs());
+it.each([true, false])(
+  "consumes server lineage after required snapshot write, before release; retention success=%s",
+  async success => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("CATALOG_SURFACE_RETENTION_ENABLED", "true");
+    const invocation = fencedInput() as unknown as {
+      input: typeof baseInput & { devCatalogSurface?: unknown };
+    };
+    const query = {
+      catalog_id: catalogFixture.surface.context.subject.id,
+      since: "2026-09-02",
+      days: 1,
+      page: 1,
+      limit: 25,
+    };
+    invocation.input.devCatalogSurface = {
+      workspaceId: catalogFixture.surface.context.workspaceId,
+      query,
+    };
+    const canonical = JSON.stringify({
+      mappingVersion: "catalog-streams-v1",
+      workspaceId: catalogFixture.surface.context.workspaceId,
+      query,
+      lineage: catalogFixture.lineage,
+    });
+    const hash = (s: string) => createHash("sha256").update(s).digest("hex");
+    const prepared = {
+      ...catalogFixture,
+      fingerprint: hash(canonical),
+      sourceEnvelope: {
+        version: 1,
+        actorId: authority.effectiveAccount,
+        assistantMessageId: "asst-fresh-id",
+        canonical,
+        surfaceSha256: hash(JSON.stringify(catalogFixture.surface)),
+      },
+    };
+    vi.mocked(prepareCatalogSurfaceStep).mockResolvedValue(prepared as never);
+    vi.mocked(sendCatalogSurfaceStep).mockResolvedValue({
+      id: "asst-fresh-id",
+      role: "assistant",
+      parts: [
+        {
+          type: "data-intelligent-ui-snapshot",
+          id: catalogFixture.surface.id,
+          data: catalogFixture.surface,
+        },
+      ],
+    });
+    const original = rpc.getMockImplementation()!;
+    rpc.mockImplementation(async (name, args) =>
+      name === "retain_catalog_surface_source"
+        ? success
+          ? {
+              data: {
+                message_id: "asst-fresh-id",
+                source_revision: 1,
+                source_sha256: hash(canonical),
+                surface_sha256: prepared.sourceEnvelope.surfaceSha256,
+                retained: true,
+              },
+              error: null,
+            }
+          : { data: null, error: { code: "40001" } }
+        : original(name, args),
+    );
+    if (success) await runAgentWorkflow(invocation as never);
+    else
+      await expect(runAgentWorkflow(invocation as never)).rejects.toThrow("retention incomplete");
+    const trace = rpc.mock.calls.map(([name, args]) =>
+      name === "retain_catalog_surface_source" ? "retain" : args.p_action,
+    );
+    expect(trace).toEqual(
+      success
+        ? ["bind", "write", "write", "retain", "release"]
+        : ["bind", "write", "write", "retain"],
+    );
+    expect(runAgentStep).not.toHaveBeenCalled();
+    expect(persistAssistantMessageStep).not.toHaveBeenCalled();
+    expect(closeChatStream).toHaveBeenCalledOnce();
+  },
+);
