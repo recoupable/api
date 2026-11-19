@@ -83,17 +83,22 @@ describe("getGeneralAgent", () => {
   });
 
   it("rejects raw marked messages before account/knowledge reads", async () => {
+    mockSelectAccountInfo.mockResolvedValue({
+      knowledges: [{ id: "knowledge-1", url: "https://knowledge.invalid/private" }],
+    } as never);
     await expect(
       getGeneralAgent({
         accountId: "real-actor",
+        artistId: "artist-456",
         orgId: null,
         messages: [{ role: "assistant", parts: [{ mode: "retained_field" }] }],
       } as never),
     ).rejects.toThrow("Retained-field model input unavailable");
-    expect(mockSelectAccountEmails).not.toHaveBeenCalled();
     expect(mockGetKnowledgeBaseText).not.toHaveBeenCalled();
+    expect(mockSelectAccountInfo).not.toHaveBeenCalled();
+    expect(mockSelectAccountEmails).not.toHaveBeenCalled();
   });
-  it("actual ToolLoopAgent rejects marked input before file download/provider invocation", async () => {
+  it("actual ToolLoopAgent rejects mixed file and marked tool-result input before download/provider invocation", async () => {
     const model = new MockLanguageModelV3();
     mockSetupToolsForRequest.mockResolvedValue({});
     const { agent } = await getGeneralAgent({

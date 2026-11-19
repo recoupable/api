@@ -247,6 +247,17 @@ try {
       clearTimeout(timer);
     }
   }
+  // Terminal runs are skipped by the runtime; this does not prove another guard execution.
+  async function assertTerminalDeliveryNoop(runId, trace) {
+    const beforeDelivery = deliveries;
+    await reenqueueRun(world, runId);
+    await bounded(
+      (async () => {
+        while (deliveries === beforeDelivery) await new Promise(r => setTimeout(r, 20));
+      })(),
+    );
+    assert.deepEqual(await events(), trace);
+  }
   const traces = [];
   for (const name of [
     "success",
@@ -346,14 +357,7 @@ try {
         );
         if (name === "retained-input") assert(!actions.includes("convert"));
         if (name !== "retained-iteration") assert(!actions.includes("routing"));
-        const beforeReplay = deliveries;
-        await reenqueueRun(world, run.runId);
-        await bounded(
-          (async () => {
-            while (deliveries === beforeReplay) await new Promise(r => setTimeout(r, 20));
-          })(),
-        );
-        assert.deepEqual(await events(), trace);
+        await assertTerminalDeliveryNoop(run.runId, trace);
       }
       if (name === "bind") assert.deepEqual(actions, ["rpc"]);
       if (name === "user") {
@@ -380,15 +384,7 @@ try {
           trace.findIndex(x => x.action === "rpc" && x.data.p_action === "release") <
             actions.indexOf("stream-finish"),
         );
-        // Completed journal replay must not repeat any provider/write/commit/cleanup effect.
-        const beforeReplay = deliveries;
-        await reenqueueRun(world, run.runId);
-        await bounded(
-          (async () => {
-            while (deliveries === beforeReplay) await new Promise(r => setTimeout(r, 20));
-          })(),
-        );
-        assert.deepEqual(await events(), trace);
+        await assertTerminalDeliveryNoop(run.runId, trace);
       }
       if (name === "new-object") {
         const original = trace.find(x => x.action === "provider").data.original[0];
