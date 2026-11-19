@@ -4,6 +4,7 @@ import { getCorsHeaders } from "@/lib/networking/getCorsHeaders";
 import { toChatResponse } from "@/lib/sessions/toChatResponse";
 import { validateGetSessionChatRequest } from "@/lib/sessions/chats/validateGetSessionChatRequest";
 import { selectChatMessages } from "@/lib/supabase/chat_messages/selectChatMessages";
+import { filterRetainedFieldHistory } from "./retained-field/filterRetainedFieldHistory";
 
 export interface SessionChatResponse {
   chat: ReturnType<typeof toChatResponse>;
@@ -17,7 +18,8 @@ export interface SessionChatResponse {
  * persisted UI message stream — enough for both initial render and
  * in-tab refresh.
  *
- * `messages` is the raw `parts` JSON for each row (chat messages are
+ * Retained-field messages are withheld as a whole until current-source disclosure
+ * is implemented. Other `messages` retain the raw `parts` JSON (chat messages are
  * stored as the full UIMessage; the caller deserializes back into
  * its UIMessage type).
  *
@@ -31,10 +33,11 @@ export async function getSessionChatHandler(
   sessionId: string,
   chatId: string,
 ): Promise<NextResponse> {
-  const chat = await validateGetSessionChatRequest(request, sessionId, chatId);
-  if (chat instanceof NextResponse) {
-    return chat;
+  const validated = await validateGetSessionChatRequest(request, sessionId, chatId);
+  if (validated instanceof NextResponse) {
+    return validated;
   }
+  const { chat, actorAccountId } = validated;
 
   const messages = await selectChatMessages({ chatId, orderBy: { createdAt: "asc" } });
   if (messages === null) return errorResponse("Failed to load messages", 500);
@@ -43,8 +46,11 @@ export async function getSessionChatHandler(
     {
       chat: toChatResponse(chat),
       isStreaming: chat.active_stream_id !== null,
-      messages: messages.map(row => row.parts),
+      messages: await filterRetainedFieldHistory(
+        { actorAccountId, sessionId: chat.session_id, chatId: chat.id },
+        messages,
+      ),
     } satisfies SessionChatResponse,
-    { status: 200, headers: getCorsHeaders() },
+    { status: 200, headers: { ...getCorsHeaders(), "Cache-Control": "private, no-store" } },
   );
 }

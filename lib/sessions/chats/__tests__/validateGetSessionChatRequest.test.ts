@@ -143,8 +143,9 @@ describe("validateGetSessionChatRequest", () => {
     const res = await validateGetSessionChatRequest(makeReq(), "sess_1", "chat_1");
     expect(res).not.toBeInstanceOf(NextResponse);
     if (!(res instanceof NextResponse)) {
-      expect(res.id).toBe("chat_1");
-      expect(res.session_id).toBe("sess_1");
+      expect(res.chat.id).toBe("chat_1");
+      expect(res.actorAccountId).toBe(accountId);
+      expect(res.chat.session_id).toBe("sess_1");
     }
     expect(selectSessions).toHaveBeenCalledWith({ id: "sess_1" });
     expect(selectChats).toHaveBeenCalledWith({ id: "chat_1" });

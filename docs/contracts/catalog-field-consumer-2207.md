@@ -136,3 +136,15 @@ Required consumer assertions, once gates allow implementation: exactly one descr
 Concrete source-inspection anchors for gate3: `save_context_metadata` in Database `supabase/migrations/20260920040000_context_guests.sql` accepts supplied URL/topic; `complete_context_enrichment` in `20260923070000_context_enrichment_scope.sql` writes supplied source items and accepts results. These are starting points for reserved-family guards, not an exhaustive writer/grant audit. At this API pin, no `read_binding`, `reconcile_retention` or `stream_binding_proposal` call exists under `app/` or `lib/`. Gate5's actual raw-history consumer is `lib/sessions/chats/getSessionChatHandler.ts`, which selects saved message parts following session/chat authorization without the proposed per-field source check.
 
 Next action: root/UI review this exact contract and schema ownership. Runtime work is blocked by selection origin, callable deployed authority and publication/history gates; document approval alone does not unblock a live implementation.
+
+## History withholding source increment — November 19, 2026
+
+The existing session-chat GET handler now calls the [retained-field history
+gate](../../lib/sessions/chats/retained-field/README.md) with the authenticated
+account and validated session/chat/database-message anchors. Until a reviewed
+current-source transport and publication protocol exist, marked retained-field
+messages are omitted in full, including sibling text/numeric projections and
+metadata. This is a default-denied history consumer, not a positive authority
+implementation or activation of the proposed producer. Legacy raw-report
+messages and controls retain their existing behavior. It does not qualify other
+disclosure paths or derive provenance for unmarked text in separate messages.

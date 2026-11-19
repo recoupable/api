@@ -46,7 +46,10 @@ beforeEach(() => {
   mocks.from.mockImplementation(() => {
     throw new Error("Unexpected storage access");
   });
-  mocks.validate.mockResolvedValue(baseChatRow({ id: chatId, session_id: sessionId }));
+  mocks.validate.mockResolvedValue({
+    chat: baseChatRow({ id: chatId, session_id: sessionId }),
+    actorAccountId: "actual-actor",
+  });
 });
 afterEach(() => {
   expect(fetch).not.toHaveBeenCalled();
@@ -82,9 +85,10 @@ it("preserves the saved UIMessage and streaming state", async () => {
     role: "assistant",
     parts: [{ type: "text", text: "Saved answer" }],
   };
-  mocks.validate.mockResolvedValue(
-    baseChatRow({ id: chatId, session_id: sessionId, active_stream_id: "synthetic-run" }),
-  );
+  mocks.validate.mockResolvedValue({
+    chat: baseChatRow({ id: chatId, session_id: sessionId, active_stream_id: "synthetic-run" }),
+    actorAccountId: "actual-actor",
+  });
   mockRead([{ parts: message }]);
   const response = await request();
   expect(response.status).toBe(200);
