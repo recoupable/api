@@ -1,0 +1,99 @@
+{
+  "scope": {
+    "actorId": "10000000-0000-4000-8000-000000000009",
+    "workspaceId": "10000000-0000-4000-8000-000000000001",
+    "requestId": "10000000-0000-4000-8000-000000000002",
+    "catalogId": "10000000-0000-4000-8000-000000000003",
+    "key": "original"
+  },
+  "actor": {
+    "actorId": "10000000-0000-4000-8000-000000000009",
+    "sessionId": "session",
+    "chatId": "chat",
+    "messageId": "assistant"
+  },
+  "receipt": {
+    "ownerId": "10000000-0000-4000-8000-000000000001",
+    "requestId": "10000000-0000-4000-8000-000000000002",
+    "subjectId": "10000000-0000-4000-8000-000000000004",
+    "catalogId": "10000000-0000-4000-8000-000000000003",
+    "key": "original",
+    "commandDigest": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "resultId": "10000000-0000-4000-8000-000000000005",
+    "sourceVersionId": "10000000-0000-4000-8000-000000000006",
+    "revision": 7
+  },
+  "envelope": {
+    "ownerId": "10000000-0000-4000-8000-000000000001",
+    "requestId": "10000000-0000-4000-8000-000000000002",
+    "subjectId": "10000000-0000-4000-8000-000000000004",
+    "catalogId": "10000000-0000-4000-8000-000000000003",
+    "resultId": "10000000-0000-4000-8000-000000000005",
+    "revision": 7,
+    "topic": "catalog_retained_streams",
+    "sourceVersionIds": [
+      "10000000-0000-4000-8000-000000000006"
+    ],
+    "evidence": {
+      "schemaVersion": 1,
+      "workspaceId": "10000000-0000-4000-8000-000000000001",
+      "catalogId": "10000000-0000-4000-8000-000000000003",
+      "subjectId": "10000000-0000-4000-8000-000000000004",
+      "isrc": "USAAA2600001",
+      "provider": "luminate",
+      "metric": "daily_streams",
+      "platform": "all_dsps",
+      "territory": "worldwide",
+      "timezone": "UTC",
+      "since": "2026-10-23",
+      "until": "2026-10-25",
+      "periods": {
+        "previous": {
+          "start": "2026-10-23",
+          "end_exclusive": "2026-10-24"
+        },
+        "current": {
+          "start": "2026-10-24",
+          "end_exclusive": "2026-10-25"
+        },
+        "days": 1,
+        "timezone": "UTC"
+      },
+      "providerRecordingId": "provider-original",
+      "observations": [
+        {
+          "catalog_id": "10000000-0000-4000-8000-000000000003",
+          "isrc": "USAAA2600001",
+          "date": "2026-10-23",
+          "run_id": "10000000-0000-4000-8000-000000000007",
+          "provider_recording_id": "provider-original",
+          "streams": 50,
+          "source_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "retrieved_at": "2026-10-25T01:00:00Z"
+        },
+        {
+          "catalog_id": "10000000-0000-4000-8000-000000000003",
+          "isrc": "USAAA2600001",
+          "date": "2026-10-24",
+          "run_id": "10000000-0000-4000-8000-000000000007",
+          "provider_recording_id": "provider-original",
+          "streams": 100,
+          "source_hash": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "retrieved_at": "2026-10-25T01:00:00Z"
+        }
+      ],
+      "absentDates": [],
+      "nullDates": [],
+      "retrievalRange": {
+        "earliest": "2026-10-25T01:00:00Z",
+        "latest": "2026-10-25T01:00:00Z"
+      }
+    }
+  },
+  "query": {
+    "since": "2026-10-24",
+    "days": 1,
+    "timezone": "UTC"
+  },
+  "asOf": "2026-10-27T00:00:00Z"
+}
