@@ -1,3 +1,4 @@
+import { assertPackModelRestrictions } from "./assertPackModelRestrictions";
 import { packProductionContextSchema as contextSchema } from "./packProductionContextSchema";
 import { parsePackAudioAnalysis } from "./parsePackAudioAnalysis";
 import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
@@ -27,6 +28,7 @@ export async function preparePackProduction(actor: PackActor, job: PackJob): Pro
       throw new Error(
         "Audio analysis outcome is uncertain; retained context needs reconciliation before production",
       );
+    assertPackModelRestrictions(["analysis"]);
     const sources = job.quote?.sources;
     if (!sources)
       throw new Error("The approved quote has no immutable source snapshot; get a new estimate");
@@ -77,6 +79,7 @@ export async function preparePackProduction(actor: PackActor, job: PackJob): Pro
       value: { state: "analyzing", audio, references, duration_seconds: duration },
     });
     assertPackQuoteConfiguration(job.quote);
+    assertPackModelRestrictions(["analysis"]);
     const analysis = await callFlamingoGenerate(
       flamingoGenerateBodySchema.parse({
         audio_url: audio.url,

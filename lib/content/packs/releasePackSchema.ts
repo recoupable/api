@@ -105,6 +105,18 @@ const creativeContextSchema = z
 
 export const releasePackBriefSchema = z
   .strictObject({
+    model_choices: z
+      .object({
+        image: z.string().min(1).max(200).optional(),
+        image_edit: z.string().min(1).max(200).optional(),
+        motion: z.string().min(1).max(200).optional(),
+        caption: z.string().min(1).max(200).optional(),
+        still_inspection: z.string().min(1).max(200).optional(),
+        video_inspection: z.string().min(1).max(200).optional(),
+        analysis: z.string().min(1).max(200).optional(),
+      })
+      .strict()
+      .optional(),
     artist_name: text.optional(),
     artist_account_id: z.uuid().optional(),
     song_title: text.optional(),

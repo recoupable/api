@@ -1,3 +1,7 @@
+import { assertPackModelRestrictions } from "./assertPackModelRestrictions";
+import { getPackModelReadiness } from "./getPackModelReadiness";
+import { getPackPlannedModelTasks } from "./getPackPlannedModelTasks";
+import { packProductionContextSchema } from "./packProductionContextSchema";
 import { assertPackQuoteConfiguration } from "./assertPackQuoteConfiguration";
 import { importPackSources } from "./importPackSources";
 import { randomUUID, createHash } from "node:crypto";
@@ -98,12 +102,20 @@ export async function processPackOperation(
     const plan = selected
       ? full.assets.filter(a => a.kind === selected.kind && a.ordinal === selected.ordinal)
       : full.assets;
+    const model_readiness = getPackModelReadiness(
+      getPackPlannedModelTasks(
+        saved.job.brief,
+        plan,
+        !packProductionContextSchema.safeParse(saved.job.production_context).success,
+      ),
+    );
     const sources =
       saved.job.quote?.sources ??
       (await importPackSources(saved.job.owner_id, resolvePackCreativeContext(saved.job.brief)));
     const quote: PackQuote = {
       sources,
       ...full,
+      model_readiness,
       fingerprint: createHash("sha256")
         .update(
           JSON.stringify({
@@ -111,6 +123,7 @@ export async function processPackOperation(
             deliverables: saved.job.deliverables,
             sources,
             execution_config_digest: full.execution_config_digest,
+            model_readiness_digest: model_readiness.digest,
           }),
         )
         .digest("hex"),
@@ -187,10 +200,27 @@ export async function processPackOperation(
       assertPackQuoteConfiguration(saved.job.quote);
       if (saved.job.quote.retry_asset_id !== input.asset_id)
         throw new Error("Request and approve a fresh estimate for this failed asset first");
+      assertPackModelRestrictions(
+        getPackPlannedModelTasks(
+          saved.job.brief,
+          [selected],
+          !packProductionContextSchema.safeParse(saved.job.production_context).success,
+        ),
+      );
       funded = await runPackCommand(actor, "approve", saved.job.id, input);
     }
   } else {
     assertPackQuoteConfiguration(saved.job.quote);
+    // A funded running replay asks the durable command for its existing outcome.
+    // New worker effects remain subject to their own task-specific restriction checks.
+    if (saved.job.status !== "running")
+      assertPackModelRestrictions(
+        getPackPlannedModelTasks(
+          saved.job.brief,
+          saved.job.quote.assets,
+          !packProductionContextSchema.safeParse(saved.job.production_context).success,
+        ),
+      );
     const credits =
       saved.job.status === "running"
         ? { kind: "available" as const }

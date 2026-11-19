@@ -5,6 +5,8 @@ import { importPackSources } from "../importPackSources";
 import { start } from "workflow/api";
 import { readAdmittedPackSnapshot } from "../foundation/readAdmittedPackSnapshot";
 const fixture = vi.hoisted(() => ({ saved: null as any, composedAudio: "" }));
+// This fixture isolates existing workflow/analysis behavior; restriction admission is tested separately.
+vi.mock("../assertPackModelRestrictions", () => ({ assertPackModelRestrictions: vi.fn() }));
 vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
 vi.mock("@/lib/organizations/validateOrganizationAccess", () => ({
   validateOrganizationAccess: vi.fn(async () => true),
