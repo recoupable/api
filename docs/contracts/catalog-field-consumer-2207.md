@@ -148,3 +148,13 @@ metadata. This is a default-denied history consumer, not a positive authority
 implementation or activation of the proposed producer. Legacy raw-report
 messages and controls retain their existing behavior. It does not qualify other
 disclosure paths or derive provenance for unmarked text in separate messages.
+
+## Model-input withholding source increment — November 19, 2026
+
+The existing workflow, Slack and evaluation callers now invoke the [deny-only
+model boundary](../../lib/chat/retained-field/README.md) before conversion and
+provider work. The workflow body checks again outside journaled steps and across
+iteration results; general-agent tool loops check each next-call input. Marked
+input fails as a whole, preserving legacy unmarked tool-call/result pairs rather
+than pruning selected messages. This adds no positive source authority and does
+not qualify unmarked prose, other model sources or stream/export disclosure.

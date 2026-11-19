@@ -1,3 +1,4 @@
+import { assertNoRetainedFieldModelInput } from "@/lib/chat/retained-field/assertNoRetainedFieldModelInput";
 import { FatalError } from "workflow";
 import type { TrustedFencedWorkflowInput } from "./fence/TrustedFencedWorkflowInput";
 import { bindFencedWorkflowStep } from "./fence/bindFencedWorkflowStep";
@@ -124,6 +125,8 @@ export async function runAgentWorkflow(
   let legacyCleanupEntered = false;
   // Fenced failures close only this run's stream; retained DB authority needs reconciliation.
   try {
+    // Pure workflow-body check reruns on replay; conversion itself is journaled.
+    assertNoRetainedFieldModelInput(input.messages);
     if (writer) {
       const latestUser = input.messages.findLast(message => message.role === "user");
       if (!latestUser) throw new FatalError("Fenced turn requires a user message");
@@ -161,6 +164,7 @@ export async function runAgentWorkflow(
     // appends every iteration's `responseMessages` to it, which is how
     // iteration N+1 sees iteration N's tool results.
     const modelMessages = await convertMessagesStep(input.messages);
+    assertNoRetainedFieldModelInput(modelMessages);
 
     // The assistant message under construction. Threaded into each iteration
     // as `originalMessages` so the AI SDK keeps appending to it instead of
@@ -226,6 +230,7 @@ export async function runAgentWorkflow(
     // it and the queue retried it 4 times, each attempt a full agent run
     // that mailed the customer again (chat#1918).
     for (let iteration = 0; iteration < CHAT_AGENT_MAX_ITERATIONS; iteration++) {
+      assertNoRetainedFieldModelInput([input.messages, modelMessages, pendingAssistantResponse]);
       result = await runAgentStep({
         // Snapshot, not the live array — each iteration's input is a durable
         // step input and must describe the conversation as it was at THAT
@@ -242,6 +247,8 @@ export async function runAgentWorkflow(
         assistantMessageId,
       });
 
+      // Completed/replayed steps may introduce new tool results or UI companion parts.
+      assertNoRetainedFieldModelInput([result.responseMessage, result.responseMessages]);
       if (result.responseMessage) {
         pendingAssistantResponse = result.responseMessage;
         // Persist per iteration so a long turn's transcript stays live rather

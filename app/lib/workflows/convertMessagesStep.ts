@@ -1,3 +1,4 @@
+import { assertNoRetainedFieldModelInput } from "@/lib/chat/retained-field/assertNoRetainedFieldModelInput";
 import { convertToModelMessages, type ModelMessage, type UIMessage } from "ai";
 
 /**
@@ -13,6 +14,8 @@ import { convertToModelMessages, type ModelMessage, type UIMessage } from "ai";
  */
 export async function convertMessagesStep(messages: UIMessage[]): Promise<ModelMessage[]> {
   "use step";
+
+  assertNoRetainedFieldModelInput(messages);
 
   return convertToModelMessages(messages);
 }

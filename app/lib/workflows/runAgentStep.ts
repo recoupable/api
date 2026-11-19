@@ -1,3 +1,4 @@
+import { assertNoRetainedFieldModelInput } from "@/lib/chat/retained-field/assertNoRetainedFieldModelInput";
 import { streamText, type ModelMessage, type UIMessage, type UIMessageChunk } from "ai";
 import { gateway } from "@ai-sdk/gateway";
 import { agentCustomInstructions } from "@/lib/chat/agentCustomInstructions";
@@ -112,6 +113,8 @@ export type RunAgentStepResult = {
  */
 export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentStepResult> {
   "use step";
+
+  assertNoRetainedFieldModelInput([input.modelMessages, input.originalMessages]);
 
   console.log("[runAgentStep] start", {
     modelId: input.modelId,

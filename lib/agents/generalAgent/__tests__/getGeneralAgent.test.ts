@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ChatRequestBody } from "@/lib/chat/validateChatRequest";
-import { ToolLoopAgent } from "ai";
+import { ToolLoopAgent, tool } from "ai";
+import { MockLanguageModelV3 } from "ai/test";
+import { z } from "zod";
 
 // Import after mocks
 import getGeneralAgent from "../getGeneralAgent";
@@ -80,6 +82,104 @@ describe("getGeneralAgent", () => {
     mockBuildSystemPromptWithImages.mockReturnValue(finalInstructions);
   });
 
+  it("rejects raw marked messages before account/knowledge reads", async () => {
+    await expect(
+      getGeneralAgent({
+        accountId: "real-actor",
+        orgId: null,
+        messages: [{ role: "assistant", parts: [{ mode: "retained_field" }] }],
+      } as never),
+    ).rejects.toThrow("Retained-field model input unavailable");
+    expect(mockSelectAccountEmails).not.toHaveBeenCalled();
+    expect(mockGetKnowledgeBaseText).not.toHaveBeenCalled();
+  });
+  it("actual ToolLoopAgent rejects marked input before file download/provider invocation", async () => {
+    const model = new MockLanguageModelV3();
+    mockSetupToolsForRequest.mockResolvedValue({});
+    const { agent } = await getGeneralAgent({
+      accountId: "real-actor",
+      orgId: null,
+      messages: [],
+      model,
+    } as never);
+    const fetch = vi.fn(() => {
+      throw new Error("NETWORK FORBIDDEN");
+    });
+    vi.stubGlobal("fetch", fetch);
+    try {
+      await expect(
+        agent.generate({
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: "PRIVATE 987654321" },
+                {
+                  type: "file",
+                  data: new URL("https://download.invalid/private"),
+                  mediaType: "text/plain",
+                },
+              ],
+            },
+            {
+              role: "tool",
+              content: [
+                {
+                  type: "tool-result",
+                  toolName: "source",
+                  toolCallId: "call",
+                  output: { type: "json", value: { mode: "retained_field" } },
+                },
+              ],
+            },
+          ] as never,
+        }),
+      ).rejects.toThrow("Retained-field model input unavailable");
+      expect(model.doGenerateCalls).toHaveLength(0);
+      expect(fetch).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+  it("actual ToolLoopAgent stops before the second provider call on a marked tool result", async () => {
+    const model = new MockLanguageModelV3({
+      doGenerate: {
+        content: [{ type: "tool-call", toolCallId: "call", toolName: "source", input: "{}" }],
+        finishReason: { unified: "tool-calls", raw: "tool-calls" },
+        usage: {
+          inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+          outputTokens: { total: 1, text: 1, reasoning: 0 },
+        },
+        warnings: [],
+      },
+    });
+    mockSetupToolsForRequest.mockResolvedValue({
+      source: tool({
+        inputSchema: z.object({}),
+        execute: async () => ({ mode: "retained_field", amount: 987654321, text: "PRIVATE" }),
+      }),
+    } as never);
+    const { agent } = await getGeneralAgent({
+      accountId: "real-actor",
+      orgId: null,
+      messages: [],
+      model,
+    } as never);
+    const fetch = vi.fn(() => {
+      throw new Error("NETWORK FORBIDDEN");
+    });
+    vi.stubGlobal("fetch", fetch);
+    try {
+      await expect(
+        agent.generate({ messages: [{ role: "user", content: "ordinary request" }] }),
+      ).rejects.toThrow("Retained-field model input unavailable");
+      expect(model.doGenerateCalls).toHaveLength(1);
+      expect(JSON.stringify(model.doGenerateCalls)).not.toContain("987654321");
+      expect(fetch).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
   describe("basic functionality", () => {
     it("returns a RoutingDecision object with required properties", async () => {
       const body: ChatRequestBody = {

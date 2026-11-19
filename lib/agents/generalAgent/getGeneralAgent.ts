@@ -1,3 +1,4 @@
+import { assertNoRetainedFieldModelInput } from "@/lib/chat/retained-field/assertNoRetainedFieldModelInput";
 import { ToolLoopAgent } from "ai";
 import { CHAT_AGENT_STOP_WHEN } from "@/lib/chat/const";
 import { GoogleGenerativeAIProviderOptions } from "@ai-sdk/google";
@@ -23,6 +24,7 @@ import { getAnthropicProviderOptions } from "@/lib/agents/generalAgent/getAnthro
  * @returns The general agent
  */
 export default async function getGeneralAgent(body: ChatRequestBody): Promise<RoutingDecision> {
+  assertNoRetainedFieldModelInput(body.messages);
   const { accountId, orgId, messages, artistId, model: bodyModel } = body;
 
   const accountEmails = await selectAccountEmails({ accountIds: accountId });
@@ -61,7 +63,12 @@ export default async function getGeneralAgent(body: ChatRequestBody): Promise<Ro
     tools,
     stopWhen,
     prepareStep: options => {
+      assertNoRetainedFieldModelInput([
+        options.messages,
+        options.steps.map(step => step.toolResults),
+      ]);
       const next = getPrepareStepResult(options);
+      assertNoRetainedFieldModelInput(next?.messages);
       if (next) return { ...options, ...next };
       return options;
     },

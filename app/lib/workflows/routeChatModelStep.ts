@@ -1,3 +1,4 @@
+import { assertNoRetainedFieldModelInput } from "@/lib/chat/retained-field/assertNoRetainedFieldModelInput";
 import type { UIMessage, UIMessageChunk } from "ai";
 import { selectChatModel } from "@/lib/ai/routing/selectChatModel";
 
@@ -7,6 +8,8 @@ export async function routeChatModelStep(
   writable: WritableStream<UIMessageChunk>,
 ) {
   "use step";
+
+  assertNoRetainedFieldModelInput(messages);
 
   const writer = writable.getWriter();
   try {

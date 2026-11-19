@@ -165,3 +165,34 @@ describe("setupChatRequest", () => {
     });
   });
 });
+
+const retainedMessage = {
+  id: "private",
+  role: "assistant",
+  parts: [
+    { type: "data-retained-field-snapshot", data: { amount: 987654321 } },
+    { type: "text", text: "PRIVATE 987654321" },
+    { type: "file", url: "https://download.invalid/private", mediaType: "text/plain" },
+  ],
+};
+it("rejects retained input before agent setup and converter downloads, without pruning tool pairs", async () => {
+  vi.clearAllMocks();
+  await expect(
+    setupChatRequest({
+      messages: [retainedMessage],
+      accountId: "real-actor",
+      orgId: null,
+    } as never),
+  ).rejects.toThrow("Retained-field model input unavailable");
+  expect(mockGetGeneralAgent).not.toHaveBeenCalled();
+  expect(mockConvertToModelMessages).not.toHaveBeenCalled();
+});
+it("rejects a marked converted result before returning a model-ready config", async () => {
+  mockGetGeneralAgent.mockResolvedValue({ agent: { tools: {} } } as never);
+  mockConvertToModelMessages.mockResolvedValue([
+    { role: "tool", content: [{ output: { type: "json", value: { mode: "retained_field" } } }] },
+  ] as never);
+  await expect(
+    setupChatRequest({ messages: [], accountId: "real-actor", orgId: null }),
+  ).rejects.toThrow("Retained-field model input unavailable");
+});

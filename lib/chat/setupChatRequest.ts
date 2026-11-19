@@ -1,3 +1,4 @@
+import { assertNoRetainedFieldModelInput } from "@/lib/chat/retained-field/assertNoRetainedFieldModelInput";
 import { convertToModelMessages } from "ai";
 import { MAX_MESSAGES } from "./const";
 import { type ChatConfig } from "./types";
@@ -16,17 +17,17 @@ import getGeneralAgent from "@/lib/agents/generalAgent/getGeneralAgent";
  * @returns ChatConfig ready for use with AI SDK
  */
 export async function setupChatRequest(body: ChatRequestBody): Promise<ChatConfig> {
+  assertNoRetainedFieldModelInput(body.messages);
   const decision = await getGeneralAgent(body);
 
-  const convertedMessages = (
-    await convertToModelMessages(body.messages, {
-      tools: decision.agent.tools,
-      ignoreIncompleteToolCalls: true,
-    })
-  ).slice(-MAX_MESSAGES);
+  const convertedMessages = await convertToModelMessages(body.messages, {
+    tools: decision.agent.tools,
+    ignoreIncompleteToolCalls: true,
+  });
 
+  assertNoRetainedFieldModelInput(convertedMessages);
   return {
     agent: decision.agent,
-    messages: convertedMessages,
+    messages: convertedMessages.slice(-MAX_MESSAGES),
   };
 }

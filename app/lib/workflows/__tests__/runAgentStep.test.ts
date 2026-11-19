@@ -16,6 +16,7 @@ vi.mock("@ai-sdk/gateway", () => ({
 // getRun(runId).status to source its abort signal. Stub both so the tests
 // don't pull in the workflow runtime.
 vi.mock("workflow", () => ({
+  FatalError: class FatalError extends Error {},
   getWorkflowMetadata: vi.fn(() => ({
     workflowRunId: "test-run-id",
     workflowName: "test",
@@ -381,5 +382,20 @@ it.each(["low", "medium", "high"])(
     expect(vi.mocked(streamText).mock.calls[0]?.[0].providerOptions).toEqual({
       openai: { reasoningEffort },
     });
+  },
+);
+
+it.each(["modelMessages", "originalMessages"])(
+  "denies retained %s at the actual provider step before streamText",
+  async field => {
+    vi.clearAllMocks();
+    await expect(
+      runAgentStep({
+        ...baseInput,
+        [field]: [{ mode: "retained_field", text: "PRIVATE" }],
+        writable: makeWritable().stream,
+      } as never),
+    ).rejects.toThrow("Retained-field model input unavailable");
+    expect(streamText).not.toHaveBeenCalled();
   },
 );
