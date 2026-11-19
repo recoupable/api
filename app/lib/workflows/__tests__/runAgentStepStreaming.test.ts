@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { streamText } from "ai";
+import { FatalError } from "workflow";
+import { getRun } from "workflow/api";
+import { pollWorkflowCancellation } from "@/lib/chat/pollWorkflowCancellation";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
 import { persistAssistantMessage } from "@/lib/chat/persistAssistantMessage";
 
@@ -13,7 +16,8 @@ vi.mock("@ai-sdk/gateway", () => ({
 vi.mock("@/lib/chat/persistAssistantMessage", () => ({
   persistAssistantMessage: vi.fn(),
 }));
-vi.mock("workflow", () => ({
+vi.mock("workflow", async () => ({
+  FatalError: (await vi.importActual<typeof import("workflow")>("workflow")).FatalError,
   getWorkflowMetadata: vi.fn(() => ({
     workflowRunId: "test-run-id",
     workflowName: "test",
@@ -114,5 +118,153 @@ describe("runAgentStep — streaming shape (mirrors upstream open-agents)", () =
     expect(result.aborted).toBe(true);
     expect(result.finishReason).toBe("stop");
     expect(result.responseMessages).toEqual([]);
+  });
+});
+
+describe("retained structured stream output", () => {
+  const safePart = { type: "text-delta", id: "t1", delta: "already emitted independent text" };
+  const markedPart = {
+    type: "tool-output-available",
+    toolCallId: "source-call",
+    output: { rows: [{ mode: "retained_field" }], sibling: "PRIVATE-SIBLING-987654321" },
+  };
+  const markedMessage = {
+    id: "assistant",
+    role: "assistant",
+    parts: [
+      {
+        type: "tool-source",
+        toolCallId: "source-call",
+        state: "output-available",
+        input: {},
+        output: markedPart.output,
+      },
+    ],
+  };
+
+  it.each(["running", "cancelled", "poller-aborted"])(
+    "withholds the whole marked part and refuses rather than returning output when run is %s",
+    async status => {
+      vi.mocked(getRun).mockReturnValue({ status: Promise.resolve(status) } as never);
+      if (status === "poller-aborted") {
+        vi.mocked(pollWorkflowCancellation).mockImplementationOnce((_runId, controller) => {
+          controller.abort();
+          return { stop: vi.fn(), done: Promise.resolve() };
+        });
+      }
+      let signal: AbortSignal | undefined;
+      const finish = vi.fn();
+      vi.mocked(streamText).mockImplementation(options => {
+        signal = options.abortSignal;
+        // Reject after denial cleanup aborts the provider, as streamText can do.
+        const rejectOnAbort = () =>
+          new Promise<never>((_resolve, reject) => {
+            const fail = () =>
+              reject(Object.assign(new Error("provider aborted"), { name: "AbortError" }));
+            if (signal?.aborted) queueMicrotask(fail);
+            else signal?.addEventListener("abort", fail, { once: true });
+          });
+        return {
+          toUIMessageStream: (opts: { onFinish: (event: unknown) => void }) =>
+            (async function* () {
+              try {
+                yield safePart;
+                yield markedPart;
+                yield { type: "text-delta", id: "t1", delta: "later output" };
+              } finally {
+                // SDK cancellation may finish its accumulated message, including withheld data.
+                finish();
+                opts.onFinish({ responseMessage: markedMessage });
+              }
+            })(),
+          finishReason: rejectOnAbort(),
+          response: rejectOnAbort(),
+        } as never;
+      });
+      const { stream, written } = makeWritable();
+      const close = vi.spyOn(stream, "close");
+      const abort = vi.spyOn(stream, "abort");
+      const result = runAgentStep({ ...baseInput, writable: stream } as never);
+      await expect(result).rejects.toBeInstanceOf(FatalError);
+      await expect(result).rejects.toThrow(/^Retained-field model input unavailable$/);
+      expect(written).toEqual([safePart]);
+      expect(JSON.stringify(written)).not.toContain("PRIVATE-SIBLING");
+      expect(finish).toHaveBeenCalledOnce();
+      expect(stream.locked).toBe(false);
+      expect(close).not.toHaveBeenCalled();
+      expect(abort).not.toHaveBeenCalled();
+      expect(signal?.aborted).toBe(true);
+      expect(
+        vi.mocked(pollWorkflowCancellation).mock.results.at(-1)?.value.stop,
+      ).toHaveBeenCalledOnce();
+      expect(persistAssistantMessage).not.toHaveBeenCalled();
+    },
+  );
+
+  it("refuses a marked accumulated onFinish message even during cancellation", async () => {
+    vi.mocked(getRun).mockReturnValue({ status: Promise.resolve("cancelled") } as never);
+    vi.mocked(streamText).mockReturnValue({
+      toUIMessageStream: (opts: { onFinish: (event: unknown) => void }) =>
+        (async function* () {
+          yield safePart;
+          opts.onFinish({ responseMessage: markedMessage });
+          throw Object.assign(new Error("stopped"), { name: "AbortError" });
+        })(),
+      finishReason: Promise.resolve("stop"),
+      response: Promise.resolve({ messages: [] }),
+    } as never);
+    const { stream, written } = makeWritable();
+    await expect(runAgentStep({ ...baseInput, writable: stream } as never)).rejects.toThrow(
+      "Retained-field model input unavailable",
+    );
+    expect(written).toEqual([safePart]);
+  });
+
+  it("preserves an unmarked tool output and its completed message", async () => {
+    const part = { type: "tool-output-available", toolCallId: "safe", output: { total: 7 } };
+    const message = {
+      id: "assistant",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool-source",
+          toolCallId: "safe",
+          state: "output-available",
+          input: {},
+          output: part.output,
+        },
+      ],
+    };
+    const modelMessages = [
+      {
+        role: "tool",
+        content: [
+          {
+            type: "tool-result",
+            toolCallId: "safe",
+            toolName: "source",
+            output: { type: "json", value: part.output },
+          },
+        ],
+      },
+    ];
+    vi.mocked(streamText).mockReturnValue({
+      toUIMessageStream: (opts: { onFinish: (event: unknown) => void }) =>
+        (async function* () {
+          yield part;
+          opts.onFinish({ responseMessage: message });
+        })(),
+      finishReason: Promise.resolve("tool-calls"),
+      response: Promise.resolve({ messages: modelMessages }),
+    } as never);
+    const { stream, written } = makeWritable();
+    const result = await runAgentStep({ ...baseInput, writable: stream } as never);
+    expect(written).toEqual([part]);
+    expect(result).toEqual({
+      finishReason: "tool-calls",
+      responseMessage: message,
+      responseMessages: modelMessages,
+      aborted: false,
+    });
   });
 });

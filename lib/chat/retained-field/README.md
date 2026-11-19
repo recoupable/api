@@ -20,6 +20,13 @@ source diagnostics or authority details and is not retryable by the workflow.
 - `routeChatModelStep` checks before routing metadata or the Jev evaluator.
 - `runAgentStep` checks both model and original UI messages before polling,
   gateway construction and `streamText`, including independently resumed steps.
+  It also checks each structured UI stream part before acquiring a writer or
+  writing any of that part. A marked part is withheld in full, including sibling
+  payloads. The accumulated `onFinish` message is checked before capture because
+  the SDK can finish it during stream cancellation. A privacy refusal remains a
+  fatal rejection even when cancellation races it; no refused output is returned
+  as an ordinary aborted result for persistence. Existing poller/provider abort
+  cleanup runs, while shared-stream closure stays with the workflow.
 - `setupChatRequest` checks original messages before `getGeneralAgent` or
   conversion, then converted messages before legacy truncation/config return.
   Its actual callers are Slack's `handleSlackChatMessage` and evaluation's
@@ -28,6 +35,11 @@ source diagnostics or authority details and is not retryable by the workflow.
   that reconstruction intentionally drops metadata. Its authenticated API-key
   account and room scope are unchanged. Existing redacted error/idle handling
   remains; no automatic retry is added.
+- Email's `generateEmailResponse` loads history through `getEmailRoomMessages`,
+  which checks raw stored content before extracting text and dropping metadata.
+  Marked history denies the entire generation, including sibling text; the
+  existing inbound handler retains its generic error response. Room lookup and
+  authenticated account/organization context are unchanged.
 - `getGeneralAgent` checks before account/knowledge/tool setup. Its actual
   `ToolLoopAgent.prepareStep` checks messages and tool results every iteration,
   and checks any tool-chain replacement messages. In the installed SDK this
@@ -41,6 +53,13 @@ There is no positive current-source transport, latest lookup, re-key, retention,
 expansion, raw-report fallback, public route, grant or activation.
 
 ## Qualification
+
+Stream-output regression tests invoke the actual `runAgentStep` with synthetic
+stream/provider/cancellation seams. They cover running, cancelled and already
+aborted runs, withheld sibling payloads, marked `onFinish` state, rejection of
+pending provider promises during cleanup, and unchanged unmarked tool output.
+This guard does not prevent the operation that produced the output or retract
+independent prose already emitted; it denies recognized structured output only.
 
 Tests invoke real workflow orchestration/conversion/routing/provider-step entry
 points with synthetic effect seams; replay cases supply the already-completed

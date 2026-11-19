@@ -1,3 +1,4 @@
+import { assertNoRetainedFieldModelInput } from "@/lib/chat/retained-field/assertNoRetainedFieldModelInput";
 import type { ModelMessage } from "ai";
 import selectMemories from "@/lib/supabase/memories/selectMemories";
 import { extractTextFromParts } from "./extractTextFromParts";
@@ -17,6 +18,8 @@ interface MemoryContent {
 export async function getEmailRoomMessages(roomId: string): Promise<ModelMessage[]> {
   const existingMemories = await selectMemories(roomId, { ascending: true });
   if (!existingMemories) return [];
+  // Inspect stored content before text-only adaptation drops structured markers.
+  assertNoRetainedFieldModelInput(existingMemories.map(memory => memory.content));
 
   const messages: ModelMessage[] = [];
 
