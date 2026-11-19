@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { readRetainedFieldSelection } from "./readRetainedFieldSelection";
 import { consumeRetainedField } from "./consumeRetainedField";
 import { method } from "./schemas";
+import { evaluateRetainedStreamField } from "../catalog-stream-fields/evaluate";
 const id = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const scope = {
   actorId: id(9),
@@ -147,15 +148,12 @@ describe("genuine retained selection proposal", () => {
     expect(reconcile).toHaveBeenCalledTimes(1);
     expect(await consumeRetainedField(actor, request)).toEqual({ state: "unavailable" });
   });
-  it.each(["withdrawn", "removed", "member_missing", "wrong_actor", "corrected", "superseded"])(
-    "withholds all projections on %s (synthetic authority refusal)",
-    async () => {
-      const result = await consumeRetainedField(actor, request, async (_, consume) =>
-        consume({ asOf, readBinding: async () => null }),
-      );
-      expect(result).toEqual({ state: "unavailable" });
-    },
-  );
+  it("withholds all projections when the authority read returns unavailable", async () => {
+    const result = await consumeRetainedField(actor, request, async (_, consume) =>
+      consume({ asOf, readBinding: async () => null }),
+    );
+    expect(result).toEqual({ state: "unavailable" });
+  });
   it.each([
     { ...envelope, revision: 8 },
     { ...envelope, resultId: id(8) },
@@ -237,3 +235,31 @@ it("redacts later transport failure after a successful row and never retries", a
   ).toEqual({ state: "error" });
   expect(readBinding).toHaveBeenCalledTimes(2);
 });
+
+it.each([270000, 400000])(
+  "classifies actual oversized UTF-8 authority evidence as invalid (%i characters)",
+  async characters => {
+    const oversized = structuredClone(envelope);
+    oversized.evidence.providerRecordingId = "é".repeat(characters);
+    const evidenceBytes = Buffer.byteLength(JSON.stringify(oversized.evidence), "utf8");
+    const envelopeBytes = Buffer.byteLength(JSON.stringify(oversized), "utf8");
+    expect(evidenceBytes).toBeGreaterThan(512 * 1024);
+    if (characters === 270000) expect(envelopeBytes).toBeLessThan(768 * 1024);
+    else expect(envelopeBytes).toBeGreaterThan(768 * 1024);
+    expect(
+      evaluateRetainedStreamField({
+        operation: "read_field",
+        recipe: method.recipe,
+        field: "current_streams",
+        selection: { ...selection, query },
+        asOf,
+        boundary: { state: "qualified", envelope: oversized },
+      }),
+    ).toEqual({ state: "refused", reason: "size_limit" });
+    expect(
+      await consumeRetainedField(actor, request, async (_, consume) =>
+        consume({ asOf, readBinding: async () => oversized }),
+      ),
+    ).toEqual({ state: "invalid" });
+  },
+);

@@ -72,7 +72,8 @@ export async function consumeRetainedField(
             asOf: tx.asOf,
             boundary: { state: "qualified", envelope },
           });
-          if (result.state !== "ready") return { state: "unavailable" };
+          if (result.state !== "ready")
+            return { state: result.reason === "size_limit" ? "invalid" : "unavailable" };
           const amount = result.field.amount;
           if (amount !== null && (!Number.isSafeInteger(amount) || amount < 0))
             return { state: "unavailable" };
