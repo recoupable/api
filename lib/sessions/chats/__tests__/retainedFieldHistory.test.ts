@@ -106,6 +106,7 @@ it.each([
   { type: "data-retained-field-snapshot", data: null },
   { capability: "retained-field-companion/1", data: {} },
   { data: { fieldContext: { contract: "catalog-retained-field-projection/1" } } },
+  { mode: "retained_field" },
 ])(
   "withholds malformed or unsupported family members without relying on successful schema parsing: %j",
   async part => {
