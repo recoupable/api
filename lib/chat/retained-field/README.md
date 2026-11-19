@@ -45,11 +45,19 @@ expansion, raw-report fallback, public route, grant or activation.
 Tests invoke real workflow orchestration/conversion/routing/provider-step entry
 points with synthetic effect seams; replay cases supply the already-completed
 step outputs that those callers can receive. They are not a claim of live WDK
-journal migration or replay against production state. The compiled offline workflow fixture additionally qualifies marked original
-input, converted output and iteration results as actual failed runs. Each is
-re-enqueued and its captured effect trace remains unchanged: no replayed provider,
-write, commit or cleanup effects. Synthetic effect seams remain in place; no
-live authorization or existing production journal migration is claimed.
+journal migration or replay against production state. The compiled offline
+workflow fixture additionally qualifies marked original input, converted output
+and iteration results as actual failed runs. Independently captured journals show
+completed conversion and agent-step results followed by workflow resumption,
+stream closure and static failure, with no subsequent routing/provider call for
+marked conversion and no second provider call for a marked iteration result.
+
+The fixture also re-enqueues each run after it has already failed. The runtime
+skips terminal runs, so the unchanged effect trace proves terminal duplicate
+delivery is a no-op. It does not prove another execution of the disclosure
+assertion. That is distinct from the running workflow's journaled-step completion
+and resumption evidence above. Synthetic effect seams remain in place; no live
+authorization or existing production journal migration is claimed.
 
 Slack/evaluation tests use their real caller and setup functions with synthetic
 account/storage/agent seams. Actual `ToolLoopAgent.generate` tests use the SDK's
