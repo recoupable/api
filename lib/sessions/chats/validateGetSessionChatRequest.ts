@@ -14,18 +14,18 @@ import type { Tables } from "@/types/database.types";
  *   3. Loads the chat and confirms it belongs to the session
  *
  * Returns either a 401/403/404 NextResponse describing the first
- * failure, or the resolved chat row for the handler to render.
+ * failure, or the resolved chat and authenticated account for the handler.
  *
  * @param request - The incoming request.
  * @param sessionId - The id of the parent session.
  * @param chatId - The id of the chat being fetched.
- * @returns A NextResponse on failure, or the chat row on success.
+ * @returns A NextResponse on failure, or the chat and actual authenticated account on success.
  */
 export async function validateGetSessionChatRequest(
   request: NextRequest,
   sessionId: string,
   chatId: string,
-): Promise<NextResponse | Tables<"chats">> {
+): Promise<NextResponse | { chat: Tables<"chats">; actorAccountId: string }> {
   const auth = await validateAuthContext(request);
   if (auth instanceof NextResponse) {
     return auth;
@@ -59,5 +59,5 @@ export async function validateGetSessionChatRequest(
     );
   }
 
-  return chat;
+  return { chat, actorAccountId: auth.accountId };
 }

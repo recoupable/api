@@ -23,9 +23,10 @@ function makeReq(): NextRequest {
 }
 
 function mockValidated(chatOverrides: Parameters<typeof baseChatRow>[0] = {}) {
-  vi.mocked(validateGetSessionChatRequest).mockResolvedValue(
-    baseChatRow({ id: "chat_1", session_id: "sess_1", ...chatOverrides }),
-  );
+  vi.mocked(validateGetSessionChatRequest).mockResolvedValue({
+    chat: baseChatRow({ id: "chat_1", session_id: "sess_1", ...chatOverrides }),
+    actorAccountId: "actual-actor",
+  });
 }
 
 describe("getSessionChatHandler", () => {
