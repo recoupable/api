@@ -197,6 +197,17 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
   // from the inner stream, and missing that silently dropped every tool call
   // from the transcript (chat#1918). Persistence now lives in the workflow
   // body via `persistAssistantMessageStep`.
+  // SDK onFinish may run while iterator cancellation unwinds. Keep a privacy
+  // refusal authoritative even if cancellation replaces the thrown error.
+  let outputRefusal: unknown;
+  const assertOutput = (output: unknown) => {
+    try {
+      assertNoRetainedFieldModelInput(output);
+    } catch (error) {
+      outputRefusal = error;
+      throw error;
+    }
+  };
   let responseMessage: UIMessage | undefined;
   let finishReason: string;
   let responseMessages: ModelMessage[] = [];
@@ -215,12 +226,14 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
       sendStart: false,
       sendFinish: false,
       onFinish: ({ responseMessage: finalMessage }) => {
+        assertOutput(finalMessage);
         responseMessage = finalMessage;
       },
     })) {
       // A writer lock taken inside a step applies only within that step, so
       // sequential steps can share one stream. Release per part so the step's
       // request can terminate.
+      assertOutput(part);
       const writer = input.writable.getWriter();
       try {
         await writer.write(part);
@@ -236,6 +249,12 @@ export async function runAgentStep(input: RunAgentStepInput): Promise<RunAgentSt
     finishReason = reason;
     responseMessages = response.messages;
   } catch (error) {
+    if (outputRefusal) {
+      // Aborting the provider in finally may reject these pending promises.
+      void Promise.resolve(result.finishReason).catch(() => {});
+      void Promise.resolve(result.response).catch(() => {});
+      throw outputRefusal;
+    }
     // Three ways a user-stop surfaces here: the stream throws AbortError; the
     // poller already flipped our signal; or `run.cancel()` closed the workflow
     // writable underneath us and the write threw something unrelated before
