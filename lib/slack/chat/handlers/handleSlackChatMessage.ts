@@ -1,3 +1,4 @@
+import { assertNoRetainedFieldModelInput } from "@/lib/chat/retained-field/assertNoRetainedFieldModelInput";
 import type { UIMessage } from "ai";
 import type { SlackChatThreadState } from "../types";
 import type { ChatRequestBody } from "@/lib/chat/validateChatRequest";
@@ -77,6 +78,7 @@ export async function handleSlackChatMessage(
 
     // Load full conversation history from the room (includes the message we just saved)
     const memories = await selectMemories(roomId, { ascending: true });
+    assertNoRetainedFieldModelInput((memories ?? []).map(memory => memory.content));
     const historyMessages: UIMessage[] = (memories ?? [])
       .filter(m => {
         const content = m.content as unknown as { role?: string; parts?: unknown[] };
