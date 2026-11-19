@@ -1,3 +1,4 @@
+import { prepareCatalogSnapshotRetention } from "../retention/prepareCatalogSnapshotRetention";
 import { createUIMessageStreamResponse, type UIMessageChunk } from "ai";
 import { sendCatalogSurfaceStep } from "@/app/lib/workflows/sendCatalogSurfaceStep";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -139,9 +140,29 @@ it("serializes the actual prepared snapshot and same text through the API SDK", 
     }),
   });
   const body = await response.text();
-  await expect(JSON.stringify(prepared, null, 2) + "\n").toMatchFileSnapshot(
-    "../__fixtures__/catalog-streams-v1.json",
-  );
+  expect(prepared.sourceEnvelope.canonical).toContain('"lineage"');
+  expect(
+    prepareCatalogSnapshotRetention(
+      { accountId: actor, sessionId: "s", chatId: "c", messageId: input.assistantMessageId },
+      prepared,
+    ).sourceSha256,
+  ).toBe(prepared.fingerprint);
+  expect(JSON.stringify(message)).not.toContain("sourceEnvelope");
+  expect(JSON.stringify(message)).not.toContain("run-1");
+  expect(body).not.toContain("sourceEnvelope");
+  expect(body).not.toContain("run-1");
+  await expect(
+    JSON.stringify(
+      {
+        surface: prepared.surface,
+        fingerprint: prepared.fingerprint,
+        lineage: prepared.lineage,
+        mappingVersion: prepared.mappingVersion,
+      },
+      null,
+      2,
+    ) + "\n",
+  ).toMatchFileSnapshot("../__fixtures__/catalog-streams-v1.json");
   await expect(body).toMatchFileSnapshot("../__fixtures__/catalog-streams-v1.sse");
   const decoded = body
     .split("\n\n")
@@ -168,6 +189,7 @@ it("stops before a snapshot if the output stream rejects delivery", async () => 
   await expect(
     sendCatalogSurfaceStep(writable, input.assistantMessageId, prepared),
   ).rejects.toThrow("cancelled");
+  expect(JSON.stringify(chunks)).not.toContain("sourceEnvelope");
   expect(chunks.some(c => c.type === "data-intelligent-ui-snapshot")).toBe(false);
   expect(writable.locked).toBe(false);
 });
@@ -238,6 +260,8 @@ it("delivers only the same readable answer in explicit text mode", async () => {
     prepared,
     "text",
   );
+  expect(JSON.stringify({ message, chunks })).not.toContain("sourceEnvelope");
+  expect(JSON.stringify({ message, chunks })).not.toContain("run-1");
   expect(chunks.some(c => c.type === "data-intelligent-ui-snapshot")).toBe(false);
   expect(message.parts).toEqual([{ type: "text", text: prepared.surface.fallbackText }]);
 });
@@ -268,9 +292,18 @@ it.each([
     text: expect.stringContaining(phrase),
   });
   if (missing === 1) {
-    await expect(JSON.stringify(result, null, 2) + "\n").toMatchFileSnapshot(
-      "../__fixtures__/catalog-streams-missing-date-v1.json",
-    );
+    await expect(
+      JSON.stringify(
+        {
+          surface: result.surface,
+          fingerprint: result.fingerprint,
+          lineage: result.lineage,
+          mappingVersion: result.mappingVersion,
+        },
+        null,
+        2,
+      ) + "\n",
+    ).toMatchFileSnapshot("../__fixtures__/catalog-streams-missing-date-v1.json");
     const chunks: UIMessageChunk[] = [{ type: "start", messageId: input.assistantMessageId }];
     await sendCatalogSurfaceStep(
       new WritableStream({

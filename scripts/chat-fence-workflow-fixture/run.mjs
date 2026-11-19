@@ -49,11 +49,15 @@ async function copy(from, to) {
   bindings.push({ path: from, sha256: createHash("sha256").update(bytes).digest("hex") });
 }
 await copy("app/lib/workflows/runAgentWorkflow.ts", "workflow.ts");
+await copy("app/lib/workflows/retainCatalogSnapshotStep.ts", "retainCatalogSnapshotStep.ts");
 await mkdir(join(source, "fence"));
 for (const name of await readdir(join(root, "app/lib/workflows/fence")))
   if (name.endsWith(".ts")) await copy(`app/lib/workflows/fence/${name}`, `fence/${name}`);
 await copy("lib/chat/auto-commit/autoCommitChatTurn.ts", "autoCommitChatTurn.ts");
 for (const path of [
+  "lib/intelligent-ui/retention/retainCatalogSnapshot.ts",
+  "lib/intelligent-ui/retention/prepareCatalogSnapshotRetention.ts",
+  "lib/supabase/catalog_surface_sources/retainCatalogSurfaceSource.ts",
   "lib/chat/fence/encodeStrictJson.ts",
   "lib/chat/fence/persistence/createFencedMessageWriter.ts",
   "lib/supabase/chat_fence/executeChatFenceCommand.ts",

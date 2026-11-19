@@ -24,6 +24,7 @@ import type { DurableAgentContext } from "@/lib/agent/tools/AgentContext";
 
 import type { CatalogSurfaceRequest } from "@/lib/intelligent-ui/catalogSurfaceRequest";
 import { prepareCatalogSurfaceStep } from "./prepareCatalogSurfaceStep";
+import { retainCatalogSnapshotStep } from "./retainCatalogSnapshotStep";
 import { sendCatalogSurfaceStep } from "./sendCatalogSurfaceStep";
 
 const ZERO_USAGE: LanguageModelUsage = {
@@ -189,6 +190,16 @@ export async function runAgentWorkflow(
       const message = await sendCatalogSurfaceStep(writable, assistantMessageId, prepared);
       if (writer) {
         await persistFencedMessageStep(writer, "assistant", message);
+        await retainCatalogSnapshotStep(
+          writer,
+          {
+            accountId: input.accountId,
+            sessionId: input.sessionId,
+            chatId: input.chatId,
+            messageId: assistantMessageId,
+          },
+          prepared,
+        );
         await releaseFencedWorkflowStep(writer);
       } else await persistAssistantMessageStep(input.chatId, message);
       await sendStreamFinish(writable);
