@@ -177,13 +177,29 @@ const retainedMessage = {
 };
 it("rejects retained input before agent setup and converter downloads, without pruning tool pairs", async () => {
   vi.clearAllMocks();
+  const messages = [
+    {
+      role: "assistant",
+      content: [{ type: "tool-call", toolCallId: "safe-call", toolName: "safe", input: {} }],
+    },
+    {
+      role: "tool",
+      content: [
+        {
+          type: "tool-result",
+          toolCallId: "safe-call",
+          toolName: "safe",
+          output: { type: "json", value: { total: 0 } },
+        },
+      ],
+    },
+    retainedMessage,
+  ];
+  const originalMessages = structuredClone(messages);
   await expect(
-    setupChatRequest({
-      messages: [retainedMessage],
-      accountId: "real-actor",
-      orgId: null,
-    } as never),
+    setupChatRequest({ messages, accountId: "real-actor", orgId: null } as never),
   ).rejects.toThrow("Retained-field model input unavailable");
+  expect(messages).toEqual(originalMessages);
   expect(mockGetGeneralAgent).not.toHaveBeenCalled();
   expect(mockConvertToModelMessages).not.toHaveBeenCalled();
 });

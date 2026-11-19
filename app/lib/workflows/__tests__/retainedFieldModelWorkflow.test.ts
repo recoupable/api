@@ -1,3 +1,9 @@
+import { clearChatActiveStream } from "@/lib/chat/clearChatActiveStream";
+import { sendStreamFinish } from "@/app/lib/workflows/sendStreamFinish";
+import { closeChatStream } from "@/app/lib/workflows/closeChatStream";
+import { deleteEphemeralKeyStep } from "@/app/lib/workflows/deleteEphemeralKeyStep";
+import { bindFencedWorkflowStep } from "@/app/lib/workflows/fence/bindFencedWorkflowStep";
+import { releaseFencedWorkflowStep } from "@/app/lib/workflows/fence/releaseFencedWorkflowStep";
 import { it, expect, vi, beforeEach, afterEach } from "vitest";
 import { runAgentWorkflow } from "@/app/lib/workflows/runAgentWorkflow";
 import { runAgentStep } from "@/app/lib/workflows/runAgentStep";
@@ -6,6 +12,15 @@ import { generateAssistantMessageId } from "@/app/lib/workflows/generateAssistan
 import { persistAssistantMessageStep } from "@/app/lib/workflows/persistAssistantMessageStep";
 import { autoCommitChatTurn } from "@/lib/chat/auto-commit/autoCommitChatTurn";
 import { routeChatModelStep } from "@/app/lib/workflows/routeChatModelStep";
+vi.mock("@/app/lib/workflows/fence/bindFencedWorkflowStep", () => ({
+  bindFencedWorkflowStep: vi.fn(),
+}));
+vi.mock("@/app/lib/workflows/fence/persistFencedMessageStep", () => ({
+  persistFencedMessageStep: vi.fn(),
+}));
+vi.mock("@/app/lib/workflows/fence/releaseFencedWorkflowStep", () => ({
+  releaseFencedWorkflowStep: vi.fn(),
+}));
 vi.mock("@/app/lib/workflows/routeChatModelStep", () => ({ routeChatModelStep: vi.fn() }));
 
 vi.mock("@/app/lib/workflows/prepareCatalogSurfaceStep", () => ({
@@ -213,4 +228,82 @@ it("a terminal marked result cannot reach auto-commit's subsequent model work", 
   );
   expect(autoCommitChatTurn).not.toHaveBeenCalled();
   expect(runAgentStep).toHaveBeenCalledTimes(1);
+});
+
+it.each([
+  ["raw", false],
+  ["raw", true],
+  ["converted", false],
+  ["converted", true],
+] as const)("cleans legacy %s denial exactly once (headless=%s)", async (stage, headless) => {
+  const cleanupOrder: string[] = [];
+  vi.mocked(sendStreamFinish).mockImplementation(async () => {
+    cleanupOrder.push("finish");
+  });
+  vi.mocked(closeChatStream).mockImplementation(async () => {
+    cleanupOrder.push("close");
+  });
+  if (stage === "converted")
+    vi.mocked(convertMessagesStep).mockResolvedValue([{ mode: "retained_field" }] as never);
+  await expect(
+    runAgentWorkflow({
+      ...baseInput,
+      messages: stage === "raw" ? [marked] : baseInput.messages,
+      agentContext: {
+        sandbox: { state: { type: "vercel" }, workingDirectory: "/sandbox/mono" },
+        ...(headless ? { ephemeralKeyId: "owned-key" } : {}),
+      } as never,
+    }),
+  ).rejects.toThrow("Retained-field model input unavailable");
+  expect(clearChatActiveStream).toHaveBeenCalledExactlyOnceWith("chat-1", "wrun_loop_test");
+  expect(sendStreamFinish).toHaveBeenCalledExactlyOnceWith(writableStub);
+  expect(closeChatStream).toHaveBeenCalledExactlyOnceWith(writableStub);
+  expect(cleanupOrder).toEqual(["finish", "close"]);
+  if (headless) expect(deleteEphemeralKeyStep).toHaveBeenCalledExactlyOnceWith("owned-key");
+  else expect(deleteEphemeralKeyStep).not.toHaveBeenCalled();
+  expect(runAgentStep).not.toHaveBeenCalled();
+  expect(routeChatModelStep).not.toHaveBeenCalled();
+  expect(convertMessagesStep).toHaveBeenCalledTimes(stage === "raw" ? 0 : 1);
+});
+it.each(["raw", "converted"])("preserves fenced ownership on %s denial", async stage => {
+  vi.mocked(bindFencedWorkflowStep).mockResolvedValue({
+    writer: { synthetic: true },
+    turn: { kind: "new" },
+  } as never);
+  if (stage === "converted")
+    vi.mocked(convertMessagesStep).mockResolvedValue([{ mode: "retained_field" }] as never);
+  await expect(
+    runAgentWorkflow({
+      kind: "internal-fenced/v1",
+      fence: {},
+      input: {
+        ...baseInput,
+        messages: stage === "raw" ? [marked] : baseInput.messages,
+        agentContext: { ephemeralKeyId: "fenced-key" },
+      },
+    } as never),
+  ).rejects.toThrow("Retained-field model input unavailable");
+  expect(closeChatStream).toHaveBeenCalledExactlyOnceWith(writableStub);
+  expect(clearChatActiveStream).not.toHaveBeenCalled();
+  expect(sendStreamFinish).not.toHaveBeenCalled();
+  expect(deleteEphemeralKeyStep).not.toHaveBeenCalled();
+  expect(releaseFencedWorkflowStep).not.toHaveBeenCalled();
+  expect(runAgentStep).not.toHaveBeenCalled();
+});
+it("does not acquire cleanup authority when fenced binding loses", async () => {
+  vi.mocked(bindFencedWorkflowStep).mockRejectedValue(
+    new Error("Fenced bind requires reconciliation"),
+  );
+  await expect(
+    runAgentWorkflow({
+      kind: "internal-fenced/v1",
+      fence: {},
+      input: { ...baseInput, messages: [marked] },
+    } as never),
+  ).rejects.toThrow("Fenced bind requires reconciliation");
+  expect(closeChatStream).not.toHaveBeenCalled();
+  expect(clearChatActiveStream).not.toHaveBeenCalled();
+  expect(sendStreamFinish).not.toHaveBeenCalled();
+  expect(deleteEphemeralKeyStep).not.toHaveBeenCalled();
+  expect(releaseFencedWorkflowStep).not.toHaveBeenCalled();
 });

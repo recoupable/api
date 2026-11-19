@@ -106,7 +106,7 @@ const seams = [
   [
     "@/app/lib/workflows/convertMessagesStep",
     "convertMessagesStep",
-    'record("convert"); return scenario().fail==="retained-converted"?[{mode:"retained_field",amount:987654321}]:[];',
+    'record("convert"); return scenario().fail.includes("retained-converted")?[{mode:"retained_field",amount:987654321}]:[];',
   ],
   ["@/app/lib/workflows/sendStreamStart", "sendStreamStart", 'record("stream-start",args[1]);'],
   ["@/app/lib/workflows/sendStreamFinish", "sendStreamFinish", 'record("stream-finish");'],
@@ -265,7 +265,12 @@ try {
     "retained-input",
     "retained-converted",
     "retained-iteration",
+    "legacy-retained-input-interactive",
+    "legacy-retained-input-headless",
+    "legacy-retained-converted-interactive",
+    "legacy-retained-converted-headless",
   ]) {
+    const legacy = name === "legacy" || name.startsWith("legacy-retained-");
     await writeFile(join(effects, "events.jsonl"), "");
     await writeFile(join(effects, "scenario.json"), JSON.stringify({ fail: name }));
     const invocation = {
@@ -288,7 +293,9 @@ try {
       });
     if (name === "resume")
       invocation.fence.turn = { kind: "same-turn-resume", assistantId: "historical-assistant" };
-    if (name === "retained-input")
+    if (name.startsWith("legacy-retained-") && name.endsWith("interactive"))
+      delete invocation.input.agentContext.ephemeralKeyId;
+    if (name.includes("retained-input"))
       invocation.input.messages.push({
         id: "private",
         role: "assistant",
@@ -297,8 +304,8 @@ try {
           { type: "text", text: "PRIVATE" },
         ],
       });
-    const run = await start(runAgentWorkflow, [name === "legacy" ? invocation.input : invocation]);
-    if (name.startsWith("retained-"))
+    const run = await start(runAgentWorkflow, [legacy ? invocation.input : invocation]);
+    if (name.includes("retained-"))
       await assert.rejects(bounded(run.returnValue), /Retained-field model input unavailable/);
     else if (
       [
@@ -317,7 +324,7 @@ try {
     const trace = await events();
     const actions = trace.map(x => x.action);
     const commands = trace.filter(x => x.action === "rpc").map(x => x.data);
-    if (name !== "legacy") {
+    if (!legacy) {
       assert.equal(actions[0], "rpc");
       assert.equal(commands[0].p_action, "bind");
       assert(!actions.includes("legacy-clear"));
@@ -395,9 +402,33 @@ try {
       }
     } else {
       assert.equal(commands.length, 0);
-      assert(actions.includes("legacy-clear"));
-      assert(actions.includes("key-delete"));
-      assert(actions.includes("legacy-parts"));
+      if (name === "legacy") {
+        assert(actions.includes("legacy-clear"));
+        assert(actions.includes("key-delete"));
+        assert(actions.includes("legacy-parts"));
+      } else {
+        assert.equal(actions.filter(x => x === "legacy-clear").length, 1);
+        assert.equal(
+          actions.filter(x => x === "key-delete").length,
+          name.endsWith("headless") ? 1 : 0,
+        );
+        assert.equal(actions.filter(x => x === "stream-finish").length, 1);
+        assert.equal(actions.filter(x => x === "stream-close").length, 1);
+        assert(actions.indexOf("stream-finish") < actions.indexOf("stream-close"));
+        assert.equal(
+          actions.filter(x => x === "convert").length,
+          name.includes("converted") ? 1 : 0,
+        );
+        for (const forbidden of [
+          "provider",
+          "routing",
+          "commit",
+          "legacy-write",
+          "legacy-parts",
+          "stream-start",
+        ])
+          assert(!actions.includes(forbidden));
+      }
     }
     traces.push({ name, runId: run.runId, trace });
     console.log(`PASS actual compiled workflow: ${name}`);

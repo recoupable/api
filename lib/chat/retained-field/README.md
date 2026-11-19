@@ -73,6 +73,10 @@ provenance after another source has already removed all markers or converted the
 content to unmarked prose/serialized text. It does not classify independent system
 prompts, knowledge content, other model callers, streamed output already emitted,
 metadata/export surfaces or already-delivered clients. It does not retract an
-already-completed provider call. Existing early-workflow failure cleanup semantics
-are unchanged; this is not a stream lifecycle or account/grant change. Positive
+already-completed provider call. Early raw/conversion privacy denials now enter the existing legacy cleanup:
+CAS-scoped active-stream clear, one terminal finish before writable closure, and
+headless ephemeral-key revocation when present. Unrelated startup failures keep
+their prior behavior. Fenced failures close their stream without legacy cleanup
+or release, and a losing fenced bind acquires no cleanup authority. No retry or
+account/grant policy is added. Positive
 current-authority/publication integration and other disclosure paths remain open.
