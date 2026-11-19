@@ -44,11 +44,13 @@ export async function consumeRetainedField(
           const comparisonState = result.coverage.comparisonState;
           if (comparisonState !== "comparable" && comparisonState !== "incomplete")
             return { state: "error" };
+          const { authority, kind } = result.ref;
+          if (authority !== "context" || kind !== "recording") return { state: "error" };
           const amount = result.field.amount;
           if (amount !== null && (!Number.isSafeInteger(amount) || amount < 0))
             return { state: "unavailable" };
           items.push({
-            ref: result.ref,
+            ref: { ...result.ref, authority, kind },
             binding: selection,
             value: amount === null ? { state: "unknown" } : { state: "known", amount },
             periods: result.periods,

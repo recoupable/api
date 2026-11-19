@@ -3,7 +3,10 @@ import type { evaluateRetainedStreamField } from "../catalog-stream-fields/evalu
 import type { requestSchema, ActorScope, Selection } from "./schemas";
 type Evaluated = Extract<ReturnType<typeof evaluateRetainedStreamField>, { state: "ready" }>;
 export type Item = {
-  ref: Evaluated["ref"];
+  ref: Omit<Evaluated["ref"], "authority" | "kind"> & {
+    authority: "context";
+    kind: "recording";
+  };
   binding: Selection;
   value: { state: "known"; amount: number } | { state: "unknown" };
   periods: Evaluated["periods"];
@@ -13,10 +16,14 @@ export type Item = {
     nullDateCount: number;
     missingDateCount: number;
   };
-  source: Pick<
-    Evaluated["provenance"],
-    "provider" | "metric" | "platform" | "territory" | "timezone" | "retrievalRange"
-  >;
+  source: {
+    provider: "luminate";
+    metric: "daily_streams";
+    platform: "all_dsps";
+    territory: "worldwide";
+    timezone: "UTC";
+    retrievalRange: Evaluated["provenance"]["retrievalRange"];
+  };
 };
 export type Ready = Omit<z.infer<typeof requestSchema>, "mode" | "selections"> & {
   state: "ready";
