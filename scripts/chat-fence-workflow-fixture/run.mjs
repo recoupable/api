@@ -54,6 +54,8 @@ for (const name of await readdir(join(root, "app/lib/workflows/fence")))
   if (name.endsWith(".ts")) await copy(`app/lib/workflows/fence/${name}`, `fence/${name}`);
 await copy("lib/chat/auto-commit/autoCommitChatTurn.ts", "autoCommitChatTurn.ts");
 for (const path of [
+  "lib/chat/retained-field/assertNoRetainedFieldModelInput.ts",
+  "lib/sessions/chats/retained-field/hasRetainedFieldContent.ts",
   "lib/chat/fence/encodeStrictJson.ts",
   "lib/chat/fence/persistence/createFencedMessageWriter.ts",
   "lib/supabase/chat_fence/executeChatFenceCommand.ts",
@@ -104,7 +106,7 @@ const seams = [
   [
     "@/app/lib/workflows/convertMessagesStep",
     "convertMessagesStep",
-    'record("convert"); return [];',
+    'record("convert"); return scenario().fail==="retained-converted"?[{mode:"retained_field",amount:987654321}]:[];',
   ],
   ["@/app/lib/workflows/sendStreamStart", "sendStreamStart", 'record("stream-start",args[1]);'],
   ["@/app/lib/workflows/sendStreamFinish", "sendStreamFinish", 'record("stream-finish");'],
@@ -117,7 +119,7 @@ const seams = [
   [
     "@/app/lib/workflows/runAgentStep",
     "runAgentStep",
-    'record("provider",{original:args[0].originalMessages}); const {readUIMessageStream}=await import("ai"); const initial=args[0].originalMessages[0]; const stream=new ReadableStream({start(c){c.enqueue({type:"start",messageId:initial.id});c.enqueue({type:"text-start",id:"generated"});c.enqueue({type:"text-delta",id:"generated",delta:"synthetic result"});c.enqueue({type:"text-end",id:"generated"});c.enqueue({type:"finish"});c.close();}}); let responseMessage; for await(const value of readUIMessageStream({message:initial,stream})) responseMessage=value; record("sdk-optional",Object.hasOwn(responseMessage.parts.at(-1),"providerMetadata")); return {finishReason:scenario().fail==="iteration"?"tool-calls":"stop",aborted:false,responseMessages:[],responseMessage};',
+    'record("provider",{original:args[0].originalMessages}); if(scenario().fail==="retained-iteration") return {finishReason:"tool-calls",aborted:false,responseMessages:[{role:"tool",content:[{type:"tool-result",output:{type:"json",value:{mode:"retained_field",amount:987654321}}}]}]}; const {readUIMessageStream}=await import("ai"); const initial=args[0].originalMessages[0]; const stream=new ReadableStream({start(c){c.enqueue({type:"start",messageId:initial.id});c.enqueue({type:"text-start",id:"generated"});c.enqueue({type:"text-delta",id:"generated",delta:"synthetic result"});c.enqueue({type:"text-end",id:"generated"});c.enqueue({type:"finish"});c.close();}}); let responseMessage; for await(const value of readUIMessageStream({message:initial,stream})) responseMessage=value; record("sdk-optional",Object.hasOwn(responseMessage.parts.at(-1),"providerMetadata")); return {finishReason:scenario().fail==="iteration"?"tool-calls":"stop",aborted:false,responseMessages:[],responseMessage};',
   ],
   [
     "@/app/lib/workflows/persistAssistantMessageStep",
@@ -260,6 +262,9 @@ try {
     "new-object",
     "resume",
     "legacy",
+    "retained-input",
+    "retained-converted",
+    "retained-iteration",
   ]) {
     await writeFile(join(effects, "events.jsonl"), "");
     await writeFile(join(effects, "scenario.json"), JSON.stringify({ fail: name }));
@@ -283,8 +288,19 @@ try {
       });
     if (name === "resume")
       invocation.fence.turn = { kind: "same-turn-resume", assistantId: "historical-assistant" };
+    if (name === "retained-input")
+      invocation.input.messages.push({
+        id: "private",
+        role: "assistant",
+        parts: [
+          { type: "data-retained-field-snapshot", data: { amount: 987654321 } },
+          { type: "text", text: "PRIVATE" },
+        ],
+      });
     const run = await start(runAgentWorkflow, [name === "legacy" ? invocation.input : invocation]);
-    if (
+    if (name.startsWith("retained-"))
+      await assert.rejects(bounded(run.returnValue), /Retained-field model input unavailable/);
+    else if (
       [
         "bind",
         "user",
@@ -312,6 +328,25 @@ try {
         assert.equal(c.p.run_id, run.runId);
         assert.equal(c.p.epoch, 1);
         assert.equal(c.p.owner, authority.owner);
+      }
+      if (name.startsWith("retained-")) {
+        assert(!actions.includes("commit"));
+        assert(!commands.some(c => c.p_action === "release"));
+        assert(actions.includes("stream-close"));
+        assert.equal(
+          actions.filter(x => x === "provider").length,
+          name === "retained-iteration" ? 1 : 0,
+        );
+        if (name === "retained-input") assert(!actions.includes("convert"));
+        if (name !== "retained-iteration") assert(!actions.includes("routing"));
+        const beforeReplay = deliveries;
+        await reenqueueRun(world, run.runId);
+        await bounded(
+          (async () => {
+            while (deliveries === beforeReplay) await new Promise(r => setTimeout(r, 20));
+          })(),
+        );
+        assert.deepEqual(await events(), trace);
       }
       if (name === "bind") assert.deepEqual(actions, ["rpc"]);
       if (name === "user") {
