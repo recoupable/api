@@ -1,48 +1,16 @@
 import { z } from "zod";
 import { evaluateRetainedStreamField } from "../catalog-stream-fields/evaluate";
-import { actorScopeSchema, requestSchema, type ActorScope, type Selection } from "./schemas";
-type Evaluated = Extract<ReturnType<typeof evaluateRetainedStreamField>, { state: "ready" }>;
-type Item = {
-  ref: Evaluated["ref"];
-  binding: Selection;
-  value: { state: "known"; amount: number } | { state: "unknown" };
-  periods: Evaluated["periods"];
-  coverage: {
-    comparisonState: string;
-    absentDateCount: number;
-    nullDateCount: number;
-    missingDateCount: number;
-  };
-  source: Pick<
-    Evaluated["provenance"],
-    "provider" | "metric" | "platform" | "territory" | "timezone" | "retrievalRange"
-  >;
-};
-type Ready = Omit<z.infer<typeof requestSchema>, "mode" | "selections"> & {
-  state: "ready";
-  contract: "catalog-retained-field-projection/1";
-  asOf: string;
-  semantics: "historical_snapshot";
-  items: Item[];
-};
-type Result = Ready | { state: "unavailable" | "error" | "invalid" };
-/** Adapter MUST authenticate scope and pre-lock the complete sorted batch, keeping locks through callback evaluation.
- * No implementation or grant is supplied. Injected test ports prove plumbing only. */
-export type LockedRead = (
-  scope: ActorScope & { workspaceId: string; catalogId: string; selections: Selection[] },
-  consume: (tx: {
-    asOf: string;
-    readBinding: (selection: Selection) => Promise<unknown>;
-  }) => Promise<Result>,
-) => Promise<Result>;
+import { actorScopeSchema, requestSchema } from "./schemas";
+import type { Item, Ready, Result, LockedRead } from "./retainedFieldTypes";
+import { classifyRetainedFieldRefusal } from "./classifyRetainedFieldRefusal";
 /** Inactive source consumer; no report fallback, disclosure route, transport or UI schema change. */
 export async function consumeRetainedField(
   actorInput: unknown,
   input: unknown,
   withLockedRead?: LockedRead,
 ): Promise<Result> {
-  const actor = actorScopeSchema.safeParse(actorInput),
-    request = requestSchema.safeParse(input);
+  const actor = actorScopeSchema.safeParse(actorInput);
+  const request = requestSchema.safeParse(input);
   if (!actor.success || !request.success) return { state: "invalid" };
   if (!withLockedRead) return { state: "unavailable" };
   const q = request.data;
@@ -72,8 +40,10 @@ export async function consumeRetainedField(
             asOf: tx.asOf,
             boundary: { state: "qualified", envelope },
           });
-          if (result.state !== "ready")
-            return { state: result.reason === "size_limit" ? "invalid" : "unavailable" };
+          if (result.state !== "ready") return classifyRetainedFieldRefusal(result.reason);
+          const comparisonState = result.coverage.comparisonState;
+          if (comparisonState !== "comparable" && comparisonState !== "incomplete")
+            return { state: "error" };
           const amount = result.field.amount;
           if (amount !== null && (!Number.isSafeInteger(amount) || amount < 0))
             return { state: "unavailable" };
@@ -83,7 +53,7 @@ export async function consumeRetainedField(
             value: amount === null ? { state: "unknown" } : { state: "known", amount },
             periods: result.periods,
             coverage: {
-              comparisonState: result.coverage.comparisonState,
+              comparisonState,
               absentDateCount: result.coverage.absentDates.length,
               nullDateCount: result.coverage.nullDates.length,
               missingDateCount: result.coverage.missingDays.length,

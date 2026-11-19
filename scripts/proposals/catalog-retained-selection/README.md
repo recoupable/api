@@ -8,8 +8,11 @@ API1290/Database142 are a different source path and are unchanged.
 
 `readRetainedFieldSelection` calls an injected current command reconciler with the
 original authenticated actor, workspace, request, catalog and retention key. The
-owning implementation is `stream_binding_proposal.reconcile_retention`, which
-rechecks `read_binding`. It validates the exact receipt/scope/key and projects its
+intended backing function is the private, source-only Database proposal
+[`stream_binding_proposal.reconcile_retention`](https://github.com/recoupable/database/blob/1b892dd2671ba7e15e0c44b690fbfbe515b59fbd/proposals/stream-retention-writer-2207/writer.sql#L3),
+which rechecks `read_binding`. It is not implemented or connected as a live API
+transport here; the injected callback alone supplies no authentication proof.
+The adapter validates the exact receipt/scope/key and projects its
 genuine Context identities. Null, pending, malformed, mismatched or ambiguous
 results cannot create a ready selection; operational errors are redacted errors.
 No retain/expand/provider call, latest lookup, re-key or raw-report fallback exists.

@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { readRetainedFieldSelection } from "./readRetainedFieldSelection";
 import { consumeRetainedField } from "./consumeRetainedField";
 import { method } from "./schemas";
+import { classifyRetainedFieldRefusal } from "./classifyRetainedFieldRefusal";
 import { evaluateRetainedStreamField } from "../catalog-stream-fields/evaluate";
 const id = (n: number) => `10000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 const scope = {
@@ -261,5 +262,12 @@ it.each([270000, 400000])(
         consume({ asOf, readBinding: async () => oversized }),
       ),
     ).toEqual({ state: "invalid" });
+  },
+);
+
+it.each(["helper_changed", "source_error"])(
+  "classifies evaluator operational refusal %s without details",
+  reason => {
+    expect(classifyRetainedFieldRefusal(reason)).toEqual({ state: "error" });
   },
 );
