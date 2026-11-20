@@ -17,7 +17,7 @@
     "lib/sites/production/assessStoredSitePublishEvidence.ts": "6124f1587aa9b351331a990db81a9939486536b7608066841f91ce6706f61d57",
     "lib/supabase/site_publish_evidence/selectSitePublishEvidence.ts": "ca533800b5a40b37031c8a960821fd643b0607648956b90270927c9dcb89aee0",
     "lib/sites/production/assessSitePublishEvidence.ts": "a629edca6f7e005abdc001ebd127aaad9aab8eddfa12a93e4c28e825bfc8c132",
-    "lib/sites/production/schema.ts": "dea40d0d54c1ae026f9cb74a81fd5141cc407436f34f98e3ed26cd29079d28ef",
+    "lib/sites/production/schema.ts": "b6eaad41acebcd4f7b061a4267cb6189581e109d7ddbd4310583199bc6d23ec1",
     "lib/sites/production/openingSequence.ts": "17c0647a3055aa26e7e5c68c1dc2f1abbe8bec51b159de0b0be0a34b7a029c54",
     "lib/sites/assets/catalog.ts": "0cc1c01baf240e44b98603d06d810a82d7e6e1f3203aae39959e2610e29fee16",
     "lib/sites/production/openingReviewSchema.ts": "d01dd4553241bc6c4a81a3f9bed5f0c1d33c65184e69d1afe0b801fbe0f25ca9",
@@ -66,6 +66,7 @@
   },
   "api_baseline_commit": "f6103bc4f31dfa12f8f9c553920837a7e4d80da5",
   "api_modified_from_baseline": [
-    "lib/sites/production/captureSavedSiteReview.ts"
+    "lib/sites/production/captureSavedSiteReview.ts",
+    "lib/sites/production/schema.ts"
   ]
 }

@@ -43,7 +43,10 @@ export async function repairDirectSite(input: {
       return next.snapshot;
     },
     reviewCandidate: candidate =>
-      reviewExperience(candidate, direction, accountId, site.id, context.siteSkill),
+      reviewExperience(candidate, direction, accountId, site.id, context.siteSkill, {
+        baseRevision: site.revision,
+        releaseArtwork: context.release?.artwork ?? null,
+      }),
   });
   if (result.status === "stopped" && result.reason !== "direction-required")
     throw getSiteRepairStopError(result.reason);

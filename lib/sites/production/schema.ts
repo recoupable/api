@@ -66,6 +66,15 @@ export type CreativeReview = z.infer<typeof reviewSchema> & {
     evidence?: { sourceSha256: string; journeySha256: string; runnerSha256: string };
     nativeShareDelivery: "not-tested";
     spotifyAuthentication: "not-tested";
+    coverHidden?: ReturnType<typeof import("./getCoverHiddenEvidence").getCoverHiddenEvidence> & {
+      baseRevision: number | null;
+      scopeSha256: string;
+      critique: {
+        assessment: "expresses-world" | "needs-improvement" | "unverified";
+        reasons: string[];
+        improvements: string[];
+      };
+    };
     opening?: Awaited<ReturnType<typeof import("./reviewOpeningSequence").reviewOpeningSequence>>;
     journey?: z.infer<typeof experienceContractSchema>;
     viewports: { name: string; journeyPassed?: boolean; errors: string[]; overflow: boolean }[];

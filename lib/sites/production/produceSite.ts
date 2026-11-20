@@ -57,6 +57,7 @@ export async function produceSite(
     accountId,
     site.id,
     context.siteSkill,
+    { baseRevision: site.revision, releaseArtwork: context.release?.artwork ?? null },
   );
   const repaired = await repairDirectSite({
     site,
