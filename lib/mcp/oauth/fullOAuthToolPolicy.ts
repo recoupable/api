@@ -52,6 +52,14 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
     notice:
       "Spends account credits: $0.05 per linked profile plus $0.01 per requested post. Confirm before scraping.",
   },
+  get_published_posts: { readOnly: true, destructive: false, openWorld: false },
+  get_published_post_stats: {
+    readOnly: true,
+    destructive: false,
+    openWorld: true,
+    notice:
+      "Spends account credits: $0.001 per successful read. Read each post once and keep the result.",
+  },
   get_artist_socials: { readOnly: true, destructive: false, openWorld: false },
   artist_deep_research: { readOnly: true, destructive: false, openWorld: false },
   spotify_deep_research: { readOnly: true, destructive: false, openWorld: false },

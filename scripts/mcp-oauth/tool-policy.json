@@ -197,6 +197,25 @@
     "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution. Check the target artist/resource through an authorized relationship, not a system-prompt assertion."
   },
   {
+    "name": "get_published_post_stats",
+    "file": "lib/mcp/tools/posts/registerGetPublishedPostStatsTool.ts",
+    "scopes": [
+      "mcp:read",
+      "mcp:spend"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution. Check the post's account through an authorized relationship; gate credits before the LinkedIn read and charge $0.001 only after it succeeds."
+  },
+  {
+    "name": "get_published_posts",
+    "file": "lib/mcp/tools/posts/registerGetPublishedPostsTool.ts",
+    "scopes": [
+      "mcp:read"
+    ],
+    "status": "requires OAuth execution audit before enablement",
+    "authorizationWork": "Bind account and requested resources to the selected grant context; enforce scopes, current access, and redacted errors at execution. Scope the list to the credential's account; check any artist filter through an authorized relationship, not a system-prompt assertion."
+  },
+  {
     "name": "get_catalog_playcount_history",
     "file": "lib/mcp/tools/catalogs/registerGetCatalogPlaycountHistoryTool.ts",
     "scopes": [

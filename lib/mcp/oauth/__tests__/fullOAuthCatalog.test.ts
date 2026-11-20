@@ -65,12 +65,12 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
-    expect(tools).toHaveLength(94);
+    expect(tools).toHaveLength(96);
     expect(
       tools.filter(
         tool => !(tool._meta?.ui as { visibility?: string[] })?.visibility?.includes("app"),
       ),
-    ).toHaveLength(93);
+    ).toHaveLength(95);
     expect(verify).not.toHaveBeenCalled();
     for (const service of Object.values(services)) expect(service).not.toHaveBeenCalled();
     expect(contextToolOperations.prepare_catalog_audit).toMatchObject({
@@ -87,6 +87,8 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       list_artists: [true, false, false],
       get_artist_posts: [true, false, false],
       get_scraper_results: [true, false, true],
+      get_published_posts: [true, false, false],
+      get_published_post_stats: [true, false, true],
       scrape_artist_socials: [false, true, true],
       get_tasks: [true, false, false],
       get_youtube_revenue: [true, false, false],

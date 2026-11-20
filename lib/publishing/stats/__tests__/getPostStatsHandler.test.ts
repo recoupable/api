@@ -18,8 +18,8 @@ vi.mock("@/lib/publishing/stats/getLinkedInPostStats", () => ({ getLinkedInPostS
 vi.mock("@/lib/publishing/stats/getLinkedInVideoStats", () => ({
   getLinkedInVideoStats: vi.fn(),
 }));
-vi.mock("@/lib/credits/ensureCreditsOrShortCircuit", () => ({
-  ensureCreditsOrShortCircuit: vi.fn().mockResolvedValue(null),
+vi.mock("@/lib/credits/checkCreditsAvailable", () => ({
+  checkCreditsAvailable: vi.fn().mockResolvedValue({ kind: "available" }),
 }));
 vi.mock("@/lib/publishing/stats/chargePostStatsRead", () => ({ chargePostStatsRead: vi.fn() }));
 
