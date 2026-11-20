@@ -1,5 +1,6 @@
 import type { Watcher } from "@vercel/board";
 import { claudeWatcher } from "@/lib/board/claudeWatcher";
+import { CLAUDE_BOARD_PROFILE } from "@/lib/board/claudeBoardProfile";
 
 /**
  * Returns the watchers this deployment registers on the team board. Only
@@ -10,5 +11,5 @@ import { claudeWatcher } from "@/lib/board/claudeWatcher";
  */
 export function getBoardWatchers(): Record<string, Watcher> {
   if (process.env.VERCEL_ENV !== "production") return {};
-  return { claude: claudeWatcher };
+  return { [CLAUDE_BOARD_PROFILE]: claudeWatcher };
 }
