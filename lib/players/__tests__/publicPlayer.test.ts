@@ -1,4 +1,5 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { GET as publicGet } from "@/app/api/players/public/[id]/route";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { getPublicPlayer } from "../getPublicPlayer";
 const m = vi.hoisted(() => ({
   select: vi.fn(),
@@ -100,4 +101,77 @@ it("exposes configured audio only to Spotify provider sessions, not the chooser 
   expect(
     await getPublicPlayer(id, { provider: "apple_music", parent: "https://artist.example" }, true),
   ).toMatchObject({ audioUrl: null });
+});
+
+it.each(["", "public-client-id"])(
+  "exposes credential-free capabilities without creating a session (%s)",
+  async client => {
+    vi.stubEnv("SITES_SPOTIFY_CLIENT_ID", client);
+    vi.stubEnv("PLAYER_APP_ORIGIN", "https://app.recoupable.dev");
+    const result = await getPublicPlayer(id, {});
+    expect(result).toMatchObject({
+      capabilities: {
+        version: 1,
+        spotify: {
+          clientConfiguration: client ? "configured" : "unconfigured",
+          releaseConfigured: true,
+          premiumEligibility: "unknown",
+          tokenStatus: "unknown",
+          scopeStatus: "unknown",
+          playbackSupport: "unknown",
+        },
+      },
+    });
+    expect(result).not.toHaveProperty("spotify");
+    expect(result).not.toHaveProperty("flow");
+    expect(m.insert).not.toHaveBeenCalled();
+  },
+);
+it("retains capability unknowns on fresh and resumed provider sessions", async () => {
+  vi.stubEnv("SITES_SPOTIFY_CLIENT_ID", "");
+  const first = await getPublicPlayer(
+    id,
+    { provider: "spotify", parent: "https://artist.example" },
+    true,
+  );
+  expect(first).toMatchObject({
+    spotify: { configured: false },
+    capabilities: { spotify: { clientConfiguration: "unconfigured", tokenStatus: "unknown" } },
+  });
+  expect(m.insert).toHaveBeenCalledTimes(1);
+  if (!("flow" in first)) throw new Error("Expected session");
+  m.session.mockResolvedValue({ ...m.insert.mock.calls[0][0], provider: "spotify" });
+  const resumed = await getPublicPlayer(
+    id,
+    { provider: "spotify", parent: "https://artist.example", flow: first.flow },
+    true,
+  );
+  expect(resumed).toMatchObject({ flow: first.flow, capabilities: first.capabilities });
+  expect(m.insert).toHaveBeenCalledTimes(1);
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
+
+it("keeps metadata GET credential-free, no-store and free of provider/session work", async () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  const response = await publicGet(new Request("https://api.example/api/players/public/" + id), {
+    params: Promise.resolve({ id }),
+  });
+  expect(response.status).toBe(200);
+  expect(response.headers.get("Cache-Control")).toBe("no-store");
+  const body = await response.json();
+  expect(body.capabilities.version).toBe(1);
+  expect(body).not.toHaveProperty("spotify");
+  expect(body).not.toHaveProperty("flow");
+  expect(m.insert).not.toHaveBeenCalled();
+  expect(fetch).not.toHaveBeenCalled();
+});
+it("preserves invalid public origin configuration failure", async () => {
+  vi.stubEnv("PLAYER_APP_ORIGIN", "invalid");
+  await expect(getPublicPlayer(id, {})).rejects.toThrow();
+  expect(m.insert).not.toHaveBeenCalled();
 });
