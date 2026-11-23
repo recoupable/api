@@ -39,6 +39,7 @@ describe("processAndSendEmail", () => {
         subject: "Test",
         html: expect.stringContaining("Hello world"),
       }),
+      undefined,
     );
   });
 
@@ -56,6 +57,7 @@ describe("processAndSendEmail", () => {
       expect.objectContaining({
         html: expect.stringContaining("<h1>HTML body</h1>"),
       }),
+      undefined,
     );
   });
 
@@ -72,6 +74,7 @@ describe("processAndSendEmail", () => {
       expect.objectContaining({
         cc: ["cc@example.com"],
       }),
+      undefined,
     );
   });
 
@@ -91,6 +94,7 @@ describe("processAndSendEmail", () => {
       expect.objectContaining({
         html: expect.stringContaining("Test Artist"),
       }),
+      undefined,
     );
   });
 
@@ -128,5 +132,25 @@ describe("processAndSendEmail", () => {
     if (!result.success) {
       expect(result.error).toContain("Rate limited");
     }
+  });
+
+  it("forwards idempotencyKey to Resend so a replayed send delivers once (chat#1918)", async () => {
+    mockSendEmailWithResend.mockResolvedValue({ id: "resend-1" });
+    await processAndSendEmail({
+      to: ["a@b.com"],
+      subject: "S",
+      text: "body",
+      idempotencyKey: "chat_1:msg_2",
+    });
+    expect(mockSendEmailWithResend).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ idempotencyKey: "chat_1:msg_2" }),
+    );
+  });
+
+  it("omits Resend options entirely when no idempotencyKey is given", async () => {
+    mockSendEmailWithResend.mockResolvedValue({ id: "resend-2" });
+    await processAndSendEmail({ to: ["a@b.com"], subject: "S", text: "body" });
+    expect(mockSendEmailWithResend).toHaveBeenCalledWith(expect.anything(), undefined);
   });
 });
