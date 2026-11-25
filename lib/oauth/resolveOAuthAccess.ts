@@ -11,6 +11,7 @@ export type OAuthAccess = {
   resource: string;
   context: "personal";
   selectedContext?: SelectedContext;
+  subject?: string;
 };
 
 /** Check every authority binding, including the current grant, before accepting a bearer. */
@@ -64,6 +65,11 @@ export async function resolveOAuthAccess(
     return undefined;
   return {
     ...(selectedContext ? { selectedContext } : {}),
+    ...(typeof attribution.extra.subject === "string" &&
+    attribution.extra.subject.startsWith("did:privy:") &&
+    attribution.extra.subject.length <= 300
+      ? { subject: attribution.extra.subject }
+      : {}),
     accountId: token.accountId,
     clientId: token.clientId,
     grantId: token.grantId,

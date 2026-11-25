@@ -7,6 +7,7 @@ import { setOAuthMcpHeaders } from "@/lib/mcp/oauth/setOAuthMcpHeaders";
 import { registerAllTools } from "@/lib/mcp/tools";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { createModernRecoupHandler } from "@/lib/mcp/skills/createModernRecoupHandler";
+import { registerRecoupSkillsTool } from "@/lib/mcp/skills/registerRecoupSkillsTool";
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { verifyBearerToken } from "@/lib/mcp/verifyApiKey";
 import { registerOAuthTools } from "@/lib/mcp/oauth/registerOAuthTools";
@@ -23,9 +24,13 @@ function createRecoupHandlers(
   version: string,
   withSkills = true,
 ) {
+  const registerConnection = (server: McpServer) => {
+    register(server);
+    if (withSkills) registerRecoupSkillsTool(server);
+  };
   return {
-    legacy: createMcpHandler(register, { serverInfo: createRecoupServerInfo(version) }),
-    modern: createModernRecoupHandler(register, version, withSkills),
+    legacy: createMcpHandler(registerConnection, { serverInfo: createRecoupServerInfo(version) }),
+    modern: createModernRecoupHandler(registerConnection, version, withSkills),
   };
 }
 

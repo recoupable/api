@@ -1,40 +1,35 @@
 # Recoup Skills over MCP
 
-Recoup serves the native Skills extension (`io.modelcontextprotocol/skills`)
-to clients using MCP `2026-07-28`.
+Use the Recoup connector at `https://api.recoupable.dev/mcp` and sign in to
+Recoup. Signed-in accounts using the standard connector grant can use
+customer-facing skills. The connector
+also makes internal skills available to Recoup organization members, accounts
+with a staff skills grant, and OAuth users whose Recoup sign-in identity has a
+currently verified `@recoupable.com` email. These grants apply to skill
+content. Recoup tool actions continue to enforce their existing permissions.
 
-## Claude Code setup
+In ChatGPT, ask the connected Recoup app to find or use a Recoup skill. The
+`recoup_skills` tool searches the authorized catalog and reads skill
+instructions and supporting files. ChatGPT's plugin listing shows the skills
+included in the submitted plugin package.
 
-Connect Recoup for customer-facing skills and tools. Recoup staff can add the
-second connection for internal skills. Authorize Recoup Staff with the full
-tools permission and a Recoup organization member account or a staff skills grant.
-
-```sh
-claude mcp add --transport http recoup https://api.recoupable.dev/mcp
-claude mcp add --transport http recoup-staff https://api.recoupable.dev/mcp/staff
-```
-
-Use `/skills` to find skills from both connections. For example, use
-`/recoup:recoup-song-check-credits` or `/recoup-staff:recoup-internal-weekly-usage-review`.
-Existing Recoup connections already use the first endpoint. Recoup Staff serves
-skills and their resources. Recoup serves the tools those skills may need.
-Selected Context grants retain their Context-only surface.
-
-Both catalogs fit within Claude Code's 100-skill limit per connection.
-[Claude Code MCP skill limits](https://code.claude.com/docs/en/mcp#mcp-skill-limitations)
+Clients with native Skills over MCP support can also use `skills/list`,
+`skills/get`, and `resources/read` on the same connection. For Claude Code,
+use `/skills` or ask Recoup to find a skill by name if its menu reaches the
+client's display limit. Selected Context grants keep their workspace-only
+tool surface.
 
 ## Granting staff skills access
 
-Use the server-side `RECOUP_STAFF_SKILL_ACCOUNT_IDS` setting for accounts that
-need access to staff skills without organization membership. Set it to a
-comma-separated list of exact Recoup account IDs. This grants access only to
-the staff skills connection. The account still needs full tools consent.
+Use the server-side `RECOUP_STAFF_SKILL_ACCOUNT_IDS` setting for explicit
+grants. Set it to a comma-separated list of exact Recoup account IDs.
+
+Use an account with customer-facing access when scanning or packaging the
+public plugin so the submitted package contains only customer-facing skills.
 
 ## Updating the catalog
 
 The [Skills repository](https://github.com/recoupable/skills) owns the skill
-source and supports the existing install paths. To release a catalog update,
-bump the full Skills commit SHA in `scripts/mcp-skills/build.mjs` and run
-`pnpm build:mcp-skills`. The build validates both catalogs and checks their
-sizes against Claude Code's limit. Each deployment packages the same skill
-definitions and supporting files until the next API release.
+source. To release a catalog update, bump the Skills commit SHA in
+`scripts/mcp-skills/build.mjs` and run `pnpm build:mcp-skills`. This validates
+the catalog and packages the skill definitions and supporting files with the API.

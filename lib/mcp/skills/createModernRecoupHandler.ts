@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createRecoupServerInfo } from "../createRecoupServerInfo";
 import type { McpAuthInfo } from "../verifyApiKey";
 import { getRecoupSkills } from "./getRecoupSkills";
+import { resolveRecoupSkillsAudience } from "./resolveRecoupSkillsAudience";
 
 type LegacyTool = (
   args: unknown,
@@ -18,7 +19,7 @@ export function createModernRecoupHandler(
   withSkills = true,
 ) {
   return createMcpHandler(
-    async ({ authInfo }) => {
+    async ({ authInfo, requestInfo }) => {
       const auth = authInfo as McpAuthInfo | undefined;
       const server = new McpServer(createRecoupServerInfo(version));
 
@@ -55,7 +56,17 @@ export function createModernRecoupHandler(
       };
       register(registration as unknown as LegacyServer);
 
-      if (withSkills) (await getRecoupSkills("public")).attach(server);
+      if (withSkills) {
+        const method = requestInfo?.headers.get("Mcp-Method");
+        const skillRequest =
+          method === "skills/list" ||
+          method === "skills/get" ||
+          method === "resources/directory/read" ||
+          (method === "resources/read" &&
+            requestInfo?.headers.get("Mcp-Name") !== "ui://recoup/explore.html");
+        const audience = skillRequest ? await resolveRecoupSkillsAudience(auth) : undefined;
+        (await getRecoupSkills(audience ?? "public")).attach(server);
+      }
       return server;
     },
     { legacy: "reject" },
