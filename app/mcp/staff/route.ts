@@ -26,8 +26,15 @@ export async function POST(request: Request) {
   const response = await withMcpAuth(
     async request => {
       if (!auth || auth.extra.oauth?.selectedContext) return new Response(null, { status: 403 });
-      const { isRecoupAdmin } = await import("@/lib/organizations/isRecoupAdmin");
-      if (!(await isRecoupAdmin(auth.extra.accountId))) return new Response(null, { status: 403 });
+      const { accountId } = auth.extra;
+      if (!accountId) return new Response(null, { status: 403 });
+      const hasSkillsGrant = process.env.RECOUP_STAFF_SKILL_ACCOUNT_IDS?.split(",").some(
+        id => id.trim() === accountId,
+      );
+      if (!hasSkillsGrant) {
+        const { isRecoupAdmin } = await import("@/lib/organizations/isRecoupAdmin");
+        if (!(await isRecoupAdmin(accountId))) return new Response(null, { status: 403 });
+      }
       return staffHandler.fetch(request, { authInfo: auth });
     },
     async () => auth,

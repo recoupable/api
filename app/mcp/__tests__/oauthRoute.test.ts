@@ -326,3 +326,29 @@ it("challenges the staff connection for full-tools scope at the canonical MCP re
   expect((await staffPOST(request())).status).toBe(403);
   expect(isRecoupAdmin).not.toHaveBeenCalled();
 });
+
+it("grants staff skills to the exact configured account without requiring organization membership", async () => {
+  const grantedAccount = "ef19d455-2c61-4051-a38e-bc2500b1c880";
+  vi.stubEnv("RECOUP_STAFF_SKILL_ACCOUNT_IDS", ` ${grantedAccount} ,`);
+  isRecoupAdmin.mockResolvedValue(false);
+  const request = () => modernRequest("skills/list", {}, "test", `${access.resource}/staff`);
+  const auth = { token: "test", clientId: access.clientId, scopes: ["mcp:tools"] };
+  verify.mockResolvedValue({ ...auth, extra: { accountId: grantedAccount } });
+  const granted = await staffPOST(request());
+  expect(granted.status).toBe(200);
+  expect(isRecoupAdmin).not.toHaveBeenCalled();
+
+  verify.mockResolvedValue({ ...auth, extra: { accountId: grantedAccount.slice(0, -1) } });
+  expect((await staffPOST(request())).status).toBe(403);
+
+  verify.mockResolvedValue({
+    ...auth,
+    scopes: ["mcp:read"],
+    extra: { accountId: grantedAccount },
+  });
+  expect((await staffPOST(request())).status).toBe(403);
+
+  vi.stubEnv("RECOUP_STAFF_SKILL_ACCOUNT_IDS", "");
+  verify.mockResolvedValue({ ...auth, extra: { accountId: grantedAccount } });
+  expect((await staffPOST(request())).status).toBe(403);
+});

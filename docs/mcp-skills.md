@@ -7,7 +7,7 @@ to clients using MCP `2026-07-28`.
 
 Connect Recoup for customer-facing skills and tools. Recoup staff can add the
 second connection for internal skills. Authorize Recoup Staff with the full
-tools permission and an account in the Recoup organization.
+tools permission and a Recoup organization member account or a staff skills grant.
 
 ```sh
 claude mcp add --transport http recoup https://api.recoupable.dev/mcp
@@ -22,6 +22,13 @@ Selected Context grants retain their Context-only surface.
 
 Both catalogs fit within Claude Code's 100-skill limit per connection.
 [Claude Code MCP skill limits](https://code.claude.com/docs/en/mcp#mcp-skill-limitations)
+
+## Granting staff skills access
+
+Use the server-side `RECOUP_STAFF_SKILL_ACCOUNT_IDS` setting for accounts that
+need access to staff skills without organization membership. Set it to a
+comma-separated list of exact Recoup account IDs. This grants access only to
+the staff skills connection. The account still needs full tools consent.
 
 ## Updating the catalog
 
