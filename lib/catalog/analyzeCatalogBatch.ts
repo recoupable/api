@@ -18,6 +18,8 @@ export async function analyzeCatalogBatch(
   // Use AI to select relevant songs from this batch
   const { object } = await generateObject({
     model: DEFAULT_MODEL,
+    maxRetries: 1,
+    maxOutputTokens: 8192,
     schema: z.object({
       selected_song_isrcs: z
         .array(z.string())
@@ -29,8 +31,8 @@ Songs:
 ${JSON.stringify(
   songs.map(s => ({
     isrc: s.isrc,
-    name: s.name,
-    artist: s.artists.map(a => a.name).join(", "),
+    name: s.name?.slice(0, 300),
+    artists: s.artists.slice(0, 20).map(artist => artist.name?.slice(0, 100)),
   })),
   null,
   2,

@@ -86,8 +86,9 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
     const expectedAnnotations: Record<string, [boolean, boolean, boolean]> = {
       list_artists: [true, false, false],
       get_artist_posts: [true, false, false],
-      get_scraper_results: [true, false, true],
+      get_scraper_results: [true, false, false],
       scrape_artist_socials: [false, true, true],
+      select_catalog_songs: [true, false, false],
       get_tasks: [true, false, false],
       get_youtube_revenue: [true, false, false],
       search_web: [true, false, true],

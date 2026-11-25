@@ -38,20 +38,8 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
   },
   list_artists: { readOnly: true, destructive: false, openWorld: false },
   get_artist_posts: { readOnly: true, destructive: false, openWorld: false },
-  get_scraper_results: {
-    readOnly: true,
-    destructive: false,
-    openWorld: true,
-    notice:
-      "Reads public social scrape data by run ID; this lookup is not scoped to the connected account’s runs.",
-  },
-  scrape_artist_socials: {
-    readOnly: false,
-    destructive: true,
-    openWorld: true,
-    notice:
-      "Spends account credits: $0.05 per linked profile plus $0.01 per requested post. Confirm before scraping.",
-  },
+  get_scraper_results: { readOnly: true, destructive: false, openWorld: false },
+  scrape_artist_socials: { readOnly: false, destructive: true, openWorld: true },
   get_artist_socials: { readOnly: true, destructive: false, openWorld: false },
   artist_deep_research: { readOnly: true, destructive: false, openWorld: false },
   spotify_deep_research: { readOnly: true, destructive: false, openWorld: false },

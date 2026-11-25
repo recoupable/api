@@ -6,6 +6,11 @@ import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccou
 import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
 import { startArtistSocialsScrape } from "@/lib/artist/startArtistSocialsScrape";
 
+const redis = vi.hoisted(() => ({
+  values: new Map<string, { value: string; until: number }>(),
+  eval: vi.fn(),
+}));
+
 vi.mock("@/lib/artists/checkAccountArtistAccess", () => ({ checkAccountArtistAccess: vi.fn() }));
 vi.mock("@/lib/supabase/account_socials/selectAccountSocials", () => ({
   selectAccountSocials: vi.fn(),
@@ -13,6 +18,18 @@ vi.mock("@/lib/supabase/account_socials/selectAccountSocials", () => ({
 vi.mock("@/lib/credits/checkCreditsAvailable", () => ({ checkCreditsAvailable: vi.fn() }));
 vi.mock("@/lib/artist/startArtistSocialsScrape", () => ({ startArtistSocialsScrape: vi.fn() }));
 vi.mock("@/lib/organizations/canAccessAccount", () => ({ canAccessAccount: vi.fn() }));
+vi.mock("ioredis", () => ({
+  Redis: class {
+    eval = redis.eval;
+    on() {}
+    async connect() {}
+    disconnect() {}
+    async set(key: string, value: string, _ex: string, ttl: number) {
+      redis.values.set(key, { value, until: Date.now() + ttl * 1000 });
+      return "OK";
+    }
+  },
+}));
 
 const ARTIST_ID = "660e8400-e29b-41d4-a716-446655440000";
 const SOCIALS = [
@@ -35,7 +52,22 @@ describe("registerScrapeArtistSocialsTool", () => {
   let handler: (args: unknown, extra: unknown) => Promise<{ content: Array<{ text: string }> }>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    vi.stubEnv("OAUTH_INDEX_KEY", undefined);
+    vi.stubEnv("REDIS_URL", "redis://fixture.invalid:6379");
+    redis.values.clear();
+    redis.eval.mockImplementation(async (_script, keys, quoteKey, lockKey, scope, token) => {
+      const entry = redis.values.get(quoteKey);
+      if (keys === 1) {
+        if (entry?.value === lockKey) redis.values.delete(quoteKey);
+        return 1;
+      }
+      if (!entry || entry.until <= Date.now() || entry.value !== scope) return 0;
+      if (redis.values.has(lockKey)) return 1;
+      redis.values.set(lockKey, { value: token, until: Infinity });
+      redis.values.delete(quoteKey);
+      return 2;
+    });
     const server = {
       registerTool: vi.fn((name, c, h) => {
         expect(name).toBe("scrape_artist_socials");
@@ -53,9 +85,8 @@ describe("registerScrapeArtistSocialsTool", () => {
     ]);
   });
 
-  it("keeps the description to three sentences and states the cost", () => {
-    const sentences = config.description.split(/(?<=[.!?])\s+/).filter(Boolean);
-    expect(sentences.length).toBeLessThanOrEqual(3);
+  it("describes the quoted price and explicit approval", () => {
+    expect(config.description).toContain("explicit approval");
     expect(config.description).toContain("$0.05 per profile plus $0.01 per requested post");
   });
 
@@ -69,14 +100,21 @@ describe("registerScrapeArtistSocialsTool", () => {
     expect(config.inputSchema.safeParse({}).success).toBe(false);
   });
 
-  it("gates credits for every linked profile, then starts the scrape for the caller", async () => {
-    const result = await handler({ artist_account_id: ARTIST_ID, posts: 5 }, extra("acct"));
+  async function quote(posts?: number) {
+    const args = { artist_account_id: ARTIST_ID, posts };
+    const result = await handler(args, extra("acct"));
+    return { ...args, approved_quote: text(result).quote as string };
+  }
+
+  it("checks the approved maximum and dispatches with the existing per-profile price", async () => {
+    const result = await handler(await quote(5), extra("acct"));
     expect(checkAccountArtistAccess).toHaveBeenCalledWith("acct", ARTIST_ID);
     // (50,000 + 5 × 10,000) × 2 profiles
     expect(checkCreditsAvailable).toHaveBeenCalledWith({
       accountId: "acct",
       creditsToDeduct: 200_000,
     });
+    expect(redis.eval).toHaveBeenCalledTimes(2);
     expect(startArtistSocialsScrape).toHaveBeenCalledWith({
       accountId: "acct",
       socials: SOCIALS,
@@ -91,6 +129,77 @@ describe("registerScrapeArtistSocialsTool", () => {
         { runId: null, datasetId: null, error: "Unsupported platform" },
       ],
     });
+  });
+
+  it("quotes the maximum without starting work or charging credits", async () => {
+    const result = await handler({ artist_account_id: ARTIST_ID, posts: 5 }, extra("acct"));
+    expect(text(result)).toMatchObject({
+      approval_required: true,
+      profile_count: 2,
+      maximum_credits: 200_000,
+      maximum_usd: 0.2,
+    });
+    expect(startArtistSocialsScrape).not.toHaveBeenCalled();
+    expect(checkCreditsAvailable).not.toHaveBeenCalled();
+  });
+
+  it("rejects a quote used with different targets, post depth or billing account", async () => {
+    const approved = await quote(5);
+    await handler({ ...approved, posts: 6 }, extra("acct"));
+    await handler(approved, extra("different"));
+    vi.mocked(selectAccountSocials).mockResolvedValue([
+      SOCIALS[0],
+      { social: { ...SOCIALS[1].social, username: "different" } },
+    ] as never);
+    const result = await handler(approved, extra("acct"));
+    expect(text(result).success).toBe(false);
+    expect(checkCreditsAvailable).not.toHaveBeenCalled();
+    expect(startArtistSocialsScrape).not.toHaveBeenCalled();
+  });
+
+  it("rejects a replay without starting another provider job", async () => {
+    const approved = await quote(5);
+    await Promise.all([handler(approved, extra("acct")), handler(approved, extra("acct"))]);
+    expect(startArtistSocialsScrape).toHaveBeenCalledOnce();
+  });
+
+  it("serializes separate quotes through the balance check and dispatch", async () => {
+    const first = await quote(5);
+    const second = await quote(5);
+    let finish!: (runs: Awaited<ReturnType<typeof startArtistSocialsScrape>>) => void;
+    let markStarted!: () => void;
+    const started = new Promise<void>(resolve => {
+      markStarted = resolve;
+    });
+    vi.mocked(startArtistSocialsScrape).mockImplementationOnce(() => {
+      markStarted();
+      return new Promise(resolve => {
+        finish = resolve;
+      });
+    });
+    const pending = handler(first, extra("acct"));
+    await started;
+    const busy = await handler(second, extra("acct"));
+    expect(text(busy).message).toContain("being started");
+    expect(checkCreditsAvailable).toHaveBeenCalledOnce();
+    finish([{ runId: "r1", datasetId: null, error: null }]);
+    await pending;
+    const next = await handler(second, extra("acct"));
+    expect(text(next).success).toBe(true);
+    expect(checkCreditsAvailable).toHaveBeenCalledTimes(2);
+  });
+
+  it("expires an unused quote before spending credits", async () => {
+    const approved = await quote(5);
+    const now = vi.spyOn(Date, "now").mockReturnValue(Date.now() + 11 * 60 * 1000);
+    try {
+      const result = await handler(approved, extra("acct"));
+      expect(text(result).success).toBe(false);
+      expect(checkCreditsAvailable).not.toHaveBeenCalled();
+      expect(startArtistSocialsScrape).not.toHaveBeenCalled();
+    } finally {
+      now.mockRestore();
+    }
   });
 
   it("requires authentication", async () => {
@@ -123,7 +232,7 @@ describe("registerScrapeArtistSocialsTool", () => {
       remainingCredits: 10,
       requiredCredits: 100_000,
     });
-    const result = await handler({ artist_account_id: ARTIST_ID }, extra("acct"));
+    const result = await handler(await quote(), extra("acct"));
     expect(text(result).message).toBe("Insufficient credits: 10 remaining, 100000 required");
     expect(startArtistSocialsScrape).not.toHaveBeenCalled();
   });
@@ -133,7 +242,7 @@ describe("registerScrapeArtistSocialsTool", () => {
       { runId: null, datasetId: null, error: "Failed to start scrape" },
       { runId: null, datasetId: null, error: "Unsupported platform" },
     ]);
-    const result = await handler({ artist_account_id: ARTIST_ID }, extra("acct"));
+    const result = await handler(await quote(), extra("acct"));
     expect(text(result)).toEqual({
       success: false,
       message:
@@ -143,7 +252,7 @@ describe("registerScrapeArtistSocialsTool", () => {
 
   it("returns a redacted error when the scrape throws", async () => {
     vi.mocked(startArtistSocialsScrape).mockRejectedValue(new Error("apify token bad"));
-    const result = await handler({ artist_account_id: ARTIST_ID }, extra("acct"));
+    const result = await handler(await quote(), extra("acct"));
     expect(text(result)).toEqual({
       success: false,
       message: "Failed to start the artist socials scrape.",
