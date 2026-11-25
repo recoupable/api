@@ -54,3 +54,6 @@ supabase/.temp/
 
 # Python bytecode from running modal/ tests locally
 __pycache__/
+
+# Recoup Skills release bundled with the MCP route
+/.mcp-skills/

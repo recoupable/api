@@ -22,6 +22,7 @@ jobs:
         with:
           version: 9
       - run: pnpm install --frozen-lockfile
+      - run: pnpm build:mcp-skills
       - run: pnpm typecheck:mcp-oauth
       - run: pnpm test:mcp-oauth
       - run: pnpm test:extension
