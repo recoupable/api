@@ -3,6 +3,11 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerGetScraperResultsTool } from "../registerGetScraperResultsTool";
 import { getScraperRunResults } from "@/lib/apify/getScraperRunResults";
 
+import { selectApifyScraperRun } from "@/lib/supabase/apify_scraper_runs/selectApifyScraperRun";
+
+vi.mock("@/lib/supabase/apify_scraper_runs/selectApifyScraperRun", () => ({
+  selectApifyScraperRun: vi.fn(),
+}));
 vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
 vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
 vi.mock("@/lib/apify/getScraperRunResults", () => ({ getScraperRunResults: vi.fn() }));
@@ -21,7 +26,10 @@ describe("registerGetScraperResultsTool", () => {
   let handler: (args: unknown, extra: unknown) => Promise<{ content: Array<{ text: string }> }>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
+    vi.mocked(selectApifyScraperRun).mockResolvedValue([
+      { account_id: "acct", origin: "artist", batch_id: "batch" },
+    ] as never);
     const server = {
       registerTool: vi.fn((name, c, h) => {
         expect(name).toBe("get_scraper_results");
@@ -41,21 +49,59 @@ describe("registerGetScraperResultsTool", () => {
     vi.mocked(getScraperRunResults).mockResolvedValue({
       status: "SUCCEEDED",
       dataset_id: "d1",
-      data: [{ url: "https://x.com/a/status/1" }],
+      data: [{ url: "https://x.com/a/status/1", likesCount: 4, internalField: "hidden" }],
     });
     const result = await handler({ runId: "r1" }, extra("acct"));
     expect(getScraperRunResults).toHaveBeenCalledWith("r1");
     expect(text(result)).toEqual({
       status: "SUCCEEDED",
-      dataset_id: "d1",
-      data: [{ url: "https://x.com/a/status/1" }],
+      data: [{ url: "https://x.com/a/status/1", likesCount: 4 }],
+    });
+  });
+
+  it("keeps platform links and counts without provider metadata or arbitrary URLs", async () => {
+    vi.mocked(getScraperRunResults).mockResolvedValue({
+      status: "SUCCEEDED",
+      dataset_id: "internal",
+      data: [
+        {
+          url: "https://www.youtube.com/watch?v=video-1&secret=private",
+          profileUrl: "https://example.com/private",
+          aboutChannelInfo: { numberOfSubscribers: 42, channelLocation: "omitted" },
+          latestPosts: [
+            { url: "https://www.instagram.com/p/post/", likesCount: 3, caption: "omitted" },
+          ],
+        },
+      ],
+    });
+    expect(text(await handler({ runId: "r1" }, extra("acct")))).toEqual({
+      status: "SUCCEEDED",
+      data: [
+        {
+          url: "https://www.youtube.com/watch?v=video-1",
+          aboutChannelInfo: { numberOfSubscribers: 42 },
+          latestPosts: [{ url: "https://www.instagram.com/p/post/", likesCount: 3 }],
+        },
+      ],
     });
   });
 
   it("reports a still-running run without data", async () => {
     vi.mocked(getScraperRunResults).mockResolvedValue({ status: "RUNNING", dataset_id: "d1" });
     const result = await handler({ runId: "r1" }, extra("acct"));
-    expect(text(result)).toEqual({ status: "RUNNING", dataset_id: "d1" });
+    expect(text(result)).toEqual({ status: "RUNNING" });
+  });
+
+  it.each([
+    { rows: [] },
+    { rows: [{ account_id: "other", origin: "artist", batch_id: "batch" }] },
+    { rows: [{ account_id: "acct", origin: "fan", batch_id: "batch" }] },
+    { rows: [{ account_id: "acct", origin: "artist", batch_id: null }] },
+  ])("denies runs outside the account's artist refreshes (%j)", async ({ rows }) => {
+    vi.mocked(selectApifyScraperRun).mockResolvedValue(rows as never);
+    const result = await handler({ runId: "r1" }, extra("acct"));
+    expect(text(result)).toMatchObject({ success: false });
+    expect(getScraperRunResults).not.toHaveBeenCalled();
   });
 
   it("requires authentication", async () => {

@@ -7,9 +7,17 @@ import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
 import { getToolResultError } from "@/lib/mcp/getToolResultError";
 import { artistSocialsScrapeBodySchema } from "@/lib/artist/validateArtistSocialsScrapeBody";
+import { executeQuotedSocialRefresh } from "./executeQuotedSocialRefresh";
 import { runArtistSocialsScrape } from "@/lib/artist/runArtistSocialsScrape";
 
 const scrapeArtistSocialsSchema = artistSocialsScrapeBodySchema.extend({
+  approved_quote: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      "Omit to preview the maximum charge. Pass the returned quote only after the user explicitly approves that amount.",
+    ),
   artist_account_id: artistSocialsScrapeBodySchema.shape.artist_account_id.describe(
     "The artist account ID whose linked social profiles should be scraped.",
   ),
@@ -21,20 +29,17 @@ const scrapeArtistSocialsSchema = artistSocialsScrapeBodySchema.extend({
 type ScrapeArtistSocialsArgs = z.infer<typeof scrapeArtistSocialsSchema>;
 
 /**
- * Registers the "scrape_artist_socials" tool, the MCP counterpart of
- * `POST /api/artist/socials/scrape`. Starts a fresh scrape of every social
- * profile linked to the artist and returns one Apify run per profile; read
- * each run with `get_scraper_results`. Costs credits per profile started.
- *
- * @param server - The MCP server instance to register the tool on.
+ * Register the two-step MCP social refresh. Use get_scraper_results to read the returned runs.
  */
 export function registerScrapeArtistSocialsTool(server: McpServer): void {
   server.registerTool(
     "scrape_artist_socials",
     {
+      title: "Refresh Artist Social Profiles",
       description:
-        "Start a fresh scrape of every social profile linked to an artist (profile stats and recent posts), costing $0.05 per profile plus $0.01 per requested post. Returns one run per profile; pass each runId to get_scraper_results to check status and read the scraped data. Scraped posts are also saved and can be listed later with get_artist_posts.",
+        "Refresh public profile stats and recent posts for an artist you can access. The first call quotes the maximum at $0.05 per profile plus $0.01 per requested post. After explicit approval, pass the quote to start the refresh and receive run IDs; Recoup saves collected posts and charges only for profiles whose jobs start.",
       inputSchema: scrapeArtistSocialsSchema,
+      annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
     },
     async (
       args: ScrapeArtistSocialsArgs,
@@ -52,7 +57,28 @@ export function registerScrapeArtistSocialsTool(server: McpServer): void {
           accountId,
           artistAccountId: args.artist_account_id,
           posts: args.posts,
+          execute: params =>
+            executeQuotedSocialRefresh(params, args.artist_account_id, args.approved_quote),
         });
+        if (result.kind === "quote") {
+          return getToolResultSuccess({
+            success: true,
+            approval_required: true,
+            quote: result.token,
+            expires_at: new Date(result.expiresAt).toISOString(),
+            profile_count: result.profileCount,
+            maximum_credits: result.maximumCredits,
+            maximum_usd: result.maximumUsd,
+          });
+        }
+        if (result.kind === "invalid_quote") {
+          return getToolResultError("This quote expired, was already used, or its scope changed.");
+        }
+        if (result.kind === "busy") {
+          return getToolResultError(
+            "A social refresh is being started for this account. Wait for it to finish before retrying this quote.",
+          );
+        }
         if (result.kind === "forbidden") {
           return getToolResultError("Access denied to specified artist_account_id");
         }

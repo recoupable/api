@@ -37,8 +37,9 @@ export function registerGetArtistPostsTool(server: McpServer): void {
   server.registerTool(
     "get_artist_posts",
     {
+      title: "List Saved Artist Social Posts",
       description:
-        "List an artist's saved social posts across all linked socials, most recently updated first, with post URL, views, likes, comments and reposts. Posts are saved by scrapes; run scrape_artist_socials first for the latest posts.",
+        "List saved public post URLs and engagement counts for an artist your connected Recoup account can access. Results are ordered by most recently updated and read from previously collected data.",
       inputSchema: getArtistPostsSchema,
     },
     async (
