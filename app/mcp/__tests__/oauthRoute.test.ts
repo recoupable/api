@@ -186,6 +186,14 @@ it("advertises native skills and serves their manifests and files through authen
   expect(listing.result.cacheScope).toBe("private");
   expect(listing.result.skills.map((skill: { uri: string }) => skill.uri)).toEqual([publicSkill]);
 
+  vi.stubEnv("OAUTH_ISSUER", "");
+  vi.stubEnv("OAUTH_INDEX_KEY", "");
+  const legacyCredential = await (
+    await POST(modernRequest("tools/call", { name: "recoup_skills", arguments: {} }))
+  ).json();
+  expect(legacyCredential.result.isError).toBeFalsy();
+  expect(legacyCredential.result.content[0].text).toContain("recoup-public-test");
+
   const lookup = await (await POST(modernRequest("skills/get", { uri: publicSkill }))).json();
   expect(lookup.result.skill).toEqual(listing.result.skills[0]);
   const uri = "skill://recoup-public-test/references/checklist.md";
@@ -416,6 +424,11 @@ it("uses the signed-in identity for native skills and the ChatGPT tool on the sa
     expect(native.result.skills.map((skill: { uri: string }) => skill.uri).sort()).toEqual(
       [staffSkill, publicSkill].sort(),
     );
+
+    checkFullOAuthRateLimit.mockRejectedValueOnce(
+      new Error("Tool rate limit reached; retry in 6 seconds"),
+    );
+    expect((await POST(modernRequest("skills/list"))).status).toBe(500);
 
     getVerifiedPrivyEmails.mockResolvedValue([]);
     expect((await tool({ skill: "recoup-internal-test" })).isError).toBe(true);

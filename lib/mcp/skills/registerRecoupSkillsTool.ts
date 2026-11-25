@@ -1,10 +1,10 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
 import type { McpAuthInfo } from "../verifyApiKey";
 import { getRecoupSkills } from "./getRecoupSkills";
 import { readRecoupSkillFile } from "./readRecoupSkillFile";
 import { resolveRecoupSkillsAudience } from "./resolveRecoupSkillsAudience";
+import { recoupSkillsToolSchema } from "./recoupSkillsToolSchema";
 
 const pageSize = 25;
 const unavailable: CallToolResult = {
@@ -20,40 +20,12 @@ export function registerRecoupSkillsTool(server: McpServer) {
       title: "Recoup Skills",
       description:
         "Find and load Recoup workflows available to the connected account. Search by topic or list the catalog, then pass a matching skill name to load its instructions before running the workflow. Use file to load a supporting file referenced by those instructions.",
-      inputSchema: z
-        .object({
-          query: z
-            .string()
-            .trim()
-            .max(200)
-            .optional()
-            .describe("Topic or words to find in skill names and descriptions"),
-          offset: z.number().int().min(0).optional().describe("Next offset from a previous search"),
-          skill: z
-            .string()
-            .regex(/^[a-z0-9-]{1,64}$/)
-            .optional()
-            .describe("Exact skill name to load"),
-          file: z
-            .string()
-            .min(1)
-            .max(1024)
-            .optional()
-            .describe(
-              "Skill-relative supporting file. Defaults to SKILL.md when a skill is selected",
-            ),
-        })
-        .strict()
-        .refine(
-          ({ file, offset, query, skill }) =>
-            skill ? query === undefined && offset === undefined : file === undefined,
-          "Provide a skill and optional file, or list skills with an optional query and offset.",
-        ),
+      inputSchema: recoupSkillsToolSchema,
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ query, offset = 0, skill, file = "SKILL.md" }, extra): Promise<CallToolResult> => {
       const authInfo = extra.authInfo as McpAuthInfo | undefined;
-      const audience = await resolveRecoupSkillsAudience(authInfo, true).catch((error: unknown) => {
+      const audience = await resolveRecoupSkillsAudience(authInfo).catch((error: unknown) => {
         if (
           error instanceof Error &&
           /^Tool rate limit reached; retry in \d+ seconds$/.test(error.message)
