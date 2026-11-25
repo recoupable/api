@@ -1,7 +1,8 @@
 # Recoup Skills over MCP
 
 Use the Recoup connector at `https://api.recoupable.dev/mcp` and sign in to
-Recoup. Every signed-in account can use customer-facing skills. The connector
+Recoup. Signed-in accounts using the standard connector grant can use
+customer-facing skills. The connector
 also makes internal skills available to Recoup organization members, accounts
 with a staff skills grant, and OAuth users whose Recoup sign-in identity has a
 currently verified `@recoupable.com` email. These grants apply to skill

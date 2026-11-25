@@ -354,6 +354,9 @@ it("grants staff skills to the exact configured account without requiring organi
   expect((await staffPOST(request())).status).toBe(403);
 });
 
+const checkFullOAuthRateLimit = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+vi.mock("@/lib/mcp/oauth/checkFullOAuthRateLimit", () => ({ checkFullOAuthRateLimit }));
+
 const getVerifiedPrivyEmails = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/privy/getVerifiedPrivyEmails", () => ({ getVerifiedPrivyEmails }));
 
@@ -382,6 +385,16 @@ it("uses the signed-in identity for native skills and the ChatGPT tool on the sa
     expect(JSON.stringify(publicList)).toContain("recoup-public-test");
     expect(JSON.stringify(publicList)).not.toContain("recoup-internal-test");
     expect((await tool({ skill: "recoup-internal-test" })).isError).toBe(true);
+    expect((await tool({ file: "SKILL.md" })).isError).toBe(true);
+    expect((await tool({ skill: "recoup-public-test", query: "something" })).isError).toBe(true);
+    expect(checkFullOAuthRateLimit).toHaveBeenCalledWith("recoup_skills", access.accountId);
+
+    checkFullOAuthRateLimit.mockRejectedValueOnce(
+      new Error("Tool rate limit reached; retry in 6 seconds"),
+    );
+    const throttled = await tool({});
+    expect(throttled.isError).toBe(true);
+    expect(JSON.stringify(throttled)).toContain("retry in 6 seconds");
 
     getVerifiedPrivyEmails.mockResolvedValue(["staff@recoupable.com"]);
     const staffList = await tool({});

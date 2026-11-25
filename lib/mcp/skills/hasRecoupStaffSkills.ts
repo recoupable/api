@@ -1,8 +1,10 @@
 import type { McpAuthInfo } from "../verifyApiKey";
 
 /** Staff skills are a read entitlement independent of administrative and write permissions. */
-export async function hasRecoupStaffSkills(auth?: McpAuthInfo): Promise<boolean> {
-  const accountId = auth?.extra.accountId;
+export async function hasRecoupStaffSkills(
+  accountId: string,
+  auth?: McpAuthInfo,
+): Promise<boolean> {
   if (!accountId || auth?.extra.oauth?.selectedContext) return false;
   if (process.env.RECOUP_STAFF_SKILL_ACCOUNT_IDS?.split(",").some(id => id.trim() === accountId))
     return true;

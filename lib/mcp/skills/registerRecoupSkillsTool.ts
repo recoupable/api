@@ -2,8 +2,9 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { McpAuthInfo } from "../verifyApiKey";
-import { getRecoupSkills, readRecoupSkillFile } from "./getRecoupSkills";
-import { hasRecoupStaffSkills } from "./hasRecoupStaffSkills";
+import { getRecoupSkills } from "./getRecoupSkills";
+import { readRecoupSkillFile } from "./readRecoupSkillFile";
+import { resolveRecoupSkillsAudience } from "./resolveRecoupSkillsAudience";
 
 const pageSize = 25;
 const unavailable: CallToolResult = {
@@ -42,13 +43,26 @@ export function registerRecoupSkillsTool(server: McpServer) {
               "Skill-relative supporting file. Defaults to SKILL.md when a skill is selected",
             ),
         })
-        .strict(),
+        .strict()
+        .refine(
+          ({ file, offset, query, skill }) =>
+            skill ? query === undefined && offset === undefined : file === undefined,
+          "Provide a skill and optional file, or list skills with an optional query and offset.",
+        ),
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
     async ({ query, offset = 0, skill, file = "SKILL.md" }, extra): Promise<CallToolResult> => {
-      const auth = extra.authInfo as McpAuthInfo | undefined;
-      if (!auth?.extra.accountId || auth.extra.oauth?.selectedContext) return unavailable;
-      const catalog = await getRecoupSkills((await hasRecoupStaffSkills(auth)) ? "all" : "public");
+      const authInfo = extra.authInfo as McpAuthInfo | undefined;
+      const audience = await resolveRecoupSkillsAudience(authInfo, true).catch((error: unknown) => {
+        if (
+          error instanceof Error &&
+          /^Tool rate limit reached; retry in \d+ seconds$/.test(error.message)
+        )
+          throw error;
+        return undefined;
+      });
+      if (!audience) return unavailable;
+      const catalog = await getRecoupSkills(audience);
       if (!skill) {
         const terms = query?.toLowerCase().split(/\s+/).filter(Boolean) ?? [];
         const matches = catalog.entries
