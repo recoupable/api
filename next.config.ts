@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   env: {
     RESOURCE_WALLET_ADDRESS: process.env.RESOURCE_WALLET_ADDRESS,
   },
+  outputFileTracingIncludes: {
+    "/mcp": ["./.mcp-skills/generated/**/*"],
+  },
   experimental: {
     optimizePackageImports: ["date-fns", "@ai-sdk/anthropic", "@ai-sdk/openai", "@ai-sdk/google"],
   },

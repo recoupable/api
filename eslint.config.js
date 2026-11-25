@@ -41,6 +41,7 @@ export default [
       "dist/**",
       "node_modules/**",
       ".next/**",
+      ".mcp-skills/**",
       "next-env.d.ts",
       "lib/mcp/extension/generated-ui.ts",
       "ui/recoup/host.js",
