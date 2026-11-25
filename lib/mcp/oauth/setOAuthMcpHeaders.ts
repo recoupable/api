@@ -9,7 +9,7 @@ export function setOAuthMcpHeaders(
   response.headers.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   response.headers.set(
     "Access-Control-Allow-Headers",
-    "Authorization, Content-Type, MCP-Protocol-Version, MCP-Session-Id, Last-Event-ID",
+    "Authorization, Content-Type, MCP-Protocol-Version, MCP-Session-Id, Last-Event-ID, Mcp-Method, Mcp-Name",
   );
   response.headers.set("Access-Control-Expose-Headers", "WWW-Authenticate, MCP-Session-Id");
   response.headers.set("Cache-Control", "no-store");
@@ -18,7 +18,7 @@ export function setOAuthMcpHeaders(
     const metadata = getOAuthResourceMetadata(issuer);
     response.headers.set(
       "WWW-Authenticate",
-      `Bearer resource_metadata="${new URL(metadata.resource).origin}/.well-known/oauth-protected-resource/mcp", scope="${metadata.scopes_supported.join(" ")}"`,
+      `Bearer resource_metadata="${new URL(metadata.resource).origin}/.well-known/oauth-protected-resource/mcp", scope="${(requiredScopes.length ? requiredScopes : metadata.scopes_supported).join(" ")}"`,
     );
   }
   if (

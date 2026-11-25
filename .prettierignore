@@ -6,6 +6,7 @@ coverage/
 src/client
 **/**/*.json
 *.md
+.mcp-skills/
 lib/mcp/extension/generated-ui.ts
 ui/recoup/preview.html
 ui/recoup/host.html

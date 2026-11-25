@@ -5,6 +5,8 @@ import { createFullOAuthToolServices } from "@/lib/mcp/oauth/createFullOAuthTool
 import { getLimitedOAuthRequestScopes } from "@/lib/mcp/oauth/getLimitedOAuthRequestScopes";
 import { setOAuthMcpHeaders } from "@/lib/mcp/oauth/setOAuthMcpHeaders";
 import { registerAllTools } from "@/lib/mcp/tools";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { createModernRecoupHandler } from "@/lib/mcp/skills/createModernRecoupHandler";
 import { createMcpHandler, withMcpAuth } from "mcp-handler";
 import { verifyBearerToken } from "@/lib/mcp/verifyApiKey";
 import { registerOAuthTools } from "@/lib/mcp/oauth/registerOAuthTools";
@@ -16,34 +18,33 @@ import { verifyOAuthBearer } from "@/lib/oauth/verifyOAuthBearer";
 // another in one model batch) can take several minutes, matching their HTTP routes.
 export const maxDuration = 800;
 
-const baseHandler = createMcpHandler(
-  server => {
-    registerAllTools(server);
-    registerRecoupExtension(server);
-  },
-  {
-    serverInfo: createRecoupServerInfo("0.0.1"),
-  },
-);
+function createRecoupHandlers(
+  register: (server: McpServer) => void,
+  version: string,
+  withSkills = true,
+) {
+  return {
+    legacy: createMcpHandler(register, { serverInfo: createRecoupServerInfo(version) }),
+    modern: createModernRecoupHandler(register, version, withSkills),
+  };
+}
 
-// Wrap with auth - Privy JWT or API key required for all MCP requests
-const oauthHandler = createMcpHandler(
-  server => {
-    registerOAuthTools(server, createOAuthToolServices(), verifyOAuthBearer);
-    registerRecoupExtension(server);
-  },
-  { serverInfo: createRecoupServerInfo("0.1.0") },
-);
+const baseHandler = createRecoupHandlers(server => {
+  registerAllTools(server);
+  registerRecoupExtension(server);
+}, "0.0.1");
 
-const fullOAuthHandler = createMcpHandler(
-  server => {
-    registerFullOAuthTools(server, verifyOAuthBearer, createFullOAuthToolServices());
-    registerRecoupExtension(server);
-  },
-  { serverInfo: createRecoupServerInfo("0.2.0") },
-);
+const oauthHandler = createRecoupHandlers(server => {
+  registerOAuthTools(server, createOAuthToolServices(), verifyOAuthBearer);
+  registerRecoupExtension(server);
+}, "0.1.0");
 
-const selectedContextHandler = createMcpHandler(
+const fullOAuthHandler = createRecoupHandlers(server => {
+  registerFullOAuthTools(server, verifyOAuthBearer, createFullOAuthToolServices());
+  registerRecoupExtension(server);
+}, "0.2.0");
+
+const selectedContextHandler = createRecoupHandlers(
   server =>
     registerFullOAuthTools(
       server,
@@ -51,26 +52,31 @@ const selectedContextHandler = createMcpHandler(
       createFullOAuthToolServices(),
       "selected_context",
     ),
-  { serverInfo: createRecoupServerInfo("0.3.0") },
+  "0.3.0",
+  false,
 );
 
 async function handler(req: Request) {
   const bearer = /^Bearer +([^\s]+)$/i.exec(req.headers.get("authorization") ?? "")?.[1];
   const auth = await verifyBearerToken(req, bearer);
+  const modern =
+    req.headers.has("Mcp-Method") ||
+    (req.headers.get("MCP-Protocol-Version") ?? "") >= "2026-07-28";
   const parsed = auth ? await validateMcpJsonBody(req) : { body: undefined };
-  if (parsed instanceof Response) return setOAuthMcpHeaders(parsed);
+  if (parsed instanceof Response && !modern) return setOAuthMcpHeaders(parsed);
   const requiredScopes =
-    auth?.extra.oauth && !auth.scopes.includes("mcp:tools")
+    auth?.extra.oauth && !auth.scopes.includes("mcp:tools") && !(parsed instanceof Response)
       ? getLimitedOAuthRequestScopes(parsed.body)
       : [];
+  const handlers = auth?.extra.oauth
+    ? auth.scopes.includes("mcp:tools")
+      ? auth.extra.oauth.selectedContext
+        ? selectedContextHandler
+        : fullOAuthHandler
+      : oauthHandler
+    : baseHandler;
   const response = await withMcpAuth(
-    auth?.extra.oauth
-      ? auth.scopes.includes("mcp:tools")
-        ? auth.extra.oauth.selectedContext
-          ? selectedContextHandler
-          : fullOAuthHandler
-        : oauthHandler
-      : baseHandler,
+    modern ? request => handlers.modern.fetch(request, { authInfo: auth }) : handlers.legacy,
     async () => auth,
     {
       required: true,

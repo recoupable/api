@@ -4,6 +4,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { POST } from "../route";
+import { POST as staffPOST } from "../staff/route";
 const { access, verify, createArtist } = vi.hoisted(() => ({
   access: {
     accountId: "alice",
@@ -111,3 +112,243 @@ it.each([false, true])(
 );
 
 vi.mock("@/lib/organizations/canAccessAccount", () => ({ canAccessAccount: vi.fn() }));
+
+const publicSkill = "skill://recoup-public-test/SKILL.md";
+const staffSkill = "skill://recoup-internal-test/SKILL.md";
+
+vi.mock("@modelcontextprotocol/server/ext/skills/node", async () => {
+  const { memorySkillFiles } = await import("@modelcontextprotocol/server/ext/skills");
+  const skill = (name: string) => `---\nname: ${name}\ndescription: Fixture skill\n---\nTest.\n`;
+  return {
+    nodeSkillFiles: () =>
+      memorySkillFiles({
+        "recoup-public-test/SKILL.md": skill("recoup-public-test"),
+        "recoup-public-test/references/checklist.md": "Checklist\n",
+        "recoup-internal-test/SKILL.md": skill("recoup-internal-test"),
+      }),
+  };
+});
+const isRecoupAdmin = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/organizations/isRecoupAdmin", () => ({ isRecoupAdmin }));
+
+function modernRequest(
+  method: string,
+  params: Record<string, unknown> = {},
+  token = "test",
+  url = access.resource,
+) {
+  const name = params.name ?? params.uri;
+  return new Request(url, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      accept: "application/json, text/event-stream",
+      "content-type": "application/json",
+      "MCP-Protocol-Version": "2026-07-28",
+      "Mcp-Method": method,
+      ...(typeof name === "string" && ["resources/read", "tools/call"].includes(method)
+        ? { "Mcp-Name": name }
+        : {}),
+    },
+    body: JSON.stringify({
+      jsonrpc: "2.0",
+      id: 1,
+      method,
+      params: {
+        ...params,
+        _meta: {
+          "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+          "io.modelcontextprotocol/clientCapabilities": {},
+        },
+      },
+    }),
+  });
+}
+
+it("advertises native skills and serves their manifests and files through authenticated MCP", async () => {
+  verify.mockImplementation(async (_request, token) =>
+    token === "test"
+      ? { token, clientId: "client", scopes: ["mcp:tools"], extra: { accountId: "member" } }
+      : undefined,
+  );
+  isRecoupAdmin.mockResolvedValue(false);
+
+  expect((await POST(modernRequest("server/discover", {}, "unknown"))).status).toBe(401);
+  const discovery = await (await POST(modernRequest("server/discover"))).json();
+  expect(discovery.result.capabilities).toMatchObject({
+    resources: {},
+    extensions: { "io.modelcontextprotocol/skills": { directoryRead: true } },
+  });
+  expect(discovery.result.supportedVersions).toContain("2026-07-28");
+
+  const listing = await (await POST(modernRequest("skills/list"))).json();
+  expect(listing.result.cacheScope).toBe("private");
+  expect(listing.result.skills.map((skill: { uri: string }) => skill.uri)).toEqual([publicSkill]);
+
+  const lookup = await (await POST(modernRequest("skills/get", { uri: publicSkill }))).json();
+  expect(lookup.result.skill).toEqual(listing.result.skills[0]);
+  const uri = "skill://recoup-public-test/references/checklist.md";
+  const file = await (await POST(modernRequest("resources/read", { uri }))).json();
+  const readable = Buffer.from(file.result.contents[0].text);
+  const { createHash } = await import("node:crypto");
+  expect(lookup.result.skill.resources).toContainEqual({
+    uri,
+    digest: `sha256:${createHash("sha256").update(readable).digest("hex")}`,
+    size: readable.length,
+  });
+
+  const denied = await (await POST(modernRequest("skills/get", { uri: staffSkill }))).json();
+  expect(denied.error.code).toBe(-32602);
+  const deniedRead = await (
+    await POST(modernRequest("resources/read", { uri: staffSkill }))
+  ).json();
+  expect(deniedRead.error).toBeDefined();
+
+  isRecoupAdmin.mockResolvedValue(true);
+  const staffOnMain = await (await POST(modernRequest("skills/get", { uri: staffSkill }))).json();
+  expect(staffOnMain.error.code).toBe(-32602);
+  expect(isRecoupAdmin).not.toHaveBeenCalled();
+});
+
+it("uses the same full OAuth tool restrictions and account binding on modern MCP", async () => {
+  access.scopes = ["mcp:tools"];
+  verify.mockResolvedValue({
+    token: "test",
+    clientId: access.clientId,
+    scopes: access.scopes,
+    extra: { accountId: access.accountId, oauth: access },
+  });
+  const listing = await (await POST(modernRequest("tools/list"))).json();
+  expect(listing.result.tools.map((tool: { name: string }) => tool.name).sort()).toEqual([
+    "get_tasks",
+    "list_artists",
+    "open_recoup_workflows",
+    "open_recoup_workflows_sidebar",
+  ]);
+  const called = await (
+    await POST(modernRequest("tools/call", { name: "get_tasks", arguments: {} }))
+  ).json();
+  expect(called.result.content[0].text).toContain("alice");
+  const ui = await (
+    await POST(modernRequest("resources/read", { uri: "ui://recoup/explore.html" }))
+  ).json();
+  expect(ui.result.contents[0].mimeType).toBe("text/html;profile=mcp-app");
+});
+
+it("serves public skills to limited OAuth grants without elevating their tool permissions", async () => {
+  access.scopes = ["mcp:read"];
+  verify.mockResolvedValue({
+    token: "test",
+    clientId: access.clientId,
+    scopes: access.scopes,
+    extra: { accountId: access.accountId, oauth: access },
+  });
+  isRecoupAdmin.mockResolvedValue(true);
+  const listing = await (await POST(modernRequest("skills/list"))).json();
+  expect(listing.result.skills.map((skill: { uri: string }) => skill.uri)).toEqual([publicSkill]);
+  expect(isRecoupAdmin).not.toHaveBeenCalled();
+  const write = await POST(
+    modernRequest("tools/call", { name: "create_new_artist", arguments: { name: "Fixture" } }),
+  );
+  expect(write.status).toBe(403);
+  expect(createArtist).not.toHaveBeenCalled();
+});
+
+it("keeps selected Context grants out of skill discovery", async () => {
+  verify.mockResolvedValue({
+    token: "test",
+    clientId: access.clientId,
+    scopes: ["mcp:tools"],
+    extra: { accountId: access.accountId, oauth: { ...access, selectedContext: {} } },
+  });
+  const discovery = await (await POST(modernRequest("server/discover"))).json();
+  expect(discovery.result.capabilities.extensions).toBeUndefined();
+  const direct = await (await POST(modernRequest("skills/get", { uri: publicSkill }))).json();
+  expect(direct.error.code).toBe(-32601);
+});
+
+it("serves only internal skills on the staff connection and rechecks staff access on every read", async () => {
+  verify.mockResolvedValue({
+    token: "test",
+    clientId: access.clientId,
+    scopes: ["mcp:tools"],
+    extra: { accountId: "staff" },
+  });
+  isRecoupAdmin.mockResolvedValue(true);
+  const send = (method: string, params?: Record<string, unknown>) =>
+    staffPOST(modernRequest(method, params, "test", `${access.resource}/staff`));
+
+  const discover = await (await send("server/discover")).json();
+  expect(discover.result._meta["io.modelcontextprotocol/serverInfo"].name).toBe("recoup-staff");
+  expect(discover.result.capabilities.tools).toBeUndefined();
+  const list = await (await send("skills/list")).json();
+  expect(list.result.skills.map((skill: { uri: string }) => skill.uri)).toEqual([staffSkill]);
+  expect(list.result.cacheScope).toBe("private");
+  const lookup = await (await send("skills/get", { uri: staffSkill })).json();
+  expect(lookup.result.skill.uri).toBe(staffSkill);
+  const file = await (await send("resources/read", { uri: staffSkill })).json();
+  expect(file.result.contents[0].text).toContain("name: recoup-internal-test");
+  const elsewhere = await (await send("skills/get", { uri: publicSkill })).json();
+  expect(elsewhere.error.code).toBe(-32602);
+
+  isRecoupAdmin.mockResolvedValue(false);
+  expect((await send("skills/list")).status).toBe(403);
+  expect((await send("skills/get", { uri: staffSkill })).status).toBe(403);
+  expect((await send("resources/read", { uri: staffSkill })).status).toBe(403);
+});
+
+it("challenges the staff connection for full-tools scope at the canonical MCP resource", async () => {
+  vi.stubEnv("OAUTH_ENABLED", "true");
+  vi.stubEnv("OAUTH_ISSUER", "https://api.example/api/oauth");
+  const request = () => modernRequest("server/discover", {}, "test", `${access.resource}/staff`);
+  verify.mockResolvedValue(undefined);
+  const unauthorized = await staffPOST(request());
+  expect(unauthorized.status).toBe(401);
+  expect(unauthorized.headers.get("WWW-Authenticate")).toBe(
+    'Bearer resource_metadata="https://api.example/.well-known/oauth-protected-resource/mcp", scope="mcp:tools"',
+  );
+
+  const identity = { token: "test", clientId: access.clientId };
+  verify.mockResolvedValue({
+    ...identity,
+    scopes: ["mcp:read"],
+    extra: { accountId: "staff", oauth: access },
+  });
+  const limited = await staffPOST(request());
+  expect(limited.status).toBe(403);
+  expect(limited.headers.get("WWW-Authenticate")).toContain('scope="mcp:tools"');
+
+  verify.mockResolvedValue({
+    ...identity,
+    scopes: ["mcp:tools"],
+    extra: { accountId: "staff", oauth: { ...access, selectedContext: {} } },
+  });
+  expect((await staffPOST(request())).status).toBe(403);
+  expect(isRecoupAdmin).not.toHaveBeenCalled();
+});
+
+it("grants staff skills to the exact configured account without requiring organization membership", async () => {
+  const grantedAccount = "ef19d455-2c61-4051-a38e-bc2500b1c880";
+  vi.stubEnv("RECOUP_STAFF_SKILL_ACCOUNT_IDS", ` ${grantedAccount} ,`);
+  isRecoupAdmin.mockResolvedValue(false);
+  const request = () => modernRequest("skills/list", {}, "test", `${access.resource}/staff`);
+  const auth = { token: "test", clientId: access.clientId, scopes: ["mcp:tools"] };
+  verify.mockResolvedValue({ ...auth, extra: { accountId: grantedAccount } });
+  const granted = await staffPOST(request());
+  expect(granted.status).toBe(200);
+  expect(isRecoupAdmin).not.toHaveBeenCalled();
+
+  verify.mockResolvedValue({ ...auth, extra: { accountId: grantedAccount.slice(0, -1) } });
+  expect((await staffPOST(request())).status).toBe(403);
+
+  verify.mockResolvedValue({
+    ...auth,
+    scopes: ["mcp:read"],
+    extra: { accountId: grantedAccount },
+  });
+  expect((await staffPOST(request())).status).toBe(403);
+
+  vi.stubEnv("RECOUP_STAFF_SKILL_ACCOUNT_IDS", "");
+  verify.mockResolvedValue({ ...auth, extra: { accountId: grantedAccount } });
+  expect((await staffPOST(request())).status).toBe(403);
+});
