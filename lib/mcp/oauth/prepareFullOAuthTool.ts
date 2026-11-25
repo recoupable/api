@@ -39,14 +39,11 @@ export async function prepareFullOAuthTool(
     );
     if (organizationIds.some(id => !accessible.has(id))) throw new Error("Workspace access denied");
   }
-  if (name === "select_catalog_songs" || name === "insert_catalog_songs") {
-    const ids =
-      name === "select_catalog_songs"
-        ? [z.string().parse(args.catalog_id)]
-        : z
-            .array(z.object({ catalog_id: z.string() }))
-            .parse(args.songs)
-            .map(song => song.catalog_id);
+  if (name === "insert_catalog_songs") {
+    const ids = z
+      .array(z.object({ catalog_id: z.string() }))
+      .parse(args.songs)
+      .map(song => song.catalog_id);
     const catalogs = await selectAccountCatalogs(await getCatalogOwnerIds(accountId), {
       catalogIds: ids,
     });

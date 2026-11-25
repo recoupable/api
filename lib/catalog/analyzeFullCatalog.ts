@@ -3,10 +3,12 @@ import { type CatalogSongWithArtists } from "@/lib/supabase/catalog_songs/select
 import { refineResults } from "./refineResults";
 
 const BATCH_SIZE = 100;
+const MAX_PAGES_PER_SEARCH = 10;
 
 export interface AnalyzeFullCatalogOptions {
   catalogId: string;
   criteria: string;
+  startPage?: number;
 }
 
 /**
@@ -21,20 +23,27 @@ export interface AnalyzeFullCatalogOptions {
 export async function analyzeFullCatalog({
   catalogId,
   criteria,
+  startPage = 1,
 }: AnalyzeFullCatalogOptions): Promise<{
   results: CatalogSongWithArtists[];
   totalSongs: number;
   totalPages: number;
+  nextPage?: number;
 }> {
   // Fetch first page to get total count
-  const firstPage = await selectCatalogSongsWithArtists({ catalogId, limit: BATCH_SIZE, page: 1 });
+  const firstPage = await selectCatalogSongsWithArtists({
+    catalogId,
+    limit: BATCH_SIZE,
+    page: startPage,
+  });
   const totalPages = Math.ceil(firstPage.total_count / BATCH_SIZE);
   const totalSongs = firstPage.total_count;
 
-  // Fetch all pages in parallel
-  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
+  // Fetch one bounded window of pages in parallel
+  const pageCount = Math.max(0, Math.min(MAX_PAGES_PER_SEARCH, totalPages - startPage + 1));
+  const pageNumbers = Array.from({ length: pageCount }, (_, i) => i + startPage);
   const pagePromises = pageNumbers.map(async pageNum =>
-    pageNum === 1
+    pageNum === startPage
       ? firstPage.songs
       : (await selectCatalogSongsWithArtists({ catalogId, page: pageNum, limit: BATCH_SIZE }))
           .songs,
@@ -50,5 +59,6 @@ export async function analyzeFullCatalog({
     results,
     totalSongs,
     totalPages,
+    ...(startPage + pageCount <= totalPages ? { nextPage: startPage + pageCount } : {}),
   };
 }

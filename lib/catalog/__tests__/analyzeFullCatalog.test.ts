@@ -65,36 +65,37 @@ describe("analyzeFullCatalog filtering", () => {
     }
   });
 
+  it("limits each search to ten pages and continues from the returned page", async () => {
+    const songs = catalog(1001);
+    select([songs[1000].isrc]);
+    const first = await analyzeFullCatalog({ ...options, startPage: 1 });
+    expect(first).toMatchObject({ results: [], totalSongs: 1001, totalPages: 11, nextPage: 11 });
+    expect(generateObject).toHaveBeenCalledTimes(10);
+    const last = await analyzeFullCatalog({
+      ...options,
+      startPage: first.nextPage,
+    });
+    expect(last.results).toEqual([songs[1000]]);
+    expect(last.nextPage).toBeUndefined();
+    expect(generateObject).toHaveBeenCalledTimes(11);
+  });
+
   it("returns no results when no songs match", async () => {
     catalog(5);
     select([]);
     expect((await analyzeFullCatalog(options)).results).toEqual([]);
   });
 
-  it("filters before limiting, so a match on the last page is retained", async () => {
+  it("returns the bounded matching window in catalog order", async () => {
     const songs = catalog(1001);
-    select([songs[1000].isrc]);
-    expect((await analyzeFullCatalog(options)).results).toEqual([songs[1000]]);
-    expect(generateObject).toHaveBeenCalledTimes(11);
-  });
-
-  it("caps all-matching results without reprocessing batches", async () => {
-    const songs = catalog(1001);
-    const isrcs = songs.map(song => song.isrc);
-    let calls = 0;
-    vi.mocked(generateObject).mockImplementation(async () => {
-      // Fail quickly on the old recursion instead of hanging the test runner.
-      if (++calls > 11) throw new Error("Catalog was analyzed more than once");
-      return { object: { selected_song_isrcs: isrcs } } as Awaited<
-        ReturnType<typeof generateObject>
-      >;
-    });
+    select(songs.map(song => song.isrc));
     expect(await analyzeFullCatalog(options)).toEqual({
       results: songs.slice(0, 1000),
       totalSongs: 1001,
       totalPages: 11,
+      nextPage: 11,
     });
-    expect(generateObject).toHaveBeenCalledTimes(11);
+    expect(generateObject).toHaveBeenCalledTimes(10);
   });
 
   it("ignores invented identifiers and duplicate model selections", async () => {

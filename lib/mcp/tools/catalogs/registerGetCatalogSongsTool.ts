@@ -1,10 +1,26 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { z } from "zod";
+import { resolveAccountId } from "@/lib/mcp/resolveAccountId";
+import type { McpAuthInfo } from "@/lib/mcp/verifyApiKey";
+import { getToolResultError } from "@/lib/mcp/getToolResultError";
+import { getCatalogOwnerIds } from "@/lib/catalog/getCatalogOwnerIds";
+import { selectAccountCatalogs } from "@/lib/supabase/account_catalogs/selectAccountCatalogs";
 import { analyzeFullCatalog } from "@/lib/catalog/analyzeFullCatalog";
-import {
-  getCatalogSongsQuerySchema,
-  type GetCatalogSongsQuery,
-} from "@/lib/catalog/validateGetCatalogSongsQuery";
+import { getCatalogSongsQuerySchema } from "@/lib/catalog/validateGetCatalogSongsQuery";
 import { getToolResultSuccess } from "@/lib/mcp/getToolResultSuccess";
+
+const catalogSearchSchema = getCatalogSongsQuerySchema.extend({
+  criteria: getCatalogSongsQuerySchema.shape.criteria.max(2000),
+  start_page: z
+    .number()
+    .int()
+    .positive()
+    .max(10_000_000)
+    .optional()
+    .describe(
+      "Start at page 1 or use nextPage returned by the previous search. Each page covers up to 100 tracks.",
+    ),
+});
 
 /**
  * Registers the "select_catalog_songs" tool on the MCP server.
@@ -16,19 +32,27 @@ export function registerGetCatalogSongsTool(server: McpServer): void {
   server.registerTool(
     "select_catalog_songs",
     {
-      description: `Find catalog candidates matching your criteria through AI batch analysis. Get catalog_id from select_catalogs.
-
-For a nonempty catalog, sends ISRCs, song names, artist names, and your criteria to an AI provider in batches of up to 100 songs per model call. All batches are analyzed before the 1,000-match output cap; results preserve catalog order, not relevance rank. Empty catalogs return without model analysis.
-
-Read-only does not mean free. Repeated calls can repeat provider work and cost; billing idempotency is not established. Charges, approval requirements, spending ceilings, and retry handling remain unmeasured or unapproved for this operation. This description does not authorize spending or use of a song.
-
-Catalog presence does not establish licensing clearance or permission for a proposed use.`,
-      inputSchema: getCatalogSongsQuerySchema,
+      title: "Find Matching Catalog Tracks",
+      description:
+        "Find tracks that match a brief in a catalog your connected Recoup account can access. Recoup sends track titles, artist names, ISRCs, and your brief to an AI provider and analyzes up to 1,000 tracks per call without deducting Recoup credits. Results follow catalog order. Use nextPage to continue a larger catalog. A match does not establish licensing clearance.",
+      inputSchema: catalogSearchSchema,
     },
-    async (args: GetCatalogSongsQuery) => {
+    async (args, extra) => {
+      const { accountId, error } = await resolveAccountId({
+        authInfo: extra.authInfo as McpAuthInfo | undefined,
+        accountIdOverride: undefined,
+      });
+      if (!accountId) return getToolResultError(error ?? "Authentication required.");
+      const catalogs = await selectAccountCatalogs(await getCatalogOwnerIds(accountId), {
+        catalogIds: [args.catalog_id],
+      });
+      if (!catalogs.some(catalog => catalog.id === args.catalog_id)) {
+        return getToolResultError("Catalog access denied.");
+      }
       const response = await analyzeFullCatalog({
         catalogId: args.catalog_id,
         criteria: args.criteria,
+        startPage: args.start_page ?? 1,
       });
 
       return getToolResultSuccess(response);
