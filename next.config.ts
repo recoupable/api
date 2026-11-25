@@ -9,6 +9,7 @@ const nextConfig: NextConfig = {
   },
   outputFileTracingIncludes: {
     "/mcp": ["./.mcp-skills/generated/**/*"],
+    "/mcp/staff": ["./.mcp-skills/generated/**/*"],
   },
   experimental: {
     optimizePackageImports: ["date-fns", "@ai-sdk/anthropic", "@ai-sdk/openai", "@ai-sdk/google"],

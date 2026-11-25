@@ -18,7 +18,7 @@ export function createModernRecoupHandler(
   withSkills = true,
 ) {
   return createMcpHandler(
-    async ({ authInfo, requestInfo }) => {
+    async ({ authInfo }) => {
       const auth = authInfo as McpAuthInfo | undefined;
       const server = new McpServer(createRecoupServerInfo(version));
 
@@ -55,22 +55,7 @@ export function createModernRecoupHandler(
       };
       register(registration as unknown as LegacyServer);
 
-      if (withSkills) {
-        const method = requestInfo?.headers.get("Mcp-Method");
-        const requestsSkills =
-          method === "skills/list" ||
-          method === "skills/get" ||
-          method === "resources/directory/read" ||
-          (method === "resources/read" &&
-            requestInfo?.headers.get("Mcp-Name") !== "ui://recoup/explore.html");
-        // The token's own permissions and current staff membership both matter.
-        let staff = false;
-        if (requestsSkills && auth?.scopes.includes("mcp:tools")) {
-          const { isRecoupAdmin } = await import("@/lib/organizations/isRecoupAdmin");
-          staff = await isRecoupAdmin(auth.extra.accountId);
-        }
-        (await getRecoupSkills(staff)).attach(server);
-      }
+      if (withSkills) (await getRecoupSkills("public")).attach(server);
       return server;
     },
     { legacy: "reject" },

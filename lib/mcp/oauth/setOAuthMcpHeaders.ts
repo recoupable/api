@@ -18,7 +18,7 @@ export function setOAuthMcpHeaders(
     const metadata = getOAuthResourceMetadata(issuer);
     response.headers.set(
       "WWW-Authenticate",
-      `Bearer resource_metadata="${new URL(metadata.resource).origin}/.well-known/oauth-protected-resource/mcp", scope="${metadata.scopes_supported.join(" ")}"`,
+      `Bearer resource_metadata="${new URL(metadata.resource).origin}/.well-known/oauth-protected-resource/mcp", scope="${(requiredScopes.length ? requiredScopes : metadata.scopes_supported).join(" ")}"`,
     );
   }
   if (

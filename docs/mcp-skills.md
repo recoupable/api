@@ -1,21 +1,26 @@
 # Recoup Skills over MCP
 
-The authenticated `/mcp` endpoint serves the native Skills extension
-(`io.modelcontextprotocol/skills`) to clients using MCP `2026-07-28`.
-Connect Claude to `https://api.recoupable.dev/mcp` and authorize Recoup as usual.
-In compatible Claude Code sessions, use `/skills` or type
-`/recoup:recoup-song-check-credits` if the connection is named `recoup`.
+Recoup serves the native Skills extension (`io.modelcontextprotocol/skills`)
+to clients using MCP `2026-07-28`.
 
-Clients discover the extension with `server/discover`, enumerate skills with
-`skills/list`, and read skill files through `resources/read`. Each manifest
-includes the original frontmatter and byte digests for the skill's files.
-Authenticated customers receive the customer-facing catalog. Recoup staff using
-full MCP tools credentials can also retrieve `recoup-internal-*` skills.
+## Claude Code setup
+
+Connect Recoup for customer-facing skills and tools. Recoup staff can add the
+second connection for internal skills. Authorize Recoup Staff with the full
+tools permission and an account in the Recoup organization.
+
+```sh
+claude mcp add --transport http recoup https://api.recoupable.dev/mcp
+claude mcp add --transport http recoup-staff https://api.recoupable.dev/mcp/staff
+```
+
+Use `/skills` to find skills from both connections. For example, use
+`/recoup:recoup-song-check-credits` or `/recoup-staff:recoup-internal-weekly-usage-review`.
+Existing Recoup connections already use the first endpoint. Recoup Staff serves
+skills and their resources. Recoup serves the tools those skills may need.
 Selected Context grants retain their Context-only surface.
 
-Claude Code displays up to 100 skills per server. Its connector scanning rules
-can also prevent some larger bundles from loading. The server exposes the
-complete authorized catalog through pagination and direct lookup.
+Both catalogs fit within Claude Code's 100-skill limit per connection.
 [Claude Code MCP skill limits](https://code.claude.com/docs/en/mcp#mcp-skill-limitations)
 
 ## Updating the catalog
@@ -23,6 +28,6 @@ complete authorized catalog through pagination and direct lookup.
 The [Skills repository](https://github.com/recoupable/skills) owns the skill
 source and supports the existing install paths. To release a catalog update,
 bump the full Skills commit SHA in `scripts/mcp-skills/build.mjs` and run
-`pnpm build:mcp-skills`. The API build downloads that revision, validates it
-with the official Skills SDK, and packages its files with the MCP route. A
-deployment keeps the same catalog and file digests until the next API release.
+`pnpm build:mcp-skills`. The build validates both catalogs and checks their
+sizes against Claude Code's limit. Each deployment packages the same skill
+definitions and supporting files until the next API release.
