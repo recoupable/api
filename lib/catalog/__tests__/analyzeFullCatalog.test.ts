@@ -80,6 +80,17 @@ describe("analyzeFullCatalog filtering", () => {
     expect(generateObject).toHaveBeenCalledTimes(11);
   });
 
+  it("checks the catalog size before asking for an out-of-range offset", async () => {
+    catalog(1);
+    expect((await analyzeFullCatalog({ ...options, startPage: 10_000_000 })).results).toEqual([]);
+    expect(selectCatalogSongsWithArtists).toHaveBeenCalledExactlyOnceWith({
+      catalogId: "catalog",
+      limit: 100,
+      page: 1,
+    });
+    expect(generateObject).not.toHaveBeenCalled();
+  });
+
   it("returns no results when no songs match", async () => {
     catalog(5);
     select([]);

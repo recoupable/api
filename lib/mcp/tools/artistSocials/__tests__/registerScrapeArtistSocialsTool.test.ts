@@ -6,7 +6,10 @@ import { selectAccountSocials } from "@/lib/supabase/account_socials/selectAccou
 import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
 import { startArtistSocialsScrape } from "@/lib/artist/startArtistSocialsScrape";
 
-import { claimSocialRefreshQuote } from "../claimSocialRefreshQuote";
+const redis = vi.hoisted(() => ({
+  values: new Map<string, { value: string; until: number }>(),
+  eval: vi.fn(),
+}));
 
 vi.mock("@/lib/artists/checkAccountArtistAccess", () => ({ checkAccountArtistAccess: vi.fn() }));
 vi.mock("@/lib/supabase/account_socials/selectAccountSocials", () => ({
@@ -15,7 +18,18 @@ vi.mock("@/lib/supabase/account_socials/selectAccountSocials", () => ({
 vi.mock("@/lib/credits/checkCreditsAvailable", () => ({ checkCreditsAvailable: vi.fn() }));
 vi.mock("@/lib/artist/startArtistSocialsScrape", () => ({ startArtistSocialsScrape: vi.fn() }));
 vi.mock("@/lib/organizations/canAccessAccount", () => ({ canAccessAccount: vi.fn() }));
-vi.mock("../claimSocialRefreshQuote", () => ({ claimSocialRefreshQuote: vi.fn() }));
+vi.mock("ioredis", () => ({
+  Redis: class {
+    on() {}
+    async connect() {}
+    disconnect() {}
+    async set(key: string, value: string, _ex: string, ttl: number) {
+      redis.values.set(key, { value, until: Date.now() + ttl * 1000 });
+      return "OK";
+    }
+    eval = redis.eval;
+  },
+}));
 
 const ARTIST_ID = "660e8400-e29b-41d4-a716-446655440000";
 const SOCIALS = [
@@ -39,8 +53,21 @@ describe("registerScrapeArtistSocialsTool", () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    vi.stubEnv("OAUTH_INDEX_KEY", Buffer.alloc(32, 1).toString("base64"));
-    vi.mocked(claimSocialRefreshQuote).mockResolvedValue(true);
+    vi.stubEnv("OAUTH_INDEX_KEY", undefined);
+    vi.stubEnv("REDIS_URL", "redis://fixture.invalid:6379");
+    redis.values.clear();
+    redis.eval.mockImplementation(async (_script, keys, quoteKey, lockKey, scope, token) => {
+      const entry = redis.values.get(quoteKey);
+      if (keys === 1) {
+        if (entry?.value === lockKey) redis.values.delete(quoteKey);
+        return 1;
+      }
+      if (!entry || entry.until <= Date.now() || entry.value !== scope) return 0;
+      if (redis.values.has(lockKey)) return 1;
+      redis.values.set(lockKey, { value: token, until: Infinity });
+      redis.values.delete(quoteKey);
+      return 2;
+    });
     const server = {
       registerTool: vi.fn((name, c, h) => {
         expect(name).toBe("scrape_artist_socials");
@@ -87,10 +114,7 @@ describe("registerScrapeArtistSocialsTool", () => {
       accountId: "acct",
       creditsToDeduct: 200_000,
     });
-    expect(claimSocialRefreshQuote).toHaveBeenCalledExactlyOnceWith(
-      expect.any(String),
-      expect.any(Number),
-    );
+    expect(redis.eval).toHaveBeenCalledTimes(2);
     expect(startArtistSocialsScrape).toHaveBeenCalledWith({
       accountId: "acct",
       socials: SOCIALS,
@@ -129,15 +153,40 @@ describe("registerScrapeArtistSocialsTool", () => {
     ] as never);
     const result = await handler(approved, extra("acct"));
     expect(text(result).success).toBe(false);
-    expect(claimSocialRefreshQuote).not.toHaveBeenCalled();
+    expect(checkCreditsAvailable).not.toHaveBeenCalled();
     expect(startArtistSocialsScrape).not.toHaveBeenCalled();
   });
 
   it("rejects a replay without starting another provider job", async () => {
     const approved = await quote(5);
-    vi.mocked(claimSocialRefreshQuote).mockResolvedValueOnce(true).mockResolvedValueOnce(false);
     await Promise.all([handler(approved, extra("acct")), handler(approved, extra("acct"))]);
     expect(startArtistSocialsScrape).toHaveBeenCalledOnce();
+  });
+
+  it("serializes separate quotes through the balance check and dispatch", async () => {
+    const first = await quote(5);
+    const second = await quote(5);
+    let finish!: (runs: Awaited<ReturnType<typeof startArtistSocialsScrape>>) => void;
+    let markStarted!: () => void;
+    const started = new Promise<void>(resolve => {
+      markStarted = resolve;
+    });
+    vi.mocked(startArtistSocialsScrape).mockImplementationOnce(() => {
+      markStarted();
+      return new Promise(resolve => {
+        finish = resolve;
+      });
+    });
+    const pending = handler(first, extra("acct"));
+    await started;
+    const busy = await handler(second, extra("acct"));
+    expect(text(busy).message).toContain("being started");
+    expect(checkCreditsAvailable).toHaveBeenCalledOnce();
+    finish([{ runId: "r1", datasetId: null, error: null }]);
+    await pending;
+    const next = await handler(second, extra("acct"));
+    expect(text(next).success).toBe(true);
+    expect(checkCreditsAvailable).toHaveBeenCalledTimes(2);
   });
 
   it("expires an unused quote before spending credits", async () => {

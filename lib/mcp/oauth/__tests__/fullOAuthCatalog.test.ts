@@ -88,7 +88,7 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       get_artist_posts: [true, false, false],
       get_scraper_results: [true, false, false],
       scrape_artist_socials: [false, true, true],
-      select_catalog_songs: [true, false, true],
+      select_catalog_songs: [true, false, false],
       get_tasks: [true, false, false],
       get_youtube_revenue: [true, false, false],
       search_web: [true, false, true],

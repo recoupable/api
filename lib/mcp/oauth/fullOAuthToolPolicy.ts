@@ -58,7 +58,7 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
     notice: "Only caller-owned runs with verifiable ownership can be read.",
   },
   select_catalogs: { readOnly: true, destructive: false, openWorld: false },
-  select_catalog_songs: { readOnly: true, destructive: false, openWorld: true },
+  select_catalog_songs: { readOnly: true, destructive: false, openWorld: false },
   get_youtube_revenue: { readOnly: true, destructive: false, openWorld: false },
   search_google_images: { readOnly: true, destructive: false, openWorld: true },
   search_web: { readOnly: true, destructive: false, openWorld: true },

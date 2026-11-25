@@ -32,10 +32,7 @@ ${JSON.stringify(
   songs.map(s => ({
     isrc: s.isrc,
     name: s.name?.slice(0, 300),
-    artist: s.artists
-      .map(a => a.name)
-      .join(", ")
-      .slice(0, 500),
+    artists: s.artists.slice(0, 20).map(artist => artist.name?.slice(0, 100)),
   })),
   null,
   2,

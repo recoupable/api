@@ -3,8 +3,7 @@ import type { StartArtistSocialsScrapeParams } from "@/lib/artist/startArtistSoc
 import type { RunArtistSocialsScrapeResult } from "@/lib/artist/runArtistSocialsScrape";
 import { creditsToUsd } from "@/lib/credits/creditsToUsd";
 import { checkCreditsAvailable } from "@/lib/credits/checkCreditsAvailable";
-import { claimSocialRefreshQuote } from "./claimSocialRefreshQuote";
-import { createSocialRefreshQuote } from "./createSocialRefreshQuote";
+import { socialRefreshQuoteStore } from "./socialRefreshQuoteStore";
 
 export type QuotedSocialRefreshResult =
   | RunArtistSocialsScrapeResult
@@ -17,7 +16,7 @@ export type QuotedSocialRefreshResult =
       maximumUsd: number;
     }
   | { kind: "invalid_quote" }
-  | { kind: "used_quote" };
+  | { kind: "busy" };
 
 /** Validate the approved maximum and consume the quote before dispatching jobs. */
 export async function executeQuotedSocialRefresh(
@@ -28,33 +27,38 @@ export async function executeQuotedSocialRefresh(
   const { accountId, socials, posts, costPerProfile } = params;
   const profileCount = socials.length;
   const maximumCredits = costPerProfile * profileCount;
-  const quote = createSocialRefreshQuote({
+  const targets = socials
+    .map(({ social }) => JSON.stringify([social?.id, social?.profile_url, social?.username]))
+    .sort();
+  const quote = socialRefreshQuoteStore(
     accountId,
-    artistId,
-    targets: socials
-      .map(({ social }) => JSON.stringify([social?.id, social?.profile_url, social?.username]))
-      .sort(),
-    posts,
-    maximumCredits,
-  });
+    JSON.stringify({ artistId, targets, posts, maximumCredits }),
+  );
 
   if (!approvedQuote) {
     return {
       kind: "quote",
-      ...quote.issue(),
+      ...(await quote.issue()),
       profileCount,
       maximumCredits,
       maximumUsd: creditsToUsd(maximumCredits),
     };
   }
 
-  const claims = quote.verify(approvedQuote);
-  if (!claims) return { kind: "invalid_quote" };
+  const claim = await quote.claim(approvedQuote);
+  if (claim === "invalid") return { kind: "invalid_quote" };
+  if (claim === "busy") return { kind: "busy" };
 
-  const gate = await checkCreditsAvailable({ accountId, creditsToDeduct: maximumCredits });
-  if (gate.kind === "insufficient_credits") return gate;
-  if (!(await claimSocialRefreshQuote(claims.id, claims.expiresAt))) return { kind: "used_quote" };
-
-  const runs = await startArtistSocialsScrape(params);
-  return { kind: "started", runs };
+  try {
+    const gate = await checkCreditsAvailable({ accountId, creditsToDeduct: maximumCredits });
+    if (gate.kind === "insufficient_credits") return gate;
+    const runs = await startArtistSocialsScrape(params);
+    return { kind: "started", runs };
+  } finally {
+    try {
+      await quote.release(approvedQuote);
+    } catch (error) {
+      console.error("[social refresh] could not release execution lock", error);
+    }
+  }
 }

@@ -43,19 +43,24 @@ export function registerGetCatalogSongsTool(server: McpServer): void {
         accountIdOverride: undefined,
       });
       if (!accountId) return getToolResultError(error ?? "Authentication required.");
-      const catalogs = await selectAccountCatalogs(await getCatalogOwnerIds(accountId), {
-        catalogIds: [args.catalog_id],
-      });
-      if (!catalogs.some(catalog => catalog.id === args.catalog_id)) {
-        return getToolResultError("Catalog access denied.");
+      try {
+        const catalogs = await selectAccountCatalogs(await getCatalogOwnerIds(accountId), {
+          catalogIds: [args.catalog_id],
+        });
+        if (!catalogs.some(catalog => catalog.id === args.catalog_id)) {
+          return getToolResultError("Catalog access denied.");
+        }
+        return getToolResultSuccess(
+          await analyzeFullCatalog({
+            catalogId: args.catalog_id,
+            criteria: args.criteria,
+            startPage: args.start_page ?? 1,
+          }),
+        );
+      } catch (error) {
+        console.error("[select_catalog_songs] failed:", error);
+        return getToolResultError("Could not search the catalog.");
       }
-      const response = await analyzeFullCatalog({
-        catalogId: args.catalog_id,
-        criteria: args.criteria,
-        startPage: args.start_page ?? 1,
-      });
-
-      return getToolResultSuccess(response);
     },
   );
 }

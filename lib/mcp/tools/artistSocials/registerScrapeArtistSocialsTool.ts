@@ -13,8 +13,7 @@ import { runArtistSocialsScrape } from "@/lib/artist/runArtistSocialsScrape";
 const scrapeArtistSocialsSchema = artistSocialsScrapeBodySchema.extend({
   approved_quote: z
     .string()
-    .min(1)
-    .max(256)
+    .uuid()
     .optional()
     .describe(
       "Omit to preview the maximum charge. Pass the returned quote only after the user explicitly approves that amount.",
@@ -30,12 +29,7 @@ const scrapeArtistSocialsSchema = artistSocialsScrapeBodySchema.extend({
 type ScrapeArtistSocialsArgs = z.infer<typeof scrapeArtistSocialsSchema>;
 
 /**
- * Registers the "scrape_artist_socials" tool, the MCP counterpart of
- * `POST /api/artist/socials/scrape`. Starts a fresh scrape of every social
- * profile linked to the artist and returns one Apify run per profile; read
- * each run with `get_scraper_results`. Costs credits per profile started.
- *
- * @param server - The MCP server instance to register the tool on.
+ * Register the two-step MCP social refresh. Use get_scraper_results to read the returned runs.
  */
 export function registerScrapeArtistSocialsTool(server: McpServer): void {
   server.registerTool(
@@ -78,13 +72,11 @@ export function registerScrapeArtistSocialsTool(server: McpServer): void {
           });
         }
         if (result.kind === "invalid_quote") {
-          return getToolResultError(
-            "This quote expired or its scope changed. Preview the current charge again.",
-          );
+          return getToolResultError("This quote expired, was already used, or its scope changed.");
         }
-        if (result.kind === "used_quote") {
+        if (result.kind === "busy") {
           return getToolResultError(
-            "This quote was already used. Check any runs from the original request.",
+            "A social refresh is being started for this account. Wait for it to finish before retrying this quote.",
           );
         }
         if (result.kind === "forbidden") {

@@ -26,15 +26,11 @@ export type RunArtistSocialsScrapeResult =
   | { kind: "started"; runs: StartedArtistSocialsScrape[] };
 
 /**
- * Runs an artist socials scrape end to end: checks the caller can access the
- * artist, loads the linked socials, gates credits for every linked profile,
- * then starts the scrape (which charges only the profiles that started).
- * Shared by `POST /api/artist/socials/scrape` and the `scrape_artist_socials`
- * MCP tool, which map the result to their own response shapes.
+ * Authorize artist access and load the linked profiles and per-profile price.
+ * REST checks the balance and starts the work. MCP delegates to its quote flow.
  *
  * @param params - See {@link RunArtistSocialsScrapeParams}.
- * @returns `forbidden`, the credit shortfall, or the started runs (empty when
- *   the artist has no linked socials).
+ * @returns The authorization, quote or scrape outcome.
  */
 export async function runArtistSocialsScrape<Result = never>({
   accountId,
