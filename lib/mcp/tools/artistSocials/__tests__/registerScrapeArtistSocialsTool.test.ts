@@ -20,6 +20,7 @@ vi.mock("@/lib/artist/startArtistSocialsScrape", () => ({ startArtistSocialsScra
 vi.mock("@/lib/organizations/canAccessAccount", () => ({ canAccessAccount: vi.fn() }));
 vi.mock("ioredis", () => ({
   Redis: class {
+    eval = redis.eval;
     on() {}
     async connect() {}
     disconnect() {}
@@ -27,7 +28,6 @@ vi.mock("ioredis", () => ({
       redis.values.set(key, { value, until: Date.now() + ttl * 1000 });
       return "OK";
     }
-    eval = redis.eval;
   },
 }));
 
