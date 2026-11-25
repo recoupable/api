@@ -82,6 +82,7 @@ it.each([false, true])(
           "list_artists",
           "open_recoup_workflows",
           "open_recoup_workflows_sidebar",
+          "recoup_skills",
         ]);
         const result = await client.callTool({ name: "get_tasks", arguments: {} });
         expect(result.isError).not.toBe(true);
@@ -206,8 +207,8 @@ it("advertises native skills and serves their manifests and files through authen
 
   isRecoupAdmin.mockResolvedValue(true);
   const staffOnMain = await (await POST(modernRequest("skills/get", { uri: staffSkill }))).json();
-  expect(staffOnMain.error.code).toBe(-32602);
-  expect(isRecoupAdmin).not.toHaveBeenCalled();
+  expect(staffOnMain.result.skill.uri).toBe(staffSkill);
+  expect(isRecoupAdmin).toHaveBeenCalledWith("member");
 });
 
 it("uses the same full OAuth tool restrictions and account binding on modern MCP", async () => {
@@ -224,6 +225,7 @@ it("uses the same full OAuth tool restrictions and account binding on modern MCP
     "list_artists",
     "open_recoup_workflows",
     "open_recoup_workflows_sidebar",
+    "recoup_skills",
   ]);
   const called = await (
     await POST(modernRequest("tools/call", { name: "get_tasks", arguments: {} }))
@@ -243,10 +245,9 @@ it("serves public skills to limited OAuth grants without elevating their tool pe
     scopes: access.scopes,
     extra: { accountId: access.accountId, oauth: access },
   });
-  isRecoupAdmin.mockResolvedValue(true);
+  isRecoupAdmin.mockResolvedValue(false);
   const listing = await (await POST(modernRequest("skills/list"))).json();
   expect(listing.result.skills.map((skill: { uri: string }) => skill.uri)).toEqual([publicSkill]);
-  expect(isRecoupAdmin).not.toHaveBeenCalled();
   const write = await POST(
     modernRequest("tools/call", { name: "create_new_artist", arguments: { name: "Fixture" } }),
   );
@@ -351,4 +352,63 @@ it("grants staff skills to the exact configured account without requiring organi
   vi.stubEnv("RECOUP_STAFF_SKILL_ACCOUNT_IDS", "");
   verify.mockResolvedValue({ ...auth, extra: { accountId: grantedAccount } });
   expect((await staffPOST(request())).status).toBe(403);
+});
+
+const getVerifiedPrivyEmails = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/privy/getVerifiedPrivyEmails", () => ({ getVerifiedPrivyEmails }));
+
+it("uses the signed-in identity for native skills and the ChatGPT tool on the same connection", async () => {
+  const subject = "did:privy:connector-staff";
+  access.scopes = ["mcp:read"];
+  verify.mockResolvedValue({
+    token: "test",
+    clientId: access.clientId,
+    scopes: access.scopes,
+    extra: { accountId: access.accountId, oauth: { ...access, subject } },
+  });
+  isRecoupAdmin.mockResolvedValue(false);
+  const client = new Client({ name: "connector-fixture", version: "1" });
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL(access.resource), {
+      requestInit: { headers: { Authorization: "Bearer test" } },
+      fetch: async (input, init) => POST(new Request(input, init)),
+    }),
+  );
+  const tool = (args: Record<string, unknown>) =>
+    client.callTool({ name: "recoup_skills", arguments: args });
+  try {
+    getVerifiedPrivyEmails.mockResolvedValue(["someone@recoupable.com.example"]);
+    const publicList = await tool({});
+    expect(JSON.stringify(publicList)).toContain("recoup-public-test");
+    expect(JSON.stringify(publicList)).not.toContain("recoup-internal-test");
+    expect((await tool({ skill: "recoup-internal-test" })).isError).toBe(true);
+
+    getVerifiedPrivyEmails.mockResolvedValue(["staff@recoupable.com"]);
+    const staffList = await tool({});
+    expect(JSON.stringify(staffList)).toContain("recoup-public-test");
+    expect(JSON.stringify(staffList)).toContain("recoup-internal-test");
+    expect(JSON.stringify(await tool({ skill: "recoup-internal-test" }))).toContain(
+      "name: recoup-internal-test",
+    );
+    expect(
+      JSON.stringify(await tool({ skill: "recoup-public-test", file: "references/checklist.md" })),
+    ).toContain("Checklist");
+    expect(
+      (await tool({ skill: "recoup-public-test", file: "../recoup-internal-test/SKILL.md" }))
+        .isError,
+    ).toBe(true);
+    expect(getVerifiedPrivyEmails).toHaveBeenCalledWith(subject);
+
+    const native = await (await POST(modernRequest("skills/list"))).json();
+    expect(native.result.skills.map((skill: { uri: string }) => skill.uri).sort()).toEqual(
+      [staffSkill, publicSkill].sort(),
+    );
+
+    getVerifiedPrivyEmails.mockResolvedValue([]);
+    expect((await tool({ skill: "recoup-internal-test" })).isError).toBe(true);
+    const revoked = await (await POST(modernRequest("resources/read", { uri: staffSkill }))).json();
+    expect(revoked.error).toBeDefined();
+  } finally {
+    await client.close();
+  }
 });

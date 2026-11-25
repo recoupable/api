@@ -3,7 +3,7 @@ import { SkillsExtension, type SkillCatalog } from "@modelcontextprotocol/server
 import { nodeSkillFiles } from "@modelcontextprotocol/server/ext/skills/node";
 import { isStaffSkill } from "./isStaffSkill.mjs";
 
-type Audience = "public" | "staff";
+type Audience = "public" | "staff" | "all";
 
 const files = nodeSkillFiles(join(process.cwd(), ".mcp-skills/generated"));
 const catalogs = new Map<Audience, Promise<SkillCatalog>>();
@@ -18,7 +18,7 @@ export function getRecoupSkills(audience: Audience): Promise<SkillCatalog> {
       read: path => files.read(path),
       list: async path => {
         const children = await files.list(path);
-        return path
+        return path || audience === "all"
           ? children
           : children.filter(child => isStaffSkill(child.name) === (audience === "staff"));
       },
@@ -30,4 +30,10 @@ export function getRecoupSkills(audience: Audience): Promise<SkillCatalog> {
   });
   catalogs.set(audience, catalog);
   return catalog;
+}
+
+/** Read a file selected by the caller from an authorized catalog manifest. */
+export async function readRecoupSkillFile(uri: string) {
+  const url = new URL(uri);
+  return files.read(`${url.hostname}${decodeURIComponent(url.pathname)}`);
 }

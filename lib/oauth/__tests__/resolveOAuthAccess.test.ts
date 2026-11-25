@@ -130,3 +130,13 @@ it("preserves valid selected workspace attribution and rejects a different perso
   selectedContext.ownerId = "00000000-0000-4000-8000-000000000002";
   expect(await resolveOAuthAccess(f.options, "secret")).toBeUndefined();
 });
+
+it("uses only the Privy subject recorded on the validated grant", async () => {
+  const f = fixture();
+  Object.assign(f.attribution.extra, { subject: "did:privy:verified-staff" });
+  expect(await resolveOAuthAccess(f.options, "secret")).toMatchObject({
+    subject: "did:privy:verified-staff",
+  });
+  Object.assign(f.attribution.extra, { subject: "staff@recoupable.com" });
+  expect(await resolveOAuthAccess(f.options, "secret")).not.toHaveProperty("subject");
+});
