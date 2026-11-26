@@ -7,7 +7,7 @@ import { isStaffSkill } from "../../lib/mcp/skills/isStaffSkill.mjs";
 
 // Skills stays the source of truth. Pin the published revision so the manifest and
 // the files it describes are immutable for the lifetime of a deployment.
-const revision = "a5c145c64eb4440be6176420c500732e076ea297";
+const revision = "fd3325e0a75518be2f647ab81585c0bd48b9514c";
 const root = fileURLToPath(new URL("../../.mcp-skills/", import.meta.url));
 const destination = join(root, "generated");
 await mkdir(root, { recursive: true });
