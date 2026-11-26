@@ -5,6 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { registerFullOAuthTools } from "../registerFullOAuthTools";
 import { contextToolOperations } from "../contextToolOperations";
 import { fullOAuthToolPolicy } from "../fullOAuthToolPolicy";
+import { registerRecoupSkillsTool } from "../../skills/registerRecoupSkillsTool";
 import { registerRecoupExtension } from "../../extension/registerRecoupExtension";
 vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
 vi.hoisted(() => {
@@ -38,6 +39,7 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
   const services = { prepare: vi.fn(), listArtists: vi.fn() };
   registerFullOAuthTools(server, verify, services);
   registerRecoupExtension(server);
+  registerRecoupSkillsTool(server);
   const client = new Client({ name: "test", version: "1" });
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   await server.connect(serverTransport);
@@ -55,6 +57,7 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
               "spotify_deep_research",
             ].includes(name),
         ),
+        "recoup_skills",
         "open_recoup_workflows",
         "open_recoup_workflows_sidebar",
         "get_daily_email_status",
@@ -65,12 +68,12 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       ].sort(),
     );
     for (const tool of tools) expect(tool.inputSchema.properties).not.toHaveProperty("account_id");
-    expect(tools).toHaveLength(94);
+    expect(tools).toHaveLength(95);
     expect(
       tools.filter(
         tool => !(tool._meta?.ui as { visibility?: string[] })?.visibility?.includes("app"),
       ),
-    ).toHaveLength(93);
+    ).toHaveLength(94);
     expect(verify).not.toHaveBeenCalled();
     for (const service of Object.values(services)) expect(service).not.toHaveBeenCalled();
     expect(contextToolOperations.prepare_catalog_audit).toMatchObject({
@@ -93,7 +96,12 @@ it("discovers the entire delegated catalog over the real MCP SDK", async () => {
       get_youtube_revenue: [true, false, false],
       search_web: [true, false, true],
       send_email: [false, true, true],
-      contact_team: [false, true, false],
+      contact_team: [false, true, true],
+      set_daily_email_status: [false, true, true],
+      create_task: [false, true, true],
+      update_task: [false, true, true],
+      delete_task: [false, true, false],
+      recoup_skills: [true, false, false],
       compact_chats: [true, false, false],
       generate_image: [false, true, true],
       edit_image: [false, true, true],

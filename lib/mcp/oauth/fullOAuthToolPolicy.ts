@@ -117,9 +117,26 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
   create_new_artist: { readOnly: false, destructive: false, openWorld: false },
   update_account_info: { readOnly: false, destructive: true, openWorld: false },
   update_artist_socials: { readOnly: false, destructive: true, openWorld: false },
-  update_pulse: { readOnly: false, destructive: true, openWorld: false },
-  create_task: { readOnly: false, destructive: false, openWorld: false },
-  update_task: { readOnly: false, destructive: true, openWorld: false },
+  update_pulse: {
+    readOnly: false,
+    destructive: true,
+    openWorld: true,
+    notice: "Enabling starts recurring personalized email to the connected account.",
+  },
+  create_task: {
+    readOnly: false,
+    destructive: true,
+    openWorld: true,
+    notice:
+      "Creates and enables a recurring agent schedule. Depending on the prompt, future runs can use existing account credits and send email.",
+  },
+  update_task: {
+    readOnly: false,
+    destructive: true,
+    openWorld: true,
+    notice:
+      "Changes an existing agent schedule or its instructions. An enabled schedule can use existing account credits and send email on future runs.",
+  },
   delete_task: { readOnly: false, destructive: true, openWorld: false },
   insert_catalog_songs: {
     readOnly: false,
@@ -149,7 +166,13 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
     notice:
       "Creates a new edited image and uploads it to public media storage; the source image is retained. Use only when public storage is authorized.",
   },
-  generate_sora_2_video: { readOnly: false, destructive: false, openWorld: false },
+  generate_sora_2_video: {
+    readOnly: false,
+    destructive: false,
+    openWorld: false,
+    notice:
+      "Starts a private video generation job through Recoup's configured Sora provider. This tool does not deduct Recoup credits.",
+  },
   analyze_music: {
     readOnly: false,
     destructive: true,
@@ -174,8 +197,9 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
   contact_team: {
     readOnly: false,
     destructive: true,
-    openWorld: false,
-    notice: "Sends a message to Recoup support. Requires an explicit request to contact support.",
+    openWorld: true,
+    notice:
+      "Sends the message and available account email to Recoup support via Telegram, including the chat ID and title if a conversation is selected. Requires an explicit request to contact support.",
   },
   send_email: {
     readOnly: false,
