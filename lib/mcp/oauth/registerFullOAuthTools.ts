@@ -36,7 +36,11 @@ export function registerFullOAuthTools(
 ) {
   const register = (
     name: string,
-    config: { description?: string; inputSchema: z.ZodType; annotations?: Record<string, unknown> },
+    config: {
+      description?: string;
+      inputSchema: z.ZodType | z.ZodRawShape;
+      annotations?: Record<string, unknown>;
+    },
     handler: (args: Args, extra: Extra) => Promise<CallToolResult>,
     operation?: {
       name: string;
@@ -102,13 +106,15 @@ export function registerFullOAuthTools(
         }
       : fullOAuthToolPolicy[name];
     if (!policy) throw new Error(`Missing delegated policy for ${name}`);
-    const originalObject =
-      config.inputSchema instanceof z.ZodObject ? config.inputSchema : undefined;
+    // The MCP SDK accepts raw Zod shapes. The OAuth adapter also parses them itself.
+    const registeredSchema =
+      config.inputSchema instanceof z.ZodType ? config.inputSchema : z.object(config.inputSchema);
+    const originalObject = registeredSchema instanceof z.ZodObject ? registeredSchema : undefined;
     // External agents need not create a Recoup chat merely to send an email.
     const sourceSchema =
       name === "send_email" && originalObject
         ? originalObject.extend({ room_id: originalObject.shape.room_id.optional() })
-        : config.inputSchema;
+        : registeredSchema;
     const object = sourceSchema instanceof z.ZodObject ? sourceSchema : undefined;
     const hasOwner = !!object && "account_id" in object.shape;
     const inputSchema = object

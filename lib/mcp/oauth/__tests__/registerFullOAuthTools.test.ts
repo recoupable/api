@@ -2,6 +2,15 @@ import { describe, it, expect, vi } from "vitest";
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { registerFullOAuthTools } from "../registerFullOAuthTools";
+import { registerGetArtistSocialsTool } from "../../tools/artistSocials/registerGetArtistSocialsTool";
+
+const socials = vi.hoisted(() => {
+  process.env.PRIVY_PROJECT_SECRET = "test";
+  return vi.fn();
+});
+vi.mock("@/lib/auth/validateAuthContext", () => ({ validateAuthContext: vi.fn() }));
+vi.mock("@/lib/artist/getArtistSocials", () => ({ getArtistSocials: socials }));
+vi.mock("@/lib/supabase/serverClient", () => ({ default: {} }));
 
 const operation = vi.fn(async (args: unknown) => ({
   content: [{ type: "text" as const, text: JSON.stringify(args) }],
@@ -50,8 +59,8 @@ vi.mock("../../tools", () => ({
       { inputSchema: z.object({ active: z.boolean() }) },
       operation,
     );
+    registerGetArtistSocialsTool(server);
     for (const name of [
-      "get_artist_socials",
       "artist_deep_research",
       "spotify_deep_research",
       "get_catalog_playcount_history",
@@ -119,6 +128,37 @@ describe("full OAuth registry", () => {
     expect(registered.has("artist_deep_research")).toBe(false);
     expect(registered.has("spotify_deep_research")).toBe(false);
     expect(registered.has("ingestion")).toBe(false);
+  });
+  it("reads artist socials through the real tool registration with OAuth-bound access", async () => {
+    const { registered, prepare } = setup();
+    const tool = registered.get("get_artist_socials")!;
+    const artist_account_id = "artist-listed-for-owner";
+    const profile = {
+      status: "success",
+      socials: [{ username: "saved-profile", follower_count: 42 }],
+      pagination: { page: 1, limit: 20, total_count: 1, total_pages: 1 },
+    };
+    socials.mockResolvedValue(profile);
+
+    const result = await tool.run({ artist_account_id }, extra);
+    expect(result.isError).toBeFalsy();
+    const expectedArgs = { artist_account_id, page: 1, limit: 20 };
+    expect(prepare).toHaveBeenCalledExactlyOnceWith("get_artist_socials", expectedArgs, "owner");
+    expect(socials).toHaveBeenCalledExactlyOnceWith(expectedArgs);
+    expect(JSON.parse(result.content[0].text)).toEqual(profile);
+
+    socials.mockClear();
+    const custom = { artist_account_id, page: 2, limit: 5, history: 14 };
+    expect((await tool.run(custom, extra)).isError).toBeFalsy();
+    expect(socials).toHaveBeenCalledExactlyOnceWith(custom);
+
+    socials.mockClear();
+    prepare.mockRejectedValueOnce(new Error("Artist access denied"));
+    expect((await tool.run({ artist_account_id: "outside-workspace" }, extra)).isError).toBe(true);
+    expect(
+      (await tool.run({ artist_account_id, account_id: "different-owner" }, extra)).isError,
+    ).toBe(true);
+    expect(socials).not.toHaveBeenCalled();
   });
   it.each([
     undefined,

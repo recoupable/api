@@ -40,7 +40,12 @@ export const fullOAuthToolPolicy: Record<string, ToolPolicy> = {
   get_artist_posts: { readOnly: true, destructive: false, openWorld: false },
   get_scraper_results: { readOnly: true, destructive: false, openWorld: false },
   scrape_artist_socials: { readOnly: false, destructive: true, openWorld: true },
-  get_artist_socials: { readOnly: true, destructive: false, openWorld: false },
+  get_artist_socials: {
+    readOnly: true,
+    destructive: false,
+    openWorld: false,
+    notice: "Use the artist account_id returned by list_artists as artist_account_id.",
+  },
   artist_deep_research: { readOnly: true, destructive: false, openWorld: false },
   spotify_deep_research: { readOnly: true, destructive: false, openWorld: false },
   get_spotify_album: { readOnly: true, destructive: false, openWorld: true },
