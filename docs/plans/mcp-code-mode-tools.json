@@ -1,0 +1,440 @@
+{
+  "tools": [
+    {
+      "name": "search",
+      "title": "Find Recoup operations and skills",
+      "description": "Discover operations available to this connection. Request details by exact ID or read an authorized skill file. A cursor continues the same query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "operations",
+              "skills"
+            ]
+          },
+          "file": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "query"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "cursor"
+            ]
+          }
+        ],
+        "allOf": [
+          {
+            "if": {
+              "required": [
+                "file"
+              ]
+            },
+            "then": {
+              "required": [
+                "id",
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "skills"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "revision",
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "execute",
+      "title": "Run a Recoup read or preview",
+      "description": "Run one async JavaScript function (recoup, params) against authorized Recoup operations. Use recoup.read(id, args) or recoup.prepare(id, args), then return a bounded JSON result. A runId reads an existing receipt.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "runId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "source",
+              "revision"
+            ],
+            "not": {
+              "required": [
+                "runId"
+              ]
+            }
+          },
+          {
+            "required": [
+              "runId"
+            ],
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "source"
+                  ]
+                },
+                {
+                  "required": [
+                    "revision"
+                  ]
+                },
+                {
+                  "required": [
+                    "params"
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "partial",
+              "approval_required",
+              "denied",
+              "expired",
+              "accepted",
+              "running",
+              "succeeded",
+              "failed",
+              "unknown_outcome",
+              "canceled"
+            ]
+          },
+          "value": {},
+          "runId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "retry": {
+                "enum": [
+                  "narrow",
+                  "rediscover",
+                  "reconnect",
+                  "reconcile",
+                  "backoff",
+                  "never"
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "retry"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "state",
+          "traceId",
+          "truncated"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "approval_required",
+                    "accepted",
+                    "running",
+                    "unknown_outcome"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "runId"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "denied",
+                    "expired",
+                    "failed",
+                    "unknown_outcome"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "error"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "commit",
+      "title": "Apply an approved Recoup change",
+      "description": "Apply one exact prepared change after Recoup records approval. Reuse the same requestKey to recover its receipt after interruption.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "intent": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "requestKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          }
+        },
+        "required": [
+          "intent",
+          "requestKey"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "approval_required",
+              "denied",
+              "expired",
+              "accepted",
+              "running",
+              "succeeded",
+              "failed",
+              "unknown_outcome",
+              "canceled"
+            ]
+          },
+          "runId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "approvalUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "retry": {
+                "enum": [
+                  "narrow",
+                  "rediscover",
+                  "reconnect",
+                  "reconcile",
+                  "backoff",
+                  "never"
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "retry"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "state",
+          "traceId"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "approval_required",
+                    "accepted",
+                    "running",
+                    "unknown_outcome"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "runId"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "denied",
+                    "expired",
+                    "failed",
+                    "unknown_outcome"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "error"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "approval_required"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "approvalUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": true
+      }
+    }
+  ]
+}
