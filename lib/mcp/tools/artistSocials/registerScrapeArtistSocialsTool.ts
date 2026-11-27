@@ -37,7 +37,7 @@ export function registerScrapeArtistSocialsTool(server: McpServer): void {
     {
       title: "Refresh Artist Social Profiles",
       description:
-        "Refresh public profile stats and recent posts for an artist you can access. The first call quotes the maximum at $0.05 per profile plus $0.01 per requested post. After explicit approval, pass the quote to start the refresh and receive run IDs; Recoup saves collected posts and charges only for profiles whose jobs start.",
+        "Refresh public social profiles and recent posts for an artist you can access. Recoup shows the maximum credit cost before starting and uses existing credits only after you approve.",
       inputSchema: scrapeArtistSocialsSchema,
       annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
     },
