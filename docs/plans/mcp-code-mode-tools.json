@@ -139,8 +139,8 @@
     },
     {
       "name": "execute",
-      "title": "Run a Recoup read or preview",
-      "description": "Run one async JavaScript function (recoup, params) against authorized Recoup operations. Use recoup.read(id, args) or recoup.prepare(id, args), then return a bounded JSON result. A runId reads an existing receipt.",
+      "title": "Run delegated Recoup operations",
+      "description": "Run async (recoup, params) with a stable run requestKey. Use recoup.read(id,args) or recoup.act(id,args,{requestKey}) with a stable key per effect. Delegated actions may immediately change data or contact external parties. A requestKey or runId alone retrieves status. Use runId with resume:true for a checkpointed continuation.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -162,44 +162,50 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 256
+          },
+          "requestKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "resume": {
+            "const": true
           }
         },
-        "required": [],
         "additionalProperties": false,
         "oneOf": [
           {
             "required": [
               "source",
-              "revision"
+              "revision",
+              "requestKey"
             ],
-            "not": {
-              "required": [
-                "runId"
-              ]
+            "properties": {
+              "runId": false,
+              "resume": false
+            }
+          },
+          {
+            "required": [
+              "requestKey"
+            ],
+            "properties": {
+              "source": false,
+              "params": false,
+              "revision": false,
+              "runId": false,
+              "resume": false
             }
           },
           {
             "required": [
               "runId"
             ],
-            "not": {
-              "anyOf": [
-                {
-                  "required": [
-                    "source"
-                  ]
-                },
-                {
-                  "required": [
-                    "revision"
-                  ]
-                },
-                {
-                  "required": [
-                    "params"
-                  ]
-                }
-              ]
+            "properties": {
+              "source": false,
+              "params": false,
+              "revision": false,
+              "requestKey": false
             }
           }
         ]
@@ -265,6 +271,12 @@
             "type": "string",
             "minLength": 1,
             "maxLength": 1024
+          },
+          "intent": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192,
+            "pattern": "^[A-Za-z0-9_-]+$"
           }
         },
         "required": [
@@ -366,22 +378,23 @@
         ]
       },
       "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "openWorldHint": false
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": true
       }
     },
     {
       "name": "commit",
       "title": "Apply an approved Recoup change",
-      "description": "Apply one exact prepared change after Recoup records approval. Reuse the same requestKey to recover its receipt after interruption.",
+      "description": "Apply one exact policy-paused effect after recorded approval. Reuse requestKey on retry. Look up the run with execute.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "intent": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 8192
+            "maxLength": 8192,
+            "pattern": "^[A-Za-z0-9_-]+$"
           },
           "requestKey": {
             "type": "string",
@@ -520,5 +533,225 @@
         "openWorldHint": true
       }
     }
-  ]
+  ],
+  "readOnlyExecute": {
+    "title": "Run a Recoup read",
+    "description": "Run async (recoup, params) using recoup.read(id, args) and return bounded JSON. A runId reads an authorized receipt.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "source",
+            "revision"
+          ],
+          "properties": {
+            "runId": false
+          }
+        },
+        {
+          "required": [
+            "runId"
+          ],
+          "properties": {
+            "source": false,
+            "revision": false,
+            "params": false
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "partial",
+            "accepted",
+            "running",
+            "succeeded",
+            "failed",
+            "canceled"
+          ]
+        },
+        "value": {},
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "traceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "retry": {
+              "enum": [
+                "narrow",
+                "rediscover",
+                "reconnect",
+                "reconcile",
+                "backoff",
+                "never"
+              ]
+            }
+          },
+          "required": [
+            "code",
+            "retry"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "state",
+        "traceId",
+        "truncated"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "accepted",
+                  "running"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "runId"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "failed"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "error"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "complete"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "truncated": {
+                "const": false
+              }
+            },
+            "required": [
+              "value"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "truncated": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "state": {
+                "const": "partial"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "actRequest": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "args": {
+        "type": "object"
+      },
+      "options": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          }
+        },
+        "required": [
+          "requestKey"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "id",
+      "args",
+      "options"
+    ],
+    "additionalProperties": false
+  }
 }
