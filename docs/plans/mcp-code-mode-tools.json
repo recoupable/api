@@ -1,0 +1,878 @@
+{
+  "tools": [
+    {
+      "name": "search",
+      "title": "Find Recoup operations and skills",
+      "description": "Discover operations available to this connection. Request details by exact ID or read an authorized skill file. A cursor continues the same query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "operations",
+              "skills"
+            ]
+          },
+          "file": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "cursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "query"
+            ]
+          },
+          {
+            "required": [
+              "id"
+            ]
+          },
+          {
+            "required": [
+              "cursor"
+            ]
+          }
+        ],
+        "allOf": [
+          {
+            "if": {
+              "required": [
+                "file"
+              ]
+            },
+            "then": {
+              "required": [
+                "id",
+                "kind"
+              ],
+              "properties": {
+                "kind": {
+                  "const": "skills"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "items": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "summary": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "effect": {
+                  "enum": [
+                    "read",
+                    "write",
+                    "instruction"
+                  ]
+                },
+                "detail": {
+                  "type": "object",
+                  "description": "Authorized contract, example, or requested skill content. Section-specific schemas and byte caps are validated by the catalog broker."
+                }
+              },
+              "required": [
+                "id",
+                "summary",
+                "effect"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          }
+        },
+        "required": [
+          "revision",
+          "items"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "execute",
+      "title": "Run delegated Recoup operations",
+      "description": "Run async (recoup, params) with a stable run requestKey. Use recoup.read(id,args) or recoup.act(id,args,{requestKey}) with a stable key per effect. Delegated actions may immediately change data or contact external parties. A requestKey or runId alone retrieves status. Use runId with resume:true for a checkpointed continuation.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192
+          },
+          "params": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "runId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "requestKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          },
+          "resume": {
+            "const": true
+          }
+        },
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "source",
+              "revision",
+              "requestKey"
+            ],
+            "properties": {
+              "runId": false,
+              "resume": false
+            }
+          },
+          {
+            "required": [
+              "requestKey"
+            ],
+            "properties": {
+              "source": false,
+              "params": false,
+              "revision": false,
+              "runId": false,
+              "resume": false
+            }
+          },
+          {
+            "required": [
+              "runId"
+            ],
+            "properties": {
+              "source": false,
+              "params": false,
+              "revision": false,
+              "requestKey": false
+            }
+          }
+        ]
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "complete",
+              "partial",
+              "approval_required",
+              "denied",
+              "expired",
+              "accepted",
+              "running",
+              "succeeded",
+              "failed",
+              "unknown_outcome",
+              "canceled"
+            ]
+          },
+          "value": {},
+          "runId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "truncated": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "retry": {
+                "enum": [
+                  "narrow",
+                  "rediscover",
+                  "reconnect",
+                  "reconcile",
+                  "backoff",
+                  "never"
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "retry"
+            ],
+            "additionalProperties": false
+          },
+          "approvalUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "intent": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          }
+        },
+        "required": [
+          "state",
+          "traceId",
+          "truncated",
+          "runId"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "denied",
+                    "expired",
+                    "failed",
+                    "unknown_outcome"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "error"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "approval_required"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "approvalUrl",
+                "intent"
+              ]
+            },
+            "else": {
+              "properties": {
+                "intent": false,
+                "approvalUrl": false
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "complete"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "truncated": {
+                  "const": false
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "truncated": {
+                  "const": true
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "state": {
+                  "const": "partial"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": true
+      }
+    },
+    {
+      "name": "commit",
+      "title": "Apply an approved Recoup change",
+      "description": "Apply one exact policy-paused effect after recorded approval. Reuse requestKey on retry. Look up the run with execute.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "intent": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192,
+            "pattern": "^[A-Za-z0-9_-]+$"
+          },
+          "requestKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          }
+        },
+        "required": [
+          "intent",
+          "requestKey"
+        ],
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "approval_required",
+              "denied",
+              "expired",
+              "accepted",
+              "running",
+              "succeeded",
+              "failed",
+              "unknown_outcome",
+              "canceled"
+            ]
+          },
+          "runId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "approvalUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
+          },
+          "traceId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": {
+                "type": "string",
+                "maxLength": 64
+              },
+              "retry": {
+                "enum": [
+                  "narrow",
+                  "rediscover",
+                  "reconnect",
+                  "reconcile",
+                  "backoff",
+                  "never"
+                ]
+              }
+            },
+            "required": [
+              "code",
+              "retry"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "state",
+          "traceId",
+          "runId"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "denied",
+                    "expired",
+                    "failed",
+                    "unknown_outcome"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "error"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "approval_required"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "approvalUrl"
+              ]
+            }
+          }
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": true,
+        "openWorldHint": true
+      }
+    }
+  ],
+  "readOnlyExecute": {
+    "title": "Run a Recoup read",
+    "description": "Run async (recoup, params) using recoup.read(id, args) and return bounded JSON. A runId reads an authorized receipt.",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192
+        },
+        "params": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "revision": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        }
+      },
+      "required": [],
+      "additionalProperties": false,
+      "oneOf": [
+        {
+          "required": [
+            "source",
+            "revision"
+          ],
+          "properties": {
+            "runId": false
+          }
+        },
+        {
+          "required": [
+            "runId"
+          ],
+          "properties": {
+            "source": false,
+            "revision": false,
+            "params": false
+          }
+        }
+      ]
+    },
+    "annotations": {
+      "readOnlyHint": true,
+      "destructiveHint": false,
+      "openWorldHint": false
+    },
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "partial",
+            "accepted",
+            "running",
+            "succeeded",
+            "failed",
+            "canceled"
+          ]
+        },
+        "value": {},
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "traceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "retry": {
+              "enum": [
+                "narrow",
+                "rediscover",
+                "reconnect",
+                "reconcile",
+                "backoff",
+                "never"
+              ]
+            }
+          },
+          "required": [
+            "code",
+            "retry"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "state",
+        "traceId",
+        "truncated"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "accepted",
+                  "running"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "runId"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "failed"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "error"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "complete"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "truncated": {
+                "const": false
+              }
+            },
+            "required": [
+              "value"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "truncated": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "state": {
+                "const": "partial"
+              }
+            }
+          }
+        }
+      ]
+    }
+  },
+  "actRequest": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256
+      },
+      "args": {
+        "type": "object"
+      },
+      "options": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 96
+          }
+        },
+        "required": [
+          "requestKey"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "required": [
+      "id",
+      "args",
+      "options"
+    ],
+    "additionalProperties": false
+  },
+  "delegatedExecute": {
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "partial",
+            "approval_required",
+            "denied",
+            "expired",
+            "accepted",
+            "running",
+            "succeeded",
+            "failed",
+            "unknown_outcome",
+            "canceled"
+          ]
+        },
+        "value": {},
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "traceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "retry": {
+              "enum": [
+                "narrow",
+                "rediscover",
+                "reconnect",
+                "reconcile",
+                "backoff",
+                "never"
+              ]
+            }
+          },
+          "required": [
+            "code",
+            "retry"
+          ],
+          "additionalProperties": false
+        },
+        "approvalUrl": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "required": [
+        "state",
+        "traceId",
+        "truncated",
+        "runId"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "denied",
+                  "expired",
+                  "failed",
+                  "unknown_outcome"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "error"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "approval_required"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "approvalUrl"
+            ]
+          },
+          "else": {
+            "properties": {
+              "approvalUrl": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "complete"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "truncated": {
+                "const": false
+              }
+            },
+            "required": [
+              "value"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "truncated": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "state": {
+                "const": "partial"
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}
