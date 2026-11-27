@@ -6,7 +6,7 @@ export function registerGetWorkspacePlayerFansTool(server: McpServer) {
     "get_workspace_player_fans",
     {
       description:
-        "Read one Spotify fan contact per authorized workspace, with its artist relationships. No cross-workspace identity links, provider tokens or email marketing consent.",
+        "List fan contacts for release players in a Recoup workspace you can access. Each contact appears once and includes their Spotify display name and email when available, plus the artists they connected with. A connection does not grant marketing consent.",
       inputSchema: workspacePlayerFansQuerySchema,
       annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
     },
