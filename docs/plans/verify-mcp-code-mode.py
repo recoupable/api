@@ -9,6 +9,7 @@ or Recoup server are needed.
 import hashlib
 import json
 import os
+import re
 import sys
 import tempfile
 from importlib.metadata import version
@@ -19,7 +20,7 @@ import tiktoken
 from jsonschema import Draft202012Validator
 from referencing import Registry
 
-from mcp_code_mode_cases import act_cases, contract_cases
+from mcp_code_mode_cases import act_cases, contract_cases, recovery_cases
 
 
 MANIFEST = Path(__file__).with_name("mcp-code-mode-tools.json")
@@ -47,6 +48,34 @@ def trusted_approval_link(payload, receipt_run_id):
         return False
     expected = "https://app.recoupable.dev/mcp/approvals/" + quote(receipt_run_id, safe="")
     return payload["approvalUrl"] == expected
+
+
+def valid_recovery(payload, run_id, ledger_steps):
+    """Check the broker projection against an authorized receipt, never guest claims."""
+    if payload.get("runId") != run_id:
+        return False
+    if ledger_steps is None:
+        return True
+    if run_id is None or len(ledger_steps) > 16 or payload.get("value") != {"steps": ledger_steps}:
+        return False
+    required = {"stepId", "state", "receiptRef"}
+    allowed = required | {"readbackRef"}
+    step_ids = set()
+    for step in ledger_steps:
+        if not isinstance(step, dict) or not required <= step.keys() <= allowed:
+            return False
+        if step["state"] not in {
+            "approval_required", "accepted", "running", "succeeded", "failed",
+            "denied", "expired", "canceled", "unknown_outcome"
+        }:
+            return False
+        for key in step.keys() - {"state"}:
+            if not isinstance(step[key], str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", step[key]):
+                return False
+        if step["stepId"] in step_ids:
+            return False
+        step_ids.add(step["stepId"])
+    return True
 
 
 def verify_profile(tools, action_capable, has_commit):
@@ -112,6 +141,13 @@ def main():
         if act_validator.is_valid(request) != valid:
             failures.append(f"Guest act request ({label}): expected {'valid' if valid else 'invalid'}")
     print(f"Guest act RPC: 1 schema, {len(cases)} cases (excluded from MCP descriptor counts)")
+    action_output = Draft202012Validator(execute["outputSchema"], registry=Registry())
+    recoveries = list(recovery_cases())
+    for valid, label, run_id, ledger_steps, payload in recoveries:
+        accepted = action_output.is_valid(payload) and valid_recovery(payload, run_id, ledger_steps)
+        if accepted != valid:
+            failures.append(f"Broker recovery ({label}): expected {'valid' if valid else 'invalid'}")
+    print(f"Broker recovery: {len(recoveries)} cases (conditional status projection)")
     for failure in failures:
         print(failure, file=sys.stderr)
     return int(bool(failures))
