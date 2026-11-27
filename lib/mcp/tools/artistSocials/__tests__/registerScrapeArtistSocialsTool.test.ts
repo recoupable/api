@@ -85,9 +85,10 @@ describe("registerScrapeArtistSocialsTool", () => {
     ]);
   });
 
-  it("describes the quoted price and explicit approval", () => {
-    expect(config.description).toContain("explicit approval");
-    expect(config.description).toContain("$0.05 per profile plus $0.01 per requested post");
+  it("describes the credit quote and approval before starting a refresh", () => {
+    expect(config.description).toBe(
+      "Refresh public social profiles and recent posts for an artist you can access. Recoup shows the maximum credit cost before starting and uses existing credits only after you approve.",
+    );
   });
 
   it("reuses the REST body limits for posts", () => {
