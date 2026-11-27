@@ -88,7 +88,35 @@
             "maxItems": 8,
             "items": {
               "type": "object",
-              "additionalProperties": true
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 256
+                },
+                "summary": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 512
+                },
+                "effect": {
+                  "enum": [
+                    "read",
+                    "write",
+                    "instruction"
+                  ]
+                },
+                "detail": {
+                  "type": "object",
+                  "description": "Authorized contract, example, or requested skill content. Section-specific schemas and byte caps are validated by the catalog broker."
+                }
+              },
+              "required": [
+                "id",
+                "summary",
+                "effect"
+              ],
+              "additionalProperties": false
             }
           },
           "nextCursor": {
@@ -232,6 +260,11 @@
               "retry"
             ],
             "additionalProperties": false
+          },
+          "approvalUrl": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024
           }
         },
         "required": [
@@ -277,6 +310,57 @@
               "required": [
                 "error"
               ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "approval_required"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "approvalUrl"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "complete"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "truncated": {
+                  "const": false
+                }
+              },
+              "required": [
+                "value"
+              ]
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "truncated": {
+                  "const": true
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "state": {
+                  "const": "partial"
+                }
+              }
             }
           }
         ]
