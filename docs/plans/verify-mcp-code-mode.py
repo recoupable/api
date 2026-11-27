@@ -45,7 +45,7 @@ def trusted_approval_link(payload, receipt_run_id):
         return True
     if payload.get("runId") != receipt_run_id:
         return False
-    expected = "https://chat.recoupable.dev/mcp/approvals/" + quote(receipt_run_id, safe="")
+    expected = "https://app.recoupable.dev/mcp/approvals/" + quote(receipt_run_id, safe="")
     return payload["approvalUrl"] == expected
 
 

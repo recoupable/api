@@ -44,16 +44,16 @@ def contract_cases():
     for tool in ("execute", "commit"):
         base = output if tool == "execute" else {"traceId": "trace-1"}
         approval = {**base, **receipt, "state": "approval_required"}
-        yield tool, "output", True, "approval link", {**approval, "approvalUrl": "https://chat.recoupable.dev/mcp/approvals/run-1"}
+        yield tool, "output", True, "approval link", {**approval, "approvalUrl": "https://app.recoupable.dev/mcp/approvals/run-1"}
         for bad_url in (
             "https://elsewhere.example/mcp/approvals/run-1",
-            "http://chat.recoupable.dev/mcp/approvals/run-1",
-            "https://chat.recoupable.dev/mcp/approvals/run-2",
-            "https://chat.recoupable.dev/mcp/approvals/run-1?next=https://elsewhere.example",
+            "http://app.recoupable.dev/mcp/approvals/run-1",
+            "https://app.recoupable.dev/mcp/approvals/run-2",
+            "https://app.recoupable.dev/mcp/approvals/run-1?next=https://elsewhere.example",
         ):
             yield tool, "output", False, "untrusted approval destination", {**approval, "approvalUrl": bad_url}
         yield tool, "output", False, "foreign receipt and matching URL", {
-            **approval, "runId": "run-2", "approvalUrl": "https://chat.recoupable.dev/mcp/approvals/run-2"
+            **approval, "runId": "run-2", "approvalUrl": "https://app.recoupable.dev/mcp/approvals/run-2"
         }
         yield tool, "output", False, "missing approval link", approval
         for state in ("accepted", "running", "unknown_outcome"):
