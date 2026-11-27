@@ -282,29 +282,11 @@
         "required": [
           "state",
           "traceId",
-          "truncated"
+          "truncated",
+          "runId"
         ],
         "additionalProperties": false,
         "allOf": [
-          {
-            "if": {
-              "properties": {
-                "state": {
-                  "enum": [
-                    "approval_required",
-                    "accepted",
-                    "running",
-                    "unknown_outcome"
-                  ]
-                }
-              }
-            },
-            "then": {
-              "required": [
-                "runId"
-              ]
-            }
-          },
           {
             "if": {
               "properties": {
@@ -336,8 +318,15 @@
             },
             "then": {
               "required": [
-                "approvalUrl"
+                "approvalUrl",
+                "intent"
               ]
+            },
+            "else": {
+              "properties": {
+                "intent": false,
+                "approvalUrl": false
+              }
             }
           },
           {
@@ -467,29 +456,11 @@
         },
         "required": [
           "state",
-          "traceId"
+          "traceId",
+          "runId"
         ],
         "additionalProperties": false,
         "allOf": [
-          {
-            "if": {
-              "properties": {
-                "state": {
-                  "enum": [
-                    "approval_required",
-                    "accepted",
-                    "running",
-                    "unknown_outcome"
-                  ]
-                }
-              }
-            },
-            "then": {
-              "required": [
-                "runId"
-              ]
-            }
-          },
           {
             "if": {
               "properties": {
@@ -753,5 +724,155 @@
       "options"
     ],
     "additionalProperties": false
+  },
+  "delegatedExecute": {
+    "outputSchema": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string",
+          "enum": [
+            "complete",
+            "partial",
+            "approval_required",
+            "denied",
+            "expired",
+            "accepted",
+            "running",
+            "succeeded",
+            "failed",
+            "unknown_outcome",
+            "canceled"
+          ]
+        },
+        "value": {},
+        "runId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "traceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256
+        },
+        "truncated": {
+          "type": "boolean"
+        },
+        "error": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string",
+              "maxLength": 64
+            },
+            "retry": {
+              "enum": [
+                "narrow",
+                "rediscover",
+                "reconnect",
+                "reconcile",
+                "backoff",
+                "never"
+              ]
+            }
+          },
+          "required": [
+            "code",
+            "retry"
+          ],
+          "additionalProperties": false
+        },
+        "approvalUrl": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024
+        }
+      },
+      "required": [
+        "state",
+        "traceId",
+        "truncated",
+        "runId"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "denied",
+                  "expired",
+                  "failed",
+                  "unknown_outcome"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "error"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "enum": [
+                  "approval_required"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "approvalUrl"
+            ]
+          },
+          "else": {
+            "properties": {
+              "approvalUrl": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "complete"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "truncated": {
+                "const": false
+              }
+            },
+            "required": [
+              "value"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "truncated": {
+                "const": true
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "state": {
+                "const": "partial"
+              }
+            }
+          }
+        }
+      ]
+    }
   }
 }

@@ -9,18 +9,18 @@ or Recoup server are needed.
 import hashlib
 import json
 import os
-import re
 import sys
 import tempfile
 from importlib.metadata import version
 from pathlib import Path
-from urllib.parse import quote
 
 import tiktoken
 from jsonschema import Draft202012Validator
 from referencing import Registry
 
-from mcp_code_mode_cases import act_cases, contract_cases, recovery_cases
+from mcp_code_mode_cases import act_cases, refusal_cases
+from mcp_code_mode_recovery import recovery_cases, valid_recovery
+from mcp_code_mode_validation import valid_preadmission_refusal, verify_profile
 
 
 MANIFEST = Path(__file__).with_name("mcp-code-mode-tools.json")
@@ -41,84 +41,14 @@ def cached_encoding():
     return tiktoken.get_encoding("o200k_base")
 
 
-def trusted_approval_link(payload, receipt_run_id):
-    if "approvalUrl" not in payload:
-        return True
-    if payload.get("state") != "approval_required" or payload.get("runId") != receipt_run_id:
-        return False
-    expected = "https://app.recoupable.dev/mcp/approvals/" + quote(receipt_run_id, safe="")
-    return payload["approvalUrl"] == expected
-
-
-def valid_recovery(payload, run_id, ledger_steps):
-    """Check the broker projection against an authorized receipt, never guest claims."""
-    if payload.get("runId") != run_id:
-        return False
-    if ledger_steps is None:
-        return True
-    if run_id is None or len(ledger_steps) > 16 or payload.get("value") != {"steps": ledger_steps}:
-        return False
-    required = {"stepId", "state", "receiptRef"}
-    allowed = required | {"readbackRef"}
-    step_ids = set()
-    for step in ledger_steps:
-        if not isinstance(step, dict) or not required <= step.keys() <= allowed:
-            return False
-        if step["state"] not in {
-            "approval_required", "accepted", "running", "succeeded", "failed",
-            "denied", "expired", "canceled", "unknown_outcome"
-        }:
-            return False
-        for key in step.keys() - {"state"}:
-            if not isinstance(step[key], str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,128}", step[key]):
-                return False
-        if step["stepId"] in step_ids:
-            return False
-        step_ids.add(step["stepId"])
-    return True
-
-
-def verify_profile(tools, action_capable, has_commit):
-    expected_names = ["search", "execute"] + (["commit"] if has_commit else [])
-    if [tool["name"] for tool in tools] != expected_names:
-        raise ValueError(f"Expected descriptors in order {expected_names}.")
-    failures = []
-    validators = {}
-    for tool in tools:
-        name = tool["name"]
-        effectful = name == "commit" or (name == "execute" and action_capable)
-        expected_hints = {
-            "readOnlyHint": not effectful,
-            "destructiveHint": effectful,
-            "openWorldHint": effectful,
-        }
-        if tool["annotations"] != expected_hints:
-            failures.append(f"{name} annotations differ from the fixture's admitted effects.")
-        for direction in ("input", "output"):
-            schema = tool[f"{direction}Schema"]
-            Draft202012Validator.check_schema(schema)
-            validators[name, direction] = Draft202012Validator(schema, registry=Registry())
-    cases = list(contract_cases(action_capable, has_commit))
-    for name, direction, valid, label, payload in cases:
-        accepted = validators[name, direction].is_valid(payload)
-        if direction == "output" and name in {"execute", "commit"}:
-            accepted = accepted and trusted_approval_link(payload, receipt_run_id="run-1")
-            if name == "execute" and "intent" in payload:
-                accepted = accepted and has_commit and payload.get("state") == "approval_required"
-            if name == "execute" and has_commit and payload.get("state") == "approval_required":
-                accepted = accepted and "intent" in payload
-        if accepted != valid:
-            failures.append(f"{name} {direction} ({label}): expected {'valid' if valid else 'invalid'}")
-    return len(validators), len(cases), failures
-
-
 def main():
     fixture = json.loads(MANIFEST.read_text(encoding="utf-8"))
     search, execute, commit = fixture["tools"]
     read_execute = {**execute, **fixture["readOnlyExecute"]}
+    delegated_execute = {**execute, **fixture["delegatedExecute"]}
     profiles = [
         ("Read only", [search, read_execute], False, False),
-        ("Delegated action", [search, execute], True, False),
+        ("Delegated action", [search, delegated_execute], True, False),
         ("Delegated action with approval completion", [search, execute, commit], True, True),
     ]
     encoding = cached_encoding()
@@ -148,6 +78,11 @@ def main():
         if accepted != valid:
             failures.append(f"Broker recovery ({label}): expected {'valid' if valid else 'invalid'}")
     print(f"Broker recovery: {len(recoveries)} cases (conditional status projection)")
+    refusals = list(refusal_cases())
+    for valid, label, envelope in refusals:
+        if valid_preadmission_refusal(envelope) != valid:
+            failures.append(f"Pre-admission refusal ({label}): expected {'valid' if valid else 'invalid'}")
+    print(f"Pre-admission MCP tool errors: {len(refusals)} cases")
     for failure in failures:
         print(failure, file=sys.stderr)
     return int(bool(failures))
